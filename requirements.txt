@@ -3,6 +3,7 @@ pandas>=2.0
 tabulate>=0.9
 tqdm>=4.65
 python-dotenv>=1.0
+beautifulsoup4>=4.12
 
 # Dev / tests
 pytest>=7.4

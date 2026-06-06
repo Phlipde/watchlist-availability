@@ -1,0 +1,67 @@
+# platforms.toml — Select the streaming services to check, per country.
+#
+# The section matches the COUNTRY variable in .env (default: FR).
+# true  → included in the search    false → ignored
+#
+# IMPORTANT: this file only chooses WHICH platforms to check. The display section
+# (Free / Paid) is detected automatically PER FILM from TMDB's real monetization —
+# it is NOT decided here (Free = free or free-with-ads; Paid = subscription or
+# rental). A platform can appear in either section depending on the film. The
+# comment groupings below are just the *typical* nature of each provider.
+#
+# Provider names must match the keys in _ALL_PROVIDERS (watchlist_availability.py).
+# To add a service that isn't listed, extend _ALL_PROVIDERS there first.
+
+[FR]
+# Typically free / ad-supported
+Arte          = true
+Molotov       = false
+"Pluto TV"    = false
+Plex          = false
+# Typically paid — subscription or rental
+Netflix       = true
+"Canal+"      = true
+"TF1+"        = true
+"M6+"         = false
+"Prime Video" = false
+"Disney+"     = false
+"Apple TV+"   = false
+"Paramount+"  = false
+"HBO Max"     = false
+Crunchyroll   = false
+MUBI          = false
+"Canal VOD"   = false
+"Google Play" = false
+"Amazon VOD"  = false
+"Pathé Home"  = false
+"Rakuten TV"  = false
+"Orange VOD"  = false
+
+[US]
+# Typically free / ad-supported
+"Pluto TV"    = false
+Plex          = false
+# Typically paid — subscription or rental
+Netflix       = true
+"Prime Video" = true
+"Disney+"     = true
+"Apple TV+"   = false
+Hulu          = false
+Peacock       = false
+"Google Play" = false
+"Amazon VOD"  = false
+YouTube       = false
+
+[GB]
+# Typically free / ad-supported
+"BBC iPlayer" = false
+ITVX          = false
+"Channel 4"   = false
+# Typically paid — subscription or rental
+Netflix       = true
+"Prime Video" = true
+"Disney+"     = false
+"Apple TV+"   = false
+Now           = false
+"Google Play" = false
+"Amazon VOD"  = false
