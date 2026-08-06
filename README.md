@@ -8,7 +8,7 @@ The watchlist is **fetched automatically** from your public Letterboxd page — 
 export needed. An exported ZIP or CSV is still supported as a fallback.
 
 ```console
-$ cd ~/Documents/Code/all/watchlist_availability
+$ cd watchlist-availability
 $ ./run.sh
 Fetching Letterboxd watchlist: 100%|██████████| 12/12 [00:03<00:00,  3.6 film/s]
 Watchlist fetched from Letterboxd: @yourname (12 films)
@@ -41,7 +41,7 @@ Results saved: /Users/you/Downloads/watchlist_2026-06-06.md
 ## Installation
 
 ```bash
-git clone https://github.com/your-username/watchlist-availability.git
+git clone https://github.com/CorbeusUltra/watchlist-availability.git
 cd watchlist-availability
 python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
