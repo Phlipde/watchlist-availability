@@ -1,7 +1,6 @@
 # Watchlist Availability
 
-Checks which films from your **Letterboxd** watchlist are streamable, and whether for free or
-not, via the TMDB API. Results are grouped into two sections — **Free** (free or free-with-ads)
+Checks which films from your **Letterboxd** watchlist are streamable via the TMDB API. Results are grouped into two sections — **Free** (free or free-with-ads)
 and **Paid** (subscription or rental) — based on what TMDB reports for each film.
 
 The watchlist is **fetched automatically** from your public Letterboxd page — no manual
@@ -38,6 +37,7 @@ Results saved: /Users/you/Downloads/watchlist_2026-06-06.md
 - A free [TMDB](https://www.themoviedb.org/) account for an API key
 - A Letterboxd username whose **watchlist is public** (or, failing that, an exported file)
 
+
 ## Installation
 
 ```bash
@@ -47,6 +47,7 @@ python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
+
 
 ## Configuration
 
@@ -63,6 +64,7 @@ pip install -r requirements.txt
    - Get a free TMDB key at [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api).
    - `COUNTRY` is the ISO 3166-1 alpha-2 code (e.g. `FR`, `US`, `GB`) — it must match a section
      in `platforms.toml`.
+
 
 ## Getting the watchlist
 
@@ -88,10 +90,12 @@ The script also auto-detects `watchlist*.csv` files (both `watchlist.csv` and
 script **does not crash**: it prints a one-step guide (copy-paste link), then **waits for
 you to press Enter**. Press `Ctrl+C` to cancel.
 
+
 ## Saved result
 
 On every run, a dated Markdown file is written to `Downloads`
 (e.g. `watchlist_2026-06-06.md`) so you can keep the result and avoid re-running it too often.
+
 
 ## Usage
 
@@ -105,6 +109,7 @@ cd ~/path_to_project_folder
 
 `run.sh` activates the project's virtualenv and launches the script — no need to activate
 `.venv` manually.
+
 
 ## How availability types are determined
 
@@ -121,6 +126,7 @@ The same provider can land in either section depending on the film, and a film c
 Free **and** Paid. The `buy` category (permanent purchase) is always excluded.
 
 > **Note:** TMDB does not expose expiry dates (the data comes from JustWatch's private API).
+
 
 ## Customising the platforms
 
@@ -154,13 +160,15 @@ Provider names must match TMDB's own naming (verified against
 `_ALL_PROVIDERS` in `watchlist_availability.py`, then add it to the country section in
 `platforms.toml`.
 
+
 ## Running the tests
 
 ```bash
-.venv/bin/python3.14 -m pytest tests/ -v
+.venv/bin/python -m pytest tests/ -v
 ```
 
 The tests are fully mocked — no real API key required.
+
 
 ## Project structure
 
@@ -177,9 +185,11 @@ watchlist-availability/
 └── README.md
 ```
 
+
 ## Acknowledgements
 
 Developed with the help of [Claude](https://claude.com/claude-code) (Anthropic).
+
 
 ## License
 
