@@ -66,14 +66,8 @@ Now           = false
 "Google Play" = false
 "Amazon VOD"  = false
 
-
 [DE]
-
-# ============================================================
 # Typically free / ad-supported
-# ============================================================
-
-
 
 # Public broadcasters
 "ARD Mediathek" = true

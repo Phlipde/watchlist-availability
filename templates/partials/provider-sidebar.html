@@ -1,0 +1,32 @@
+<aside id="provider-panel" class="rounded-3 shadow-sm provider-panel" aria-hidden="true">
+        <div id="provider-filters">
+          <div class="provider-heading"><h2 class="h4">Services</h2><span class="badge rounded-pill text-bg-secondary" id="provider-count"></span></div>
+          <div class="provider-search"><input class="form-control form-control-sm" id="provider-search" type="search" placeholder="Search providers..." aria-label="Search providers"><select class="form-select form-select-sm mt-2" id="provider-sort" aria-label="Provider sort"><option value="selected">Selected first</option><option value="count">Most available</option><option value="name">A-Z</option></select></div>
+          <p class="filter-help">Choose services to show films available on them. <strong>Any selected service</strong> matches at least one service; <strong>All selected services</strong> requires every selected service. Use reset to restore the configured defaults.</p>
+          <div class="provider-actions"><button class="btn btn-sm btn-outline-secondary" id="select-all-providers" type="button"><i class="ti ti-checks"></i> All</button><button class="btn btn-sm btn-outline-secondary" id="clear-providers" type="button"><i class="ti ti-square"></i> Clear</button><button class="btn btn-sm btn-outline-secondary" id="reset-providers" type="button"><i class="ti ti-refresh"></i> Reset defaults</button></div>
+          {% for group, subgroups in provider_groups %}
+            <section class="provider-group"><h3>{{ group }}</h3>
+            {% if group == 'Amazon Channels' %}
+              <details class="channel-dropdown">
+                <summary>Amazon Channels <span>({{ subgroups[0][1]|length }})</span></summary>
+                <div class="provider-list">
+                  {% for provider in subgroups[0][1] %}
+                    <label data-provider-label="{{ provider }}"><input type="checkbox" value="{{ provider }}" {% if provider in selected %}checked{% endif %}> <span class="provider-name">{{ provider }}</span>{% if provider in mostly_free_providers %}<span class="free-tag">Free</span>{% endif %}<span class="provider-film-count" data-provider-count="{{ provider }}">0</span></label>
+                  {% endfor %}
+                </div>
+              </details>
+            {% else %}
+              <div class="provider-list">
+                {% for subgroup, providers in subgroups %}
+                  {% for provider in providers %}
+                    <label data-provider-label="{{ provider }}"><input type="checkbox" value="{{ provider }}" {% if provider in selected %}checked{% endif %}> <span class="provider-name">{{ provider }}</span>{% if provider in mostly_free_providers %}<span class="free-tag">Free</span>{% endif %}<span class="provider-film-count" data-provider-count="{{ provider }}">0</span></label>
+                  {% endfor %}
+                {% endfor %}
+              </div>
+            {% endif %}
+            </section>
+          {% endfor %}
+          <label class="upload-label">Use CSV watchlist <input class="form-control form-control-sm mt-2" id="csv-upload" type="file" accept=".csv,text/csv"></label>
+          <p class="selection-note">Changing services only changes the visible films.</p>
+        </div>
+      </aside>

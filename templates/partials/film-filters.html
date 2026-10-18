@@ -1,0 +1,13 @@
+<div class="film-filters" id="film-filters" hidden aria-label="Film filters">
+          <input class="form-control form-control-sm" id="film-search" type="search" placeholder="Search films..." aria-label="Search films" value="{{ initial_filters.query }}">
+          <select class="form-select form-select-sm" id="availability-filter" aria-label="Availability"><option value="all">Free + Paid</option><option value="Free">Free</option><option value="Paid">Paid</option><option value="unavailable">Unavailable</option><option value="available">Available only</option></select>
+          <select class="form-select form-select-sm" id="kind-filter" aria-label="Offer type"><option value="all">Any offer type</option><option value="free">Free</option><option value="ads">With ads</option><option value="flatrate">Subscription</option><option value="rent">Rent</option></select>
+          <input class="form-control form-control-sm" id="year-from" type="number" placeholder="Year from" aria-label="Year from">
+          <input class="form-control form-control-sm" id="year-to" type="number" placeholder="Year to" aria-label="Year to">
+          <select class="form-select form-select-sm" id="min-rating" aria-label="Minimum TMDB rating"><option value="0">Any TMDB rating</option><option value="6">TMDB 6+</option><option value="7">TMDB 7+</option><option value="8">TMDB 8+</option><option value="9">TMDB 9+</option></select>
+          <select class="form-select form-select-sm" id="genre-filter" aria-label="Genre"><option value="all">All genres</option></select>
+          <select class="form-select form-select-sm" id="runtime-filter" aria-label="Runtime"><option value="all">Any runtime</option><option value="short">Under 90 min</option><option value="medium">90-120 min</option><option value="long">Over 120 min</option></select>
+          <select class="form-select form-select-sm" id="media-filter" aria-label="Media"><option value="all">Any media</option><option value="trailer">With trailer</option><option value="poster">With poster</option></select>
+          <select class="form-select form-select-sm" id="change-filter" aria-label="Availability changes"><option value="all">Any change</option><option value="added">Newly available</option><option value="removed">No longer available</option></select>
+          <select class="form-select form-select-sm" id="provider-count-filter" aria-label="Minimum providers"><option value="0">Any provider count</option><option value="2">2+ providers</option><option value="3">3+ providers</option><option value="4">4+ providers</option></select>
+        </div>

@@ -1,0 +1,11 @@
+.git
+.github
+.vscode
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.watchlist_cache.json
+.watchlist_latest.json
+.watchlist_favorites.sqlite3
+tests

@@ -126,11 +126,60 @@ collects the availability data for all known providers once. Provider selection,
 film search, Free/Paid, and year filters then only change the visible cards in the
 browser. The scan runs in the background with a progress bar, and films appear as
 soon as they are checked. Amazon Channels are grouped in a collapsible section.
-The web app also supports country switching, cached repeat scans, cancellation and
-retry, saved provider preferences, Any/All matching, sorting, statistics, film
+The web app also supports country switching, cached repeat scans, one active scan at
+a time, cancellation and retry, saved provider preferences, Any/All matching, sorting, statistics, film
 details, and JSON/CSV export.
+When rescanning, the current results stay visible until the new scan completes. You
+can optionally grey out films reported as unavailable during that rescan.
+The most recent successful result is restored immediately after a page reload while
+the next scan runs. Completed results are written atomically, and a finished rescan
+reports how many films became newly available or unavailable.
+The availability filter can show available films only, unavailable films only, or
+both. Completed rescans also list provider additions and removals on affected film
+cards and in the expandable scan summary.
+Inactive scans expire after 30 minutes so a stale background job cannot block the
+single-scan guard forever. Browser polling backs off when no progress is reported,
+and individual lookup failures are recorded while the rest of the watchlist
+continues scanning.
 The app uses the same Letterboxd fallback and TMDB logic as the CLI. The existing
 `run.sh` command remains available for terminal output.
+
+The web UI uses locally served, pinned Tabler Core assets with the existing
+Bootstrap-compatible component runtime. The custom theme and icon font are stored
+under `static/`, so the Docker deployment does not depend on a CDN for its UI.
+The frontend is split into Jinja partials under `templates/partials/`. Its browser
+behavior is loaded through the native ES module entry point
+`static/js/app.js`, with small `api.js`, `state.js`, `ui.js`, `filters.js`, and
+`rendering.js` modules keeping
+request handling, scan state, and presentation helpers separate. Template-only
+configuration is passed through `window.WATCHLIST_CONFIG`, so the JavaScript
+modules remain static and cacheable.
+Scan feedback and favorite helpers are also isolated in `scans.js` and
+`favorites.js`.
+Film cards are keyboard-accessible and open a unified details popout when clicked.
+The popout provides TMDB, trailer, and Letterboxd search actions. Provider filters
+and result cards remain side by side on larger screens, while the page uses a
+single document scroll instead of a nested provider scrollbar.
+The header also provides a persisted Desktop layout toggle for narrow browser
+windows or embedded previews. Offer-type badges, including their Tabler icons,
+are shown both on cards and in the film details popout.
+Each provider label also shows the number of unique available films for that
+provider. A film with multiple offer types at one provider is counted once;
+unavailable films are excluded. The provider panel is the primary filter: the
+Filters button opens it on narrow screens, and the panel explains the Any/All
+matching modes. Use **Reset defaults** to restore the providers enabled in the
+country configuration after using Clear or a shared URL with a different
+selection. Additional filters support trailers, posters, availability changes,
+and minimum provider counts. Filter selections, provider selections, sorting,
+and the favorites view are synchronized into the URL so filtered views can be
+shared and restored after reload.
+
+For Docker or Unraid, the included `Dockerfile` runs Gunicorn with one worker and
+stores runtime data below `/data`. The included `docker-compose.yml` maps that
+directory to `./data`; on Unraid, map it to a persistent appdata directory.
+`WATCHLIST_DATA_DIR`, `WATCHLIST_CACHE_PATH`, `WATCHLIST_LATEST_PATH`, and
+`WATCHLIST_FAVORITES_DB` can be overridden when separate persistent paths are
+preferred.
 
 `run.sh` activates the project's virtualenv and launches the script — no need to activate
 `.venv` manually.
@@ -199,7 +248,21 @@ The tests are fully mocked — no real API key required.
 
 ```
 watchlist-availability/
-├── watchlist_availability.py   # Main script (scraping + TMDB + rendering)
+├── watchlist_availability.py   # Compatibility facade and CLI entry point
+├── watchlist_app/
+│   ├── cli.py                   # Command-line orchestration
+│   ├── rendering.py             # Terminal, Markdown, and HTML output
+│   ├── config.py               # Environment and filesystem configuration
+│   ├── providers.py            # Provider definitions and TOML loading
+│   ├── letterboxd.py           # Letterboxd, CSV, and ZIP input loading
+│   ├── tmdb.py                 # TMDB API access and metadata caches
+│   └── results.py              # Availability result construction
+├── web/
+│   ├── routes.py                # Flask endpoint registration
+│   ├── cache.py                # JSON scan-result cache
+│   ├── favorites.py            # SQLite favorites persistence
+│   ├── scans.py                # Background scan coordination
+│   └── serialization.py        # Web API result/stat conversion
 ├── platforms.toml              # Streaming services selection (per country)
 ├── run.sh                      # Entry point (venv + script)
 ├── tests/

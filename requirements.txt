@@ -5,6 +5,7 @@ tqdm>=4.65
 python-dotenv>=1.0
 beautifulsoup4>=4.12
 Flask>=3.0
+gunicorn>=22.0
 
 # Dev / tests
 pytest>=7.4

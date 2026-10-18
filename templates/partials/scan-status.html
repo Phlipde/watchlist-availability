@@ -1,0 +1,9 @@
+<div class="progress-wrap" id="loading-panel">
+          <p class="feedback" id="status-message">Preparing your watchlist...</p>
+          <div class="scan-phase-line"><span id="scan-phase">Preparing</span><span id="scan-live-stats">0 checked · 0 available · 0 unavailable · 0 failed</span></div>
+          <div class="progress progress-track" role="progressbar" aria-label="Scan progress"><div class="progress-bar" id="progress-bar"></div></div>
+          <div class="progress-label"><span id="current-title">Starting scan</span><span id="progress-count">0%</span></div>
+          <div class="toolbar"><button class="btn btn-sm btn-outline-secondary" id="cancel-scan" type="button"><i class="ti ti-stop-circle"></i> Cancel scan</button><button class="btn btn-sm btn-accent" id="retry-scan" type="button" hidden><i class="ti ti-arrow-clockwise"></i> Retry scan</button><label><input id="grey-unavailable" type="checkbox"> Grey out films found unavailable</label></div>
+        </div>
+        <details class="scan-failures" id="scan-failures" hidden><summary><i class="ti ti-alert-triangle"></i> Failed lookups <span class="badge text-bg-danger" id="failed-count">0</span></summary><ul id="failed-list"></ul></details>
+        <p class="error" id="error-message" hidden></p>
