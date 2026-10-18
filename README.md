@@ -1,10 +1,8 @@
 # Watchlist Availability
+> Still under development, mostly vibecoded :)
+Automatically cross-references your **Letterboxd** watchlist with streaming provider availability via the **TMDB API** (data powered by JustWatch). Results are cleanly organized into **Free** (free or ad-supported) and **Paid** (subscription or rental) categories.
 
-Checks which films from your **Letterboxd** watchlist are streamable via the TMDB API. Results are grouped into two sections — **Free** (free or free-with-ads)
-and **Paid** (subscription or rental) — based on what TMDB reports for each film.
-
-The watchlist is **fetched automatically** from your public Letterboxd page — no manual
-export needed. An exported ZIP or CSV is still supported as a fallback.
+The script fetches your public Letterboxd watchlist page directly—no manual export required. If scraping is unavailable, local CSV or ZIP exports are supported as a fallback.
 
 ```console
 $ cd watchlist-availability
@@ -23,262 +21,232 @@ Checking streaming availability on TMDB: 100%|██████████| 12
 
 ---
 Netflix: 2 
-
 Canal+: 2
 
 Results saved: /Users/you/Downloads/watchlist_2026-06-06.md
+
 ```
 
 ---
 
 ## Requirements
 
-- Python 3.11+ (uses `tomllib` from the stdlib)
-- A free [TMDB](https://www.themoviedb.org/) account for an API key
-- A Letterboxd username whose **watchlist is public** (or, failing that, an exported file)
+* **Python 3.11+** (uses standard library `tomllib`)
+* A free [TMDB Account & API Key](https://www.themoviedb.org/)
+* A Letterboxd account with a **public watchlist** (or an exported ZIP/CSV file)
 
+---
 
 ## Installation
 
 ```bash
-git clone https://github.com/CorbeusUltra/watchlist-availability.git
+git clone [https://github.com/CorbeusUltra/watchlist-availability.git](https://github.com/CorbeusUltra/watchlist-availability.git)
 cd watchlist-availability
 python3 -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+source .venv/bin/activate        # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+
 ```
 
+---
 
 ## Configuration
 
-1. Copy the `.env.example` file:
-   ```bash
-   cp .env.example .env
-   ```
-2. Edit `.env`:
-   ```
-   TMDB_API_KEY=your_key_here
-   LETTERBOXD_USERNAME=your_username
-   COUNTRY=FR
-   ```
-   - Get a free TMDB key at [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api).
-   - `COUNTRY` is the ISO 3166-1 alpha-2 code (e.g. `FR`, `US`, `GB`) — it must match a section
-     in `platforms.toml`.
+1. Copy the example environment file:
+```bash
+cp .env.example .env
+
+```
 
 
-## Getting the watchlist
+2. Edit `.env` with your credentials and region:
+```ini
+TMDB_API_KEY=your_key_here
+LETTERBOXD_USERNAME=your_username
+COUNTRY=DE
 
-**Automatic (recommended).** Set `LETTERBOXD_USERNAME` in `.env`. The script reads your
-public watchlist directly (`letterboxd.com/<username>/watchlist/`), page by page, with a
-**progress bar**. No manual download. Your watchlist must be **public**.
-
-**Fallback — ZIP or CSV.** If scraping fails (private watchlist, outage) or
-`LETTERBOXD_USERNAME` is empty, the script falls back to an exported file:
-
-1. Sign in to [letterboxd.com](https://letterboxd.com) and go to:
-
-       https://letterboxd.com/data/export
-
-2. Drop the downloaded **ZIP** (or the extracted `watchlist.csv`) into `~/Downloads`.
-3. Press **Enter** in the terminal — the script extracts `watchlist.csv` from the ZIP
-   automatically and deletes the ZIP. No manual unzipping needed.
-
-The script also auto-detects `watchlist*.csv` files (both `watchlist.csv` and
-`watchlist-2024-06-01.csv` are accepted).
-
-**What happens on failure?** If scraping fails *and* nothing is found in `Downloads`, the
-script **does not crash**: it prints a one-step guide (copy-paste link), then **waits for
-you to press Enter**. Press `Ctrl+C` to cancel.
+```
 
 
-## Saved result
+* **TMDB Key:** Obtain a free API key at [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api).
+* **Country:** Set your ISO 3166-1 alpha-2 code (e.g., `FR`, `US`, `DE`). This must match a defined section in `platforms.toml`.
 
-On every run, a dated Markdown file is written to `Downloads`
-(e.g. `watchlist_2026-06-06.md`) so you can keep the result and avoid re-running it too often.
 
+
+---
+
+## Fetching the Watchlist
+
+* **Automatic (Recommended):** Set `LETTERBOXD_USERNAME` in `.env`. The application reads your public watchlist directly (`letterboxd.com/<username>/watchlist/`).
+* **Fallback (ZIP or CSV):** If `LETTERBOXD_USERNAME` is empty or scraping fails, place your exported `watchlist.csv` or `watchlist.zip` (from [letterboxd.com/data/export](https://letterboxd.com/data/export)) into `~/Downloads`. The script auto-detects `watchlist*.csv` and extracts ZIP files automatically.
+* **Failure Handling:** If scraping fails and no local export is detected, the script displays a direct download link and waits for manual input without crashing.
+
+---
 
 ## Usage
 
-The canonical entry point is **`run.sh`**. Make sure you are **in the project folder**
-first, then run it:
+### 1. Terminal Interface (CLI)
+
+Execute `run.sh` inside the project folder. It activates the virtual environment automatically:
 
 ```bash
-cd ~/path_to_project_folder
+cd watchlist-availability
 ./run.sh
+
 ```
 
-## Web app
+*A dated Markdown report (e.g., `watchlist_2026-06-06.md`) is saved to your `Downloads` folder upon completion.*
 
-Start the local web app to choose the streaming providers in the browser:
+---
+
+### 2. Interactive Web Application
+
+Launch the Flask web app to filter, search, and manage your watchlist visually:
 
 ```bash
+# macOS / Linux
 ./run_web.sh
-```
 
-Unter Windows PowerShell:
-
-```powershell
+# Windows (PowerShell)
 python app.py
+
 ```
 
-Open [http://127.0.0.1:5000](http://127.0.0.1:5000). On the initial page load, the app
-collects the availability data for all known providers once. Provider selection,
-film search, Free/Paid, and year filters then only change the visible cards in the
-browser. The scan runs in the background with a progress bar, and films appear as
-soon as they are checked. Amazon Channels are grouped in a collapsible section.
-The web app also supports country switching, cached repeat scans, one active scan at
-a time, cancellation and retry, saved provider preferences, Any/All matching, sorting, statistics, film
-details, and JSON/CSV export.
-When rescanning, the current results stay visible until the new scan completes. You
-can optionally grey out films reported as unavailable during that rescan.
-The most recent successful result is restored immediately after a page reload while
-the next scan runs. Completed results are written atomically, and a finished rescan
-reports how many films became newly available or unavailable.
-The availability filter can show available films only, unavailable films only, or
-both. Completed rescans also list provider additions and removals on affected film
-cards and in the expandable scan summary.
-Inactive scans expire after 30 minutes so a stale background job cannot block the
-single-scan guard forever. Browser polling backs off when no progress is reported,
-and individual lookup failures are recorded while the rest of the watchlist
-continues scanning.
-The app uses the same Letterboxd fallback and TMDB logic as the CLI. The existing
-`run.sh` command remains available for terminal output.
+Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
 
-The web UI uses locally served, pinned Tabler Core assets with the existing
-Bootstrap-compatible component runtime. The custom theme and icon font are stored
-under `static/`, so the Docker deployment does not depend on a CDN for its UI.
-The frontend is split into Jinja partials under `templates/partials/`. Its browser
-behavior is loaded through the native ES module entry point
-`static/js/app.js`, with small `api.js`, `state.js`, `ui.js`, `filters.js`, and
-`rendering.js` modules keeping
-request handling, scan state, and presentation helpers separate. Template-only
-configuration is passed through `window.WATCHLIST_CONFIG`, so the JavaScript
-modules remain static and cacheable.
-Scan feedback and favorite helpers are also isolated in `scans.js` and
-`favorites.js`.
-Film cards are keyboard-accessible and open a unified details popout when clicked.
-The popout provides TMDB, trailer, and Letterboxd search actions. Provider filters
-and result cards remain side by side on larger screens, while the page uses a
-single document scroll instead of a nested provider scrollbar.
-The header also provides a persisted Desktop layout toggle for narrow browser
-windows or embedded previews. Offer-type badges, including their Tabler icons,
-are shown both on cards and in the film details popout.
-Each provider label also shows the number of unique available films for that
-provider. A film with multiple offer types at one provider is counted once;
-unavailable films are excluded. The provider panel is the primary filter: the
-Filters button opens it on narrow screens, and the panel explains the Any/All
-matching modes. Use **Reset defaults** to restore the providers enabled in the
-country configuration after using Clear or a shared URL with a different
-selection. Additional filters support trailers, posters, availability changes,
-and minimum provider counts. Filter selections, provider selections, sorting,
-and the favorites view are synchronized into the URL so filtered views can be
-shared and restored after reload.
+#### Web Features
 
-For Docker or Unraid, the included `Dockerfile` runs Gunicorn with one worker and
-stores runtime data below `/data`. The included `docker-compose.yml` maps that
-directory to `./data`; on Unraid, map it to a persistent appdata directory.
-`WATCHLIST_DATA_DIR`, `WATCHLIST_CACHE_PATH`, `WATCHLIST_LATEST_PATH`, and
-`WATCHLIST_FAVORITES_DB` can be overridden when separate persistent paths are
-preferred.
+* **Progressive Scans & Caching:** Scans execute in the background with progressive card loading. The app caches results locally and restores previous state on reload.
+* **Filtering & Search:** Dynamic filtering by Provider, Free/Paid offer types, release year, trailer availability, poster availability, and minimum provider counts.
+* **Any / All Provider Modes:** Toggle between showing films available on *any* selected service vs. *all* selected services.
+* **Delta Tracking:** Rescans highlight provider additions and removals on film cards and summary panels.
+* **Favorites & Deep Links:** Persistent SQLite favorites, detailed modal popouts (trailers, TMDB links, Letterboxd search), and URL-synced search filter states.
+* **Bundled Assets:** Native Tabler Core UI components hosted under `static/` with zero CDN dependencies.
 
-`run.sh` activates the project's virtualenv and launches the script — no need to activate
-`.venv` manually.
+---
 
+### 3. Docker & Self-Hosting (Unraid)
 
-## How availability types are determined
+Deploy the application using the included Docker configuration:
 
-There are just two sections, detected **automatically, per film**, from TMDB's real
-monetization for that film on each provider (data sourced from JustWatch):
+```bash
+docker-compose up -d
 
-| Section | A ✓ appears when TMDB lists the film on the provider as… |
-|---|---|
-| **Free** | `free` or `ads` (watchable at no cost, possibly with ads) |
-| **Paid** | `flatrate` (subscription) or `rent` (rental) |
+```
 
-The same provider can land in either section depending on the film, and a film can appear in
-**both** at once — e.g. M6+ offering a film free-with-ads *and* by subscription puts it under
-Free **and** Paid. The `buy` category (permanent purchase) is always excluded.
+#### Persistent Path Environment Variables
 
-> **Note:** TMDB does not expose expiry dates (the data comes from JustWatch's private API).
+Data is stored inside `/data` in the container. Map this directory to an appdata folder on host environments (like Unraid):
 
+| Variable | Default Path | Purpose |
+| --- | --- | --- |
+| `WATCHLIST_DATA_DIR` | App root directory | Base directory for runtime databases and caches |
+| `WATCHLIST_CACHE_PATH` | `<DATA_DIR>/.watchlist_cache.json` | Persistent TMDB lookup cache |
+| `WATCHLIST_LATEST_PATH` | `<DATA_DIR>/.watchlist_latest.json` | State of the most recent completed scan |
+| `WATCHLIST_FAVORITES_DB` | `<DATA_DIR>/.watchlist_favorites.sqlite3` | SQLite database storing favorited movies |
 
-## Customising the platforms
+---
 
-`platforms.toml` only chooses **which** platforms to check (`true`/`false`) — it does **not**
-decide their section (that comes from TMDB, per film). The country is matched by the `COUNTRY`
-setting in `.env`; each provider is a flat `true`/`false` toggle, grouped by comments for
-readability only:
+## Provider Classification Logic
+
+Monetization categories are mapped dynamically per film based on TMDB / JustWatch data:
+
+| Section | A checkmark (✓) appears when TMDB reports the offer as… |
+| --- | --- |
+| **Free** | `free` or `ads` (free streaming, ad-supported streaming) |
+| **Paid** | `flatrate` (subscription) or `rent` (rental purchase) |
+
+* **Note:** Permanent purchases (`buy`) are excluded. If a service offers a film under both free-with-ads and subscription models, it appears in both sections.
+
+---
+
+## Customizing Platforms (`platforms.toml`)
+
+`platforms.toml` configures which providers to check for your active region:
 
 ```toml
 [FR]
-# Typically free / ad-supported
-Arte          = true
-Molotov       = false
-# Typically paid — subscription or rental
-Netflix       = true
-"Canal+"      = true
-"TF1+"        = true
-"M6+"         = false
-"Canal VOD"   = false
-"Google Play" = false
+# Free / Ad-supported
+Arte         = true
+Molotov      = false
+
+# Paid / Subscription
+Netflix      = true
+"Canal+"     = true
+"TF1+"       = true
 
 [US]
-Netflix       = true
+Netflix      = true
 "Prime Video" = true
-"Disney+"     = true
-Hulu          = false
+"Disney+"    = true
+Hulu         = false
+
 ```
 
-Provider names must match TMDB's own naming (verified against
-`GET /watch/providers/movie?watch_region=<COUNTRY>`). To add a service not listed, extend
-`_ALL_PROVIDERS` in `watchlist_availability.py`, then add it to the country section in
-`platforms.toml`.
+> **Note:** Provider names must match TMDB's exact regional provider names (`GET /watch/providers/movie?watch_region=<COUNTRY>`).
 
+---
 
-## Running the tests
+## Running Tests
+
+Execute the automated `pytest` test suite:
 
 ```bash
+# macOS / Linux
 .venv/bin/python -m pytest tests/ -v
-```
 
-The tests are fully mocked — no real API key required.
-
-
-## Project structure
+# Windows (PowerShell)
+.venv\Scripts\python.exe -m pytest tests\ -v
 
 ```
+
+*All API calls and network requests in the test suite are fully mocked.*
+
+---
+
+## Project Structure
+
+```text
 watchlist-availability/
 ├── watchlist_availability.py   # Compatibility facade and CLI entry point
-├── watchlist_app/
-│   ├── cli.py                   # Command-line orchestration
-│   ├── rendering.py             # Terminal, Markdown, and HTML output
-│   ├── config.py               # Environment and filesystem configuration
-│   ├── providers.py            # Provider definitions and TOML loading
-│   ├── letterboxd.py           # Letterboxd, CSV, and ZIP input loading
-│   ├── tmdb.py                 # TMDB API access and metadata caches
-│   └── results.py              # Availability result construction
-├── web/
-│   ├── routes.py                # Flask endpoint registration
-│   ├── cache.py                # JSON scan-result cache
-│   ├── favorites.py            # SQLite favorites persistence
+├── app.py                      # Flask web application entry point
+├── watchlist_app/              # Core application logic & ingestion
+│   ├── cli.py                  # CLI orchestration
+│   ├── config.py               # Path and environment settings
+│   ├── letterboxd.py           # Web scraping, CSV, and ZIP loading
+│   ├── providers.py            # TOML provider definition loader
+│   ├── rendering.py            # Console, Markdown, and HTML formatters
+│   ├── results.py              # Streaming availability builder
+│   └── tmdb.py                 # TMDB API access and caching
+├── web/                        # Web app modules
+│   ├── cache.py                # JSON scan cache management
+│   ├── favorites.py            # SQLite favorites database
+│   ├── routes.py               # Flask endpoint definitions
 │   ├── scans.py                # Background scan coordination
-│   └── serialization.py        # Web API result/stat conversion
-├── platforms.toml              # Streaming services selection (per country)
-├── run.sh                      # Entry point (venv + script)
-├── tests/
-│   └── test_watchlist.py       # pytest suite (fully mocked)
-├── .env.example                # Configuration template
-├── .gitignore
-├── requirements.txt
-└── README.md
+│   └── serialization.py        # Web API response converters
+├── static/                     # Bundled frontend scripts and stylesheets
+├── templates/                  # Jinja2 templates and UI partials
+├── platforms.toml              # Regional streaming provider toggles
+├── run.sh                      # CLI launch script
+├── run_web.sh                  # Web server launch script
+├── Dockerfile                  # Production container build definition
+├── docker-compose.yml          # Docker Compose orchestration
+└── tests/                      # Automated unit test suite
+
 ```
 
+---
 
 ## Acknowledgements
 
-Developed with the help of [Claude](https://claude.com/claude-code) (Anthropic).
+Developed with the assistance of [Claude Code](https://claude.com/claude-code) (Anthropic) and [GitHub Copilot](https://github.com/features/copilot) (GitHub / Microsoft).
 
+---
 
 ## License
 
-MIT
+[MIT](https://www.google.com/search?q=LICENSE)
+
+```
+
+```

@@ -1,5 +1,8 @@
 # Clé API et secrets
 .env
+.vscode/
+.github/
+.continue/
 
 # Python
 __pycache__/
