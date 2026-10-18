@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Watchlist Availability</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    :root { color-scheme: dark; font-family: Georgia, serif; --ink: #f5f1e8; --muted: #a9a397; --line: #3b403d; --accent: #e8b86b; --panel: #1b211f; --bg: #101412; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: radial-gradient(circle at top right, #29352e, var(--bg) 46%); color: var(--ink); }
+    main { max-width: 1440px; margin: auto; padding: 42px 24px 72px; }
+    header { display: flex; justify-content: space-between; gap: 24px; align-items: end; border-bottom: 1px solid var(--line); padding-bottom: 24px; }
+    h1 { font-size: clamp(2.4rem, 6vw, 5.5rem); line-height: .9; font-weight: 400; margin: 0; max-width: 680px; }
+    h2 { font-size: 2rem; font-weight: 400; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+    h3 { color: var(--accent); font: .9rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: .08em; margin: 22px 0 10px; }
+    h3.subgroup { color: var(--muted); font-size: .75rem; margin-top: 16px; }
+    .channel-dropdown { margin-top: 18px; border: 1px solid var(--line); background: #151a18; }
+    .channel-dropdown summary { padding: 11px 12px; color: var(--accent); font: .78rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: .06em; cursor: pointer; list-style: none; }
+    .channel-dropdown summary::-webkit-details-marker { display: none; }
+    .channel-dropdown summary::before { content: '+'; display: inline-block; width: 18px; color: var(--muted); }
+    .channel-dropdown[open] summary::before { content: '-'; }
+    .channel-dropdown summary span { color: var(--muted); }
+    .channel-dropdown .provider-list { margin: 0 12px 14px; max-height: 280px; overflow-y: auto; }
+    .intro, .meta { color: var(--muted); max-width: 520px; line-height: 1.5; }
+    .workspace { display: grid; grid-template-columns: 300px 1fr; gap: 42px; margin-top: 36px; }
+    aside { position: sticky; top: 16px; align-self: start; max-height: calc(100vh - 32px); overflow-y: auto; background: rgba(27,33,31,.9); border: 1px solid var(--line); padding: 22px; }
+    .provider-list { display: grid; gap: 7px; padding-left: 12px; border-left: 1px solid var(--line); }
+    label { display: flex; gap: 9px; align-items: center; color: #d9d3c7; font: .92rem system-ui, sans-serif; cursor: pointer; }
+    input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; }
+    .selection-note, .feedback { margin: 24px 0 0; color: var(--muted); font: .78rem/1.4 system-ui, sans-serif; }
+    .feedback { margin: 0 0 12px; min-height: 1.2em; }
+    .toolbar, .stats { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; margin: 14px 0; }
+    .toolbar select, .toolbar button { cursor: pointer; }
+    .stats { color: var(--muted); font: .8rem system-ui, sans-serif; }
+    .stats strong { color: var(--ink); }
+    .coverage { display: grid; gap: 6px; margin: 12px 0 20px; }
+    .coverage-row { display: grid; grid-template-columns: 130px 1fr 38px; gap: 8px; align-items: center; color: var(--muted); font: .75rem system-ui, sans-serif; }
+    .coverage-row .progress { height: 7px; background: #303733; }
+    .film-details { margin-top: 10px; color: var(--muted); font: .78rem/1.4 system-ui, sans-serif; }
+    .film-details summary { color: var(--accent); cursor: pointer; }
+    .unavailable { opacity: .78; }
+    .unavailable-card { filter: grayscale(1); opacity: .58; background: #151a18 !important; }
+    .unavailable-card .film-info { color: #89938b; }
+    .provider-search { margin: 12px 0 16px; }
+    .provider-search input { width: 100%; }
+    .share-message { color: var(--muted); font: .78rem system-ui, sans-serif; }
+    .favorite { border: 2px solid var(--accent); border-radius: 50%; background: rgba(16,20,18,.88); color: var(--accent); font-size: 1.55rem; line-height: 1; cursor: pointer; padding: 5px 8px 7px; box-shadow: 0 3px 12px rgba(0,0,0,.45); }
+    .poster { position: relative; }
+    .poster > .favorite { position: absolute; top: 10px; right: 10px; z-index: 2; }
+    .poster > .favorite[data-favorite="true"] { background: var(--accent); color: #17140f; }
+    .film-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+    .favorite-status, .favorite-note { min-width: 0; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: .72rem system-ui, sans-serif; padding: 4px; }
+    .favorite-note { flex: 1; }
+    .progress-wrap { margin: 20px 0 36px; }
+    .progress-track { height: 8px; overflow: hidden; background: #303733; border: 1px solid var(--line); }
+    .progress-bar { width: 0%; height: 100%; background: var(--accent); transition: width .25s ease; }
+    .progress-label { display: flex; justify-content: space-between; gap: 14px; margin-top: 8px; color: var(--muted); font: .78rem system-ui, sans-serif; }
+    .error { border: 1px solid #a85c4d; background: #3b211e; padding: 14px; color: #ffd7ce; font-family: system-ui, sans-serif; }
+    .film-filters { display: grid; grid-template-columns: minmax(180px, 2fr) repeat(3, minmax(110px, 1fr)); gap: 9px; margin: 24px 0 30px; }
+    .film-filters input, .film-filters select { width: 100%; padding: 10px 11px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: .85rem system-ui, sans-serif; }
+    .films { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 18px; }
+    .film { background: var(--panel); border: 1px solid var(--line); border-radius: .5rem; overflow: hidden; }
+    .poster { aspect-ratio: 2 / 3; background: #303733; }
+    .poster img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .no-poster { height: 100%; display: grid; place-items: center; padding: 16px; color: var(--muted); text-align: center; font-family: system-ui, sans-serif; }
+    .film-info { padding: 13px; }
+    .film-title { margin: 0 0 5px; font-size: 1.05rem; }
+    .year, .providers { color: var(--muted); font: .82rem system-ui, sans-serif; }
+    .providers { margin: 9px 0 0; color: var(--accent); }
+    .empty { color: var(--muted); font-family: system-ui, sans-serif; }
+    .btn-accent { --bs-btn-color: #17140f; --bs-btn-bg: var(--accent); --bs-btn-border-color: var(--accent); --bs-btn-hover-color: #17140f; --bs-btn-hover-bg: #f4cf91; --bs-btn-hover-border-color: #f4cf91; }
+    .provider-badge { background: rgba(232,184,107,.14); color: var(--accent); font: .72rem system-ui, sans-serif; }
+    .form-control, .form-select, .favorite-status, .favorite-note { background-color: #18201c !important; border-color: #4a554e !important; color: var(--ink) !important; }
+    .form-control::placeholder, .favorite-note::placeholder { color: #8f9b92 !important; }
+    .form-select option { background: #18201c; color: var(--ink); }
+    .btn-outline-secondary { --bs-btn-color: #d5ddd6; --bs-btn-border-color: #59655d; --bs-btn-hover-color: #101412; --bs-btn-hover-bg: #c9d2cb; --bs-btn-hover-border-color: #c9d2cb; }
+    .toast { background: #18201c !important; border: 1px solid #59655d !important; color: var(--ink) !important; }
+    .modal-content { background: #18201c !important; color: var(--ink); border: 1px solid #59655d; }
+    .table-dark { --bs-table-bg: #18201c; --bs-table-color: var(--ink); --bs-table-border-color: #435047; }
+    .progress-track { background-color: #27332c !important; }
+    .analysis-item, .film, .skeleton-card, aside, .channel-dropdown { background-color: #18201c; border-color: #435047; }
+    .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px; margin: -18px 0 18px; }
+    .filter-chip { border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; background: rgba(232,184,107,.1); color: var(--accent); font: .72rem system-ui, sans-serif; cursor: pointer; }
+    .analysis-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin: 14px 0 20px; }
+    .analysis-item { padding: 10px 12px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font: .76rem system-ui, sans-serif; }
+    .comparison-check { position: absolute; top: 12px; left: 12px; z-index: 3; width: 19px; height: 19px; accent-color: var(--accent); }
+    .skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 18px; }
+    .skeleton-card { overflow: hidden; border-radius: .5rem; background: var(--panel); }
+    .skeleton-poster { aspect-ratio: 2 / 3; background: #252d29; }
+    .skeleton-line { height: 12px; margin: 13px; border-radius: 4px; background: #303a34; }
+    @media (max-width: 800px) {
+      main { padding: 24px 14px 48px; }
+      header { display: block; padding-bottom: 18px; }
+      h1 { font-size: clamp(2.4rem, 15vw, 4rem); margin-bottom: 18px; }
+      .intro { font-size: .9rem; }
+      .workspace { display: block; margin-top: 20px; }
+      aside { position: static; max-height: none; margin-bottom: 24px; padding: 16px; }
+      aside h3 { margin-top: 16px; }
+      .provider-list { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-left: 8px; gap: 8px 6px; }
+      label { min-width: 0; font-size: .78rem; line-height: 1.2; overflow-wrap: anywhere; }
+      .channel-dropdown .provider-list { grid-template-columns: 1fr; max-height: 220px; }
+      .upload-label { display: block; margin-top: 18px; }
+      .progress-label { font-size: .7rem; }
+      .toolbar { gap: 6px; }
+      .toolbar > * { max-width: 100%; }
+      .toolbar select { flex: 1 1 145px; min-width: 0; }
+      .toolbar button { flex: 1 1 auto; white-space: normal; }
+      .film-filters { grid-template-columns: 1fr 1fr; gap: 7px; margin: 16px 0 22px; }
+      .film-filters input[type=search] { grid-column: 1 / -1; }
+      .film-filters label { grid-column: 1 / -1; }
+      .films, .skeleton-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .film-info { padding: 9px; }
+      .film-title { font-size: .9rem; overflow-wrap: anywhere; }
+      .year, .providers { font-size: .7rem; }
+      .provider-badge { font-size: .62rem; max-width: 100%; white-space: normal; }
+      .favorite { font-size: 1.25rem; padding: 4px 7px 6px; }
+      .film-actions { display: grid; grid-template-columns: 1fr; gap: 5px; }
+      .favorite-note, .favorite-status { width: 100%; }
+      .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; font-size: .72rem; }
+      .analysis-panel { grid-template-columns: 1fr 1fr; gap: 6px; }
+      .analysis-item { min-width: 0; overflow-wrap: anywhere; padding: 8px; font-size: .7rem; }
+      .coverage-row { grid-template-columns: 90px 1fr 28px; gap: 5px; font-size: .68rem; }
+      .comparison-check { top: 8px; left: 8px; }
+      .poster > .favorite { top: 7px; right: 7px; }
+    }
+    @media (max-width: 380px) {
+      .provider-list { grid-template-columns: 1fr; }
+      .films, .skeleton-grid { gap: 8px; }
+      .film-filters { grid-template-columns: 1fr; }
+      .film-filters input[type=search], .film-filters label { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div><p class="meta">WATCHLIST AVAILABILITY · <select id="country-select" aria-label="Country" style="background:transparent;color:var(--accent);border:0;font:inherit"><option value="FR" {% if country == 'FR' %}selected{% endif %}>FR</option><option value="DE" {% if country == 'DE' %}selected{% endif %}>DE</option><option value="US" {% if country == 'US' %}selected{% endif %}>US</option><option value="GB" {% if country == 'GB' %}selected{% endif %}>GB</option></select></p><h1>Find your next film.</h1></div>
+      <p class="intro">The watchlist loads in the background. Films appear as soon as they are checked, while every filter updates instantly without another request.</p>
+    </header>
+    <div class="workspace">
+      <aside class="rounded-3 shadow-sm">
+        <div id="provider-filters">
+          <h2 class="h4">Services</h2>
+          <div class="provider-search"><input class="form-control form-control-sm" id="provider-search" type="search" placeholder="Search providers..." aria-label="Search providers"></div>
+          {% for group, subgroups in provider_groups %}
+            <h3>{{ group }}</h3>
+            {% for subgroup, providers in subgroups %}
+              {% if subgroup == 'Amazon Channels' %}
+                <details class="channel-dropdown">
+                  <summary>{{ subgroup }} <span>({{ providers|length }})</span></summary>
+                  <div class="provider-list">
+                    {% for provider in providers %}
+                      <label><input type="checkbox" value="{{ provider }}" {% if provider in selected %}checked{% endif %}> {{ provider }}</label>
+                    {% endfor %}
+                  </div>
+                </details>
+              {% else %}
+                <h3 class="subgroup">{{ subgroup }}</h3>
+                <div class="provider-list">
+                  {% for provider in providers %}
+                    <label><input type="checkbox" value="{{ provider }}" {% if provider in selected %}checked{% endif %}> {{ provider }}</label>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+          <label class="upload-label">Use CSV watchlist <input class="form-control form-control-sm mt-2" id="csv-upload" type="file" accept=".csv,text/csv"></label>
+          <p class="selection-note">Changing services only changes the visible films.</p>
+        </div>
+      </aside>
+      <section>
+        <div class="progress-wrap" id="loading-panel">
+          <p class="feedback" id="status-message">Preparing your watchlist...</p>
+          <div class="progress progress-track" role="progressbar" aria-label="Scan progress"><div class="progress-bar" id="progress-bar"></div></div>
+          <div class="progress-label"><span id="current-title">Starting scan</span><span id="progress-count">0%</span></div>
+          <div class="toolbar"><button class="btn btn-sm btn-outline-secondary" id="cancel-scan" type="button"><i class="bi bi-stop-circle"></i> Cancel scan</button><button class="btn btn-sm btn-accent" id="retry-scan" type="button" hidden><i class="bi bi-arrow-clockwise"></i> Retry scan</button></div>
+        </div>
+        <p class="error" id="error-message" hidden></p>
+        <p class="meta" id="result-meta" hidden><span id="visible-count">0</span> films available · <span id="source-name"></span></p>
+        <section class="mb-4" id="stats-section" hidden><div class="d-flex justify-content-between align-items-center"><h2 class="h4">Statistics</h2><select class="form-select form-select-sm w-auto" id="stats-scope" aria-label="Statistics scope"><option value="all">All providers</option><option value="selected">Selected providers</option></select></div><div class="stats" id="stats"><span><strong id="total-count">0</strong> films</span><span><strong id="free-count">0</strong> free</span><span><strong id="paid-count">0</strong> paid</span><span><strong id="unavailable-count">0</strong> unavailable</span><span><strong id="coverage-percent">0%</strong> covered</span><span><strong id="average-providers">0</strong> providers/film</span><span>Top provider: <strong id="top-provider">-</strong></span></div><div class="analysis-panel" id="analysis-panel"><div class="analysis-item">Top genre: <strong id="top-genre">-</strong></div><div class="analysis-item">Average rating: <strong id="average-rating">-</strong></div><div class="analysis-item">Average runtime: <strong id="average-runtime">-</strong></div><div class="analysis-item">Decades: <strong id="decades">-</strong></div></div><div class="coverage" id="coverage" aria-label="Provider coverage"></div></section>
+        <div class="toolbar" id="result-tools" hidden><select class="form-select form-select-sm w-auto" id="match-mode" aria-label="Match mode"><option value="any">Any selected service</option><option value="all">All selected services</option></select><select class="form-select form-select-sm w-auto" id="sort-order" aria-label="Sort order"><option value="title">Sort: title</option><option value="year-desc">Sort: newest</option><option value="year-asc">Sort: oldest</option><option value="rating">Sort: rating</option></select><button class="btn btn-sm btn-outline-secondary" id="random-film" type="button"><i class="bi bi-shuffle"></i> Random</button><button class="btn btn-sm btn-outline-secondary" id="compare-films" type="button"><i class="bi bi-columns-gap"></i> Compare</button><button class="btn btn-sm btn-accent" id="favorites-view" type="button"><i class="bi bi-star-fill"></i> My favorites</button><button class="btn btn-sm btn-outline-secondary" id="export-favorites" type="button"><i class="bi bi-star"></i> Favorites CSV</button><button class="btn btn-sm btn-outline-secondary" id="export-json" type="button"><i class="bi bi-download"></i> JSON</button><button class="btn btn-sm btn-outline-secondary" id="export-csv" type="button"><i class="bi bi-filetype-csv"></i> CSV</button><button class="btn btn-sm btn-accent" id="share-button" type="button"><i class="bi bi-link-45deg"></i> Share</button><span class="share-message" id="share-message"></span></div>
+        <div class="film-filters" id="film-filters" hidden aria-label="Film filters">
+          <input class="form-control form-control-sm" id="film-search" type="search" placeholder="Search films..." aria-label="Search films" value="{{ initial_filters.query }}">
+          <select class="form-select form-select-sm" id="availability-filter" aria-label="Availability"><option value="all">Free + Paid</option><option value="Free">Free</option><option value="Paid">Paid</option></select>
+          <select class="form-select form-select-sm" id="kind-filter" aria-label="Offer type"><option value="all">Any offer type</option><option value="free">Free</option><option value="ads">With ads</option><option value="flatrate">Subscription</option><option value="rent">Rent</option></select>
+          <input class="form-control form-control-sm" id="year-from" type="number" placeholder="Year from" aria-label="Year from">
+          <input class="form-control form-control-sm" id="year-to" type="number" placeholder="Year to" aria-label="Year to">
+          <select id="min-rating" aria-label="Minimum TMDB rating"><option value="0">Any TMDB rating</option><option value="6">TMDB 6+</option><option value="7">TMDB 7+</option><option value="8">TMDB 8+</option><option value="9">TMDB 9+</option></select>
+          <select class="form-select form-select-sm" id="genre-filter" aria-label="Genre"><option value="all">All genres</option></select>
+          <select class="form-select form-select-sm" id="runtime-filter" aria-label="Runtime"><option value="all">Any runtime</option><option value="short">Under 90 min</option><option value="medium">90-120 min</option><option value="long">Over 120 min</option></select>
+        </div>
+        <div class="filter-chips" id="filter-chips" aria-label="Active filters"></div>
+        <div id="results"><div class="skeleton-grid" aria-label="Loading films"><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div></div></div>
+        <details class="unavailable mt-4" id="unavailable-panel" hidden><summary class="h5">Not currently available <span class="badge text-bg-secondary" id="unavailable-badge">0</span></summary><div id="unavailable-results" class="films mt-3"></div></details>
+      </section>
+    </div>
+  </main>
+  <div class="toast-container position-fixed bottom-0 end-0 p-3"><div id="app-toast" class="toast" role="status" aria-live="polite"><div class="toast-body" id="toast-message"></div></div></div>
+  <div class="modal fade" id="trailer-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content bg-dark"><div class="modal-header border-secondary"><h5 class="modal-title">Trailer</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body p-0"><div class="ratio ratio-16x9"><iframe id="trailer-frame" src="" title="Movie trailer" allowfullscreen></iframe></div></div></div></div></div>
+  <div class="modal fade" id="compare-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content bg-dark"><div class="modal-header border-secondary"><h5 class="modal-title">Film comparison</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><div class="table-responsive"><table class="table table-dark align-middle" id="compare-table"></table></div></div></div></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const imageBaseUrl = {{ image_base_url|tojson }};
+    const providerInputs = document.querySelectorAll('#provider-filters input[type="checkbox"]');
+    const results = document.getElementById('results');
+    const seen = new Set();
+    let allFilms = [];
+    let unavailableFilms = [];
+    let favoriteKeys = new Set();
+    let favoriteData = new Map();
+    let favoritesOnly = false;
+    let rescanInProgress = false;
+    let pendingResults = [];
+    let pendingUnavailable = [];
+    let currentJob;
+    const toast = window.bootstrap ? bootstrap.Toast.getOrCreateInstance(document.getElementById('app-toast'), {delay: 2400}) : {show() {}};
+    function showToast(message) { document.getElementById('toast-message').textContent = message; toast.show(); }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;'}[char]));
+    }
+    function filmCard(film, section) {
+      const providers = Object.entries(film.providers).filter(([, kinds]) => section === 'Free' ? kinds.some(kind => ['free', 'ads'].includes(kind)) : kinds.some(kind => ['flatrate', 'rent'].includes(kind))).map(([name]) => name);
+      if (!providers.length) return '';
+      const poster = film.poster_path ? `<img src="${imageBaseUrl}${escapeHtml(film.poster_path)}" alt="Poster for ${escapeHtml(film.title)}" loading="lazy">` : '<div class="no-poster">No poster available</div>';
+      const rating = film.rating ? `TMDB ${Number(film.rating).toFixed(1)}/10` : 'No rating';
+      const key = `${film.title}|${film.year}`;
+      const trailerId = film.trailer_url ? new URL(film.trailer_url).searchParams.get('v') : null;
+      const links = `${film.tmdb_url ? `<a href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer">TMDB</a>` : ''}${trailerId ? ` · <button class="btn btn-link btn-sm p-0 trailer-link" data-trailer="${escapeHtml(trailerId)}" type="button">Trailer</button>` : ''}`;
+      const kinds = [...new Set(Object.values(film.providers).flat())];
+      const favorite = favoriteKeys.has(key);
+      const savedFavorite = favoriteData.get(key) || {};
+      const providerBadges = providers.map(provider => `<span class="badge rounded-pill provider-badge me-1 mb-1" data-provider="${escapeHtml(provider)}">${escapeHtml(provider)}</span>`).join('');
+      const favoriteButton = `<button class="favorite" type="button" aria-label="Favorite" data-favorite="${favorite ? 'true' : 'false'}">${favorite ? '★' : '☆'}</button>`;
+      return `<article class="film" data-key="${escapeHtml(key)}" data-title="${escapeHtml(film.title.toLowerCase())}" data-year="${film.year ?? ''}" data-rating="${film.rating ?? 0}" data-runtime="${film.runtime ?? 0}" data-genres="${escapeHtml((film.genres || []).join('|'))}" data-kinds="${escapeHtml(kinds.join('|'))}" data-section="${section}" data-providers="${escapeHtml(providers.join('|'))}"><div class="poster"><input class="comparison-check" type="checkbox" aria-label="Compare ${escapeHtml(film.title)}">${poster}${favoriteButton}</div><div class="film-info"><p class="film-title">${escapeHtml(film.title)}</p><span class="year">${film.year ?? 'Year unknown'} · ${rating}${film.runtime ? ` · ${film.runtime} min` : ''}</span><p class="providers">${providerBadges}</p><details class="film-details"><summary>Details</summary><p>${escapeHtml(film.overview || 'No description available.')}</p><p>${escapeHtml((film.genres || []).join(', '))}</p><p>${links}</p></details><div class="film-actions"><select class="favorite-status" aria-label="Favorite status" ${favorite ? '' : 'hidden'}><option value="plan" ${savedFavorite.status === 'plan' ? 'selected' : ''}>Plan</option><option value="watching" ${savedFavorite.status === 'watching' ? 'selected' : ''}>Watching</option><option value="watched" ${savedFavorite.status === 'watched' ? 'selected' : ''}>Watched</option></select><input class="favorite-note" aria-label="Favorite note" placeholder="Note" value="${escapeHtml(savedFavorite.notes || '')}" ${favorite ? '' : 'hidden'}></div></div></article>`;
+    }
+    function renderFilms() {
+      const selected = new Set([...providerInputs].filter(input => input.checked).map(input => input.value));
+      const query = document.getElementById('film-search').value.toLowerCase().trim();
+      const availability = document.getElementById('availability-filter').value;
+      const kind = document.getElementById('kind-filter').value;
+      const minRating = Number(document.getElementById('min-rating').value) || 0;
+      const genre = document.getElementById('genre-filter').value;
+      const runtime = document.getElementById('runtime-filter').value;
+      const mode = document.getElementById('match-mode').value;
+      const from = Number(document.getElementById('year-from').value) || 0;
+      const to = Number(document.getElementById('year-to').value) || 9999;
+      const cards = document.querySelectorAll('.film');
+      let visible = 0;
+      cards.forEach(card => {
+        const providers = card.dataset.providers.split('|');
+        const providerMatch = mode === 'all' ? selected.size > 0 && [...selected].every(provider => providers.includes(provider)) : [...selected].some(provider => providers.includes(provider));
+          const isUnavailable = card.dataset.section === 'Unavailable';
+          const minutes = Number(card.dataset.runtime) || 0;
+          const runtimeMatch = runtime === 'all' || (runtime === 'short' && minutes > 0 && minutes < 90) || (runtime === 'medium' && minutes >= 90 && minutes <= 120) || (runtime === 'long' && minutes > 120);
+          const show = (isUnavailable || providerMatch) && (!favoritesOnly || favoriteKeys.has(card.dataset.key)) && card.dataset.title.includes(query) && (availability === 'all' || card.dataset.section === availability) && (kind === 'all' || card.dataset.kinds.split('|').includes(kind)) && (genre === 'all' || card.dataset.genres.split('|').includes(genre)) && runtimeMatch && (Number(card.dataset.rating) || 0) >= minRating && (Number(card.dataset.year) || 0) >= from && (Number(card.dataset.year) || 0) <= to;
+        card.hidden = !show;
+        if (show) visible++;
+      });
+      document.querySelectorAll('.result-section').forEach(section => { section.hidden = !section.querySelector('.film:not([hidden])'); });
+      updateProviderBadges(selected);
+      document.getElementById('visible-count').textContent = visible;
+      sortCards();
+      syncUrl();
+      updateFilterChips();
+    }
+    function updateProviderBadges(selected) {
+      document.querySelectorAll('.provider-badge').forEach(badge => {
+        badge.hidden = !selected.has(badge.dataset.provider);
+      });
+    }
+    function reorderProviders() {
+      const query = document.getElementById('provider-search').value.toLowerCase().trim();
+      document.querySelectorAll('.provider-list').forEach(list => {
+        [...list.querySelectorAll('label')]
+          .sort((a, b) => Number(b.querySelector('input').checked) - Number(a.querySelector('input').checked) || a.textContent.localeCompare(b.textContent))
+          .forEach(label => {
+            const matches = !query || label.textContent.toLowerCase().includes(query);
+            label.hidden = !matches;
+            list.appendChild(label);
+          });
+      });
+    }
+    function updateFilterChips() {
+      const filters = [['film-search', 'Search'], ['availability-filter', 'Availability'], ['kind-filter', 'Offer'], ['min-rating', 'Rating'], ['genre-filter', 'Genre'], ['runtime-filter', 'Runtime'], ['year-from', 'From'], ['year-to', 'To']];
+      document.getElementById('filter-chips').innerHTML = filters.map(([id, label]) => {
+        const input = document.getElementById(id);
+        const value = input.value;
+        const text = input.options ? input.options[input.selectedIndex].text : value;
+        const active = value && value !== 'all' && value !== '0';
+        return active ? `<button class="filter-chip" type="button" data-filter-id="${id}">${label}: ${escapeHtml(text)} <i class="bi bi-x"></i></button>` : '';
+      }).join('');
+    }
+    function populateGenres() {
+      const select = document.getElementById('genre-filter');
+      const current = select.value;
+      const genres = [...new Set(allFilms.flatMap(film => film.genres || []))].sort();
+      select.innerHTML = '<option value="all">All genres</option>' + genres.map(genre => `<option value="${escapeHtml(genre)}">${escapeHtml(genre)}</option>`).join('');
+      select.value = genres.includes(current) ? current : 'all';
+    }
+    function updateAnalysis() {
+      const counts = {};
+      allFilms.forEach(film => (film.genres || []).forEach(genre => { counts[genre] = (counts[genre] || 0) + 1; }));
+      const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+      const ratings = allFilms.filter(film => film.rating).map(film => film.rating);
+      const runtimes = allFilms.filter(film => film.runtime).map(film => film.runtime);
+      document.getElementById('top-genre').textContent = top ? `${top[0]} (${top[1]})` : '-';
+      document.getElementById('average-rating').textContent = ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : '-';
+      document.getElementById('average-runtime').textContent = runtimes.length ? `${Math.round(runtimes.reduce((a, b) => a + b, 0) / runtimes.length)} min` : '-';
+      document.getElementById('analysis-panel').hidden = !allFilms.length;
+    }
+    function showRandomFilm() {
+      const visible = [...document.querySelectorAll('.film')].filter(card => !card.hidden);
+      if (!visible.length) return showToast('No film matches the current filters.');
+      const selected = visible[Math.floor(Math.random() * visible.length)];
+      selected.scrollIntoView({behavior: 'smooth', block: 'center'});
+      showToast(`Random pick: ${selected.dataset.title}`);
+    }
+    function compareFilms() {
+      const selected = [...document.querySelectorAll('.comparison-check:checked')].map(check => check.closest('.film'));
+      if (selected.length < 2 || selected.length > 4) return showToast('Select 2 to 4 films to compare.');
+      document.getElementById('compare-table').innerHTML = `<thead><tr><th>Metric</th>${selected.map(card => `<th>${escapeHtml(card.dataset.title)}</th>`).join('')}</tr></thead><tbody><tr><th>Year</th>${selected.map(card => `<td>${card.dataset.year || '-'}</td>`).join('')}</tr><tr><th>Rating</th>${selected.map(card => `<td>${card.dataset.rating || '-'}</td>`).join('')}</tr><tr><th>Runtime</th>${selected.map(card => `<td>${card.dataset.runtime ? `${card.dataset.runtime} min` : '-'}</td>`).join('')}</tr><tr><th>Genres</th>${selected.map(card => `<td>${escapeHtml(card.dataset.genres.replaceAll('|', ', '))}</td>`).join('')}</tr></tbody>`;
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('compare-modal')).show();
+    }
+    function sortCards() {
+      const order = document.getElementById('sort-order').value;
+      document.querySelectorAll('.films').forEach(container => [...container.children].sort((a, b) => {
+        if (order === 'year-desc' || order === 'year-asc') return ((Number(a.dataset.year) || 0) - (Number(b.dataset.year) || 0)) * (order === 'year-desc' ? -1 : 1);
+        if (order === 'rating') return (Number(b.dataset.rating) || 0) - (Number(a.dataset.rating) || 0);
+        return a.dataset.title.localeCompare(b.dataset.title);
+      }).forEach(card => container.appendChild(card)));
+    }
+    function updateStats() {
+      const selected = new Set([...providerInputs].filter(input => input.checked).map(input => input.value));
+      const scope = document.getElementById('stats-scope').value;
+      const scopedFilms = scope === 'selected'
+        ? allFilms.filter(film => Object.keys(film.providers).some(provider => selected.has(provider)))
+        : allFilms;
+      const providers = {};
+      scopedFilms.forEach(film => Object.keys(film.providers).forEach(provider => {
+        if (scope === 'all' || selected.has(provider)) providers[provider] = (providers[provider] || 0) + 1;
+      }));
+      const top = Object.entries(providers).sort((a, b) => b[1] - a[1])[0];
+      const scopedProviderCount = film => Object.keys(film.providers).filter(provider => scope === 'all' || selected.has(provider)).length;
+      document.getElementById('total-count').textContent = scopedFilms.length;
+      document.getElementById('free-count').textContent = scopedFilms.filter(film => Object.entries(film.providers).some(([provider, kinds]) => (scope === 'all' || selected.has(provider)) && kinds.some(kind => ['free', 'ads'].includes(kind)))).length;
+      document.getElementById('paid-count').textContent = scopedFilms.filter(film => Object.entries(film.providers).some(([provider, kinds]) => (scope === 'all' || selected.has(provider)) && kinds.some(kind => ['flatrate', 'rent'].includes(kind)))).length;
+      document.getElementById('unavailable-count').textContent = unavailableFilms.length;
+      document.getElementById('coverage-percent').textContent = `${allFilms.length ? Math.round(scopedFilms.length / allFilms.length * 100) : 0}%`;
+      document.getElementById('average-providers').textContent = scopedFilms.length ? (scopedFilms.reduce((total, film) => total + scopedProviderCount(film), 0) / scopedFilms.length).toFixed(1) : '0';
+      document.getElementById('top-provider').textContent = top ? `${top[0]} (${top[1]})` : '-';
+      const coverage = document.getElementById('coverage');
+      const max = scopedFilms.length || 1;
+      coverage.innerHTML = Object.entries(providers).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([provider, count]) => `<div class="coverage-row"><span>${escapeHtml(provider)}</span><div class="progress"><div class="progress-bar" style="width:${Math.round(count / max * 100)}%"></div></div><strong>${count}</strong></div>`).join('');
+      coverage.hidden = !allFilms.length;
+    }
+    function appendUnavailable(films) {
+      if (!films?.length) return;
+      unavailableFilms = films;
+      const panel = document.getElementById('unavailable-panel');
+      const container = document.getElementById('unavailable-results');
+      panel.hidden = false;
+      document.getElementById('unavailable-badge').textContent = films.length;
+      container.innerHTML = films.map(film => {
+        const slug = String(film.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        return `<article class="film unavailable-card"><div class="film-info"><p class="film-title">${escapeHtml(film.title)}</p><span class="year">${film.year ?? 'Year unknown'}</span><p><a class="btn btn-sm btn-outline-secondary" href="https://letterboxd.com/film/${slug}/" target="_blank" rel="noreferrer"><i class="bi bi-box-arrow-up-right"></i> Letterboxd</a></p></div></article>`;
+      }).join('');
+      updateStats();
+    }
+    function appendFilms(films) {
+      films.forEach(film => {
+        const key = `${film.title}|${film.year}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        allFilms.push(film);
+        ['Free', 'Paid'].forEach(section => {
+          let block = document.querySelector(`.result-section[data-section="${section}"]`);
+          if (!block) {
+            block = document.createElement('div');
+            block.className = 'result-section';
+            block.dataset.section = section;
+            block.innerHTML = `<h2>${section}</h2><div class="films"></div>`;
+            results.querySelector('.empty')?.remove();
+            results.querySelector('.skeleton-grid')?.remove();
+            results.appendChild(block);
+          }
+          const card = filmCard(film, section);
+          if (card) block.querySelector('.films').insertAdjacentHTML('beforeend', card);
+        });
+      });
+      updateStats();
+      populateGenres();
+      updateAnalysis();
+      renderFilms();
+    }
+    function replaceWithScanResults(films, unavailable) {
+      allFilms = [];
+      unavailableFilms = [];
+      seen.clear();
+      results.innerHTML = '';
+      document.getElementById('unavailable-panel').hidden = true;
+      appendFilms(films || []);
+      appendUnavailable(unavailable || []);
+      pendingResults = [];
+      pendingUnavailable = [];
+    }
+    async function pollScan() {
+      const response = await fetch(`/api/scan/${currentJob}`);
+      const job = await response.json();
+      if (!response.ok) {
+        const url = new URL(location.href);
+        url.searchParams.delete('scan');
+        history.replaceState({}, '', url);
+        document.getElementById('error-message').textContent = 'The previous scan is no longer available. Starting a new scan.';
+        document.getElementById('error-message').hidden = false;
+        startScan();
+        return;
+      }
+      const percent = job.total ? Math.round(job.completed / job.total * 100) : 3;
+      document.getElementById('progress-bar').style.width = `${percent}%`;
+      document.getElementById('progress-count').textContent = job.total ? `${percent}% · ${job.completed}/${job.total}` : 'Loading';
+      document.getElementById('status-message').textContent = job.message;
+      document.getElementById('current-title').textContent = job.current_title || job.phase;
+      if (rescanInProgress) {
+        pendingResults = job.results || [];
+        pendingUnavailable = job.unavailable || [];
+      } else {
+        if (job.results?.length) appendFilms(job.results);
+        if (job.unavailable?.length) appendUnavailable(job.unavailable);
+      }
+      if (job.stats) {
+        document.getElementById('total-count').textContent = job.stats.total;
+        document.getElementById('free-count').textContent = job.stats.free;
+        document.getElementById('paid-count').textContent = job.stats.paid;
+        document.getElementById('top-provider').textContent = job.stats.top_provider === '-' ? '-' : `${job.stats.top_provider} (${job.stats.top_provider_count})`;
+      }
+      if (job.source_name) { document.getElementById('source-name').textContent = job.source_name; document.getElementById('result-meta').hidden = false; document.getElementById('film-filters').hidden = false; }
+      if (allFilms.length) { document.getElementById('stats-section').hidden = false; document.getElementById('result-tools').hidden = false; updateStats(); }
+      if (job.status === 'complete' || job.status === 'cancelled') { document.getElementById('progress-bar').style.width = '100%'; document.getElementById('progress-count').textContent = job.status === 'complete' ? 'Complete' : 'Cancelled'; document.getElementById('cancel-scan').hidden = true; document.getElementById('retry-scan').hidden = false; if (rescanInProgress && job.status === 'complete') replaceWithScanResults(pendingResults, pendingUnavailable); rescanInProgress = false; showToast(job.status === 'complete' ? 'Watchlist scan complete.' : 'Scan cancelled. Previous results kept.'); return; }
+      if (job.status === 'error') { document.getElementById('error-message').textContent = job.message; document.getElementById('error-message').hidden = false; document.getElementById('cancel-scan').hidden = true; document.getElementById('retry-scan').hidden = false; showToast('Scan failed.'); return; }
+      setTimeout(pollScan, 350);
+    }
+    async function startScan() {
+      rescanInProgress = allFilms.length > 0;
+      pendingResults = [];
+      pendingUnavailable = [];
+      if (!rescanInProgress) {
+        allFilms = [];
+        seen.clear();
+        results.innerHTML = '<div class="skeleton-grid" aria-label="Loading films"><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div></div>';
+      }
+      showToast(rescanInProgress ? 'Updating availability. Previous results remain visible.' : 'Starting watchlist scan...');
+      document.getElementById('cancel-scan').hidden = false; document.getElementById('retry-scan').hidden = true; document.getElementById('error-message').hidden = true;
+      unavailableFilms = [];
+      if (!rescanInProgress) document.getElementById('unavailable-panel').hidden = true;
+      const upload = document.getElementById('csv-upload').files[0];
+      const body = new FormData();
+      body.append('country', document.getElementById('country-select').value);
+      if (upload) body.append('watchlist', upload);
+      const response = await fetch('/api/scan', {method: 'POST', body});
+      const data = await response.json();
+      if (!response.ok) { document.getElementById('error-message').textContent = data.error; document.getElementById('error-message').hidden = false; showToast('Scan could not be started.'); return; }
+      currentJob = data.job_id;
+      const url = new URL(location.href);
+      url.searchParams.set('scan', currentJob);
+      history.replaceState({}, '', url);
+      pollScan();
+    }
+    function resumeScan(jobId) {
+      currentJob = jobId;
+      document.getElementById('cancel-scan').hidden = false;
+      document.getElementById('retry-scan').hidden = true;
+      showToast('Reconnecting to the scan...');
+      pollScan();
+    }
+    async function loadFavorites() {
+      const response = await fetch('/api/favorites');
+      const favorites = await response.json();
+      favoriteKeys = new Set(favorites.map(movie => movie.key));
+      favoriteData = new Map(favorites.map(movie => [movie.key, movie]));
+    }
+    async function toggleFavorite(button) {
+      const card = button.closest('.film');
+      const key = card.dataset.key;
+      const wasFavorite = favoriteKeys.has(key);
+      let response;
+      if (wasFavorite) {
+        response = await fetch(`/api/favorites/${encodeURIComponent(key)}`, {method: 'DELETE'});
+        favoriteKeys.delete(key);
+        favoriteData.delete(key);
+      } else {
+        const film = allFilms.find(movie => `${movie.title}|${movie.year}` === key);
+        if (!film) return;
+        response = await fetch('/api/favorites', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({key, ...film})});
+        favoriteKeys.add(key);
+        favoriteData.set(key, {...film, key, status: 'plan', notes: ''});
+      }
+      if (!response.ok) {
+        if (wasFavorite) favoriteKeys.add(key);
+        else favoriteKeys.delete(key);
+        return;
+      }
+      [...document.querySelectorAll('.film')]
+        .filter(movieCard => movieCard.dataset.key === key)
+        .flatMap(movieCard => [...movieCard.querySelectorAll('.favorite')])
+        .forEach(star => {
+        star.textContent = favoriteKeys.has(key) ? '★' : '☆';
+        star.dataset.favorite = String(favoriteKeys.has(key));
+        const card = star.closest('.film');
+        const status = card.querySelector('.favorite-status');
+        const note = card.querySelector('.favorite-note');
+        if (status) status.hidden = !favoriteKeys.has(key);
+        if (note) note.hidden = !favoriteKeys.has(key);
+      });
+      renderFilms();
+      showToast(favoriteKeys.has(key) ? 'Added to favorites.' : 'Removed from favorites.');
+    }
+    async function updateFavoriteField(control) {
+      const card = control.closest('.film');
+      const key = card.dataset.key;
+      const field = control.classList.contains('favorite-status') ? 'status' : 'notes';
+      const response = await fetch(`/api/favorites/${encodeURIComponent(key)}`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({[field]: control.value})});
+      if (response.ok) { const saved = favoriteData.get(key) || {key}; saved[field] = control.value; favoriteData.set(key, saved); showToast('Favorite updated.'); }
+    }
+    providerInputs.forEach(input => input.addEventListener('change', renderFilms));
+    providerInputs.forEach(input => input.addEventListener('change', reorderProviders));
+    document.getElementById('provider-search').addEventListener('input', reorderProviders);
+    document.getElementById('stats-scope').addEventListener('change', updateStats);
+    reorderProviders();
+    document.getElementById('filter-chips').addEventListener('click', event => { const button = event.target.closest('.filter-chip'); if (!button) return; const input = document.getElementById(button.dataset.filterId); input.value = input.options ? 'all' : ''; input.dispatchEvent(new Event('input', {bubbles: true})); });
+    results.addEventListener('click', event => { const favoriteButton = event.target.closest('.favorite'); if (favoriteButton) { event.preventDefault(); toggleFavorite(favoriteButton); } });
+    results.addEventListener('click', event => { const trailer = event.target.closest('.trailer-link'); if (!trailer) return; document.getElementById('trailer-frame').src = `https://www.youtube.com/embed/${encodeURIComponent(trailer.dataset.trailer)}?autoplay=1`; bootstrap.Modal.getOrCreateInstance(document.getElementById('trailer-modal')).show(); });
+    document.getElementById('trailer-modal').addEventListener('hidden.bs.modal', () => { document.getElementById('trailer-frame').src = ''; });
+    results.addEventListener('change', event => { if (event.target.classList.contains('favorite-status')) updateFavoriteField(event.target); });
+    results.addEventListener('change', event => { if (event.target.classList.contains('favorite-note')) updateFavoriteField(event.target); });
+    function syncUrl() { const url = new URL(location.href); url.searchParams.set('q', document.getElementById('film-search').value); url.searchParams.set('availability', document.getElementById('availability-filter').value); url.searchParams.set('kind', document.getElementById('kind-filter').value); url.searchParams.set('rating', document.getElementById('min-rating').value); url.searchParams.set('sort', document.getElementById('sort-order').value); history.replaceState({}, '', url); }
+    ['film-search', 'availability-filter', 'kind-filter', 'genre-filter', 'runtime-filter', 'year-from', 'year-to', 'min-rating'].forEach(id => { document.getElementById(id).addEventListener('input', renderFilms); document.getElementById(id).addEventListener('change', renderFilms); });
+    document.getElementById('availability-filter').value = {{ initial_filters.availability|tojson }};
+    document.getElementById('kind-filter').value = {{ initial_filters.kind|tojson }};
+    document.getElementById('sort-order').value = {{ initial_filters.sort|tojson }};
+    ['match-mode', 'sort-order'].forEach(id => document.getElementById(id).addEventListener('change', renderFilms));
+    document.getElementById('favorites-view').addEventListener('click', event => { favoritesOnly = !favoritesOnly; event.currentTarget.classList.toggle('active', favoritesOnly); event.currentTarget.innerHTML = favoritesOnly ? '<i class="bi bi-grid"></i> All films' : '<i class="bi bi-star-fill"></i> My favorites'; renderFilms(); });
+    document.getElementById('random-film').addEventListener('click', showRandomFilm);
+    document.getElementById('compare-films').addEventListener('click', compareFilms);
+    document.getElementById('cancel-scan').addEventListener('click', () => fetch(`/api/scan/${currentJob}/cancel`, {method: 'POST'}));
+    document.getElementById('retry-scan').addEventListener('click', startScan);
+    document.getElementById('country-select').addEventListener('change', startScan);
+    document.getElementById('share-button')?.addEventListener('click', async () => { await navigator.clipboard.writeText(location.href); document.getElementById('share-message').textContent = 'Link copied'; });
+    document.getElementById('export-json').addEventListener('click', () => download('watchlist.json', JSON.stringify(allFilms, null, 2), 'application/json'));
+    document.getElementById('export-favorites').addEventListener('click', () => download('favorites.csv', ['Title,Year,Status,Notes', ...[...favoriteData.values()].map(film => [film.title, film.year, film.status || 'plan', film.notes || ''].map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))].join('\n'), 'text/csv'));
+    document.getElementById('export-csv').addEventListener('click', () => download('watchlist.csv', ['Title,Year,Providers', ...allFilms.map(film => [film.title, film.year, Object.keys(film.providers).join('; ')].map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))].join('\n'), 'text/csv'));
+    function download(name, data, type) { const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([data], {type})); link.download = name; link.click(); URL.revokeObjectURL(link.href); }
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+    loadFavorites().then(() => {
+      const savedJob = new URL(location.href).searchParams.get('scan');
+      if (savedJob) {
+        resumeScan(savedJob);
+      } else {
+        startScan();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -65,3 +65,165 @@ Netflix       = true
 Now           = false
 "Google Play" = false
 "Amazon VOD"  = false
+
+
+[DE]
+
+# ============================================================
+# Typically free / ad-supported
+# ============================================================
+
+
+
+# Public broadcasters
+"ARD Mediathek" = true
+ZDF = true
+Arte = true
+
+# Free / ad-supported variants
+"YouTube Free" = true
+"Amazon Prime Video Free with Ads" = false
+"Amazon MX Player" = false
+
+"Pluto TV" = false
+Plex = false
+Netzkino = true
+filmfriend = true
+
+
+# ============================================================
+# Typically paid — subscription / flatrate
+# ============================================================
+
+Netflix = true
+"Netflix Kids" = false
+"Netflix Standard with Ads" = false
+
+"Prime Video" = true
+
+"Apple TV+" = true
+"Disney+" = false
+"Paramount+" = false
+"HBO Max" = false
+Crunchyroll = false
+MUBI = false
+
+Joyn = false
+
+MagentaTV = false
+"Magenta TV+" = false
+"Sky Go" = true
+WOW = false
+"FilmBox+" = false
+
+Filmtastic = false
+"Arthaus+" = false
+Alleskino = false
+Artiflix = false
+"Freenet meinVOD" = false
+"Kino on Demand" = false
+filmingo = false
+
+
+# ============================================================
+# German / broadcaster subscriptions
+# ============================================================
+
+"ARD Plus" = false
+
+# ============================================================
+# Amazon Channels
+# ============================================================
+
+"ARD Plus Amazon Channel" = false
+"ARD Plus Apple TV Channel" = false
+
+"AXN Black Amazon Channel" = false
+"Allstars Amazon Channel" = false
+"Amazon Arthaus Channel" = false
+
+"Apple TV Amazon Channel" = false
+
+"Arthaus+ Apple TV Channel" = false
+"Arthouse CNMA Amazon Channel" = false
+ArthouseCNMA = false
+
+"BATTLEZONE Amazon Channel" = false
+"CineMix+ Amazon Channel" = false
+"Cinema of Hearts Amazon Channel" = false
+"Crunchyroll Amazon Channel" = false
+"Film Total Amazon Channel" = false
+"Filmlegenden Amazon Channel" = false
+"Filmtastic Amazon Channel" = false
+"Galactic Stream Amazon Channel" = false
+
+"HBO Max Amazon Channel" = false
+"Home of Horror Amazon Channel" = false
+
+"Kabel Eins Classics Amazon Channel" = false
+"Lionsgate+ Amazon Channels" = false
+"MGM Plus Amazon Channel" = false
+"MUBI Amazon Channel" = false
+"Made in Europe Amazon Channel" = false
+"Moviedome Plus Amazon Channel" = false
+"Netzkino Select Amazon Channel" = false
+"Paramount+ Amazon Channel" = false
+"ProSieben Fun Amazon Channel" = false
+"RTL+ Max Amazon Channel" = false
+"Seven Entertainment Amazon Channel" = false
+"Sony Pictures Core Amazon Channel" = false
+"Studiocanal Presents ALLSTARS Amazon Channel" = false
+"Superfresh Amazon Channel" = false
+"Thrillbox Amazon Channel" = false
+"WOW Fiction Amazon Channel" = false
+
+
+# ============================================================
+# Other German streaming services
+# ============================================================
+
+"RTL+" = false
+"Behind the Tree" = false
+"Home of Horror" = false
+"Plex Channel" = false
+
+
+# ============================================================
+# Germany — rental / VOD
+# ============================================================
+
+"Sky Store" = false
+Verleihshop = false
+Videobuster = false
+Videoload = false
+"maxdome Store" = false
+
+"Apple TV Store" = false
+
+
+# ============================================================
+# Typically rental / VOD
+# ============================================================
+
+"Canal VOD" = false
+"Google Play" = false
+"Amazon VOD" = false
+"Pathé Home" = false
+"Rakuten TV" = false
+"Orange VOD" = false
+YouTube = false
+Sooner = false
+
+
+# ============================================================
+# International / other VOD
+# ============================================================
+
+"BBC iPlayer" = false
+ITVX = false
+"Channel 4" = false
+Hulu = false
+Peacock = false
+Now = false
+"Discovery+" = false
+"Rakuten Viki" = false

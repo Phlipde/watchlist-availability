@@ -107,6 +107,31 @@ cd ~/path_to_project_folder
 ./run.sh
 ```
 
+## Web app
+
+Start the local web app to choose the streaming providers in the browser:
+
+```bash
+./run_web.sh
+```
+
+Unter Windows PowerShell:
+
+```powershell
+python app.py
+```
+
+Open [http://127.0.0.1:5000](http://127.0.0.1:5000). On the initial page load, the app
+collects the availability data for all known providers once. Provider selection,
+film search, Free/Paid, and year filters then only change the visible cards in the
+browser. The scan runs in the background with a progress bar, and films appear as
+soon as they are checked. Amazon Channels are grouped in a collapsible section.
+The web app also supports country switching, cached repeat scans, cancellation and
+retry, saved provider preferences, Any/All matching, sorting, statistics, film
+details, and JSON/CSV export.
+The app uses the same Letterboxd fallback and TMDB logic as the CLI. The existing
+`run.sh` command remains available for terminal output.
+
 `run.sh` activates the project's virtualenv and launches the script — no need to activate
 `.venv` manually.
 

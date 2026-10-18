@@ -412,6 +412,14 @@ class TestBuildResults:
         assert results[0]["Arte"] == set()
         assert results[0]["Netflix"] == {"flatrate"}
 
+    def test_year_is_normalized_to_integer(self):
+        results = self._run(
+            self._df([("Jurassic Park", 1993.0)]),
+            {"Netflix": "Netflix"},
+            {"Netflix": {"flatrate"}},
+        )
+        assert results[0]["Year"] == 1993
+
 
 # =========================
 # _split_by_section
@@ -609,7 +617,7 @@ class TestSaveResults:
         results = [{"Title": "Inception", "Year": 2010, "Netflix": {"flatrate"}}]
         out = wa.save_results(results, "src.csv", {"Netflix": "Netflix"}, output_dir=tmp_path)
         content = out.read_text(encoding="utf-8")
-        assert "## Paid" in content
+        assert "<h2>Paid</h2>" in content
 
     def test_file_contains_free_and_paid_sections(self, tmp_path):
         results = [
@@ -619,8 +627,41 @@ class TestSaveResults:
         targets = {"Arte": "Arte", "Netflix": "Netflix"}
         out = wa.save_results(results, "src.csv", targets, output_dir=tmp_path)
         content = out.read_text(encoding="utf-8")
-        assert "## Free" in content
-        assert "## Paid" in content
+        assert "<h2>Free</h2>" in content
+        assert "<h2>Paid</h2>" in content
+
+    def test_html_contains_poster_cover_title_year_and_provider(self, tmp_path):
+        results = [{
+            "Title": "Inception & Dreams",
+            "Year": 2010,
+            "PosterPath": "/poster.jpg",
+            "Netflix": {"flatrate"},
+        }]
+        out = wa.save_results(results, "src.csv", {"Netflix": "Netflix"}, output_dir=tmp_path)
+        content = out.read_text(encoding="utf-8")
+        assert out.suffix == ".html"
+        assert 'src="https://image.tmdb.org/t/p/w500/poster.jpg"' in content
+        assert "Inception &amp; Dreams" in content
+        assert "2010" in content
+        assert "Netflix" in content
+
+    def test_html_contains_filters_and_normalized_card_data(self, tmp_path):
+        results = [{
+            "Title": "Jurassic Park",
+            "Year": 1993,
+            "Netflix": {"flatrate"},
+            "Apple TV+": {"flatrate"},
+        }]
+        targets = {"Netflix": "Netflix", "Apple TV+": "Apple TV"}
+        out = wa.save_results(results, "src.csv", targets, output_dir=tmp_path)
+        content = out.read_text(encoding="utf-8")
+        assert 'id="search"' in content
+        assert 'id="section-filter"' in content
+        assert 'id="provider-filter"' in content
+        assert 'id="year-from"' in content
+        assert 'id="year-to"' in content
+        assert 'data-title="jurassic park"' in content
+        assert 'data-year="1993"' in content
 
 
 # =========================

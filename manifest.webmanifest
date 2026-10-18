@@ -1,0 +1,9 @@
+{
+  "name": "Watchlist Availability",
+  "short_name": "Watchlist",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#101412",
+  "theme_color": "#e8b86b",
+  "icons": []
+}

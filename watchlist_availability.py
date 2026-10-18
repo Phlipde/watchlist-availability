@@ -17,6 +17,7 @@ import time
 import tomllib
 import zipfile
 from datetime import date
+from html import escape
 from pathlib import Path
 
 import pandas as pd
@@ -47,6 +48,9 @@ _USER_AGENT = (
 )
 # data-item-name is "Title (YYYY)"; the parenthesised year is optional.
 _TITLE_YEAR_RE = re.compile(r"^(.*?)\s*\((\d{4})\)\s*$")
+_TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500"
+_TMDB_POSTER_PATHS: dict[int, str | None] = {}
+_TMDB_MOVIE_DATA: dict[int, dict] = {}
 
 # Display name -> exact TMDB provider_name. Matching is by exact provider_name;
 # these strings must match TMDB's own naming. Verified against
@@ -63,6 +67,7 @@ _ALL_PROVIDERS: dict[str, str] = {
     "Molotov":      "Molotov TV",
     "Pluto TV":     "Pluto TV",
     "Plex":         "Plex",
+
     # --- Typically subscription (flatrate) ---
     "Netflix":      "Netflix",
     "Canal+":       "Canal+",
@@ -70,33 +75,123 @@ _ALL_PROVIDERS: dict[str, str] = {
     "M6+":          "M6+",
     "Prime Video":  "Amazon Prime Video",
     "Disney+":      "Disney Plus",
-    "Apple TV+":    "Apple TV",          # TMDB uses "Apple TV", not "Apple TV Plus"
+    "Apple TV+":    "Apple TV",
     "Paramount+":   "Paramount Plus",
     "HBO Max":      "HBO Max",
     "Crunchyroll":  "Crunchyroll",
     "MUBI":         "MUBI",
-    # --- Typically rental / VOD (France, verified against TMDB FR) ---
-    "Canal VOD":    "Canal VOD",
-    "Google Play":  "Google Play Movies",
-    "Amazon VOD":   "Amazon Video",      # pay-per-rental, distinct from Prime Video
-    "Pathé Home":   "Pathé Home",
-    "Rakuten TV":   "Rakuten TV",
-    "Orange VOD":   "Orange VOD",
-    "YouTube":      "YouTube",
-    "Sooner":       "Sooner",
-    # --- International (change COUNTRY in .env) ---
-    "BBC iPlayer":  "BBC iPlayer",
-    "ITVX":         "ITVX",
-    "Channel 4":    "Channel 4",
-    "Hulu":         "Hulu",
-    "Peacock":      "Peacock Premium",
-    "Now":          "Now TV",
-    "Discovery+":   "Discovery+",
-    "Rakuten Viki": "Rakuten Viki",
-    # Note: OCS merged into Canal+ (2024), no longer a separate TMDB provider.
-    # Note: "france.tv" is not tracked by TMDB for movies (only TV shows).
-    # Note: "Amazon Video" (rental) is distinct from "Amazon Prime Video" (subscription).
+
+    # --- Germany ---
+    "Joyn":             "Joyn Plus",
+    "MagentaTV":        "MagentaTV",
+    "Magenta TV+":      "Magenta TV+",
+    "Sky Go":           "Sky Go",
+    "WOW":              "WOW",
+    "FilmBox+":         "FilmBox+",
+    "Filmtastic":       "Filmtastic",
+    "Arthaus+":         "Arthaus+",
+    "Netzkino":         "Netzkino",
+    "Kino on Demand":   "Kino on Demand",
+    "filmfriend":       "filmfriend",
+    "filmingo":         "filmingo",
+    "Alleskino":        "Alleskino",
+    "Artiflix":         "Artiflix",
+    "Freenet meinVOD":  "Freenet meinVOD",
+
+    # --- Germany rental / VOD ---
+    "Sky Store":        "Sky Store",
+    "Verleihshop":      "Verleihshop",
+    "Videobuster":      "Videobuster",
+    "Videoload":        "Videoload",
+    "maxdome Store":    "maxdome Store",
+
+    # --- Typically rental / VOD ---
+    "Canal VOD":        "Canal VOD",
+    "Google Play":      "Google Play Movies",
+    "Amazon VOD":       "Amazon Video",
+    "Pathé Home":       "Pathé Home",
+    "Rakuten TV":       "Rakuten TV",
+    "Orange VOD":       "Orange VOD",
+    "YouTube":          "YouTube",
+    "Sooner":           "Sooner",
+
+    # --- International ---
+    "BBC iPlayer":      "BBC iPlayer",
+    "ITVX":             "ITVX",
+    "Channel 4":        "Channel 4",
+    "Hulu":             "Hulu",
+    "Peacock":          "Peacock Premium",
+    "Now":              "Now TV",
+    "Discovery+":       "Discovery+",
+    "Rakuten Viki":     "Rakuten Viki",
+
+    # ================================================================
+    # Additional TMDB providers detected in Germany
+    # ================================================================
+
+    # --- Public broadcasters ---
+    "ARD Mediathek":                    "ARD Mediathek",
+    "ZDF":                              "ZDF",
+
+    # --- ARD Plus ---
+    "ARD Plus":                         "ARD Plus",
+    "ARD Plus Amazon Channel":          "ARD Plus Amazon channel",
+    "ARD Plus Apple TV Channel":        "ARD Plus Apple TV channel",
+
+    # --- Amazon / Amazon Channels ---
+    "Amazon Arthaus Channel":           "Amazon Arthaus Channel",
+    "Amazon MX Player":                 "Amazon MX Player",
+    "Amazon Prime Video Free with Ads": "Amazon Prime Video Free with Ads",
+    "Amazon Prime Video with Ads":      "Amazon Prime Video with Ads",
+    "Apple TV Amazon Channel":          "Apple TV Amazon Channel",
+
+    # --- Apple TV / Arthaus ---
+    "Apple TV Store":                   "Apple TV Store",
+    "Arthaus+ Apple TV Channel":        "Arthaus+ Apple TV channel",
+    "Arthouse CNMA Amazon Channel":     "Arthouse CNMA Amazon Channel",
+    "ArthouseCNMA":                     "ArthouseCNMA",
+
+    # --- Amazon Channels ---
+    "AXN Black Amazon Channel":         "AXN Black Amazon Channel",
+    "Allstars Amazon Channel":          "Allstars Amazon Channel",
+    "BATTLEZONE Amazon Channel":        "BATTLEZONE Amazon Channel",
+    "CineMix+ Amazon Channel":          "CineMix+ Amazon Channel",
+    "Cinema of Hearts Amazon Channel":  "Cinema of Hearts Amazon Channel",
+    "Crunchyroll Amazon Channel":       "Crunchyroll Amazon Channel",
+    "Film Total Amazon Channel":        "Film Total Amazon Channel",
+    "Filmlegenden Amazon Channel":      "Filmlegenden Amazon Channel",
+    "Filmtastic Amazon Channel":        "Filmtastic Amazon Channel",
+    "Galactic Stream Amazon Channel":   "Galactic Stream Amazon Channel",
+    "HBO Max Amazon Channel":            "HBO Max Amazon Channel",
+    "Kabel Eins Classics Amazon Channel": "Kabel Eins Classics Amazon Channel",
+    "Lionsgate+ Amazon Channels":        "Lionsgate+ Amazon Channels",
+    "MGM Plus Amazon Channel":           "MGM Plus Amazon Channel",
+    "MUBI Amazon Channel":              "MUBI Amazon Channel",
+    "Made in Europe Amazon Channel":    "Made in Europe Amazon Channel",
+    "Moviedome Plus Amazon Channel":    "Moviedome Plus Amazon Channel",
+    "Netzkino Select Amazon Channel":   "Netzkino Select Amazon Channel",
+    "Paramount+ Amazon Channel":        "Paramount+ Amazon Channel",
+    "ProSieben Fun Amazon Channel":      "ProSieben Fun Amazon Channel",
+    "Seven Entertainment Amazon Channel": "Seven Entertainment Amazon Channel",
+    "Sony Pictures Core Amazon Channel": "Sony Pictures Core Amazon Channel",
+    "Studiocanal Presents ALLSTARS Amazon Channel":
+        "Studiocanal Presents ALLSTARS Amazon Channel",
+    "Superfresh Amazon Channel":        "Superfresh Amazon Channel",
+    "Thrillbox Amazon Channel":         "Thrillbox Amazon Channel",
+    "WOW Fiction Amazon Channel":       "Wow Fiction Amazon Channel",
+
+    # --- Other services ---
+    "Behind the Tree":                  "Behind the Tree",
+    "Home of Horror":                   "Home of Horror",
+    "Home of Horror Amazon Channel":    "Home of Horror Amazon Channel",
+    "Netflix Kids":                     "Netflix Kids",
+    "Netflix Standard with Ads":        "Netflix Standard with Ads",
+    "Plex Channel":                     "Plex Channel",
+    "RTL+":                             "RTL+",
+    "RTL+ Max Amazon Channel":           "RTL+ Max Amazon Channel",
+    "YouTube Free":                     "YouTube Free",
 }
+
 
 
 # Display sections, in order, with the TMDB monetization types each one covers.
@@ -363,7 +458,16 @@ def get_tmdb_id(
             r.raise_for_status()
             data = r.json()
             results = data.get("results", [])
-            return results[0]["id"] if results else None
+            if not results:
+                return None
+            tmdb_id = results[0]["id"]
+            _TMDB_POSTER_PATHS[tmdb_id] = results[0].get("poster_path")
+            _TMDB_MOVIE_DATA[tmdb_id] = {
+                "overview": results[0].get("overview", ""),
+                "rating": results[0].get("vote_average"),
+                "backdrop_path": results[0].get("backdrop_path"),
+            }
+            return tmdb_id
         except requests.RequestException:
             return None
 
@@ -401,11 +505,51 @@ def get_streaming_platforms(
     return result
 
 
+def get_tmdb_details(
+    tmdb_id: int, api_key: str | None = None
+) -> dict:
+    """Return display metadata for a movie, empty when the details call fails."""
+    if tmdb_id in _TMDB_MOVIE_DATA and "runtime" in _TMDB_MOVIE_DATA[tmdb_id]:
+        return _TMDB_MOVIE_DATA[tmdb_id]
+    key = api_key or TMDB_API_KEY
+    try:
+        response = requests.get(
+            f"https://api.themoviedb.org/3/movie/{tmdb_id}",
+            params={"api_key": key, "append_to_response": "videos"},
+            timeout=10,
+        )
+        response.raise_for_status()
+        data = response.json()
+    except requests.RequestException:
+        return {}
+    videos = data.get("videos", {}).get("results", [])
+    trailer = next(
+        (video for video in videos if video.get("site") == "YouTube" and video.get("type") == "Trailer"),
+        None,
+    )
+    details = {
+        "overview": data.get("overview", ""),
+        "rating": data.get("vote_average"),
+        "backdrop_path": data.get("backdrop_path"),
+        "runtime": data.get("runtime"),
+        "genres": [genre.get("name") for genre in data.get("genres", [])],
+        "tmdb_url": f"https://www.themoviedb.org/movie/{tmdb_id}",
+        "trailer_url": f"https://www.youtube.com/watch?v={trailer['key']}" if trailer else None,
+    }
+    _TMDB_MOVIE_DATA[tmdb_id] = details
+    return details
+
+
 def build_results(
     df: pd.DataFrame,
     targets: dict[str, str],
     country: str = "FR",
     api_key: str | None = None,
+    progress_callback=None,
+    result_callback=None,
+    cancel_callback=None,
+    unavailable_callback=None,
+    include_details: bool = False,
 ) -> list[dict]:
     """Walk the DataFrame and return one result dict per available film.
 
@@ -420,28 +564,47 @@ def build_results(
     """
     results: list[dict] = []
 
-    for _, row in tqdm(
+    for current, (_, row) in enumerate(tqdm(
         df.iterrows(),
         total=len(df),
         desc="Checking streaming availability on TMDB",
         unit="film",
-    ):
+    ), start=1):
+        if cancel_callback and cancel_callback():
+            break
         title = row["Name"]
-        year = row["Year"]
+        year = _clean_year(row["Year"])
 
         tmdb_id = get_tmdb_id(title, year, api_key=api_key)
         if tmdb_id is None:
+            if unavailable_callback:
+                unavailable_callback({"Title": title, "Year": year})
+            if progress_callback:
+                progress_callback(current, len(df), title)
             time.sleep(0.15)
             continue
 
         providers = get_streaming_platforms(tmdb_id, country=country, api_key=api_key)
+        details = get_tmdb_details(tmdb_id, api_key=api_key) if include_details else _TMDB_MOVIE_DATA.get(tmdb_id, {})
 
-        row_data: dict = {"Title": title, "Year": year}
+        row_data: dict = {
+            "Title": title,
+            "Year": year,
+            "PosterPath": _TMDB_POSTER_PATHS.get(tmdb_id),
+            **details,
+        }
         for display, tmdb_name in targets.items():
             row_data[display] = providers.get(tmdb_name, set())
 
         if any(row_data[display] for display in targets):
             results.append(row_data)
+            if result_callback:
+                result_callback(row_data)
+        elif unavailable_callback:
+            unavailable_callback({"Title": title, "Year": year})
+
+        if progress_callback:
+            progress_callback(current, len(df), title)
 
         time.sleep(0.15)
 
@@ -476,7 +639,14 @@ def _split_by_section(
         for r in results:
             checks = {n: ("✓" if (mon_set & r.get(n, set())) else "") for n in active}
             if any(checks.values()):
-                view_results.append({"Title": r["Title"], "Year": r["Year"], **checks})
+                view_results.append(
+                    {
+                        "Title": r["Title"],
+                        "Year": r["Year"],
+                        "PosterPath": r.get("PosterPath"),
+                        **checks,
+                    }
+                )
 
         view_targets = {display: targets[display] for display in active}
         sections.append((label, view_results, view_targets))
@@ -576,7 +746,7 @@ def save_results(
     targets: dict[str, str],
     output_dir: Path | None = None,
 ) -> Path:
-    """Save the results to a dated Markdown file.
+    """Save the results to a dated HTML file with TMDB poster cards.
 
     Args:
         source_name: where the watchlist came from (Letterboxd username or CSV name).
@@ -587,26 +757,143 @@ def save_results(
     """
     out_dir = output_dir or DOWNLOADS_DIR
     today = date.today()
-    out_path = out_dir / f"watchlist_{today.isoformat()}.md"
+    out_path = out_dir / f"watchlist_{today.isoformat()}.html"
 
     sections = _split_by_section(results, targets)
+    provider_options = "".join(
+        f'<option value="{escape(display)}">{escape(display)}</option>'
+        for display in targets
+    )
     rendered_sections = [
-        _render_section(label, view_results, view_targets)
+        _render_html_section(label, view_results, view_targets)
         for label, view_results, view_targets in sections
     ]
-    summary = _summary_line(results, targets)
-
-    content = "\n".join([
-        f"# Watchlist streaming availability — {_date_en(today)}\n",
-        f"**Source:** {source_name}  ",
-        f"**Generated:** {today.isoformat()}\n",
-        "---\n",
-        *rendered_sections,
-        "---\n",
-        summary,
-    ])
+    summary_items = "".join(
+        f'<li><strong>{escape(part.split(":", 1)[0])}</strong>: '
+        f'{escape(part.split(":", 1)[1].strip())}</li>'
+        for part in _summary_line(results, targets).split("\n\n")
+        if ":" in part
+    )
+    content = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Watchlist streaming availability</title>
+  <style>
+    :root {{ color-scheme: dark; font-family: system-ui, sans-serif; }}
+    body {{ margin: 0; background: #111827; color: #f3f4f6; }}
+    main {{ max-width: 1280px; margin: 0 auto; padding: 32px 20px 56px; }}
+    h1 {{ margin: 0 0 8px; font-size: clamp(1.8rem, 4vw, 3rem); }}
+    .meta {{ color: #9ca3af; margin: 0 0 36px; }}
+    .filters {{ display: grid; grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(120px, 1fr)); gap: 10px; margin-bottom: 34px; }}
+    .filters input, .filters select {{ width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #4b5563; border-radius: 6px; background: #1f2937; color: #f3f4f6; font: inherit; }}
+    section {{ margin-top: 34px; }}
+    h2 {{ border-bottom: 1px solid #374151; padding-bottom: 10px; }}
+    .films {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 20px; }}
+    .film {{ overflow: hidden; background: #1f2937; border: 1px solid #374151; border-radius: 8px; }}
+    .poster {{ aspect-ratio: 2 / 3; background: #374151; }}
+    .poster img {{ width: 100%; height: 100%; object-fit: cover; display: block; }}
+    .no-poster {{ height: 100%; display: grid; place-items: center; color: #9ca3af; text-align: center; padding: 16px; }}
+    .film-info {{ padding: 12px; }}
+    .film-title {{ margin: 0; font-weight: 700; }}
+    .year {{ color: #9ca3af; }}
+    .providers {{ margin: 10px 0 0; color: #d1d5db; font-size: .9rem; }}
+    footer {{ margin-top: 44px; color: #9ca3af; }}
+    footer ul {{ padding-left: 20px; }}
+        .no-results {{ display: none; margin: 28px 0; color: #9ca3af; }}
+        @media (max-width: 760px) {{ .filters {{ grid-template-columns: 1fr 1fr; }} .filters input[type="search"] {{ grid-column: 1 / -1; }} }}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Watchlist streaming availability</h1>
+    <p class="meta">{escape(_date_en(today))} · Source: {escape(source_name)}</p>
+        <div class="filters" aria-label="Filter films">
+            <input id="search" type="search" placeholder="Search films..." aria-label="Search films">
+            <select id="section-filter" aria-label="Filter by section">
+                <option value="all">All sections</option>
+                <option value="Free">Free</option>
+                <option value="Paid">Paid</option>
+            </select>
+            <select id="provider-filter" aria-label="Filter by provider">
+                <option value="all">All providers</option>
+                {provider_options}
+            </select>
+            <input id="year-from" type="number" min="1888" max="2100" placeholder="Year from" aria-label="Year from">
+            <input id="year-to" type="number" min="1888" max="2100" placeholder="Year to" aria-label="Year to">
+        </div>
+    {"".join(rendered_sections) or "<p>No films available on the selected platforms.</p>"}
+        <p id="no-results" class="no-results">No films match the selected filters.</p>
+    <footer><strong>Available films per platform</strong><ul>{summary_items or "<li>None</li>"}</ul></footer>
+  </main>
+    <script>
+        const filters = document.querySelectorAll('.filters input, .filters select');
+        const cards = document.querySelectorAll('.film');
+        const sections = document.querySelectorAll('section');
+        const noResults = document.getElementById('no-results');
+        function applyFilters() {{
+            const query = document.getElementById('search').value.toLowerCase().trim();
+            const selectedSection = document.getElementById('section-filter').value;
+            const selectedProvider = document.getElementById('provider-filter').value;
+            const from = Number(document.getElementById('year-from').value) || 0;
+            const to = Number(document.getElementById('year-to').value) || 9999;
+            let visible = 0;
+            cards.forEach(card => {{
+                const title = card.dataset.title;
+                const year = Number(card.dataset.year) || 0;
+                const providers = card.dataset.providers.split('|');
+                const sectionMatch = selectedSection === 'all' || card.closest('section').dataset.section === selectedSection;
+                const providerMatch = selectedProvider === 'all' || providers.includes(selectedProvider);
+                const match = sectionMatch && title.includes(query) && providerMatch && year >= from && year <= to;
+                card.hidden = !match;
+                if (match) visible++;
+            }});
+            sections.forEach(section => {{
+                const hasVisibleCard = section.querySelector('.film:not([hidden])');
+                section.hidden = !hasVisibleCard;
+            }});
+            noResults.style.display = visible ? 'none' : 'block';
+        }}
+        filters.forEach(filter => filter.addEventListener('input', applyFilters));
+        filters.forEach(filter => filter.addEventListener('change', applyFilters));
+    </script>
+</body>
+</html>
+"""
     out_path.write_text(content, encoding="utf-8")
     return out_path
+
+
+def _render_html_section(
+    title: str, results: list[dict], targets: dict[str, str]
+) -> str:
+    """Return an HTML section containing poster cards for available films."""
+    cards = []
+    for result in _sort_results(results, targets).to_dict("records"):
+        poster_path = result.get("PosterPath")
+        poster = (
+            f'<img src="{_TMDB_IMAGE_BASE_URL}{escape(poster_path)}" '
+            f'alt="Poster for {escape(str(result["Title"]))}" loading="lazy">'
+            if poster_path
+            else '<div class="no-poster">No poster available</div>'
+        )
+        providers = [
+            display for display in targets
+            if result.get(display) == "✓"
+        ]
+        year = result.get("Year")
+        year_text = "" if pd.isna(year) else str(int(year))
+        provider_data = escape("|".join(providers))
+        cards.append(
+            f'<article class="film" data-title="{escape(str(result["Title"]).lower())}" '
+            f'data-year="{escape(year_text)}" data-providers="{provider_data}">'
+            f'<div class="poster">{poster}</div>'
+            f'<div class="film-info"><p class="film-title">{escape(str(result["Title"]))}</p>'
+            f'<span class="year">{escape(year_text)}</span>'
+            f'<p class="providers">{escape(", ".join(providers))}</p></div></article>'
+        )
+    return f'<section data-section="{escape(title)}"><h2>{escape(title)}</h2><div class="films">{"".join(cards)}</div></section>'
 
 
 def _find_letterboxd_zip(downloads_dir: Path) -> Path | None:
@@ -729,6 +1016,48 @@ def load_watchlist_source() -> tuple[pd.DataFrame, str, Path]:
     print(f"Using watchlist CSV: {csv_path}")
     return load_watchlist(csv_path), csv_path.name, csv_path.parent
 
+def test_unknown_providers(
+    df: pd.DataFrame,
+    country: str = "DE",
+    api_key: str | None = None,
+) -> None:
+    """Print TMDB providers found for the watchlist that are not in _ALL_PROVIDERS."""
+
+    known_providers = set(_ALL_PROVIDERS.values())
+    unknown_providers: set[str] = set()
+
+    for _, row in tqdm(
+        df.iterrows(),
+        total=len(df),
+        desc=f"Finding unknown TMDB providers ({country})",
+        unit="film",
+    ):
+        tmdb_id = get_tmdb_id(row["Name"], row["Year"], api_key=api_key)
+
+        if tmdb_id is None:
+            continue
+
+        providers = get_streaming_platforms(
+            tmdb_id,
+            country=country,
+            api_key=api_key,
+        )
+
+        for provider_name in providers:
+            if provider_name not in known_providers:
+                unknown_providers.add(provider_name)
+
+        time.sleep(0.15)
+
+    print("\n=== UNKNOWN TMDB PROVIDERS ===")
+
+    if unknown_providers:
+        for provider in sorted(unknown_providers):
+            print(f'"{provider}"')
+    else:
+        print("None")
+
+    print("==============================\n")
 
 def main() -> None:
     """Main entry point."""
@@ -742,6 +1071,16 @@ def main() -> None:
 
     df, source_name, output_dir = load_watchlist_source()
 
+    # df, source_name, output_dir = load_watchlist_source()
+
+    # test_unknown_providers(
+    #     df,
+    #     country=COUNTRY,
+    #     api_key=TMDB_API_KEY,
+    # )
+
+
+
     results = build_results(df, targets, country=COUNTRY)
     display_results(results, targets)
 
@@ -751,3 +1090,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+

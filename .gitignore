@@ -25,3 +25,7 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Local TMDB result cache
+.watchlist_cache.json
+.watchlist_favorites.sqlite3
