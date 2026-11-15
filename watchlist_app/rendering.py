@@ -4,16 +4,26 @@ from datetime import date
 from html import escape
 from pathlib import Path
 
-import pandas as pd
 from tabulate import tabulate
 
 from .config import DOWNLOADS_DIR
+from .models import Film
 from .providers import _ALL_PROVIDERS, _DEFAULT_ENABLED, _SECTION_ORDER
 from .tmdb import _TMDB_IMAGE_BASE_URL
 
 MONTHS_EN = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
 ]
 
 
@@ -21,8 +31,12 @@ def _date_en(value: date) -> str:
     return f"{MONTHS_EN[value.month - 1]} {value.day}, {value.year}"
 
 
+def _kinds(film: Film, display: str) -> set[str]:
+    return set(film.providers.get(display, []))
+
+
 def _split_by_section(
-    results: list[dict],
+    results: list[Film],
     targets: dict[str, str],
 ) -> list[tuple[str, list[dict], dict[str, str]]]:
     """Split results into sections by each (film, provider)'s real monetization.
@@ -38,22 +52,19 @@ def _split_by_section(
     sections = []
     for label, mon_set in _SECTION_ORDER:
         # Keep only columns with at least one film matching this section's types.
-        active = [
-            display for display in targets
-            if any(mon_set & r.get(display, set()) for r in results)
-        ]
+        active = [display for display in targets if any(mon_set & _kinds(film, display) for film in results)]
         if not active:
             continue
 
         view_results = []
-        for r in results:
-            checks = {n: ("✓" if (mon_set & r.get(n, set())) else "") for n in active}
+        for film in results:
+            checks = {name: ("✓" if (mon_set & _kinds(film, name)) else "") for name in active}
             if any(checks.values()):
                 view_results.append(
                     {
-                        "Title": r["Title"],
-                        "Year": r["Year"],
-                        "PosterPath": r.get("PosterPath"),
+                        "Title": film.title,
+                        "Year": film.year,
+                        "PosterPath": film.poster_path,
                         **checks,
                     }
                 )
@@ -64,35 +75,32 @@ def _split_by_section(
     return sections
 
 
-def _sort_results(results: list[dict], targets: dict[str, str]) -> pd.DataFrame:
-    """Sort films for display, by priority:
+def _sort_results(rows: list[dict], targets: dict[str, str]) -> list[dict]:
+    """Sort section rows for display, by priority:
 
     1. number of available platforms (descending) — most available first;
     2. by platform, in column order (✓ before blank) — groups films by service;
     3. title alphabetical.
     """
-    df = pd.DataFrame(results)
-    platform_cols = list(targets.keys())
+    columns = list(targets)
 
-    df["_score"] = df[platform_cols].apply(lambda row: (row == "✓").sum(), axis=1)
-    rank_cols: list[str] = []
-    for col in platform_cols:
-        rank = f"_rank_{col}"
-        df[rank] = (df[col] == "✓").astype(int)
-        rank_cols.append(rank)
+    def sort_key(row: dict):
+        marks = [row.get(column) == "✓" for column in columns]
+        return (-sum(marks), *[not mark for mark in marks], str(row["Title"]))
 
-    sort_cols = ["_score", *rank_cols, "Title"]
-    ascending = [False, *([False] * len(rank_cols)), True]
-    df = df.sort_values(by=sort_cols, ascending=ascending).drop(columns=["_score", *rank_cols])
-    return df
+    return [
+        {"Title": row["Title"], "Year": row["Year"], **{column: row.get(column, "") for column in columns}}
+        | ({"PosterPath": row["PosterPath"]} if "PosterPath" in row else {})
+        for row in sorted(rows, key=sort_key)
+    ]
 
 
-def _summary_line(results: list[dict], targets: dict[str, str]) -> str:
+def _summary_line(results: list[Film], targets: dict[str, str]) -> str:
     """One-line count per platform: number of watchlist films available on it
     (in any tracked tier), in targets order. Avoids per-section duplicates."""
     parts = []
     for display in targets:
-        count = sum(1 for r in results if r.get(display))
+        count = sum(1 for film in results if film.providers.get(display))
         if count:
             parts.append(f"{display}: {count}")
     return "\n\n".join(parts)
@@ -108,27 +116,25 @@ def _render_section(title: str, results: list[dict], targets: dict[str, str]) ->
     if not results:
         lines.append("_No films available._\n")
     else:
-        df = _sort_results(results, targets)
+        rows = [
+            {key: value for key, value in row.items() if key != "PosterPath"}
+            for row in _sort_results(results, targets)
+        ]
         colalign = ["right", "right", *(["center"] * len(targets))]
         # "pipe" format carries the alignment markers (:---:) so the rendered
         # Markdown actually aligns (title right, ✓ centered), not just as text.
-        lines.append(
-            tabulate(
-                df, headers="keys", tablefmt="pipe", showindex=False, colalign=colalign
-            )
-        )
+        lines.append(tabulate(rows, headers="keys", tablefmt="pipe", showindex=False, colalign=colalign))
         lines.append("")
     return "\n".join(lines)
 
 
 def display_results(
-    results: list[dict],
+    results: list[Film],
     targets: dict[str, str] | None = None,
 ) -> None:
     """Print the results grouped by section (Free / Paid)."""
     _targets = (
-        targets if targets is not None
-        else {k: v for k, v in _ALL_PROVIDERS.items() if k in _DEFAULT_ENABLED}
+        targets if targets is not None else {k: v for k, v in _ALL_PROVIDERS.items() if k in _DEFAULT_ENABLED}
     )
 
     print()
@@ -151,7 +157,7 @@ def display_results(
 
 
 def save_results(
-    results: list[dict],
+    results: list[Film],
     source_name: str,
     targets: dict[str, str],
     output_dir: Path | None = None,
@@ -171,16 +177,14 @@ def save_results(
 
     sections = _split_by_section(results, targets)
     provider_options = "".join(
-        f'<option value="{escape(display)}">{escape(display)}</option>'
-        for display in targets
+        f'<option value="{escape(display)}">{escape(display)}</option>' for display in targets
     )
     rendered_sections = [
         _render_html_section(label, view_results, view_targets)
         for label, view_results, view_targets in sections
     ]
     summary_items = "".join(
-        f'<li><strong>{escape(part.split(":", 1)[0])}</strong>: '
-        f'{escape(part.split(":", 1)[1].strip())}</li>'
+        f"<li><strong>{escape(part.split(':', 1)[0])}</strong>: {escape(part.split(':', 1)[1].strip())}</li>"
         for part in _summary_line(results, targets).split("\n\n")
         if ":" in part
     )
@@ -275,12 +279,10 @@ def save_results(
     return out_path
 
 
-def _render_html_section(
-    title: str, results: list[dict], targets: dict[str, str]
-) -> str:
+def _render_html_section(title: str, results: list[dict], targets: dict[str, str]) -> str:
     """Return an HTML section containing poster cards for available films."""
     cards = []
-    for result in _sort_results(results, targets).to_dict("records"):
+    for result in _sort_results(results, targets):
         poster_path = result.get("PosterPath")
         poster = (
             f'<img src="{_TMDB_IMAGE_BASE_URL}{escape(poster_path)}" '
@@ -288,12 +290,9 @@ def _render_html_section(
             if poster_path
             else '<div class="no-poster">No poster available</div>'
         )
-        providers = [
-            display for display in targets
-            if result.get(display) == "✓"
-        ]
+        providers = [display for display in targets if result.get(display) == "✓"]
         year = result.get("Year")
-        year_text = "" if pd.isna(year) else str(int(year))
+        year_text = "" if year is None else str(int(year))
         provider_data = escape("|".join(providers))
         cards.append(
             f'<article class="film" data-title="{escape(str(result["Title"]).lower())}" '

@@ -1,2 +1,4 @@
 Set-Location $PSScriptRoot
-python app.py
+$python = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+if (-not (Test-Path $python)) { $python = "python" }
+& $python app.py @args

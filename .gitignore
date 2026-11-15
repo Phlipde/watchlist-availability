@@ -1,7 +1,8 @@
 # Clé API et secrets
 .env
 .vscode/
-.github/
+.github/*
+!.github/workflows/
 .continue/
 
 # Python
@@ -30,5 +31,8 @@ build/
 htmlcov/
 
 # Local TMDB result cache
+.watchlist.sqlite3*
 .watchlist_cache.json
+.watchlist_latest.json
 .watchlist_favorites.sqlite3
+.watchlist_films.sqlite3

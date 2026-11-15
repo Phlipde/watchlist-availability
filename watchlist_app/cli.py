@@ -1,14 +1,16 @@
-"""Command-line orchestration for watchlist availability."""
+"""Command-line entry point: check the watchlist and write an HTML report."""
 
-import time
 from pathlib import Path
 
-import pandas as pd
-from tqdm import tqdm
+from . import config, letterboxd, rendering
+from .models import WatchlistEntry
+from .scan_service import perform_scan
+from .settings import AppSettings
+from .store import Store
 
 
-def prompt_for_csv(wa, downloads_dir: Path | None = None, username: str | None = None) -> Path:
-    directory = downloads_dir or wa.DOWNLOADS_DIR
+def prompt_for_csv(downloads_dir: Path | None = None, username: str | None = None) -> Path:
+    directory = downloads_dir or config.DOWNLOADS_DIR
     print(
         f"\nCould not fetch the watchlist automatically, and no watchlist*.csv file "
         f"was found in:\n    {directory}\n\n"
@@ -26,79 +28,61 @@ def prompt_for_csv(wa, downloads_dir: Path | None = None, username: str | None =
                 f"No watchlist*.csv in {directory} and stdin is not interactive."
             ) from exc
         except KeyboardInterrupt:
-            raise SystemExit("\nCancelled.")
+            raise SystemExit("\nCancelled.") from None
         try:
-            return wa.find_watchlist_csv(downloads_dir=directory)
+            return letterboxd.find_watchlist_csv(downloads_dir=directory)
         except FileNotFoundError:
             pass
-        zip_path = wa._find_letterboxd_zip(directory)
+        zip_path = letterboxd.find_letterboxd_zip(directory)
         if zip_path:
-            csv_path = wa._extract_watchlist_from_zip(zip_path, directory)
+            csv_path = letterboxd.extract_watchlist_from_zip(zip_path, directory)
             print(f"  → Extracted watchlist.csv (ZIP {zip_path.name} deleted).")
             return csv_path
         print(f"  → Still no watchlist*.csv or Letterboxd ZIP found in {directory}. Try again.")
 
 
-def load_watchlist_source(wa) -> tuple[pd.DataFrame, str, Path]:
-    if wa.LETTERBOXD_USERNAME:
+_FROM_ENVIRONMENT = object()
+
+
+def load_watchlist_source(username=_FROM_ENVIRONMENT) -> tuple[list[WatchlistEntry], str, Path]:
+    if username is _FROM_ENVIRONMENT:
+        username = config.LETTERBOXD_USERNAME
+    if username:
         try:
-            dataframe = wa.fetch_watchlist_from_letterboxd(wa.LETTERBOXD_USERNAME)
-            if len(dataframe):
-                print(
-                    f"Watchlist fetched from Letterboxd: "
-                    f"@{wa.LETTERBOXD_USERNAME} ({len(dataframe)} films)"
-                )
-                return (
-                    dataframe,
-                    f"Letterboxd @{wa.LETTERBOXD_USERNAME}",
-                    wa.DOWNLOADS_DIR,
-                )
+            entries = letterboxd.fetch_watchlist_from_letterboxd(username)
+            if entries:
+                print(f"Watchlist fetched from Letterboxd: @{username} ({len(entries)} films)")
+                return entries, f"Letterboxd @{username}", config.DOWNLOADS_DIR
             print("Letterboxd watchlist empty or private — falling back to the exported CSV.")
-        except wa.LetterboxdError as exc:
+        except letterboxd.LetterboxdError as exc:
             print(f"Could not fetch from Letterboxd ({exc})\n→ falling back to the exported CSV.")
     try:
-        csv_path = wa.find_watchlist_csv()
+        csv_path = letterboxd.find_watchlist_csv()
     except FileNotFoundError:
-        csv_path = prompt_for_csv(wa, username=wa.LETTERBOXD_USERNAME)
+        csv_path = prompt_for_csv(username=username)
     print(f"Using watchlist CSV: {csv_path}")
-    return wa.load_watchlist(csv_path), csv_path.name, csv_path.parent
+    return letterboxd.load_watchlist(csv_path), csv_path.name, csv_path.parent
 
 
-def test_unknown_providers(wa, df: pd.DataFrame, country: str = "DE", api_key: str | None = None) -> None:
-    known_providers = set(wa._ALL_PROVIDERS.values())
-    unknown_providers: set[str] = set()
-    for _, row in tqdm(
-        df.iterrows(),
-        total=len(df),
-        desc=f"Finding unknown TMDB providers ({country})",
-        unit="film",
-    ):
-        tmdb_id = wa.get_tmdb_id(row["Name"], row["Year"], api_key=api_key)
-        if tmdb_id is None:
-            continue
-        providers = wa.get_streaming_platforms(tmdb_id, country=country, api_key=api_key)
-        unknown_providers.update(
-            provider for provider in providers if provider not in known_providers
-        )
-        time.sleep(0.15)
-    print("\n=== UNKNOWN TMDB PROVIDERS ===")
-    if unknown_providers:
-        for provider in sorted(unknown_providers):
-            print(f'"{provider}"')
-    else:
-        print("None")
-    print("==============================\n")
-
-
-def main(wa) -> None:
-    if not wa.TMDB_API_KEY:
-        raise EnvironmentError(
-            "Missing TMDB API key.\n"
-            "Copy .env.example → .env and set your TMDB_API_KEY."
-        )
-    targets = wa.load_platforms_config(wa.COUNTRY)
-    dataframe, source_name, output_dir = wa.load_watchlist_source()
-    results = wa.build_results(dataframe, targets, country=wa.COUNTRY)
-    wa.display_results(results, targets)
-    output_path = wa.save_results(results, source_name, targets, output_dir)
+def main() -> None:
+    if not config.TMDB_API_KEY:
+        raise OSError("Missing TMDB API key.\nCopy .env.example → .env and set your TMDB_API_KEY.")
+    store = Store(config.database_path())
+    try:
+        # The same settings and the same scan as the web app: saved settings win over .env.
+        settings = AppSettings(store)
+        targets = settings.targets()
+        entries, source_name, output_dir = load_watchlist_source(settings.letterboxd_username)
+        outcome = perform_scan(store, entries, source_name, settings.country, settings.tmdb_api_key)
+    finally:
+        store.close()
+    assert outcome is not None  # only a cancelled scan has no outcome
+    if outcome.reused:
+        print("Using the scan from the last 24 hours.")
+    rendering.display_results(outcome.films, targets)
+    if outcome.failed:
+        print(f"\n{len(outcome.failed)} lookup(s) failed:")
+        for failure in outcome.failed:
+            print(f"  {failure['title']}: {failure['message']}")
+    output_path = rendering.save_results(outcome.films, source_name, targets, output_dir)
     print(f"\nResults saved: {output_path}")

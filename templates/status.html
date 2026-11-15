@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Status · Watchlist Availability</title>
+  <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261115-6') }}" rel="stylesheet">
+</head>
+<body>
+  <main class="page">
+    <p class="meta"><a href="/"><i class="ti ti-arrow-left"></i> Back to the watchlist</a> · <a href="/settings">Settings</a> · <a href="/matches">Matches</a></p>
+    <h1 class="page-title">Status</h1>
+    {% if not status.tmdb_api_key_set %}<p class="error">The TMDB API key is missing, so no scan can run.</p>{% endif %}
+
+    <div class="analysis-panel status-tiles">
+      <div class="analysis-item">Last scan ({{ status.country }}): <strong class="time" data-time="{{ status.last_scan_at or '' }}">never</strong></div>
+      <div class="analysis-item">Automatic scan: <strong>{% if status.scan_interval_hours %}every {{ status.scan_interval_hours }} h{% else %}off{% endif %}</strong></div>
+      <div class="analysis-item">Next automatic scan: <strong class="time" data-time="{{ status.next_scan_at or '' }}" data-past="due now">–</strong></div>
+      <div class="analysis-item">Right now: <strong>{% if status.running %}a scan is running{% else %}idle{% endif %}</strong></div>
+      <div class="analysis-item">Films known: <strong>{{ status.counts.films }}</strong></div>
+      <div class="analysis-item">Favorites: <strong>{{ status.counts.favorites }}</strong></div>
+      <div class="analysis-item">Stored changes: <strong>{{ status.counts.changes }}</strong></div>
+      <div class="analysis-item">Matches to check: <strong><a href="/matches">{{ status.uncertain_matches }}</a></strong></div>
+      <div class="analysis-item">Providers from TMDB ({{ status.country }}): <strong>{% if status.provider_catalog.count %}{{ status.provider_catalog.count }}, <span class="time" data-time="{{ status.provider_catalog.fetched_at }}"></span>{% else %}not loaded yet{% endif %}</strong></div>
+      <div class="analysis-item">Database:<strong>{% if status.database_bytes %}{{ '%.1f'|format(status.database_bytes / 1000000) }} MB{% else %}–{% endif %}</strong></div>
+    </div>
+
+    <h2 class="h4 mt-4">Recent scans</h2>
+    {% if status.jobs %}
+    <div class="table-scroll">
+      <table class="status-table">
+        <thead><tr><th>Started</th><th>Trigger</th><th>Country</th><th>Result</th><th>Duration</th><th>Films</th><th>Available</th><th>Failed</th><th>TMDB requests</th></tr></thead>
+        <tbody>
+          {% for job in status.jobs %}
+          <tr>
+            <td class="time" data-time="{{ job.started_at }}"></td>
+            <td>{{ {'manual': 'page', 'schedule': 'schedule', 'resume': 'after restart'}.get(job.trigger, job.trigger) }}</td>
+            <td>{{ job.country }}</td>
+            <td><span class="status-{{ job.status }}">{{ job.status }}</span>{% if job.reused %} · reused{% endif %}{% if job.status in ('error', 'interrupted') and job.message %}<br><small>{{ job.message }}</small>{% endif %}</td>
+            <td>{{ job.duration_seconds }} s</td>
+            <td>{{ job.completed }}/{{ job.total }}</td>
+            <td>{{ job.available }}</td>
+            <td>{% if job.failed %}<details><summary>{{ job.failed|length }}</summary><ul>{% for failure in job.failed %}<li>{{ failure.title }}: {{ failure.message }}</li>{% endfor %}</ul></details>{% else %}0{% endif %}</td>
+            <td>{{ job.tmdb_requests }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="meta">No scan has run yet.</p>
+    {% endif %}
+  </main>
+  <script>
+    document.querySelectorAll('.time').forEach(element => {
+      const seconds = Number(element.dataset.time);
+      if (!seconds) return;
+      element.textContent = element.dataset.past && seconds * 1000 < Date.now() ? element.dataset.past : new Date(seconds * 1000).toLocaleString();
+    });
+  </script>
+</body>
+</html>

@@ -1,6 +1,8 @@
 # platforms.toml — Select the streaming services to check, per country.
 #
 # The section matches the COUNTRY variable in .env (default: FR).
+# These are only start values: once "My subscriptions" is saved on the
+# Settings page of the web app, the saved list is used instead.
 # true  → included in the search    false → ignored
 #
 # IMPORTANT: this file only chooses WHICH platforms to check. The display section
@@ -9,8 +11,9 @@
 # rental). A platform can appear in either section depending on the film. The
 # comment groupings below are just the *typical* nature of each provider.
 #
-# Provider names must match the keys in _ALL_PROVIDERS (watchlist_availability.py).
-# To add a service that isn't listed, extend _ALL_PROVIDERS there first.
+# Provider names must match the keys in _ALL_PROVIDERS (watchlist_app/providers.py).
+# Services TMDB knows but this list does not can be chosen on the Settings page
+# once a scan has loaded the provider list from TMDB.
 
 [FR]
 # Typically free / ad-supported

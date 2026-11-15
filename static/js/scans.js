@@ -1,5 +1,6 @@
+import {escapeHtml} from './ui.js';
+
 export function updateScanFeedback(job) {
-  const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]));
   const phase = document.getElementById('scan-phase');
   const scanStats = document.getElementById('scan-live-stats');
   if (phase) phase.textContent = job.phase || 'Scanning';
@@ -12,6 +13,6 @@ export function updateScanFeedback(job) {
     const failures = job.failed || [];
     failurePanel.hidden = failures.length === 0;
     document.getElementById('failed-count').textContent = failures.length;
-    failureList.innerHTML = failures.map(failure => `<li>${escape(failure.title)} (${escape(failure.year || 'unknown year')}): ${escape(failure.message || 'Lookup failed')}</li>`).join('');
+    failureList.innerHTML = failures.map(failure => `<li>${escapeHtml(failure.title)} (${escapeHtml(failure.year || 'unknown year')}): ${escapeHtml(failure.message || 'Lookup failed')}</li>`).join('');
   }
 }
