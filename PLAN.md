@@ -111,6 +111,26 @@ Review der offenen Änderungen und Audit des ganzen Projekts (2026-11-15), zehn 
 - Bewusst einfach: keine Währung (die Zahl steht für die Währung des Landes); Preise nur für eigene Abos, daher steht beim Buchen-Vorschlag kein Preis; der Rotations-Plan schaut nur einen Monat voraus.
 - Baut auf „Meine Abos“ aus Etappe 7 auf.
 
+### Etappe 9a: Knöpfe angleichen und „Free services“ (vor Etappe 10)
+- [ ] Trailer und TMDB gleich aussehen lassen: Auf der Karte (`static/js/rendering.js`) ist TMDB ein Textlink, Trailer ein `btn btn-link`-Knopf mit anderer Schrift und Farbe. Beide bekommen eine gemeinsame Klasse und eine CSS-Regel; Trailer bleibt ein Knopf, weil er den Player öffnet.
+- [ ] Trailer gleich verhalten lassen: Im Detailfenster (`static/js/app.js`) öffnet Trailer YouTube in einem neuen Tab, auf der Karte den eingebetteten Player. Künftig überall der eingebettete Player; Reihenfolge überall „TMDB · Trailer“.
+- [ ] Label „Free“ nach Daten statt nach fester Liste: Heute bekommt ein Anbieter das Label nur, wenn sein Name in `MOSTLY_FREE` (`providers.py`) steht; Angebote werden nicht geprüft. Neue Regel: „Free“, wenn im letzten Scan des Landes mindestens die Hälfte seiner Watchlist-Filme als `free` oder `ads` angeboten wird. Ohne Filme im Scan entscheidet weiter die Liste. „Amazon Prime Video with Ads“ aus der Liste streichen (braucht ein Prime-Abo).
+  - Abgleich mit der Kopie der echten Daten (2026-11-15): ohne Label, aber nur kostenlos: BBC iPlayer, Channel 4, ITVX, M6+, JustWatch TV Free. Mit Label, aber meist bezahlt: Molotov (1 von 60). Mit Label, aber kein kostenloses Angebot: Amazon Prime Video with Ads, Alleskino. Gemischt und zu Recht ohne Label: Rakuten TV (3/341), TF1+ (8/70). Neu dazu käme auch Crunchyroll (1 Film, mit Werbung).
+- [ ] Knopf „Free services“ neben „Rental shops“ in der Seitenleiste: wählt genau die Anbieter mit Label. Label und Knopf nutzen dieselbe Liste.
+- [ ] Vorher klären: Lädt ein Länderwechsel die Seite neu? Davon hängt ab, ob das Label auf dem Server oder im Browser berechnet wird.
+- Prüfung: JS-Test für die gemeinsame Klasse der Links, Tests für die 50-%-Regel und den Rückfall auf die Liste, Browser-Test für den Knopf; Bildschirmfoto von Karte und Detailfenster.
+
+### Etappe 9b: Popularität und weitere Filter (vor Etappe 10)
+Alles kommt aus der TMDB-Antwort, die der Scan für jeden Film ohnehin lädt (`watchlist_app/tmdb.py`, `_details_from_movie`); es gibt keine zusätzliche Abfrage. Neue Felder erscheinen, wenn die gespeicherten Film-Details ablaufen (spätestens nach 24 Stunden).
+- [ ] Popularität speichern: `popularity` (wie viel gerade über den Film geredet wird, ändert sich täglich) und `vote_count` (Zahl der Bewertungen auf TMDB, fast fest) ins Film-Objekt (`models.py`) und in die Prüfung der Sicherung (`validation.py`).
+- [ ] Zwei Sortierungen: „Sort: trending“ (`popularity`) und „Sort: most votes“ (`vote_count`), in `static/js/filtering.js` neben title, newest, oldest und rating.
+- [ ] Filter „Mindestens N Stimmen“ (any, 100+, 1000+, 10000+). Er behebt, dass „Sort: rating“ heute einen Film mit 9,0 aus 3 Stimmen vor einen mit 8,4 aus 7000 stellt.
+- [ ] Regie und Besetzung: `credits` an dieselbe TMDB-Abfrage anhängen (`append_to_response`), nur Regie und die ersten fünf Namen der Besetzung speichern. Die Suche findet Filme auch über diese Namen, das Detailfenster zeigt sie an.
+- [ ] Stichworte: `keywords` an dieselbe Abfrage anhängen (z. B. „heist“, „based on novel“) und als Filter anbieten, wie den Genre-Filter.
+- [ ] Filter „Only on one of my services“: zeigt die Filme, die bei einer Kündigung verloren gingen. Nutzt dieselbe Regel wie die Kosten-Seite (`watchlist_app/costs.py`), damit beide Stellen dasselbe zählen.
+- Schon an anderer Stelle geplant und hier bewusst nicht doppelt: Letterboxd-Bewertung, Originalsprache und Herkunftsland (Etappe 12), Altersfreigabe (Etappe 11), gewichtete Sortierung und Filmreihen (Etappe 10), eigene Schlagworte (Etappe 13), „Nicht interessiert“ und gespeicherte Filter (Etappe 14). Die Popularität bei Letterboxd („Watched by … members“) bräuchte eine eigene Abfrage pro Film und gehört, wenn überhaupt, zu Etappe 12.
+- Prüfung: Tests für das Übernehmen der neuen Felder aus einer TMDB-Antwort und für die Sicherung, JS-Tests für beide Sortierungen und die Filter, Browser-Test für einen Filter. Größe der Datenbank vor und nach einem Scan vergleichen, wegen Besetzung und Stichworten.
+
 ### Etappe 10: Entscheidungshilfe
 - [ ] Zufallsknopf („Würfeln“): ein Film aus der aktuellen Filteransicht. Erster, einfacher Schritt zum Abend-Modus.
 - [ ] Abend-Modus: Zeit und Genre angeben, drei Vorschläge aus den eigenen Abos.
