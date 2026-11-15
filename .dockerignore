@@ -5,7 +5,9 @@
 __pycache__
 *.pyc
 .pytest_cache
+.watchlist.sqlite3*
 .watchlist_cache.json
 .watchlist_latest.json
 .watchlist_favorites.sqlite3
+.watchlist_films.sqlite3
 tests

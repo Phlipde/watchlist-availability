@@ -16,7 +16,7 @@
 - `web/scans.py` contains background scan coordination.
 - `web/serialization.py` contains web API result and statistics conversion.
 - `web/routes.py` contains Flask endpoint registration.
-- `templates/`, `manifest.webmanifest`, and `sw.js` contain the web UI and
+- `templates/` and `manifest.webmanifest` contain the web UI and
   browser shell.
 - `platforms.toml` selects providers by country; it does not determine whether a
   result is free or paid.

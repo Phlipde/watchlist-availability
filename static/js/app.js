@@ -1,93 +1,49 @@
-import {requestJson} from './api.js';
-import {escapeHtml} from './ui.js';
-import {createScanState} from './state.js';
-import {offerBadges, offerBadgesForProviders, unavailableCard} from './rendering.js';
-import {selectedProviders, updateProviderCount, updateProviderFilmCounts} from './filters.js';
+import {escapeHtml, numberText} from './ui.js';
+import {createAppState, createScanState} from './state.js';
+import {changeSummary, offerBadgesForProviders, renderResults} from './rendering.js';
+import {readFilters, selectedProviders, updateProviderCount, updateProviderFilmCounts} from './filters.js';
+import {filmKey, filterFilms} from './filtering.js';
 import {updateScanFeedback} from './scans.js';
-import {favoriteKey, favoriteLabel} from './favorites.js';
+import {favoriteLabel} from './favorites.js';
 
 const imageBaseUrl = window.WATCHLIST_CONFIG.imageBaseUrl;
 const scanState = createScanState();
+const state = createAppState();
     const providerInputs = document.querySelectorAll('#provider-filters input[type="checkbox"]');
-    const defaultProviders = new Set(window.WATCHLIST_CONFIG.defaultProviders || []);
+    const rentalShops = new Set(window.WATCHLIST_CONFIG.rentalShops || []);
+    // The services saved in Settings for the country shown in the header.
+    const mySubscriptions = () => new Set(window.WATCHLIST_CONFIG.subscriptions?.[document.getElementById('country-select').value] || []);
     const results = document.getElementById('results');
     const seen = new Set();
-    let allFilms = [];
-    let unavailableFilms = [];
-    let favoriteKeys = new Set();
-    let favoriteData = new Map();
-    let favoritesOnly = false;
     const toast = window.bootstrap ? bootstrap.Toast.getOrCreateInstance(document.getElementById('app-toast'), {delay: 2400}) : {show() {}};
     function showToast(message) { document.getElementById('toast-message').textContent = message; toast.show(); }
 
-    function filmCard(film, section) {
-      const providers = Object.entries(film.providers).filter(([, kinds]) => section === 'Free' ? kinds.some(kind => ['free', 'ads'].includes(kind)) : kinds.some(kind => ['flatrate', 'rent'].includes(kind))).map(([name]) => name);
-      if (!providers.length) return '';
-      const poster = film.poster_path ? `<img src="${imageBaseUrl}${escapeHtml(film.poster_path)}" alt="Poster for ${escapeHtml(film.title)}" loading="lazy">` : '<div class="no-poster">No poster available</div>';
-      const rating = film.rating ? `TMDB ${Number(film.rating).toFixed(1)}/10` : 'No rating';
-      const key = favoriteKey(film);
-      const trailerId = film.trailer_url ? new URL(film.trailer_url).searchParams.get('v') : null;
-      const links = `${film.tmdb_url ? `<a href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer">TMDB</a>` : ''}${trailerId ? ` · <button class="btn btn-link btn-sm p-0 trailer-link" data-trailer="${escapeHtml(trailerId)}" type="button">Trailer</button>` : ''}`;
-      const kinds = [...new Set(Object.values(film.providers).flat())];
-      const favorite = favoriteKeys.has(key);
-      const savedFavorite = favoriteData.get(key) || {};
-      const providerBadges = providers.map(provider => `<span class="badge rounded-pill provider-badge me-1 mb-1" data-provider="${escapeHtml(provider)}">${escapeHtml(provider)}</span>`).join('');
-      const providerChanges = film.provider_changes || {};
-      const changeBadges = [
-        ...(providerChanges.added || []).map(provider => `<span class="badge text-bg-success me-1">New on ${escapeHtml(provider)}</span>`),
-        ...(providerChanges.removed || []).map(provider => `<span class="badge text-bg-secondary me-1">No longer on ${escapeHtml(provider)}</span>`),
-      ].join('');
-      const favoriteButton = `<button class="favorite" type="button" aria-label="Favorite" data-favorite="${favorite ? 'true' : 'false'}">${favorite ? '★' : '☆'}</button>`;
-      return `<article class="film" role="button" tabindex="0" aria-label="Open details for ${escapeHtml(film.title)}" data-key="${escapeHtml(key)}" data-title="${escapeHtml(film.title.toLowerCase())}" data-year="${film.year ?? ''}" data-rating="${film.rating ?? 0}" data-runtime="${film.runtime ?? 0}" data-genres="${escapeHtml((film.genres || []).join('|'))}" data-kinds="${escapeHtml(kinds.join('|'))}" data-section="${section}" data-providers="${escapeHtml(providers.join('|'))}" data-provider-total="${Object.keys(film.providers || {}).length}" data-has-trailer="${film.trailer_url ? 'true' : 'false'}" data-has-poster="${film.poster_path ? 'true' : 'false'}" data-changes="${escapeHtml(Object.keys(providerChanges).filter(change => providerChanges[change]?.length).join('|'))}"><div class="poster"><input class="comparison-check" type="checkbox" aria-label="Compare ${escapeHtml(film.title)}">${poster}${favoriteButton}</div><div class="film-info"><p class="film-title">${escapeHtml(film.title)}</p><span class="year">${film.year ?? 'Year unknown'} · ${rating}${film.runtime ? ` · ${film.runtime} min` : ''}</span><p class="providers">${providerBadges}</p><div class="offer-badges">${offerBadges(kinds)}</div>${changeBadges ? `<p class="provider-changes">${changeBadges}</p>` : ''}<button class="film-details-button" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-info-circle"></i> Details</button><div class="film-actions"><select class="favorite-status" aria-label="Favorite status" ${favorite ? '' : 'hidden'}><option value="plan" ${savedFavorite.status === 'plan' ? 'selected' : ''}>Plan</option><option value="watching" ${savedFavorite.status === 'watching' ? 'selected' : ''}>Watching</option><option value="watched" ${savedFavorite.status === 'watched' ? 'selected' : ''}>Watched</option></select><input class="favorite-note" aria-label="Favorite note" placeholder="Note" value="${escapeHtml(savedFavorite.notes || '')}" ${favorite ? '' : 'hidden'}></div></div></article>`;
+    function greyKeys() {
+      if (!scanState.rescanInProgress || !document.getElementById('grey-unavailable').checked) return new Set();
+      return new Set(scanState.pendingUnavailable.map(filmKey));
     }
+    // Filter the state, then draw the cards from the result. Filters never read card attributes.
     function renderFilms() {
+      if (!state.films.length && !state.unavailable.length) return;
       const selected = selectedProviders(providerInputs);
-      const query = document.getElementById('film-search').value.toLowerCase().trim();
-      const availability = document.getElementById('availability-filter').value;
-      const kind = document.getElementById('kind-filter').value;
-      const minRating = Number(document.getElementById('min-rating').value) || 0;
-      const genre = document.getElementById('genre-filter').value;
-      const runtime = document.getElementById('runtime-filter').value;
-      const mode = document.getElementById('match-mode').value;
-      const from = Number(document.getElementById('year-from').value) || 0;
-      const to = Number(document.getElementById('year-to').value) || 9999;
-      const media = document.getElementById('media-filter').value;
-      const change = document.getElementById('change-filter').value;
-      const minimumProviders = Number(document.getElementById('provider-count-filter').value) || 0;
-      const favoriteStatus = document.getElementById('favorite-status-filter').value;
-      const cards = document.querySelectorAll('.film');
-      let visible = 0;
-      cards.forEach(card => {
-        const isUnavailable = card.dataset.section === 'Unavailable';
-        if (!card.dataset.providers && !isUnavailable) return;
-        const providers = card.dataset.providers ? card.dataset.providers.split('|') : [];
-        const providerMatch = mode === 'all' ? selected.size > 0 && [...selected].every(provider => providers.includes(provider)) : [...selected].some(provider => providers.includes(provider));
-          const minutes = Number(card.dataset.runtime) || 0;
-          const runtimeMatch = runtime === 'all' || (runtime === 'short' && minutes > 0 && minutes < 90) || (runtime === 'medium' && minutes >= 90 && minutes <= 120) || (runtime === 'long' && minutes > 120);
-          const availabilityMatch = availability === 'all'
-            || (availability === 'unavailable' && isUnavailable)
-            || (availability === 'available' && !isUnavailable)
-            || card.dataset.section === availability;
-          const mediaMatch = media === 'all' || (media === 'trailer' && card.dataset.hasTrailer === 'true') || (media === 'poster' && card.dataset.hasPoster === 'true');
-          const changeMatch = change === 'all' || card.dataset.changes.split('|').includes(change);
-          const providerCountMatch = (Number(card.dataset.providerTotal) || 0) >= minimumProviders;
-          const favoriteMatch = !favoritesOnly || (favoriteKeys.has(card.dataset.key) && (favoriteStatus === 'all' || favoriteData.get(card.dataset.key)?.status === favoriteStatus));
-          const show = (isUnavailable || providerMatch) && favoriteMatch && card.dataset.title.includes(query) && availabilityMatch && (kind === 'all' || card.dataset.kinds.split('|').includes(kind)) && (genre === 'all' || card.dataset.genres.split('|').includes(genre)) && runtimeMatch && mediaMatch && changeMatch && providerCountMatch && (Number(card.dataset.rating) || 0) >= minRating && (Number(card.dataset.year) || 0) >= from && (Number(card.dataset.year) || 0) <= to;
-        card.hidden = !show;
-        if (show) visible++;
+      const filters = readFilters(document, state.favoritesOnly);
+      const view = filterFilms(state.films, state.unavailable, filters, {selected, favorites: state.favorites});
+      state.view = view;
+      renderResults(view, {results, unavailableResults: document.getElementById('unavailable-results')}, {
+        imageBaseUrl,
+        selected,
+        favorites: state.favorites,
+        compareKeys: state.compareKeys,
+        greyKeys: greyKeys(),
       });
-      document.querySelectorAll('.result-section').forEach(section => { section.hidden = !section.querySelector('.film:not([hidden])'); });
-      updateProviderBadges(selected);
-      document.getElementById('visible-count').textContent = visible;
-      document.getElementById('favorites-empty')?.toggleAttribute('hidden', !(favoritesOnly && visible === 0));
-      sortCards();
+      document.getElementById('unavailable-panel').hidden = view.unavailable.length === 0;
+      document.getElementById('unavailable-badge').textContent = view.unavailable.length;
+      document.getElementById('visible-count').textContent = view.visibleCount;
+      document.getElementById('scan-summary-content').innerHTML = changeSummary(state.changes, selected, state.lastScan);
+      document.getElementById('scan-summary').hidden = !state.lastScan;
+      document.getElementById('favorites-empty')?.toggleAttribute('hidden', !(state.favoritesOnly && view.visibleCount === 0 && view.unavailable.length === 0));
       syncUrl();
       updateFilterChips();
-    }
-    function updateProviderBadges(selected) {
-      document.querySelectorAll('.provider-badge').forEach(badge => {
-        badge.hidden = !selected.has(badge.dataset.provider);
-      });
     }
     function reorderProviders() {
       const query = document.getElementById('provider-search').value.toLowerCase().trim();
@@ -122,56 +78,52 @@ const scanState = createScanState();
     function populateGenres() {
       const select = document.getElementById('genre-filter');
       const current = select.value;
-      const genres = [...new Set(allFilms.flatMap(film => film.genres || []))].sort();
+      const genres = [...new Set(state.films.flatMap(film => film.genres || []))].sort();
       select.innerHTML = '<option value="all">All genres</option>' + genres.map(genre => `<option value="${escapeHtml(genre)}">${escapeHtml(genre)}</option>`).join('');
       select.value = genres.includes(current) ? current : 'all';
     }
     function updateAnalysis() {
       const counts = {};
-      allFilms.forEach(film => (film.genres || []).forEach(genre => { counts[genre] = (counts[genre] || 0) + 1; }));
+      state.films.forEach(film => (film.genres || []).forEach(genre => { counts[genre] = (counts[genre] || 0) + 1; }));
       const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-      const ratings = allFilms.filter(film => film.rating).map(film => film.rating);
-      const runtimes = allFilms.filter(film => film.runtime).map(film => film.runtime);
-    const decades = allFilms.filter(film => film.release_date).map(film => new Date(film.release_date).getFullYear());
+      const ratings = state.films.filter(film => film.rating).map(film => film.rating);
+      const runtimes = state.films.filter(film => film.runtime).map(film => film.runtime);
+    const decades = state.films.filter(film => film.release_date).map(film => new Date(film.release_date).getFullYear());
       document.getElementById('top-genre').textContent = top ? `${top[0]} (${top[1]})` : '-';
       document.getElementById('average-rating').textContent = ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : '-';
       document.getElementById('average-runtime').textContent = runtimes.length ? `${Math.round(runtimes.reduce((a, b) => a + b, 0) / runtimes.length)} min` : '-';
-      document.getElementById('analysis-panel').hidden = !allFilms.length;
+      document.getElementById('analysis-panel').hidden = !state.films.length;
       document.getElementById('decades').textContent = decades.length ? `${Math.min(...decades)}-${Math.max(...decades)}` : '-';
     }
     function showRandomFilm() {
-      const visible = [...document.querySelectorAll('.film')].filter(card => !card.hidden);
+      const visible = state.view ? [...new Map(Object.values(state.view.sections).flat().map(film => [filmKey(film), film])).values()] : [];
       if (!visible.length) return showToast('No film matches the current filters.');
-      const selected = visible[Math.floor(Math.random() * visible.length)];
-      selected.scrollIntoView({behavior: 'smooth', block: 'center'});
-      showToast(`Random pick: ${selected.dataset.title}`);
+      const film = visible[Math.floor(Math.random() * visible.length)];
+      document.querySelector(`#results .film[data-key="${CSS.escape(filmKey(film))}"]`)?.scrollIntoView({behavior: 'smooth', block: 'center'});
+      showToast(`Random pick: ${film.title}`);
     }
     function compareFilms() {
-      const selected = [...document.querySelectorAll('.comparison-check:checked')].map(check => check.closest('.film'));
-      if (selected.length < 2 || selected.length > 4) return showToast('Select 2 to 4 films to compare.');
-      const films = selected.map(card => allFilms.find(film => favoriteKey(film) === card.dataset.key)).filter(Boolean);
+      const films = state.films.filter(film => state.compareKeys.has(filmKey(film)));
+      if (films.length < 2 || films.length > 4) return showToast('Select 2 to 4 films to compare.');
       const providers = [...new Set(films.flatMap(film => Object.keys(film.providers || {})))].sort();
       const offerCell = film => Object.entries(film.providers || {}).map(([provider, kinds]) => `${escapeHtml(provider)}: ${escapeHtml(kinds.join(', '))}`).join('<br>') || '-';
       const providerRows = providers.map(provider => `<tr><th>${escapeHtml(provider)}</th>${films.map(film => `<td>${escapeHtml((film.providers?.[provider] || []).join(', ') || '—')}</td>`).join('')}</tr>`).join('');
-      document.getElementById('compare-table').innerHTML = `<thead><tr><th>Metric</th>${films.map(film => `<th>${escapeHtml(film.title)}</th>`).join('')}</tr></thead><tbody><tr><th>Year</th>${films.map(film => `<td>${film.year || '-'}</td>`).join('')}</tr><tr><th>Rating</th>${films.map(film => `<td>${film.rating || '-'}</td>`).join('')}</tr><tr><th>Runtime</th>${films.map(film => `<td>${film.runtime ? `${film.runtime} min` : '-'}</td>`).join('')}</tr><tr><th>Genres</th>${films.map(film => `<td>${escapeHtml((film.genres || []).join(', ') || '-')}</td>`).join('')}</tr><tr><th>Offers</th>${films.map(film => `<td>${offerCell(film)}</td>`).join('')}</tr>${providerRows}</tbody>`;
+      document.getElementById('compare-table').innerHTML = `<thead><tr><th>Metric</th>${films.map(film => `<th>${escapeHtml(film.title)}</th>`).join('')}</tr></thead><tbody><tr><th>Year</th>${films.map(film => `<td>${numberText(film.year, '-')}</td>`).join('')}</tr><tr><th>Rating</th>${films.map(film => `<td>${numberText(film.rating, '-')}</td>`).join('')}</tr><tr><th>Runtime</th>${films.map(film => `<td>${numberText(film.runtime) ? `${numberText(film.runtime)} min` : '-'}</td>`).join('')}</tr><tr><th>Genres</th>${films.map(film => `<td>${escapeHtml((film.genres || []).join(', ') || '-')}</td>`).join('')}</tr><tr><th>Offers</th>${films.map(film => `<td>${offerCell(film)}</td>`).join('')}</tr>${providerRows}</tbody>`;
       bootstrap.Modal.getOrCreateInstance(document.getElementById('compare-modal')).show();
     }
-    function sortCards() {
-      const order = document.getElementById('sort-order').value;
-      document.querySelectorAll('.films').forEach(container => [...container.children].filter(card => card.dataset.title).sort((a, b) => {
-        if (order === 'year-desc' || order === 'year-asc') return ((Number(a.dataset.year) || 0) - (Number(b.dataset.year) || 0)) * (order === 'year-desc' ? -1 : 1);
-        if (order === 'rating') return (Number(b.dataset.rating) || 0) - (Number(a.dataset.rating) || 0);
-        return a.dataset.title.localeCompare(b.dataset.title);
-      }).forEach(card => container.appendChild(card)));
+    function setCompared(key, checked) {
+      if (checked) state.compareKeys.add(key);
+      else state.compareKeys.delete(key);
+      document.querySelectorAll(`.film[data-key="${CSS.escape(key)}"] .comparison-check`).forEach(check => { check.checked = checked; });
     }
     function updateStats() {
       const selected = new Set([...providerInputs].filter(input => input.checked).map(input => input.value));
-      updateProviderFilmCounts(allFilms, document.querySelectorAll('.provider-film-count[data-provider-count]'));
+      updateProviderFilmCounts(state.films, document.querySelectorAll('.provider-film-count[data-provider-count]'));
       reorderProviders();
       const scope = document.getElementById('stats-scope').value;
       const scopedFilms = scope === 'selected'
-        ? allFilms.filter(film => Object.keys(film.providers).some(provider => selected.has(provider)))
-        : allFilms;
+        ? state.films.filter(film => Object.keys(film.providers).some(provider => selected.has(provider)))
+        : state.films;
       const providers = {};
       scopedFilms.forEach(film => Object.keys(film.providers).forEach(provider => {
         if (scope === 'all' || selected.has(provider)) providers[provider] = (providers[provider] || 0) + 1;
@@ -181,110 +133,71 @@ const scanState = createScanState();
       document.getElementById('total-count').textContent = scopedFilms.length;
       document.getElementById('free-count').textContent = scopedFilms.filter(film => Object.entries(film.providers).some(([provider, kinds]) => (scope === 'all' || selected.has(provider)) && kinds.some(kind => ['free', 'ads'].includes(kind)))).length;
       document.getElementById('paid-count').textContent = scopedFilms.filter(film => Object.entries(film.providers).some(([provider, kinds]) => (scope === 'all' || selected.has(provider)) && kinds.some(kind => ['flatrate', 'rent'].includes(kind)))).length;
-      document.getElementById('unavailable-count').textContent = unavailableFilms.length;
-      document.getElementById('coverage-percent').textContent = `${allFilms.length ? Math.round(scopedFilms.length / allFilms.length * 100) : 0}%`;
+      document.getElementById('unavailable-count').textContent = state.unavailable.length;
+      document.getElementById('coverage-percent').textContent = `${state.films.length ? Math.round(scopedFilms.length / state.films.length * 100) : 0}%`;
       document.getElementById('average-providers').textContent = scopedFilms.length ? (scopedFilms.reduce((total, film) => total + scopedProviderCount(film), 0) / scopedFilms.length).toFixed(1) : '0';
       document.getElementById('top-provider').textContent = top ? `${top[0]} (${top[1]})` : '-';
       const coverage = document.getElementById('coverage');
       const max = scopedFilms.length || 1;
       coverage.innerHTML = Object.entries(providers).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([provider, count]) => `<div class="coverage-row"><span>${escapeHtml(provider)}</span><div class="progress"><div class="progress-bar" style="width:${Math.round(count / max * 100)}%"></div></div><strong>${count}</strong></div>`).join('');
-      coverage.hidden = !allFilms.length;
+      coverage.hidden = !state.films.length;
     }
     function appendUnavailable(films) {
       if (!films?.length) return;
-      unavailableFilms = films;
-      const panel = document.getElementById('unavailable-panel');
-      const container = document.getElementById('unavailable-results');
-      panel.hidden = false;
-      document.getElementById('unavailable-badge').textContent = films.length;
-      container.innerHTML = films.map(unavailableCard).join('');
+      const changed = films.length !== state.unavailable.length;
+      state.unavailable = films;
       updateStats();
+      if (changed) renderFilms();
     }
     function applyRescanUnavailableState() {
-      const greyUnavailable = document.getElementById('grey-unavailable').checked;
-      const unavailableKeys = new Set(scanState.pendingUnavailable.map(film => `${film.title}|${film.year}`));
+      const keys = greyKeys();
       document.querySelectorAll('#results .film').forEach(card => {
-        card.classList.toggle('rescan-unavailable', scanState.rescanInProgress && greyUnavailable && unavailableKeys.has(card.dataset.key));
+        card.classList.toggle('rescan-unavailable', keys.has(card.dataset.key));
       });
     }
     function appendFilms(films) {
       let added = false;
-      const pendingCards = new Map();
       films.forEach(film => {
-        const key = `${film.title}|${film.year}`;
+        const key = filmKey(film);
         if (seen.has(key)) return;
         seen.add(key);
-        allFilms.push(film);
+        state.films.push(film);
         added = true;
-        ['Free', 'Paid'].forEach(section => {
-          let block = document.querySelector(`.result-section[data-section="${section}"]`);
-          if (!block) {
-            block = document.createElement('div');
-            block.className = 'result-section';
-            block.dataset.section = section;
-            block.innerHTML = `<h2>${section}</h2><div class="films"></div>`;
-            results.querySelector('.empty')?.remove();
-            results.querySelector('.skeleton-grid')?.remove();
-            results.appendChild(block);
-          }
-          const card = filmCard(film, section);
-          if (card) pendingCards.set(section, (pendingCards.get(section) || '') + card);
-        });
       });
       if (!added) return;
-      pendingCards.forEach((cards, section) => {
-        const block = document.querySelector(`.result-section[data-section="${section}"]`);
-        block.querySelector('.films').insertAdjacentHTML('beforeend', cards);
-      });
       updateStats();
       populateGenres();
       updateAnalysis();
       renderFilms();
     }
-    function replaceWithScanResults(films, unavailable) {
-      allFilms = [];
-      if (!scanState.rescanInProgress) unavailableFilms = [];
+    // Show a finished scan: films, unavailable films and the stored availability changes.
+    function replaceWithScanResults(films, unavailable, changes, lastScan) {
+      state.films = films || [];
+      state.unavailable = unavailable || [];
+      state.changes = changes || [];
+      if (lastScan) state.lastScan = lastScan;
       seen.clear();
-      results.innerHTML = '';
-      document.getElementById('unavailable-panel').hidden = true;
-      appendFilms(films || []);
-      appendUnavailable(unavailable || []);
+      state.films.forEach(film => seen.add(filmKey(film)));
+      if (!state.films.length && !state.unavailable.length) results.innerHTML = '';
       scanState.pendingResults = [];
       scanState.pendingUnavailable = [];
+      updateStats();
+      populateGenres();
+      updateAnalysis();
+      renderFilms();
     }
-    function showChangeSummary(previousFilms, nextFilms, unavailable) {
-      const previousKeys = new Set(previousFilms.map(film => `${film.title}|${film.year}`));
-      const nextKeys = new Set(nextFilms.map(film => `${film.title}|${film.year}`));
-      const newlyAvailable = nextFilms.filter(film => !previousKeys.has(`${film.title}|${film.year}`)).length;
-      const noLongerAvailable = new Set([
-        ...previousFilms
-          .filter(film => !nextKeys.has(`${film.title}|${film.year}`))
-          .map(film => `${film.title}|${film.year}`),
-        ...unavailable.map(film => `${film.title}|${film.year}`),
-      ]).size;
-      const providerChanges = [];
-      nextFilms.forEach(film => {
-        const key = `${film.title}|${film.year}`;
-        const previous = previousFilms.find(item => `${item.title}|${item.year}` === key);
-        if (!previous) return;
-        const oldProviders = new Set(Object.keys(previous.providers || {}));
-        const newProviders = new Set(Object.keys(film.providers || {}));
-        const added = [...newProviders].filter(provider => !oldProviders.has(provider));
-        const removed = [...oldProviders].filter(provider => !newProviders.has(provider));
-        if (added.length || removed.length) {
-          film.provider_changes = {added, removed};
-          providerChanges.push(`${film.title} (${added.length} added, ${removed.length} removed)`);
-        }
-      });
-      const summary = document.getElementById('scan-summary');
-      document.getElementById('scan-summary-content').innerHTML =
-        `<p>Last scan: ${newlyAvailable} newly available, ${noLongerAvailable} no longer available.</p>` +
-        (providerChanges.length ? `<p>Provider changes: ${providerChanges.map(escapeHtml).join('; ')}</p>` : '');
-      summary.hidden = false;
-    }
-    async function pollScan() {
-      const response = await requestJson(`/api/scan/${scanState.currentJob}`);
-      const job = await response.json();
+    async function pollScan(jobId = scanState.currentJob) {
+      if (jobId !== scanState.currentJob) return;
+      let response, job;
+      try {
+        response = await fetch(`/api/scan/${jobId}`);
+        job = await response.json();
+      } catch {
+        // The server was not reachable for a moment (sleep, restart): keep asking.
+        setTimeout(() => pollScan(jobId), 2000);
+        return;
+      }
+      if (jobId !== scanState.currentJob) return;
       if (!response.ok) {
         const url = new URL(location.href);
         url.searchParams.delete('scan');
@@ -323,34 +236,37 @@ const scanState = createScanState();
       }
       if (job.source_name) { document.getElementById('source-name').textContent = job.source_name; document.getElementById('result-meta').hidden = false; document.getElementById('film-filters').hidden = false; }
       if (job.last_updated) document.getElementById('last-updated').textContent = `Last updated ${new Date(job.last_updated * 1000).toLocaleString()}`;
-      if (allFilms.length) { document.getElementById('stats-section').hidden = false; document.getElementById('result-tools').hidden = false; updateStats(); }
-      if (job.status === 'complete' || job.status === 'cancelled') { document.getElementById('progress-bar').style.width = '100%'; document.getElementById('progress-count').textContent = job.status === 'complete' ? 'Complete' : 'Cancelled'; document.getElementById('cancel-scan').hidden = true; document.getElementById('retry-scan').hidden = false;       if (scanState.rescanInProgress && job.status === 'complete') {
-        const previousFilms = [...allFilms];
-        showChangeSummary(previousFilms, scanState.pendingResults, scanState.pendingUnavailable);
-        replaceWithScanResults(scanState.pendingResults, scanState.pendingUnavailable);
+      if (state.films.length) { document.getElementById('stats-section').hidden = false; document.getElementById('result-tools').hidden = false; updateStats(); }
+      if (job.status === 'complete' || job.status === 'cancelled') { document.getElementById('progress-bar').style.width = '100%'; document.getElementById('progress-count').textContent = job.status === 'complete' ? 'Complete' : 'Cancelled'; document.getElementById('cancel-scan').hidden = true; document.getElementById('retry-scan').hidden = false;       if (job.status === 'complete') {
+        scanState.rescanInProgress = false;
+        replaceWithScanResults(job.results, job.unavailable, job.changes, job.last_updated);
       }
+      // The server moves favorites saved under "Title|Year" to the TMDB id after a scan.
+      if (job.status === 'complete') loadFavorites().then(renderFilms);
       scanState.rescanInProgress = false; scanState.pendingUnavailable = []; applyRescanUnavailableState(); showToast(job.status === 'complete' ? 'Watchlist scan complete.' : 'Scan cancelled. Previous results kept.'); return; }
+      // The app was restarted during the scan: it has started a new one, join it.
+      if (job.status === 'interrupted') { startScan(); return; }
       if (job.status === 'error') { document.getElementById('error-message').textContent = job.message; document.getElementById('error-message').hidden = false; document.getElementById('cancel-scan').hidden = true; document.getElementById('retry-scan').hidden = false; scanState.rescanInProgress = false; scanState.pendingUnavailable = []; applyRescanUnavailableState(); showToast('Scan failed.'); return; }
-      setTimeout(pollScan, scanState.pollDelay);
+      setTimeout(() => pollScan(jobId), scanState.pollDelay);
     }
     async function startScan() {
-      scanState.rescanInProgress = allFilms.length > 0;
+      scanState.rescanInProgress = state.films.length > 0;
       scanState.pendingResults = [];
       scanState.pendingUnavailable = [];
       if (!scanState.rescanInProgress) {
-        allFilms = [];
+        state.films = [];
         seen.clear();
         results.innerHTML = '<div class="skeleton-grid" aria-label="Loading films"><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div></div>';
       }
       showToast(scanState.rescanInProgress ? 'Updating availability. Previous results remain visible.' : 'Starting watchlist scan...');
       document.getElementById('cancel-scan').hidden = false; document.getElementById('retry-scan').hidden = true; document.getElementById('error-message').hidden = true;
-      unavailableFilms = [];
+      state.unavailable = [];
       if (!scanState.rescanInProgress) document.getElementById('unavailable-panel').hidden = true;
       const upload = document.getElementById('csv-upload').files[0];
       const body = new FormData();
       body.append('country', document.getElementById('country-select').value);
       if (upload) body.append('watchlist', upload);
-      const response = await requestJson('/api/scan', {method: 'POST', body});
+      const response = await fetch('/api/scan', {method: 'POST', body});
       const data = await response.json();
       if (!response.ok) { document.getElementById('error-message').textContent = data.error; document.getElementById('error-message').hidden = false; showToast('Scan could not be started.'); return; }
       scanState.currentJob = data.job_id;
@@ -363,20 +279,17 @@ const scanState = createScanState();
     }
     async function loadLatestResult() {
       const country = document.getElementById('country-select').value;
-      const response = await requestJson(`/api/latest?country=${encodeURIComponent(country)}`);
+      const response = await fetch(`/api/latest?country=${encodeURIComponent(country)}`);
       if (!response.ok) return;
       const snapshot = await response.json();
       if (!snapshot.available) return;
-      replaceWithScanResults(snapshot.results || [], snapshot.unavailable || []);
+      replaceWithScanResults(snapshot.results, snapshot.unavailable, snapshot.changes, snapshot.created);
       document.getElementById('source-name').textContent = snapshot.source_name || '';
       document.getElementById('result-meta').hidden = false;
       document.getElementById('film-filters').hidden = false;
       if (snapshot.created) {
         document.getElementById('last-updated').textContent =
           `Last updated ${new Date(snapshot.created * 1000).toLocaleString()}`;
-        document.getElementById('scan-summary-content').innerHTML =
-          `<p>Last successful scan: ${new Date(snapshot.created * 1000).toLocaleString()}.</p>`;
-        document.getElementById('scan-summary').hidden = false;
       }
     }
     function resumeScan(jobId) {
@@ -387,66 +300,49 @@ const scanState = createScanState();
       pollScan();
     }
     async function loadFavorites() {
-      const response = await requestJson('/api/favorites');
+      const response = await fetch('/api/favorites');
       const favorites = await response.json();
-      favoriteKeys = new Set(favorites.map(movie => movie.key));
-      favoriteData = new Map(favorites.map(movie => [movie.key, movie]));
+      state.favorites = new Map(favorites.map(movie => [movie.key, movie]));
     }
     async function toggleFavorite(button) {
       const card = button.closest('.film');
       const key = card?.dataset.key || button.dataset.key;
       if (!key || button.disabled) return;
-      const wasFavorite = favoriteKeys.has(key);
+      const previous = state.favorites.get(key);
+      const film = state.films.find(movie => filmKey(movie) === key);
+      if (!previous && !film) return;
       button.disabled = true;
       let response;
-      if (wasFavorite) {
-        response = await requestJson(`/api/favorites/${encodeURIComponent(key)}`, {method: 'DELETE'});
-        favoriteKeys.delete(key);
-        favoriteData.delete(key);
+      if (previous) {
+        response = await fetch(`/api/favorites/${encodeURIComponent(key)}`, {method: 'DELETE'});
+        state.favorites.delete(key);
       } else {
-        const film = allFilms.find(movie => `${movie.title}|${movie.year}` === key);
-        if (!film) return;
-        response = await requestJson('/api/favorites', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({key, ...film})});
-        favoriteKeys.add(key);
-        favoriteData.set(key, {...film, key, status: 'plan', notes: ''});
+        response = await fetch('/api/favorites', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({key, ...film})});
+        state.favorites.set(key, {...film, key, status: 'plan', notes: ''});
       }
       if (!response.ok) {
-        if (wasFavorite) favoriteKeys.add(key);
-        else favoriteKeys.delete(key);
+        if (previous) state.favorites.set(key, previous);
+        else state.favorites.delete(key);
         button.disabled = false;
         showToast('Could not update favorite.');
         return;
       }
-      [...document.querySelectorAll('.film')]
-        .filter(movieCard => movieCard.dataset.key === key)
-        .flatMap(movieCard => [...movieCard.querySelectorAll('.favorite')])
-        .forEach(star => {
-        star.textContent = favoriteKeys.has(key) ? '★' : '☆';
-        star.dataset.favorite = String(favoriteKeys.has(key));
-        star.disabled = false;
-        star.setAttribute('aria-label', favoriteKeys.has(key) ? 'Remove favorite' : 'Add favorite');
-        const card = star.closest('.film');
-        const status = card.querySelector('.favorite-status');
-        const note = card.querySelector('.favorite-note');
-        if (status) status.hidden = !favoriteKeys.has(key);
-        if (note) note.hidden = !favoriteKeys.has(key);
-      });
       renderFilms();
       document.querySelectorAll(`.modal-favorite[data-key="${CSS.escape(key)}"]`).forEach(modalButton => {
-        const active = favoriteKeys.has(key);
+        const active = state.favorites.has(key);
         modalButton.innerHTML = `<i class="ti ti-star"></i> ${favoriteLabel(active)}`;
         modalButton.classList.toggle('btn-accent', active);
         modalButton.classList.toggle('btn-outline-secondary', !active);
         modalButton.disabled = false;
       });
-      showToast(favoriteKeys.has(key) ? 'Added to favorites.' : 'Removed from favorites.');
+      showToast(state.favorites.has(key) ? 'Added to favorites.' : 'Removed from favorites.');
     }
     async function updateFavoriteField(control) {
       const card = control.closest('.film');
       const key = card.dataset.key;
       const field = control.classList.contains('favorite-status') ? 'status' : 'notes';
-      const response = await requestJson(`/api/favorites/${encodeURIComponent(key)}`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({[field]: control.value})});
-      if (response.ok) { const saved = favoriteData.get(key) || {key}; saved[field] = control.value; favoriteData.set(key, saved); showToast('Favorite updated.'); }
+      const response = await fetch(`/api/favorites/${encodeURIComponent(key)}`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({[field]: control.value})});
+      if (response.ok) { const saved = state.favorites.get(key) || {key}; saved[field] = control.value; state.favorites.set(key, saved); showToast('Favorite updated.'); }
     }
     providerInputs.forEach(input => input.addEventListener('change', renderFilms));
     providerInputs.forEach(input => input.addEventListener('change', reorderProviders));
@@ -489,32 +385,39 @@ const scanState = createScanState();
       reorderProviders();
       renderFilms();
     });
-    document.getElementById('reset-providers')?.addEventListener('click', () => {
-      let restored = 0;
+    // Two ready-made views: the user's own services, or only the shops that rent single films.
+    function selectProviders(names, message) {
+      let chosen = 0;
       providerInputs.forEach(input => {
-        input.checked = defaultProviders.has(input.value);
-        if (input.checked) restored += 1;
+        input.checked = names.has(input.value);
+        if (input.checked) chosen += 1;
       });
       reorderProviders();
       renderFilms();
-      showToast(`Restored ${restored} configured providers.`);
+      showToast(message(chosen));
       if (window.innerWidth <= 800 && !document.body.classList.contains('layout-desktop')) closeProviderPanel();
+    }
+    document.getElementById('reset-providers')?.addEventListener('click', () => {
+      selectProviders(mySubscriptions(), count => `Showing your ${count} subscriptions.`);
+    });
+    document.getElementById('rental-providers')?.addEventListener('click', () => {
+      selectProviders(rentalShops, count => `Showing ${count} rental shops.`);
     });
     document.getElementById('stats-scope').addEventListener('change', updateStats);
     reorderProviders();
     document.getElementById('filter-chips').addEventListener('click', event => { const button = event.target.closest('.filter-chip'); if (!button) return; const input = document.getElementById(button.dataset.filterId); input.value = input.options ? 'all' : ''; input.dispatchEvent(new Event('input', {bubbles: true})); });
     results.addEventListener('click', event => { const favoriteButton = event.target.closest('.favorite'); if (favoriteButton) { event.preventDefault(); toggleFavorite(favoriteButton); } });
     function showFilmDetails(key) {
-      const film = [...allFilms, ...unavailableFilms].find(item => `${item.title}|${item.year}` === key);
+      const film = [...state.films, ...state.unavailable].find(item => filmKey(item) === key);
       if (!film) return;
       document.getElementById('film-details-title').textContent = film.title;
       const letterboxdSearch = `https://letterboxd.com/search/${encodeURIComponent(`${film.title} ${film.year || ''}`.trim())}/`;
       const trailerLink = film.trailer_url ? `<a class="btn btn-sm btn-outline-secondary" href="${escapeHtml(film.trailer_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-youtube"></i> Trailer</a>` : '';
       const providerRows = offerBadgesForProviders(film.providers);
       const poster = film.poster_path ? `<img class="film-modal-poster" src="${imageBaseUrl}${escapeHtml(film.poster_path)}" alt="Poster for ${escapeHtml(film.title)}">` : '';
-      const favoriteButtonClass = favoriteKeys.has(key) ? 'btn-accent' : 'btn-outline-secondary';
-      const selectedForCompare = document.querySelector(`.film[data-key="${CSS.escape(key)}"] .comparison-check`)?.checked;
-      document.getElementById('film-details-content').innerHTML = `<div class="film-modal-layout">${poster}<div><p class="film-modal-meta">${film.year ?? 'Year unknown'}${film.rating ? ` · TMDB ${Number(film.rating).toFixed(1)}/10` : ''}${film.runtime ? ` · ${film.runtime} min` : ''}</p><p>${escapeHtml(film.overview || 'No description available.')}</p><p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p></div></div><h6 class="film-modal-section-title">Availability</h6><ul class="film-provider-list">${providerRows || '<li>No provider data available.</li>'}</ul><div class="film-modal-actions"><button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-star"></i> ${favoriteLabel(favoriteKeys.has(key))}</button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-columns-gap"></i> ${selectedForCompare ? 'Remove from comparison' : 'Add to comparison'}</button>${film.tmdb_url ? `<a class="btn btn-sm btn-outline-secondary" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb"></i> TMDB</a>` : ''}${trailerLink}<a class="btn btn-sm btn-outline-secondary" href="${letterboxdSearch}" target="_blank" rel="noreferrer"><i class="ti ti-device-tv"></i> Search Letterboxd</a></div>`;
+      const favoriteButtonClass = state.favorites.has(key) ? 'btn-accent' : 'btn-outline-secondary';
+      const selectedForCompare = state.compareKeys.has(key);
+      document.getElementById('film-details-content').innerHTML = `<div class="film-modal-layout">${poster}<div><p class="film-modal-meta">${numberText(film.year, 'Year unknown')}${numberText(film.rating) ? ` · TMDB ${Number(film.rating).toFixed(1)}/10` : ''}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}</p><p>${escapeHtml(film.overview || 'No description available.')}</p><p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p></div></div><h6 class="film-modal-section-title">Availability</h6><ul class="film-provider-list">${providerRows || '<li>No provider data available.</li>'}</ul><div class="film-modal-actions"><button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-star"></i> ${favoriteLabel(state.favorites.has(key))}</button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-columns-gap"></i> ${selectedForCompare ? 'Remove from comparison' : 'Add to comparison'}</button>${film.tmdb_url ? `<a class="btn btn-sm btn-outline-secondary" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb"></i> TMDB</a>` : ''}${trailerLink}<a class="btn btn-sm btn-outline-secondary" href="${letterboxdSearch}" target="_blank" rel="noreferrer"><i class="ti ti-device-tv"></i> Search Letterboxd</a></div>`;
       bootstrap.Modal.getOrCreateInstance(document.getElementById('film-details-modal')).show();
     }
     results.addEventListener('click', event => {
@@ -530,12 +433,14 @@ const scanState = createScanState();
       }
       const compareButton = event.target.closest('.modal-compare');
       if (compareButton) {
-        const checkbox = document.querySelector(`.film[data-key="${CSS.escape(compareButton.dataset.key)}"] .comparison-check`);
-        if (checkbox) {
-          checkbox.checked = !checkbox.checked;
-          compareButton.innerHTML = `<i class="ti ti-columns-gap"></i> ${checkbox.checked ? 'Remove from comparison' : 'Add to comparison'}`;
-        }
+        const key = compareButton.dataset.key;
+        setCompared(key, !state.compareKeys.has(key));
+        compareButton.innerHTML = `<i class="ti ti-columns-gap"></i> ${state.compareKeys.has(key) ? 'Remove from comparison' : 'Add to comparison'}`;
       }
+    });
+    results.addEventListener('change', event => {
+      const check = event.target.closest('.comparison-check');
+      if (check) setCompared(check.closest('.film').dataset.key, check.checked);
     });
     results.addEventListener('keydown', event => {
       if ((event.key !== 'Enter' && event.key !== ' ') || event.target.closest('button, a, input, select, textarea')) return;
@@ -570,7 +475,7 @@ const scanState = createScanState();
         providers: [...selectedProviders(providerInputs)].join(','),
         minproviders: document.getElementById('provider-count-filter').value,
         favoriteStatus: document.getElementById('favorite-status-filter').value,
-        favorites: favoritesOnly ? '1' : '',
+        favorites: state.favoritesOnly ? '1' : '',
       };
       Object.entries(values).forEach(([name, value]) => {
         if (value && !['all', '0', 'any'].includes(value)) url.searchParams.set(name, value);
@@ -578,7 +483,9 @@ const scanState = createScanState();
       });
       history.replaceState({}, '', url);
     }
-    ['film-search', 'availability-filter', 'kind-filter', 'genre-filter', 'runtime-filter', 'year-from', 'year-to', 'min-rating', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => { document.getElementById(id).addEventListener('input', renderFilms); document.getElementById(id).addEventListener('change', renderFilms); });
+    // Only 'input': a 'change' event also fires when a text field loses focus, and redrawing the
+    // cards at that moment (on mousedown) swallowed the first click on a card or a star.
+    ['film-search', 'availability-filter', 'kind-filter', 'genre-filter', 'runtime-filter', 'year-from', 'year-to', 'min-rating', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => document.getElementById(id).addEventListener('input', renderFilms));
     const initialUrl = new URL(location.href).searchParams;
     const setInitial = (id, parameter, fallback) => {
       const element = document.getElementById(id);
@@ -603,10 +510,10 @@ const scanState = createScanState();
     if (urlProviders) providerInputs.forEach(input => { input.checked = urlProviders.split(',').includes(input.value); });
     ['match-mode', 'sort-order', 'favorite-status-filter'].forEach(id => document.getElementById(id).addEventListener('change', renderFilms));
     const favoritesButton = document.getElementById('favorites-view');
-    favoritesOnly = initialUrl.get('favorites') === '1';
-    favoritesButton.classList.toggle('active', favoritesOnly);
-    favoritesButton.innerHTML = favoritesOnly ? '<i class="ti ti-grid"></i> All films' : '<i class="ti ti-star-fill"></i> My favorites';
-    favoritesButton.addEventListener('click', event => { favoritesOnly = !favoritesOnly; event.currentTarget.classList.toggle('active', favoritesOnly); event.currentTarget.innerHTML = favoritesOnly ? '<i class="ti ti-grid"></i> All films' : '<i class="ti ti-star-fill"></i> My favorites'; renderFilms(); });
+    state.favoritesOnly = initialUrl.get('favorites') === '1';
+    favoritesButton.classList.toggle('active', state.favoritesOnly);
+    favoritesButton.innerHTML = state.favoritesOnly ? '<i class="ti ti-grid"></i> All films' : '<i class="ti ti-star-fill"></i> My favorites';
+    favoritesButton.addEventListener('click', event => { state.favoritesOnly = !state.favoritesOnly; event.currentTarget.classList.toggle('active', state.favoritesOnly); event.currentTarget.innerHTML = state.favoritesOnly ? '<i class="ti ti-grid"></i> All films' : '<i class="ti ti-star-fill"></i> My favorites'; renderFilms(); });
     document.getElementById('random-film').addEventListener('click', showRandomFilm);
     document.getElementById('compare-films').addEventListener('click', compareFilms);
     document.getElementById('cancel-scan').addEventListener('click', async event => {
@@ -614,7 +521,7 @@ const scanState = createScanState();
       if (!window.confirm('Cancel this scan? Your previous successful results will remain visible.')) return;
       event.currentTarget.disabled = true;
       try {
-        const response = await requestJson(`/api/scan/${scanState.currentJob}/cancel`, {method: 'POST'});
+        const response = await fetch(`/api/scan/${scanState.currentJob}/cancel`, {method: 'POST'});
         if (!response.ok) {
           event.currentTarget.disabled = false;
           showToast('The scan could not be cancelled.');
@@ -644,9 +551,9 @@ const scanState = createScanState();
     });
     if (layoutToggle) updateLayoutMode();
     document.getElementById('share-button')?.addEventListener('click', async () => { await navigator.clipboard.writeText(location.href); document.getElementById('share-message').textContent = 'Link copied'; });
-    document.getElementById('export-json').addEventListener('click', () => download('watchlist.json', JSON.stringify(allFilms, null, 2), 'application/json'));
-    document.getElementById('export-favorites').addEventListener('click', () => download('favorites.csv', ['Title,Year,Status,Notes', ...[...favoriteData.values()].map(film => [film.title, film.year, film.status || 'plan', film.notes || ''].map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))].join('\n'), 'text/csv'));
-    document.getElementById('export-favorites-json').addEventListener('click', () => download('favorites.json', JSON.stringify([...favoriteData.values()], null, 2), 'application/json'));
+    document.getElementById('export-json').addEventListener('click', () => download('watchlist.json', JSON.stringify(state.films, null, 2), 'application/json'));
+    document.getElementById('export-favorites').addEventListener('click', () => download('favorites.csv', ['Title,Year,Status,Notes', ...[...state.favorites.values()].map(film => [film.title, film.year, film.status || 'plan', film.notes || ''].map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))].join('\n'), 'text/csv'));
+    document.getElementById('export-favorites-json').addEventListener('click', () => download('favorites.json', JSON.stringify([...state.favorites.values()], null, 2), 'application/json'));
     document.getElementById('import-favorites').addEventListener('change', async event => {
       const file = event.target.files[0];
       if (!file) return;
@@ -657,7 +564,7 @@ const scanState = createScanState();
         const valid = records.filter(movie => movie && movie.title && movie.key);
         if (!valid.length) throw new Error('No valid favorites found.');
         for (const movie of valid) {
-          const response = await requestJson('/api/favorites', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...movie, status: ['plan', 'watching', 'watched'].includes(movie.status) ? movie.status : 'plan', notes: String(movie.notes || '')})});
+          const response = await fetch('/api/favorites', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...movie, status: ['plan', 'watching', 'watched'].includes(movie.status) ? movie.status : 'plan', notes: String(movie.notes || '')})});
           if (!response.ok) throw new Error(`Could not import "${movie.title}".`);
         }
         await loadFavorites();
@@ -679,9 +586,10 @@ const scanState = createScanState();
         return {key: record.key || `${record.title}|${record.year}`, title: record.title, year: record.year, status: record.status, notes: record.notes};
       });
     }
-    document.getElementById('export-csv').addEventListener('click', () => download('watchlist.csv', ['Title,Year,Providers', ...allFilms.map(film => [film.title, film.year, Object.keys(film.providers).join('; ')].map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))].join('\n'), 'text/csv'));
+    document.getElementById('export-csv').addEventListener('click', () => download('watchlist.csv', ['Title,Year,Providers', ...state.films.map(film => [film.title, film.year, Object.keys(film.providers).join('; ')].map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))].join('\n'), 'text/csv'));
     function download(name, data, type) { const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([data], {type})); link.download = name; link.click(); URL.revokeObjectURL(link.href); }
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+    // The offline worker was removed; drop the one older versions installed.
+    navigator.serviceWorker?.getRegistrations().then(found => found.forEach(worker => worker.unregister()));
     loadFavorites().then(async () => {
       await loadLatestResult();
       const savedJob = new URL(location.href).searchParams.get('scan');

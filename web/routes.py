@@ -1,97 +1,178 @@
 """Flask route registration for the web application."""
 
-import threading
+import json
+import os
 import time
-import uuid
 from pathlib import Path
+from urllib.parse import urlsplit
 
-import pandas as pd
-from flask import Flask, jsonify, make_response, render_template, request, send_file
+from flask import Flask, Response, jsonify, make_response, render_template, request, send_file
 
-from . import cache, favorites, scans, serialization
+from watchlist_app import costs, letterboxd, matches, providers, scheduler, tmdb, validation
+from watchlist_app.config import COUNTRIES
+from watchlist_app.scan_service import ScanService, with_changes
+from watchlist_app.settings import SCAN_INTERVALS_HOURS, AppSettings
+from watchlist_app.store import Store
+from watchlist_app.tmdb import _TMDB_IMAGE_BASE_URL
 
-STALE_SCAN_SECONDS = 30 * 60
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
 
-def register_routes(
-    app: Flask,
-    *,
-    jobs: dict[str, dict],
-    jobs_lock: threading.Lock,
-    result_cache: dict[str, dict],
-    cache_path: Path,
-    latest_result_path: Path,
-    favorites_path: Path,
-    wa,
-) -> None:
-    def favorites_db():
-        return favorites.connect(favorites_path)
+def status_overview(store: Store, settings: AppSettings, service: ScanService) -> dict:
+    """What the status page shows: recent scan runs, the schedule and the size of the data."""
+    jobs = []
+    for job in store.list_jobs(limit=20):
+        end = job["finished_at"] or job["heartbeat_at"] or job["started_at"]
+        jobs.append(
+            {
+                "id": job["id"],
+                "status": job["status"],
+                "trigger": job["trigger"],
+                "country": job["country"],
+                "source_name": job["source_name"],
+                "message": job["message"],
+                "started_at": job["started_at"],
+                "duration_seconds": round(end - job["started_at"], 1),
+                "completed": job["completed"],
+                "total": job["total"],
+                "available": job["available"],
+                "unavailable": job["unavailable"],
+                "failed": job["failed"],
+                "tmdb_requests": job["tmdb_requests"],
+                "reused": job["reused"],
+            }
+        )
+    latest = store.latest_scan(settings.country)
+    database = Path(store.path) if store.path != ":memory:" else None
+    catalog = store.provider_catalog(settings.country)
+    return {
+        "uncertain_matches": len(matches.list_matches(store)),
+        "provider_catalog": {
+            "count": len(catalog),
+            "fetched_at": max((item["fetched_at"] for item in catalog), default=None),
+        },
+        "country": settings.country,
+        "running": service.is_running(),
+        "last_scan_at": latest["created"] if latest else None,
+        "scan_interval_hours": settings.scan_interval_hours,
+        "next_scan_at": scheduler.next_scan_at(store, settings),
+        "jobs": jobs,
+        "counts": store.counts(),
+        "database_bytes": database.stat().st_size if database and database.exists() else None,
+        "tmdb_api_key_set": bool(settings.tmdb_api_key),
+        "reminders": costs.reminders({country: settings.costs(country) for country in COUNTRIES}),
+    }
 
-    def provider_groups() -> list[tuple[str, list[tuple[str, list[str]]]]]:
-        standard = {
-            "Arte", "Molotov", "Pluto TV", "Plex", "Netflix", "Canal+", "TF1+",
-            "M6+", "Prime Video", "Disney+", "Apple TV+", "Paramount+", "HBO Max",
-            "Crunchyroll", "MUBI",
-        }
-        germany = [
-            name for name in wa._ALL_PROVIDERS
-            if name not in standard and "Amazon Channel" not in name and "Amazon Channels" not in name
-        ]
-        amazon_channels = [
-            name for name in wa._ALL_PROVIDERS
-            if "Amazon Channel" in name or "Amazon Channels" in name
-        ]
-        return [
-            ("Services", [
-                ("Free and ad-supported", ["Arte", "Molotov", "Pluto TV", "Plex"]),
-                ("Subscriptions", [
-                    "Netflix", "Canal+", "TF1+", "M6+", "Prime Video", "Disney+",
-                    "Apple TV+", "Paramount+", "HBO Max", "Crunchyroll", "MUBI",
-                ]),
-                ("German and specialty services", germany),
-            ]),
-            ("Amazon Channels", [("Amazon Channels", amazon_channels)]),
-        ]
 
-    def mostly_free_providers() -> set[str]:
-        return {
-            "Arte", "Molotov", "Pluto TV", "Plex", "ARD Mediathek",
-            "filmfriend", "Netzkino", "YouTube Free", "ZDF", "Alleskino",
-            "Joyn", "Amazon MX Player", "Amazon Prime Video Free with Ads",
-            "Amazon Prime Video with Ads", "Plex Channel",
-        }
+WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
-    def all_targets() -> dict[str, str]:
-        return dict(wa._ALL_PROVIDERS)
 
-    def default_selection() -> list[str]:
-        return list(wa.load_platforms_config(wa.COUNTRY).keys())
+def _trusted_hosts() -> set[str]:
+    """Extra host names the app is reached under, e.g. behind a reverse proxy (comma-separated)."""
+    return {
+        host.strip().lower() for host in os.getenv("WATCHLIST_TRUSTED_HOSTS", "").split(",") if host.strip()
+    }
 
-    @app.route("/")
-    def index():
-        response = make_response(render_template(
-            "index.html",
-            provider_groups=provider_groups(),
-            mostly_free_providers=mostly_free_providers(),
-            selected=default_selection(),
-            targets=all_targets(),
-            country=wa.COUNTRY,
-            countries=["FR", "DE", "US", "GB"],
-            initial_filters={
-                "query": request.args.get("q", ""),
-                "availability": request.args.get("availability", "all"),
-                "kind": request.args.get("kind", "all"),
-                "min_rating": request.args.get("rating", "0"),
-                "sort": request.args.get("sort", "title"),
-            },
-            image_base_url=wa._TMDB_IMAGE_BASE_URL,
-        ))
+
+def is_cross_site_write(method: str, headers, host: str) -> bool:
+    """True for a changing request that another web site made the browser send.
+
+    Without this, any page the user visits could post to the app in the home
+    network (for example a prepared backup). Browsers mark the origin of a
+    request; requests without these headers (command line, curl, Home Assistant)
+    are allowed.
+    """
+    if method not in WRITE_METHODS:
+        return False
+    fetch_site = headers.get("Sec-Fetch-Site")
+    if fetch_site is not None:
+        return fetch_site not in {"same-origin", "none"}
+    origin = headers.get("Origin")
+    if not origin:
+        return False
+    origin_host = urlsplit(origin).netloc.lower()
+    allowed = {host.lower(), *_trusted_hosts()}
+    forwarded = headers.get("X-Forwarded-Host")
+    if forwarded:
+        allowed.update(part.strip().lower() for part in forwarded.split(","))
+    return origin_host not in allowed
+
+
+def register_routes(app: Flask, *, store: Store, settings: AppSettings, service: ScanService) -> None:
+    app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
+
+    @app.errorhandler(413)
+    def upload_too_large(error):
+        return jsonify({"error": "The file is too large."}), 413
+
+    @app.before_request
+    def reject_cross_site_writes():
+        if is_cross_site_write(request.method, request.headers, request.host):
+            return jsonify({"error": "Requests from other web sites are not allowed."}), 403
+        return None
+
+    def page(template: str, **context):
+        response = make_response(render_template(template, **context))
         response.headers["Cache-Control"] = "no-store, max-age=0"
         return response
 
-    @app.get("/sw.js")
-    def service_worker():
-        return send_file(Path(__file__).parent.parent / "sw.js", mimetype="application/javascript")
+    @app.route("/")
+    def index():
+        initial_filters = {
+            "query": request.args.get("q", ""),
+            "availability": request.args.get("availability", "all"),
+            "kind": request.args.get("kind", "all"),
+            "min_rating": request.args.get("rating", "0"),
+            "sort": request.args.get("sort", "title"),
+        }
+        return page(
+            "index.html",
+            provider_groups=providers.provider_groups(settings.loaded_providers()),
+            mostly_free_providers=providers.MOSTLY_FREE,
+            selected=settings.subscriptions(),
+            country=settings.country,
+            countries=list(COUNTRIES),
+            initial_filters=initial_filters,
+            client_config={
+                "imageBaseUrl": _TMDB_IMAGE_BASE_URL,
+                "initialFilters": initial_filters,
+                "subscriptions": {country: settings.subscriptions(country) for country in COUNTRIES},
+                "rentalShops": sorted(providers.RENTAL_SHOPS),
+            },
+        )
+
+    @app.get("/settings")
+    def settings_page():
+        return page(
+            "settings.html",
+            settings=settings.as_dict(),
+            countries=list(COUNTRIES),
+            intervals=SCAN_INTERVALS_HOURS,
+            provider_groups=providers.provider_groups(settings.loaded_providers()),
+            subscriptions={country: settings.subscriptions(country) for country in COUNTRIES},
+        )
+
+    @app.get("/status")
+    def status_page():
+        return page("status.html", status=status_overview(store, settings, service))
+
+    @app.get("/costs")
+    def costs_page():
+        scan = store.latest_scan(settings.country)
+        return page(
+            "costs.html",
+            country=settings.country,
+            last_scan_at=scan["created"] if scan else None,
+            costs=costs.overview(scan["results"] if scan else [], settings.subscriptions(), settings.costs()),
+        )
+
+    @app.get("/matches")
+    def matches_page():
+        return page(
+            "matches.html",
+            client_config={"imageBaseUrl": _TMDB_IMAGE_BASE_URL, "country": settings.country},
+            tmdb_api_key_set=bool(settings.tmdb_api_key),
+        )
 
     @app.get("/manifest.webmanifest")
     def manifest():
@@ -100,173 +181,173 @@ def register_routes(
             mimetype="application/manifest+json",
         )
 
+    # ----- scans -----
+
     @app.get("/api/latest")
     def latest_result():
-        snapshot = cache.load_snapshot(latest_result_path)
-        requested_country = request.args.get("country")
-        if requested_country and snapshot.get("country") not in {None, requested_country}:
+        scan = store.latest_scan(request.args.get("country") or None)
+        if not scan:
             return jsonify({"available": False})
-        if not snapshot:
-            return jsonify({"available": False})
-        return jsonify({"available": True, **snapshot})
+        annotated = with_changes(store, scan["country"], scan["results"], scan["unavailable"])
+        return jsonify({"available": True, **scan, **annotated})
 
     @app.route("/api/scan", methods=["GET", "POST"])
     def start_scan():
         if request.method == "GET":
-            return jsonify({
-                "message": "Use POST /api/scan to start a scan.",
-                "status_endpoint": "/api/scan/<job_id>",
-            })
-        if not wa.TMDB_API_KEY:
-            return jsonify({"error": "TMDB_API_KEY is missing."}), 400
-        payload = request.get_json(silent=True) or {}
-        country = (
-            payload.get("country", wa.COUNTRY)
-            if request.is_json
-            else request.form.get("country", wa.COUNTRY)
-        )
-        if country not in {"FR", "DE", "US", "GB"}:
-            return jsonify({"error": "Unsupported country."}), 400
-        with jobs_lock:
-            now = time.time()
-            for stale_job in jobs.values():
-                if (
-                    stale_job.get("status") == "running"
-                    and now - stale_job.get("heartbeat_at", now) > STALE_SCAN_SECONDS
-                ):
-                    stale_job.update({
-                        "status": "error",
-                        "phase": "Error",
-                        "message": "The scan expired and was stopped.",
-                        "cancel_requested": True,
-                    })
-            active_job = next(
-                (
-                    (job_id, job)
-                    for job_id, job in jobs.items()
-                    if job.get("status") == "running"
-                ),
-                None,
+            return jsonify(
+                {
+                    "message": "Use POST /api/scan to start a scan.",
+                    "status_endpoint": "/api/scan/<job_id>",
+                }
             )
-            if active_job is not None:
-                return jsonify({
-                    "job_id": active_job[0],
-                    "reconnected": True,
-                })
-        uploaded_dataframe = None
-        uploaded_source = None
+        if not settings.tmdb_api_key:
+            return jsonify({"error": "TMDB_API_KEY is missing."}), 400
+        source = (request.get_json(silent=True) or {}) if request.is_json else request.form
+        country = source.get("country", settings.country)
+        if country not in COUNTRIES:
+            return jsonify({"error": "Unsupported country."}), 400
+        entries = None
+        source_name = None
         uploaded_file = request.files.get("watchlist")
         if uploaded_file and uploaded_file.filename:
             try:
-                uploaded_dataframe = pd.read_csv(uploaded_file)
-                missing = [
-                    column for column in ("Name", "Year")
-                    if column not in uploaded_dataframe.columns
-                ]
-                if missing:
-                    return jsonify({
-                        "error": f"CSV is missing columns: {', '.join(missing)}."
-                    }), 400
-                uploaded_source = uploaded_file.filename
+                entries = letterboxd.parse_watchlist_csv(uploaded_file.read().decode("utf-8"))
+                source_name = uploaded_file.filename
             except (UnicodeDecodeError, ValueError) as exc:
                 return jsonify({"error": f"Could not read CSV: {exc}"}), 400
-        job_id = uuid.uuid4().hex
-        with jobs_lock:
-            jobs[job_id] = {
-                "job_id": job_id,
-                "status": "running", "phase": "Starting",
-                "message": "Preparing scan...", "completed": 0, "total": 0,
-                "current_title": "", "results": [],
-                "stats": serialization.result_stats([]), "unavailable": [],
-                "last_updated": None,
-                "started_at": time.time(),
-                "heartbeat_at": time.time(),
-                "failed": [],
-                "uploaded_dataframe": uploaded_dataframe,
-                "uploaded_source": uploaded_source,
-                "cancel_requested": False, "country": country,
-            }
-        threading.Thread(
-            target=scans.run_scan,
-            args=(
-                job_id, country, jobs, jobs_lock, result_cache, cache_path,
-                latest_result_path, wa,
-            ),
-            daemon=True,
-        ).start()
-        return jsonify({"job_id": job_id})
+        job_id, reconnected = service.start(country, entries=entries, source_name=source_name)
+        return jsonify({"job_id": job_id, "reconnected": True} if reconnected else {"job_id": job_id})
 
     @app.get("/api/scan/<job_id>")
     def scan_status(job_id: str):
-        with jobs_lock:
-            job = jobs.get(job_id)
-            if job is None:
-                return jsonify({"error": "Scan not found."}), 404
-            return jsonify({
-                key: value for key, value in job.items()
-                if key != "uploaded_dataframe"
-            })
+        status = service.status(job_id)
+        if status is None:
+            return jsonify({"error": "Scan not found."}), 404
+        return jsonify(status)
+
+    @app.post("/api/scan/<job_id>/cancel")
+    def cancel_scan(job_id: str):
+        if not service.cancel(job_id):
+            return jsonify({"error": "Scan not found."}), 404
+        return jsonify({"ok": True})
+
+    # ----- title matches -----
+
+    @app.get("/api/matches")
+    def list_matches():
+        include_certain = request.args.get("all") in {"1", "true"}
+        return jsonify(matches.list_matches(store, include_certain=include_certain))
+
+    @app.get("/api/matches/search")
+    def search_matches():
+        query = (request.args.get("q") or "").strip()
+        if not query:
+            return jsonify({"error": "Enter a title to search for."}), 400
+        if not settings.tmdb_api_key:
+            return jsonify({"error": "TMDB_API_KEY is missing."}), 400
+        try:
+            found = tmdb.search_movies(query, request.args.get("year") or None, settings.tmdb_api_key)
+        except tmdb.TmdbError as exc:
+            return jsonify({"error": str(exc)}), 502
+        return jsonify(found)
+
+    @app.put("/api/matches/<path:film_key>")
+    def correct_match(film_key: str):
+        body = request.get_json(silent=True) or {}
+        tmdb_id = matches.parse_tmdb_reference(body.get("tmdb_id"))
+        if tmdb_id is None:
+            return jsonify({"error": "Enter a TMDB id or a themoviedb.org film link."}), 400
+        if not settings.tmdb_api_key:
+            return jsonify({"error": "TMDB_API_KEY is missing."}), 400
+        try:
+            corrected = matches.correct_match(store, film_key, tmdb_id, settings.tmdb_api_key)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except tmdb.TmdbError as exc:
+            return jsonify({"error": str(exc)}), 502
+        return jsonify({"ok": True, **corrected})
+
+    @app.delete("/api/matches/<path:film_key>")
+    def reset_match(film_key: str):
+        if store.get_id(film_key) is None:
+            return jsonify({"error": "This watchlist entry is unknown."}), 404
+        matches.reset_match(store, film_key)
+        return jsonify({"ok": True})
+
+    # ----- favorites -----
 
     @app.get("/api/favorites")
     def list_favorites():
-        rows = favorites.rows(favorites_path)
-        return jsonify([
-            {
-                "key": row[0], "title": row[1], "year": row[2],
-                "poster_path": row[3], "tmdb_url": row[4],
-                "trailer_url": row[5], "rating": row[6], "status": row[7],
-                "notes": row[8], "added_at": row[9],
-            }
-            for row in rows
-        ])
+        return jsonify(store.list_favorites())
 
     @app.post("/api/favorites")
     def add_favorite():
-        movie = request.get_json(silent=True) or {}
-        if not movie.get("key") or not movie.get("title"):
+        favorite = validation.clean_favorite(request.get_json(silent=True) or {})
+        if favorite is None:
             return jsonify({"error": "A movie key and title are required."}), 400
-        with favorites_db() as connection:
-            connection.execute(
-                "INSERT OR REPLACE INTO favorites "
-                "(movie_key, title, year, poster_path, tmdb_url, trailer_url, rating, status, notes) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    movie["key"], movie["title"], movie.get("year"),
-                    movie.get("poster_path"), movie.get("tmdb_url"),
-                    movie.get("trailer_url"), movie.get("rating"),
-                    movie.get("status", "plan"), movie.get("notes", ""),
-                ),
-            )
+        store.add_favorite(favorite)
         return jsonify({"ok": True})
 
     @app.patch("/api/favorites/<path:movie_key>")
     def update_favorite(movie_key: str):
         changes = request.get_json(silent=True) or {}
-        allowed = {"status", "notes"}
-        updates = {key: value for key, value in changes.items() if key in allowed}
+        updates = {key: value for key, value in changes.items() if key in {"status", "notes"}}
         if not updates:
             return jsonify({"error": "No favorite fields supplied."}), 400
-        if "status" in updates and updates["status"] not in {"plan", "watching", "watched"}:
+        if "status" in updates and updates["status"] not in validation.FAVORITE_STATUSES:
             return jsonify({"error": "Invalid favorite status."}), 400
-        assignments = ", ".join(f"{key} = ?" for key in updates)
-        with favorites_db() as connection:
-            connection.execute(
-                f"UPDATE favorites SET {assignments} WHERE movie_key = ?",
-                (*updates.values(), movie_key),
-            )
+        if "notes" in updates:
+            updates["notes"] = validation.text(updates["notes"], validation.MAX_NOTES) or ""
+        store.update_favorite(movie_key, updates)
         return jsonify({"ok": True})
 
     @app.delete("/api/favorites/<path:movie_key>")
     def remove_favorite(movie_key: str):
-        with favorites_db() as connection:
-            connection.execute("DELETE FROM favorites WHERE movie_key = ?", (movie_key,))
+        store.remove_favorite(movie_key)
         return jsonify({"ok": True})
 
-    @app.post("/api/scan/<job_id>/cancel")
-    def cancel_scan(job_id: str):
-        with jobs_lock:
-            job = jobs.get(job_id)
-            if job is None:
-                return jsonify({"error": "Scan not found."}), 404
-            job["cancel_requested"] = True
-        return jsonify({"ok": True})
+    # ----- settings, status, backup -----
+
+    @app.get("/api/settings")
+    def get_settings():
+        return jsonify(settings.as_dict())
+
+    @app.put("/api/settings")
+    def put_settings():
+        changes = request.get_json(silent=True)
+        if not isinstance(changes, dict):
+            return jsonify({"error": "Send the settings as a JSON object."}), 400
+        try:
+            settings.update(changes)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        return jsonify(settings.as_dict())
+
+    @app.get("/api/status")
+    def get_status():
+        return jsonify(status_overview(store, settings, service))
+
+    @app.get("/api/backup")
+    def download_backup():
+        name = f"watchlist-backup-{time.strftime('%Y-%m-%d')}.json"
+        return Response(
+            json.dumps(store.export_backup()),
+            mimetype="application/json",
+            headers={"Content-Disposition": f'attachment; filename="{name}"'},
+        )
+
+    @app.post("/api/backup")
+    def restore_backup():
+        uploaded = request.files.get("backup")
+        if uploaded is None:
+            return jsonify({"error": "Choose a backup file."}), 400
+        try:
+            backup = json.loads(uploaded.read().decode("utf-8"))
+            counts = store.import_backup(backup)
+        except (UnicodeDecodeError, ValueError) as exc:
+            message = str(exc) if "backup" in str(exc) else "The file is not valid JSON."
+            return jsonify({"error": message}), 400
+        restored, skipped = settings.restore(backup.get("settings"))
+        counts["settings"] = restored
+        counts["skipped"] += skipped
+        return jsonify({"ok": True, "imported": counts})

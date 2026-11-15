@@ -1,113 +1,141 @@
-"""Movie result construction and scan callbacks."""
+"""Check a watchlist against TMDB and build Film results."""
 
-import time
+import os
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import partial
+from typing import Any
 
-import pandas as pd
 from tqdm import tqdm
 
-from .tmdb import _TMDB_MOVIE_DATA, _TMDB_POSTER_PATHS
+from .lookup import lookup_film
+from .models import Film, WatchlistEntry, sort_kinds
+from .providers import display_providers
+from .tmdb import clean_year
+
+DEFAULT_SCAN_WORKERS = 6
+
+# lookup(title, year, slug, country, api_key) -> dict | None, see watchlist_app.lookup.
+Lookup = Callable[[str, int | None, str | None, str, str | None], dict | None]
 
 
-def clean_year(year: int | str | float | None) -> int | None:
-    if year is None:
-        return None
-    if not isinstance(year, str) and pd.isna(year):
-        return None
+def scan_workers() -> int:
+    """Number of films looked up at the same time."""
     try:
-        return int(year)
-    except (ValueError, TypeError):
-        return None
+        return max(1, int(os.getenv("WATCHLIST_SCAN_WORKERS", DEFAULT_SCAN_WORKERS)))
+    except ValueError:
+        return DEFAULT_SCAN_WORKERS
+
+
+def make_film(entry: WatchlistEntry, found: dict, targets: dict[str, str] | None) -> Film:
+    """Combine a watchlist entry with lookup data.
+
+    Providers are reduced to the targets ({display name: TMDB name}); with
+    targets=None every provider TMDB reports is kept, under its display name.
+    """
+    available = found.get("providers") or {}
+    details = found.get("details") or {}
+    if targets is None:
+        offered = {name: sort_kinds(kinds) for name, kinds in display_providers(available).items() if kinds}
+    else:
+        offered = {
+            display: sort_kinds(available[tmdb_name])
+            for display, tmdb_name in targets.items()
+            if available.get(tmdb_name)
+        }
+    return Film(
+        title=entry.title,
+        year=clean_year(entry.year),
+        tmdb_id=found.get("tmdb_id"),
+        poster_path=found.get("poster_path"),
+        overview=details.get("overview") or "",
+        rating=details.get("rating"),
+        backdrop_path=details.get("backdrop_path"),
+        runtime=details.get("runtime"),
+        genres=list(details.get("genres") or []),
+        release_date=details.get("release_date"),
+        tmdb_url=details.get("tmdb_url"),
+        trailer_url=details.get("trailer_url"),
+        providers=offered,
+    )
 
 
 def build_results(
-    df: pd.DataFrame,
-    targets: dict[str, str],
+    entries: list[WatchlistEntry],
+    targets: dict[str, str] | None,
     country: str = "FR",
     api_key: str | None = None,
-    progress_callback=None,
-    result_callback=None,
-    cancel_callback=None,
-    unavailable_callback=None,
-    failed_callback: Callable | None = None,
-    include_details: bool = False,
-) -> list[dict]:
-    """Walk the DataFrame and return one result dict per available film.
+    progress_callback: Callable | None = None,
+    result_callback: Callable[[Film], None] | None = None,
+    cancel_callback: Callable[[], bool] | None = None,
+    unavailable_callback: Callable[[Film], None] | None = None,
+    failed_callback: Callable[[WatchlistEntry, Exception], None] | None = None,
+    lookup: Lookup | None = None,
+    workers: int | None = None,
+) -> list[Film]:
+    """Look up every entry and return the films available on at least one target, in watchlist order.
 
-    Makes a single TMDB API call per film. Each platform column holds the SET of
-    TMDB monetization types the film is available under on that provider (a subset
-    of free / ads / flatrate / rent), or an empty set. Sectioning (Free / Paid)
-    is derived from these sets later.
-
-    Returns:
-        List of dicts with keys 'Title', 'Year', and one set per platform.
-        Only films available on at least one target are included.
+    Several films are checked at the same time; callbacks run on the calling
+    thread, in the order films finish. Films that are not on TMDB or only on
+    other providers go to `unavailable_callback`; lookup errors to `failed_callback`.
     """
-    results: list[dict] = []
+    lookup = lookup or partial(lookup_film, cache=None)
+    total = len(entries)
 
-    for current, (_, row) in enumerate(tqdm(
-        df.iterrows(),
-        total=len(df),
+    # (status, payload): a Film for "available"/"unavailable", the exception for "failed".
+    def process(index: int) -> tuple[str, Any]:
+        if cancel_callback and cancel_callback():
+            return "cancelled", None
+        entry = entries[index]
+        try:
+            found = lookup(entry.title, clean_year(entry.year), entry.slug, country, api_key)
+        except Exception as exc:  # one broken film must not stop the scan
+            return "failed", exc
+        if found is None:
+            return "unavailable", Film(title=entry.title, year=clean_year(entry.year))
+        film = make_film(entry, found, targets)
+        return ("available" if film.providers else "unavailable"), film
+
+    available: dict[int, Film] = {}
+    progress = tqdm(
+        total=total,
         desc="Checking streaming availability on TMDB",
         unit="film",
-    ), start=1):
-        if cancel_callback and cancel_callback():
-            break
-        title = row["Name"]
-        year = clean_year(row["Year"])
+        disable=progress_callback is not None,  # the web app reports progress itself
+    )
 
-        try:
-            tmdb_id = get_tmdb_id(title, year, api_key=api_key)
-        except (KeyError, TypeError, ValueError) as exc:
-            if failed_callback:
-                failed_callback({"Title": title, "Year": year}, exc)
-            if progress_callback:
-                progress_callback(current, len(df), title)
-            continue
-        if tmdb_id is None:
-            if unavailable_callback:
-                unavailable_callback({"Title": title, "Year": year})
-            if progress_callback:
-                progress_callback(current, len(df), title)
-            time.sleep(0.15)
-            continue
-
-        try:
-            providers = get_streaming_platforms(tmdb_id, country=country, api_key=api_key)
-            details = get_tmdb_details(tmdb_id, api_key=api_key) if include_details else _TMDB_MOVIE_DATA.get(tmdb_id, {})
-        except (KeyError, TypeError, ValueError) as exc:
-            if failed_callback:
-                failed_callback({"Title": title, "Year": year}, exc)
-            if progress_callback:
-                progress_callback(current, len(df), title)
-            continue
-
-        row_data: dict = {
-            "Title": title,
-            "Year": year,
-            "PosterPath": _TMDB_POSTER_PATHS.get(tmdb_id),
-            **details,
-        }
-        for display, tmdb_name in targets.items():
-            row_data[display] = providers.get(tmdb_name, set())
-
-        if any(row_data[display] for display in targets):
-            results.append(row_data)
+    def report(index: int, outcome: tuple[str, Any], completed: int) -> None:
+        status, payload = outcome
+        if status == "cancelled":
+            return
+        entry = entries[index]
+        if status == "available":
+            available[index] = payload
             if result_callback:
-                result_callback(row_data)
-        elif unavailable_callback:
-            unavailable_callback({"Title": title, "Year": year})
-
+                result_callback(payload)
+        elif status == "unavailable":
+            if unavailable_callback:
+                unavailable_callback(payload)
+        elif failed_callback:
+            failed_callback(entry, payload)
+        progress.update(1)
         if progress_callback:
-            progress_callback(current, len(df), title)
+            progress_callback(completed, total, entry.title)
 
-        time.sleep(0.15)
+    try:
+        worker_count = max(1, workers if workers is not None else scan_workers())
+        if worker_count == 1:
+            for index in range(total):
+                outcome = process(index)
+                if outcome[0] == "cancelled":
+                    break
+                report(index, outcome, index + 1)
+        else:
+            with ThreadPoolExecutor(max_workers=worker_count) as executor:
+                futures = {executor.submit(process, index): index for index in range(total)}
+                for completed, future in enumerate(as_completed(futures), start=1):
+                    report(futures[future], future.result(), completed)
+    finally:
+        progress.close()
 
-    return results
-
-
-
-# Assigned by the compatibility facade before each call.
-get_tmdb_id = None
-get_streaming_platforms = None
-get_tmdb_details = None
+    return [available[index] for index in sorted(available)]

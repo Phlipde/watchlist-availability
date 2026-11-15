@@ -1,14 +1,55 @@
 """Runtime configuration for the watchlist application."""
 
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
+PROJECT_DIR = Path(__file__).parent.parent
 TMDB_API_KEY: str | None = os.getenv("TMDB_API_KEY")
 LETTERBOXD_USERNAME: str | None = os.getenv("LETTERBOXD_USERNAME")
 COUNTRY: str = os.getenv("COUNTRY", "FR")
 DOWNLOADS_DIR = Path.home() / "Downloads"
-PLATFORMS_TOML = Path(__file__).parent.parent / "platforms.toml"
+PLATFORMS_TOML = PROJECT_DIR / "platforms.toml"
+COUNTRIES = ("FR", "DE", "US", "GB")
+
+
+def data_dir() -> Path:
+    return Path(os.getenv("WATCHLIST_DATA_DIR", PROJECT_DIR))
+
+
+def database_path() -> Path:
+    """The shared SQLite database (films, offers, scans, favorites, settings)."""
+    return Path(os.getenv("WATCHLIST_DB", data_dir() / ".watchlist.sqlite3"))
+
+
+def legacy_paths() -> dict[str, Path]:
+    """Files used by older versions; read once by watchlist_app.legacy_import."""
+    directory = data_dir()
+    return {
+        "favorites_db": Path(os.getenv("WATCHLIST_FAVORITES_DB", directory / ".watchlist_favorites.sqlite3")),
+        "latest_json": Path(os.getenv("WATCHLIST_LATEST_PATH", directory / ".watchlist_latest.json")),
+        "film_cache_db": Path(os.getenv("WATCHLIST_FILM_CACHE_DB", directory / ".watchlist_films.sqlite3")),
+    }
+
+
+@dataclass
+class Settings:
+    """Values the web app needs; tests build their own instance."""
+
+    tmdb_api_key: str | None
+    letterboxd_username: str | None
+    country: str
+    downloads_dir: Path
+
+
+def load_settings() -> Settings:
+    return Settings(
+        tmdb_api_key=TMDB_API_KEY,
+        letterboxd_username=LETTERBOXD_USERNAME,
+        country=COUNTRY,
+        downloads_dir=DOWNLOADS_DIR,
+    )

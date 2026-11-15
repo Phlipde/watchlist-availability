@@ -68,8 +68,9 @@ COUNTRY=DE
 ```
 
 
-* **TMDB Key:** Obtain a free API key at [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api).
-* **Country:** Set your ISO 3166-1 alpha-2 code (e.g., `FR`, `US`, `DE`). This must match a defined section in `platforms.toml`.
+* **TMDB Key:** Obtain a free API key at [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api). The key stays in the environment and is never stored in the database or a backup.
+* **Country:** Set your ISO 3166-1 alpha-2 code (e.g., `FR`, `US`, `DE`).
+* **Start values only:** `LETTERBOXD_USERNAME`, `COUNTRY` and `platforms.toml` are only the start values. Once you save the **Settings** page of the web app (`/settings`), the saved values win, for the web app and the command line alike.
 
 
 
@@ -95,7 +96,7 @@ cd watchlist-availability
 
 ```
 
-*A dated Markdown report (e.g., `watchlist_2026-06-06.md`) is saved to your `Downloads` folder upon completion.*
+*A dated HTML report (e.g., `watchlist_2026-06-06.html`) is saved to your `Downloads` folder upon completion. The command line uses the same database, settings and scan as the web app.*
 
 ---
 
@@ -119,7 +120,13 @@ Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
 * **Progressive Scans & Caching:** Scans execute in the background with progressive card loading. The app caches results locally and restores previous state on reload.
 * **Filtering & Search:** Dynamic filtering by Provider, Free/Paid offer types, release year, trailer availability, poster availability, and minimum provider counts.
 * **Any / All Provider Modes:** Toggle between showing films available on *any* selected service vs. *all* selected services.
-* **Delta Tracking:** Rescans highlight provider additions and removals on film cards and summary panels.
+* **Change History:** Every scan is compared with the previous one. "New on …" / "No longer on …" is stored with its date and shown for 14 days, also after a reload.
+* **Settings (`/settings`):** Letterboxd username, country, your own subscriptions per country, the automatic scan interval, and backup download / restore (settings, favorites, change history, last scan per country).
+* **My subscriptions / Rental shops:** One click selects the services you pay for, or only the shops where films are rented one by one.
+* **Automatic Scans:** Optionally every 6, 12, 24 or 48 hours or once a week, while the app runs. A scan interrupted by a restart is started again.
+* **Status (`/status`):** Last and next scan, and the recent scan runs with duration, failed lookups and the number of TMDB requests.
+* **Title matches (`/matches`):** Films matched by a TMDB title search, not found, or with a release year more than a year apart are listed for checking. Search TMDB or paste a TMDB link to correct a match; corrections are kept for good and are part of the backup.
+* **Provider list from TMDB:** Once a week, a scan loads every streaming service TMDB knows in your country. New services appear in the filters and in the settings without a code change.
 * **Favorites & Deep Links:** Persistent SQLite favorites, detailed modal popouts (trailers, TMDB links, Letterboxd search), and URL-synced search filter states.
 * **Bundled Assets:** Native Tabler Core UI components hosted under `static/` with zero CDN dependencies.
 
@@ -140,10 +147,17 @@ Data is stored inside `/data` in the container. Map this directory to an appdata
 
 | Variable | Default Path | Purpose |
 | --- | --- | --- |
-| `WATCHLIST_DATA_DIR` | App root directory | Base directory for runtime databases and caches |
-| `WATCHLIST_CACHE_PATH` | `<DATA_DIR>/.watchlist_cache.json` | Persistent TMDB lookup cache |
-| `WATCHLIST_LATEST_PATH` | `<DATA_DIR>/.watchlist_latest.json` | State of the most recent completed scan |
-| `WATCHLIST_FAVORITES_DB` | `<DATA_DIR>/.watchlist_favorites.sqlite3` | SQLite database storing favorited movies |
+| `WATCHLIST_DATA_DIR` | App root directory | Base directory for the database |
+| `WATCHLIST_DB` | `<DATA_DIR>/.watchlist.sqlite3` | One SQLite database for film data, offers per country, scans, favorites and settings |
+| `WATCHLIST_SCAN_WORKERS` | `6` | Films looked up at the same time |
+| `WATCHLIST_DISABLE_SCHEDULER` | not set | Set to `1` to switch off automatic scans in this process |
+| `WATCHLIST_TRUSTED_HOSTS` | not set | Host names the app is reached under behind a reverse proxy that changes the `Host` header, comma-separated (e.g. `watch.example.org`) |
+
+#### Security
+
+The app has no login; run it only in your home network or behind a reverse proxy with authentication. Changing requests (scan, settings, favorites, backup restore, match corrections) are refused when another web site makes the browser send them, so a page you visit cannot change your data. Tools without a browser (command line, `curl`, Home Assistant) are not affected. A restored backup is checked field by field; entries that do not fit are skipped and counted.
+
+On the first start, data from older versions (`.watchlist_favorites.sqlite3`, `.watchlist_latest.json`, `.watchlist_films.sqlite3`) is copied into the database once. The old files are left untouched and can be deleted afterwards. Favorites saved under `Title|Year` move to the film's TMDB id after the next scan.
 
 ---
 
@@ -183,24 +197,26 @@ Hulu         = false
 
 ```
 
-> **Note:** Provider names must match TMDB's exact regional provider names (`GET /watch/providers/movie?watch_region=<COUNTRY>`).
+> **Note:** `platforms.toml` only knows the built-in provider names (`watchlist_app/providers.py`). Every other service TMDB lists for your country can be chosen on the Settings page once the first scan has loaded the provider list.
 
 ---
 
 ## Running Tests
 
-Execute the automated `pytest` test suite:
+Install the development tools once, then run the checks:
 
 ```bash
-# macOS / Linux
-.venv/bin/python -m pytest tests/ -v
+pip install -r requirements-dev.txt
+python -m playwright install chromium   # only for the browser tests; an installed Chrome or Edge also works
 
-# Windows (PowerShell)
-.venv\Scripts\python.exe -m pytest tests\ -v
-
+pytest -q                # unit tests
+pytest -q -m browser     # end-to-end tests in a real browser (Playwright)
+node --test tests/js/    # filter logic of the page
+ruff check . && ruff format --check .
+mypy                     # type check
 ```
 
-*All API calls and network requests in the test suite are fully mocked.*
+*All API calls and network requests in the test suite are fully mocked.* There is one test file per module. The browser tests start the app on a free local port with an empty database and fixed answers for Letterboxd and TMDB. GitHub Actions runs all of these on every push.
 
 ---
 
@@ -208,22 +224,28 @@ Execute the automated `pytest` test suite:
 
 ```text
 watchlist-availability/
-├── watchlist_availability.py   # Compatibility facade and CLI entry point
+├── watchlist_availability.py   # CLI entry point
 ├── app.py                      # Flask web application entry point
 ├── watchlist_app/              # Core application logic & ingestion
 │   ├── cli.py                  # CLI orchestration
 │   ├── config.py               # Path and environment settings
+│   ├── legacy_import.py        # One-time import of files from older versions
+│   ├── history.py              # Changes between scans
 │   ├── letterboxd.py           # Web scraping, CSV, and ZIP loading
-│   ├── providers.py            # TOML provider definition loader
+│   ├── lookup.py               # Cached film lookup (Letterboxd id, then TMDB)
+│   ├── matches.py              # Uncertain title matches and manual corrections
+│   ├── models.py               # Film and WatchlistEntry data classes
+│   ├── providers.py            # Provider catalogue, groups and platforms.toml
 │   ├── rendering.py            # Console, Markdown, and HTML formatters
-│   ├── results.py              # Streaming availability builder
-│   └── tmdb.py                 # TMDB API access and caching
+│   ├── results.py              # Parallel availability check
+│   ├── scan_service.py         # One scan for page, schedule and CLI; job state
+│   ├── scheduler.py            # Automatic scans
+│   ├── settings.py             # Settings from the database, .env as start values
+│   ├── store.py                # Shared SQLite database
+│   ├── validation.py           # Checks for restored backups and other outside data
+│   └── tmdb.py                 # TMDB API access
 ├── web/                        # Web app modules
-│   ├── cache.py                # JSON scan cache management
-│   ├── favorites.py            # SQLite favorites database
-│   ├── routes.py               # Flask endpoint definitions
-│   ├── scans.py                # Background scan coordination
-│   └── serialization.py        # Web API response converters
+│   └── routes.py               # Pages and API endpoints
 ├── static/                     # Bundled frontend scripts and stylesheets
 ├── templates/                  # Jinja2 templates and UI partials
 ├── platforms.toml              # Regional streaming provider toggles

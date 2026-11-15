@@ -2,6 +2,28 @@ export function selectedProviders(inputs) {
   return new Set([...inputs].filter(input => input.checked).map(input => input.value));
 }
 
+// Reads the filter controls into a plain object for filtering.js.
+export function readFilters(doc, favoritesOnly) {
+  const value = id => doc.getElementById(id).value;
+  return {
+    query: value('film-search').toLowerCase().trim(),
+    availability: value('availability-filter'),
+    kind: value('kind-filter'),
+    minRating: Number(value('min-rating')) || 0,
+    genre: value('genre-filter'),
+    runtime: value('runtime-filter'),
+    mode: value('match-mode'),
+    yearFrom: Number(value('year-from')) || 0,
+    yearTo: Number(value('year-to')) || 9999,
+    media: value('media-filter'),
+    change: value('change-filter'),
+    minimumProviders: Number(value('provider-count-filter')) || 0,
+    favoriteStatus: value('favorite-status-filter'),
+    sort: value('sort-order'),
+    favoritesOnly,
+  };
+}
+
 export function updateProviderCount(inputs, target) {
   target.textContent = `${[...inputs].filter(input => input.checked).length}/${inputs.length}`;
 }
@@ -14,14 +36,11 @@ export function updateProviderFilmCounts(films, countElements) {
   countElements.forEach(element => {
     const count = counts.get(element.dataset.providerCount) || 0;
     const label = element.closest('label');
-    const input = label?.querySelector('input[type="checkbox"]');
     element.textContent = count;
-    if (label) label.dataset.providerAvailable = count > 0 ? 'true' : 'false';
-    if (count === 0 && input) {
-      input.checked = false;
-      label.hidden = true;
-    } else if (label) {
-      label.hidden = false;
+    if (label) {
+      // Hide providers without films, but keep their selection (e.g. after a country switch).
+      label.dataset.providerAvailable = count > 0 ? 'true' : 'false';
+      label.hidden = count === 0;
     }
   });
   document.querySelectorAll('.provider-list').forEach(list => {

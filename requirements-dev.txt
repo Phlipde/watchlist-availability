@@ -1,0 +1,9 @@
+# Tools for development and tests; the app itself only needs requirements.txt.
+-r requirements.txt
+pytest>=7.4
+ruff>=0.6
+mypy>=1.10
+types-requests
+types-tabulate
+# Browser tests (pytest -m browser); also run `playwright install chromium` once.
+playwright>=1.45

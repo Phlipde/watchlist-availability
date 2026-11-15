@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
-# Lance watchlist_availability. Fonctionne depuis n'importe quel dossier.
+# Run watchlist_availability from any working directory.
 cd "$(dirname "$0")" || exit 1
-exec .venv/bin/python3.14 watchlist_availability.py "$@"
+if [ -x .venv/bin/python ]; then PY=.venv/bin/python; else PY=python3; fi
+exec "$PY" watchlist_availability.py "$@"
