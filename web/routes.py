@@ -8,7 +8,7 @@ from urllib.parse import urlsplit
 
 from flask import Flask, Response, jsonify, make_response, render_template, request, send_file
 
-from watchlist_app import letterboxd, matches, providers, scheduler, tmdb, validation
+from watchlist_app import costs, letterboxd, matches, providers, scheduler, tmdb, validation
 from watchlist_app.config import COUNTRIES
 from watchlist_app.scan_service import ScanService, with_changes
 from watchlist_app.settings import SCAN_INTERVALS_HOURS, AppSettings
@@ -60,6 +60,7 @@ def status_overview(store: Store, settings: AppSettings, service: ScanService) -
         "counts": store.counts(),
         "database_bytes": database.stat().st_size if database and database.exists() else None,
         "tmdb_api_key_set": bool(settings.tmdb_api_key),
+        "reminders": costs.reminders({country: settings.costs(country) for country in COUNTRIES}),
     }
 
 
@@ -154,6 +155,16 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
     @app.get("/status")
     def status_page():
         return page("status.html", status=status_overview(store, settings, service))
+
+    @app.get("/costs")
+    def costs_page():
+        scan = store.latest_scan(settings.country)
+        return page(
+            "costs.html",
+            country=settings.country,
+            last_scan_at=scan["created"] if scan else None,
+            costs=costs.overview(scan["results"] if scan else [], settings.subscriptions(), settings.costs()),
+        )
 
     @app.get("/matches")
     def matches_page():

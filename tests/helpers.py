@@ -40,7 +40,7 @@ MOVIE = {
     },
 }
 
-BUNDLE = {
+BUNDLE: dict = {
     "poster_path": "/p.jpg",
     "details": {"runtime": 148, "genres": ["Action"], "overview": "A thief.", "rating": 8.4},
     "providers": {"DE": {"Netflix": ["flatrate"]}, "US": {"Hulu": ["ads"]}},

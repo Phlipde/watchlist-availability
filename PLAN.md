@@ -102,11 +102,13 @@ Review der offenen Änderungen und Audit des ganzen Projekts (2026-11-15), zehn 
 - Prüfung (2026-11-15): 249 Python-Tests, 5 Browser-Tests, 12 JS-Tests, `ruff` und `mypy` sauber. Acht neue Tests; die Fortschritts-Abfrage hat keinen eigenen Test. Nicht gegen die echten Seiten von TMDB und Letterboxd geprüft.
 
 ### Etappe 9: Kosten und Abos
-- [ ] Abo-Rechner: Monatspreise eintragen, Kosten pro verfügbarem Watchlist-Film je Dienst.
-- [ ] Rotations-Plan: welchen Dienst für einen Monat buchen, welchen kündigen.
-- [ ] Liste „nur leihbar“ für Filme ohne Abo-Angebot.
-- [ ] „Was verliere ich, wenn ich X kündige?“: Filme, die nur bei diesem einen Dienst laufen. Grundlage für den Rotations-Plan.
-- [ ] Kündigungs-Erinnerung: Ende des Probemonats oder Kündigungsfrist je Abo eintragen; die Status-Seite zeigt sie an, die Zustellung kommt mit Etappe 16.
+- [x] Abo-Rechner: neue Seite `/costs` (`watchlist_app/costs.py`). Monatspreis je eigenem Abo eintragen; die Seite zeigt Watchlist-Filme je Dienst, Kosten pro Film und die Summe. Gespeichert je Land (Einstellung `subscription_costs:<Land>`), steht damit auch in der Sicherung.
+- [x] Rotations-Plan: „Kündigen“ nennt bezahlte Abos, bei denen kein Film verloren geht, sonst das mit den wenigsten eigenen Filmen. Kostenlose Dienste und Abos mit Preis 0 werden nie vorgeschlagen. „Für einen Monat buchen“ nennt den Dienst ohne Abo mit den meisten Watchlist-Filmen, die keines der eigenen Abos hat, dazu vier weitere.
+- [x] Liste „nur leihbar“: Filme ohne kostenloses oder Abo-Angebot bei irgendeinem Anbieter, aber mit Leih-Angebot.
+- [x] „Was verliere ich, wenn ich X kündige?“: Spalte „Only here“, also Filme, die kein anderes eigenes Abo hat und kein Anbieter kostenlos zeigt.
+- [x] Kündigungs-Erinnerung: Datum je Abo auf der Kosten-Seite; die Status-Seite listet alle Länder, das nächste Datum zuerst, mit „in X Tagen“ bzw. „vor X Tagen“. Die Zustellung kommt mit Etappe 16.
+- Prüfung (2026-11-15): 266 Python-Tests (9 neue in `tests/test_costs.py`, 4 in `tests/test_web.py`), 5 Browser-Tests, 12 JS-Tests, `ruff` und `mypy` sauber (nebenbei ein alter mypy-Fund in `tests/helpers.py` behoben). Mit der Kopie der echten Daten (DE): 11 Abos, „nur leihbar“ 44 Filme, Vorschlag „buchen“ Disney+ mit 94 Filmen. Preis für Netflix gespeichert (13,99 → 0,19 pro Film bei 74 Filmen), Erinnerung erscheint auf der Status-Seite. Beim ersten Versuch wurden kostenlose Dienste (Arte, ZDF …) zum Kündigen vorgeschlagen; behoben.
+- Bewusst einfach: keine Währung (die Zahl steht für die Währung des Landes); Preise nur für eigene Abos, daher steht beim Buchen-Vorschlag kein Preis; der Rotations-Plan schaut nur einen Monat voraus.
 - Baut auf „Meine Abos“ aus Etappe 7 auf.
 
 ### Etappe 10: Entscheidungshilfe

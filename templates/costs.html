@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Costs · Watchlist Availability</title>
+  <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261115-6') }}" rel="stylesheet">
+</head>
+<body>
+  <main class="page">
+    <p class="meta"><a href="/"><i class="ti ti-arrow-left"></i> Back to the watchlist</a> · <a href="/settings">Settings</a> · <a href="/status">Status</a></p>
+    <h1 class="page-title">Costs and subscriptions ({{ country }})</h1>
+    {% if not last_scan_at %}<p class="meta">No scan for {{ country }} yet; the film counts appear after the first scan.</p>{% endif %}
+    {% if not costs.services %}<p class="meta">No subscriptions saved for {{ country }}. Choose them on the <a href="/settings">settings page</a>.</p>{% endif %}
+
+    {% if costs.services %}
+    <form id="costs-form">
+      <div class="table-scroll">
+        <table class="status-table">
+          <thead><tr><th>Service</th><th>Price per month</th><th>Remind me on</th><th>Watchlist films</th><th>Per film</th><th>Only here</th></tr></thead>
+          <tbody>
+            {% for service in costs.services %}
+            <tr data-service="{{ service.name }}">
+              <td>{{ service.name }}</td>
+              <td><input class="form-control form-control-sm" name="price" type="number" min="0" max="1000" step="0.01" value="{{ service.price if service.price is not none else '' }}" aria-label="Price per month for {{ service.name }}"></td>
+              <td><input class="form-control form-control-sm" name="remind_on" type="date" value="{{ service.remind_on or '' }}" aria-label="Reminder for {{ service.name }} (end of trial or cancellation deadline)"></td>
+              <td>{{ service.films }}</td>
+              <td>{{ '%.2f'|format(service.per_film) if service.per_film is not none else '–' }}</td>
+              <td>{% if service.only_here %}<details><summary>{{ service.only_here|length }}</summary><ul>{% for film in service.only_here %}<li>{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</li>{% endfor %}</ul></details>{% else %}0{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot><tr><th>Total</th><th>{{ '%.2f'|format(costs.monthly_total) }}</th><th colspan="4"></th></tr></tfoot>
+        </table>
+      </div>
+      <p class="hint">“Only here”: films none of your other services has and no provider shows for free, so you lose them when you cancel. The reminder date (end of a trial or the cancellation deadline) is shown on the status page.</p>
+      <div class="toolbar mt-2"><button class="btn btn-accent" type="submit"><i class="ti ti-device-floppy"></i> Save prices</button><span class="feedback" id="costs-message" role="status"></span></div>
+    </form>
+
+    <h2 class="h4 mt-4">Rotation</h2>
+    <div class="analysis-panel">
+      <div class="analysis-item">Cancel: <strong>{{ costs.cancel|join(', ') }}</strong><br><small>{% if costs.cancel_loses_nothing %}you lose no watchlist film{% else %}the fewest films of its own{% endif %}</small></div>
+      <div class="analysis-item">Book for a month: <strong>{% if costs.book %}{{ costs.book[0].name }}{% else %}nothing{% endif %}</strong><br><small>{% if costs.book %}{{ costs.book[0].films }} watchlist films none of your services has{% else %}your services cover every film with a subscription offer{% endif %}</small></div>
+    </div>
+    {% if costs.book|length > 1 %}<p class="hint">Next best: {% for item in costs.book[1:] %}{{ item.name }} ({{ item.films }}){% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+    {% endif %}
+
+    <h2 class="h4 mt-4">Only to rent ({{ costs.rent_only|length }})</h2>
+    {% if costs.rent_only %}
+    <ul class="meta">{% for film in costs.rent_only %}<li>{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</li>{% endfor %}</ul>
+    {% else %}<p class="meta">No film is only available to rent.</p>{% endif %}
+  </main>
+  <script src="{{ url_for('static', filename='js/costs.js', v='20261115-6') }}" type="module"></script>
+</body>
+</html>

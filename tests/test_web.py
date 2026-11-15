@@ -197,6 +197,41 @@ class TestPages:
         assert overview["jobs"][0]["duration_seconds"] == 12.5
 
 
+class TestCosts:
+    def test_save_prices_and_show_costs(self, client, store, settings):
+        settings.update({"subscriptions": ["Netflix", "MUBI"]})
+        films = [
+            {"key": "1", "title": "Heat", "providers": {"Netflix": ["flatrate"], "MUBI": ["flatrate"]}},
+            {"key": "2", "title": "Alien", "providers": {"Netflix": ["flatrate"]}},
+        ]
+        store.save_scan("DE", "letterboxd", None, films, [], {})
+        answer = client.put(
+            "/api/settings", json={"costs": {"Netflix": {"price": "10", "remind_on": "2026-12-01"}}}
+        )
+        assert answer.status_code == 200
+        page = client.get("/costs").get_data(as_text=True)
+        assert ">5.00<" in page and "10.00" in page and "Alien" in page
+        status = client.get("/status").get_data(as_text=True)
+        assert "2026-12-01" in status and "Netflix (DE)" in status
+
+    def test_costs_only_for_own_services(self, client, settings):
+        settings.update({"subscriptions": ["Netflix"]})
+        answer = client.put("/api/settings", json={"costs": {"MUBI": {"price": 5}}})
+        assert answer.status_code == 400
+
+    def test_costs_page_without_scan_or_subscriptions(self, client, settings):
+        settings.update({"subscriptions": []})
+        assert "No subscriptions saved" in client.get("/costs").get_data(as_text=True)
+
+    def test_costs_survive_a_backup(self, client, settings):
+        settings.update({"subscriptions": ["Netflix"], "costs": {"Netflix": {"price": 9}}})
+        backup = client.get("/api/backup").get_json()
+        settings.update({"costs": {}})
+        upload = {"backup": (io.BytesIO(json.dumps(backup).encode()), "backup.json")}
+        client.post("/api/backup", data=upload, content_type="multipart/form-data")
+        assert settings.costs() == {"Netflix": {"price": 9.0, "remind_on": None}}
+
+
 class TestBackupApi:
     def test_download_and_restore(self, client, store):
         store.add_favorite({"key": "949", "title": "Heat", "status": "watched"})

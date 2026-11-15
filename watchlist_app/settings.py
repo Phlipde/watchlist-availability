@@ -2,7 +2,7 @@
 
 import json
 
-from . import config, providers
+from . import config, costs, providers
 from .store import Store
 
 # Shorter than a day would change nothing: a scan and its offers are reused for 24 hours.
@@ -67,6 +67,14 @@ class AppSettings:
                 pass
         return list(providers.load_platforms_config(country))
 
+    def costs(self, country: str | None = None) -> dict[str, dict]:
+        """Monthly price and reminder date per own service: {name: {"price", "remind_on"}}."""
+        stored = self._store.get_setting(f"subscription_costs:{country or self.country}")
+        try:
+            return json.loads(stored) if stored else {}
+        except ValueError:
+            return {}
+
     def targets(self, country: str | None = None) -> dict[str, str]:
         """Subscriptions as {display name: TMDB name}, as the CLI report needs them."""
         return providers.tmdb_names(self.subscriptions(country))
@@ -100,6 +108,12 @@ class AppSettings:
                         raise ValueError("Invalid subscriptions.")
                     clean = [name[:200] for name in names[:500] if isinstance(name, str) and name.strip()]
                     self._store.set_setting(key, json.dumps(clean))
+                elif isinstance(key, str) and key.startswith("subscription_costs:"):
+                    raw = json.loads(value) if isinstance(value, str) else value
+                    if key.split(":", 1)[1] not in config.COUNTRIES or not isinstance(raw, dict):
+                        raise ValueError("Invalid costs.")
+                    names = {name for name in raw if isinstance(name, str) and len(name) <= 200}
+                    self._store.set_setting(key, json.dumps(costs.clean_costs(raw, names)))
                 else:
                     continue
                 restored += 1
@@ -134,5 +148,11 @@ class AppSettings:
                 raise ValueError("Unknown provider in the subscriptions.")
             country = validated.get("country", self.country)
             validated[f"subscriptions:{country}"] = json.dumps(names)
+        if "costs" in changes:
+            country = validated.get("country", self.country)
+            own = changes.get("subscriptions", self.subscriptions(country))
+            validated[f"subscription_costs:{country}"] = json.dumps(
+                costs.clean_costs(changes["costs"], set(own))
+            )
         for key, value in validated.items():
             self._store.set_setting(key, value)
