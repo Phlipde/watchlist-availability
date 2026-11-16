@@ -360,7 +360,8 @@ def test_removed_favorite_comes_back_with_undo(app_server, page):
 def test_a_note_that_could_not_be_saved_is_marked(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"])
-    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    # The finished scan redraws the cards; typing before that would land in a card that is replaced.
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     card = page.locator('article.film[data-key="949"]')
     card.locator("button.favorite").click()
     expect(card.locator("button.favorite")).to_have_attribute("data-favorite", "true")

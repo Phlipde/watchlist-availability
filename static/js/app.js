@@ -129,6 +129,7 @@ const state = createAppState();
       results.setAttribute('aria-busy', 'false');
       document.getElementById('scan-summary-content').innerHTML = changeSummary(state.changes, selected, state.lastScan);
       renderRecentlyRemoved();
+      renderTonight();
       document.getElementById('scan-summary').hidden = !state.lastScan;
       document.getElementById('favorite-status-filter').hidden = !state.favoritesOnly;
       document.getElementById('favorites-empty')?.toggleAttribute('hidden', !(state.favoritesOnly && view.visibleCount === 0 && view.unavailable.length === 0));
@@ -230,6 +231,27 @@ const state = createAppState();
       document.getElementById('evening-runtime').value = localStorage.getItem('eveningRuntime') || '150';
       openModal('evening-modal');
     }
+    // The own services a film runs on without extra cost.
+    function includedOn(film, subscriptions) {
+      return Object.entries(film.providers || {})
+        .filter(([provider, kinds]) => subscriptions.has(provider) && kinds.some(kind => ['free', 'ads', 'flatrate'].includes(kind)))
+        .map(([provider]) => provider).sort().join(', ');
+    }
+    // "Tonight": the evening-mode picks for the saved runtime and genre, right above the results.
+    function renderTonight() {
+      const savedRuntime = localStorage.getItem('eveningRuntime');
+      const maximum = savedRuntime === null ? 150 : Number(savedRuntime);
+      const genre = localStorage.getItem('eveningGenre') || 'all';
+      const subscriptions = mySubscriptions();
+      const picks = state.favoritesOnly ? [] : eveningSuggestions(state.films, {maximum, genre, subscriptions, skip: watchedKeys()});
+      document.getElementById('tonight').hidden = !picks.length;
+      document.getElementById('tonight-criteria').textContent = `${maximum ? `Up to ${maximum} min` : 'Any length'} · ${genre === 'all' ? 'any genre' : genre} · best rated first`;
+      document.getElementById('tonight-picks').innerHTML = picks.map(film => {
+        const poster = film.poster_path ? `<img src="${imageBaseUrl}${escapeHtml(film.poster_path)}" alt="" loading="lazy">` : '<span class="tonight-noposter"></span>';
+        const facts = [numberText(film.rating) ? Number(film.rating).toFixed(1) : '', numberText(film.runtime) ? `${numberText(film.runtime)} min` : '', includedOn(film, subscriptions)].filter(Boolean).join(' · ');
+        return `<li><button class="tonight-pick" type="button" data-key="${escapeHtml(filmKey(film))}">${poster}<span class="tonight-title">${escapeHtml(film.title)}</span><span class="tonight-meta">${escapeHtml(facts)}</span></button></li>`;
+      }).join('');
+    }
     function renderEveningSuggestions() {
       const maximum = Number(document.getElementById('evening-runtime').value);
       const genre = document.getElementById('evening-genre').value;
@@ -237,13 +259,17 @@ const state = createAppState();
       localStorage.setItem('eveningGenre', genre);
       const subscriptions = mySubscriptions();
       const suggestions = eveningSuggestions(state.films, {maximum, genre, subscriptions, skip: watchedKeys()});
-      const onServices = film => Object.entries(film.providers || {})
-        .filter(([provider, kinds]) => subscriptions.has(provider) && kinds.some(kind => ['free', 'ads', 'flatrate'].includes(kind)))
-        .map(([provider]) => provider).sort().join(', ');
+      const onServices = film => includedOn(film, subscriptions);
+      renderTonight();
       document.getElementById('evening-results').innerHTML = suggestions.length
         ? `<ol class="evening-suggestions">${suggestions.map(film => `<li><button class="film-link evening-pick" type="button" data-key="${escapeHtml(filmKey(film))}">${escapeHtml(film.title)}</button> · ${numberText(film.runtime, '?')} min · TMDB ${numberText(film.rating) ? Number(film.rating).toFixed(1) : '?'}/10 · on ${escapeHtml(onServices(film))}</li>`).join('')}</ol>`
         : '<p class="empty">No matching films on your subscriptions.</p>';
     }
+    document.getElementById('tonight-picks').addEventListener('click', event => {
+      const pick = event.target.closest('.tonight-pick');
+      if (pick) showFilmDetails(pick.dataset.key, pick);
+    });
+    document.getElementById('tonight-change').addEventListener('click', showEveningSuggestions);
     document.getElementById('evening-results').addEventListener('click', event => {
       const pick = event.target.closest('.evening-pick');
       if (!pick) return;
@@ -253,8 +279,17 @@ const state = createAppState();
       bootstrap.Modal.getInstance(document.getElementById('evening-modal'))?.hide();
       showFilmDetails(pick.dataset.key, opener);
     });
+    // The tick boxes on the posters only show while choosing films to compare.
+    function setCompareMode(on) {
+      document.body.classList.toggle('compare-mode', on);
+      document.getElementById('compare-films').setAttribute('aria-pressed', String(on));
+    }
     function compareFilms() {
       const films = state.films.filter(film => state.compareKeys.has(filmKey(film)));
+      if (!document.body.classList.contains('compare-mode') && films.length < 2) {
+        setCompareMode(true);
+        return showToast('Tick 2 to 4 films, then press Compare again.');
+      }
       if (films.length < 2 || films.length > 4) return showToast('Select 2 to 4 films to compare.');
       const providers = [...new Set(films.flatMap(film => Object.keys(film.providers || {})))].sort();
       const offerCell = film => Object.entries(film.providers || {}).map(([provider, kinds]) => `${escapeHtml(provider)}: ${escapeHtml(kinds.join(', '))}`).join('<br>') || '-';
@@ -263,10 +298,9 @@ const state = createAppState();
       openModal('compare-modal');
     }
     function updateCompareButton() {
-      const {text, disabled} = compareButtonState(state.compareKeys.size);
-      const button = document.getElementById('compare-films');
-      button.innerHTML = `<i class="ti ti-columns-gap" aria-hidden="true"></i> ${text}`;
-      button.disabled = disabled;
+      const {text} = compareButtonState(state.compareKeys.size);
+      document.getElementById('compare-films').innerHTML = `<i class="ti ti-columns-gap" aria-hidden="true"></i> ${text}`;
+      if (state.compareKeys.size) setCompareMode(true);
     }
     function setCompared(key, checked) {
       if (checked) state.compareKeys.add(key);
@@ -276,6 +310,7 @@ const state = createAppState();
     }
     document.getElementById('clear-compare').addEventListener('click', () => {
       [...state.compareKeys].forEach(key => setCompared(key, false));
+      setCompareMode(false);
       bootstrap.Modal.getInstance(document.getElementById('compare-modal'))?.hide();
     });
     function updateStats() {
@@ -660,8 +695,16 @@ const state = createAppState();
       const credits = film.director || (film.cast || []).length
         ? `<p class="film-modal-credits">${film.director ? `Directed by ${escapeHtml(film.director)}` : ''}${film.director && film.cast?.length ? ' · ' : ''}${film.cast?.length ? `Cast: ${escapeHtml(film.cast.join(', '))}` : ''}</p>`
         : '';
-      const keywords = film.keywords?.length ? `<p class="film-modal-keywords">${escapeHtml(film.keywords.join(', '))}</p>` : '';
-      const providerRows = availabilityByOffer(film.providers, window.WATCHLIST_CONFIG.providerLogos, window.WATCHLIST_CONFIG.logoBaseUrl, mySubscriptions());
+      const keywords = film.keywords?.length ? `<p class="film-modal-keywords">${escapeHtml(film.keywords.slice(0, 5).join(', '))}</p>` : '';
+      // The user's own services first; the other services fold away when there is at least one own.
+      const own = mySubscriptions();
+      const offers = film.providers || {};
+      const pick = mine => Object.fromEntries(Object.entries(offers).filter(([name]) => own.has(name) === mine));
+      const rows = list => availabilityByOffer(list, window.WATCHLIST_CONFIG.providerLogos, window.WATCHLIST_CONFIG.logoBaseUrl, own);
+      const otherCount = Object.keys(pick(false)).length;
+      const providerRows = Object.keys(pick(true)).length
+        ? rows(pick(true)) + (otherCount ? `<details class="film-other-services"><summary>Other services (${otherCount})</summary>${rows(pick(false))}</details>` : '')
+        : rows(offers);
       // TMDB's watch page (JustWatch data) for the shown country; tmdb_url is checked on the server.
       const country = document.getElementById('country-select').value;
       const watchLink = film.tmdb_url ? `<a class="btn btn-sm btn-accent" href="${escapeHtml(`${film.tmdb_url}/watch?locale=${encodeURIComponent(country)}`)}" target="_blank" rel="noreferrer"><i class="ti ti-player-play" aria-hidden="true"></i> Where to watch</a>` : '';
@@ -677,7 +720,7 @@ const state = createAppState();
       const poster = film.poster_path ? `<img class="film-modal-poster" src="${imageBaseUrl}${escapeHtml(film.poster_path)}" alt="Poster for ${escapeHtml(film.title)}">` : '';
       const favoriteButtonClass = state.favorites.has(key) ? 'btn-accent' : 'btn-outline-secondary';
       const selectedForCompare = state.compareKeys.has(key);
-      document.getElementById('film-details-content').innerHTML = `<div class="film-modal-layout">${poster}<div><p class="film-modal-meta">${numberText(film.year, 'Year unknown')}${numberText(film.rating) ? ` · TMDB ${Number(film.rating).toFixed(1)}/10` : ''}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}</p><p>${escapeHtml(film.overview || 'No description available.')}</p><p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p>${credits}${seriesLine}${keywords}</div></div><h6 class="film-modal-section-title">Availability</h6>${providerRows || '<p class="empty">No service data available.</p>'}<div class="film-modal-actions">${watchLink}<button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-star" aria-hidden="true"></i> ${favoriteLabel(state.favorites.has(key))}</button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-columns-gap" aria-hidden="true"></i> ${selectedForCompare ? 'Remove from comparison' : 'Add to comparison'}</button>${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb" aria-hidden="true"></i> TMDB</a>` : ''}${trailerLink}<a class="film-link" href="${letterboxdSearch}" target="_blank" rel="noreferrer"><i class="ti ti-device-tv" aria-hidden="true"></i> Search Letterboxd</a></div><div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${savedFavorite ? favoriteFields(key, film.title, savedFavorite) : ''}</div>`;
+      document.getElementById('film-details-content').innerHTML = `<div class="film-modal-layout">${poster}<div><p class="film-modal-meta">${numberText(film.year, 'Year unknown')}${numberText(film.rating) ? ` · TMDB ${Number(film.rating).toFixed(1)}/10` : ''}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}</p><p>${escapeHtml(film.overview || 'No description available.')}</p><p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p>${credits}${seriesLine}${keywords}</div></div><div class="film-modal-actions">${watchLink}<button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-star" aria-hidden="true"></i> ${favoriteLabel(state.favorites.has(key))}</button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-columns-gap" aria-hidden="true"></i> ${selectedForCompare ? 'Remove from comparison' : 'Add to comparison'}</button>${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb" aria-hidden="true"></i> TMDB</a>` : ''}${trailerLink}<a class="film-link" href="${letterboxdSearch}" target="_blank" rel="noreferrer"><i class="ti ti-device-tv" aria-hidden="true"></i> Search Letterboxd</a></div><h6 class="film-modal-section-title">Availability</h6>${providerRows || '<p class="empty">No service data available.</p>'}<div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${savedFavorite ? favoriteFields(key, film.title, savedFavorite) : ''}</div>`;
       openModal('film-details-modal', opener);
     }
     results.addEventListener('click', event => {
@@ -757,8 +800,11 @@ const state = createAppState();
         favoriteStatus: document.getElementById('favorite-status-filter').value,
         favorites: state.favoritesOnly ? '1' : '',
       };
+      // Values equal to the page's default stay out of the link.
+      const defaults = {availability: 'available', sort: 'rating'};
       Object.entries(values).forEach(([name, value]) => {
-        if (value && !['all', '0', 'any'].includes(value)) url.searchParams.set(name, value);
+        const isDefault = name in defaults ? value === defaults[name] : ['all', '0', 'any'].includes(value);
+        if (value && !isDefault) url.searchParams.set(name, value);
         else url.searchParams.delete(name);
       });
       history.replaceState({}, '', url);
@@ -836,6 +882,12 @@ const state = createAppState();
       applyRescanUnavailableState();
     });
     document.getElementById('country-select').addEventListener('change', switchCountry);
+    const toolsToggle = document.getElementById('tools-toggle');
+    toolsToggle?.addEventListener('click', () => {
+      const open = document.body.classList.toggle('tools-open');
+      toolsToggle.setAttribute('aria-expanded', String(open));
+      if (open) document.getElementById('result-tools').scrollIntoView({block: 'start'});
+    });
     const layoutToggle = document.getElementById('layout-toggle');
     function updateLayoutMode() {
       const desktop = localStorage.getItem('watchlistLayout') === 'desktop';

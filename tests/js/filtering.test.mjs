@@ -181,11 +181,10 @@ test('evening mode skips watched films', () => {
   assert.deepEqual(picks.map(film => film.title), ['New']);
 });
 
-test('the compare button counts the chosen films and needs two', async () => {
+test('the compare button counts the chosen films', async () => {
   const {compareButtonState} = await import('../../static/js/rendering.js');
-  assert.deepEqual(compareButtonState(0), {text: 'Compare', disabled: true});
-  assert.deepEqual(compareButtonState(1), {text: 'Compare (1)', disabled: true});
-  assert.deepEqual(compareButtonState(3), {text: 'Compare (3)', disabled: false});
+  assert.deepEqual(compareButtonState(0), {text: 'Compare'});
+  assert.deepEqual(compareButtonState(3), {text: 'Compare (3)'});
 });
 
 test('weighted sorts: rating per hour, longest on the watchlist, own services, series', () => {

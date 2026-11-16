@@ -7,7 +7,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261116-9') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261116-14') }}" rel="stylesheet">
 </head>
 <body>
 
@@ -17,6 +17,7 @@
       {% include "partials/provider-sidebar.html" %}
       <section>
         {% include "partials/scan-status.html" %}
+        {% include "partials/tonight.html" %}
         {% include "partials/statistics.html" %}
         {% include "partials/result-tools.html" %}
         {% include "partials/film-filters.html" %}
@@ -28,6 +29,6 @@
   <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/tabler.min.js') }}"></script>
   <script>window.WATCHLIST_CONFIG = {{ client_config|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/app.js', v='20261116-9') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/app.js', v='20261116-14') }}" type="module"></script>
 </body>
 </html>

@@ -65,9 +65,9 @@ export function favoriteFields(key, title, saved = {}) {
   return `<div class="film-actions"><select class="favorite-status" data-key="${escapeHtml(key)}" aria-label="Favorite status for ${name}">${option('plan', 'Plan')}${option('watching', 'Watching')}${option('watched', 'Watched')}</select><input class="favorite-note" data-key="${escapeHtml(key)}" aria-label="Note for ${name}" placeholder="Note" value="${escapeHtml(saved.notes || '')}"></div>`;
 }
 
-// The compare button says how many films are chosen and only works from two.
+// The compare button says how many films are chosen.
 export function compareButtonState(count) {
-  return {text: count ? `Compare (${count})` : 'Compare', disabled: count < 2};
+  return {text: count ? `Compare (${count})` : 'Compare'};
 }
 
 // context: {imageBaseUrl, selected: Set, favorites: Map, compareKeys: Set, greyKeys: Set, favoritesOnly}

@@ -134,10 +134,10 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         )
         initial_filters = {
             "query": request.args.get("q", ""),
-            "availability": request.args.get("availability", "all"),
+            "availability": request.args.get("availability", "available"),
             "kind": request.args.get("kind", "all"),
             "min_rating": request.args.get("rating", "0"),
-            "sort": request.args.get("sort", "title"),
+            "sort": request.args.get("sort", "rating"),
         }
         return page(
             "index.html",
