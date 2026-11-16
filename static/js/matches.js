@@ -130,7 +130,7 @@ function matchRow(match) {
         element('strong', {}, withYear(match.title, match.year)),
         match.letterboxd_url ? element('a', {className: 'meta', href: match.letterboxd_url, target: '_blank', rel: 'noopener'}, ' Letterboxd') : null,
         element('div', {}, 'Matched to: ', found, element('span', {className: 'meta'}, ` · ${sourceText}`)),
-        match.reason ? element('span', {className: `match-reason reason-${match.reason}`}, match.reason_text) : null),
+        match.reason ? element('span', {className: `pill match-reason ${match.reason === 'not_found' ? 'pill-danger' : 'pill-warn'}`}, match.reason_text) : null),
       element('div', {className: 'match-actions'},
         match.reason && match.tmdb_id ? element('button', {className: 'btn btn-sm btn-outline-secondary', type: 'button', onclick: () => save(match, match.tmdb_id, row)}, element('i', {className: 'ti ti-check', 'aria-hidden': 'true'}), ' Looks right') : null,
         correct,

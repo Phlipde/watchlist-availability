@@ -239,7 +239,7 @@ def test_free_labels_follow_the_country(app_server, page):
     requests: list[str] = []
     page.on("request", lambda request: requests.append(f"{request.method} {request.url}"))
     page.locator("#country-select").select_option("DE")
-    expect(page.locator("#status-message")).to_have_text("Showing saved results.")
+    expect(page.locator("#status-message")).to_have_text(re.compile(r"^Saved results from "))
     assert wait_until(lambda: "Arte" in free_tagged(page))
     assert not [line for line in requests if line.startswith("POST") and line.endswith("/api/scan")]
 
@@ -250,10 +250,10 @@ def test_saved_results_show_the_tools(app_server, page):
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     # A second visit finds the saved scan and starts none: sorting, random and the rest must still be there.
     page.goto(app_server["url"])
-    expect(page.locator("#status-message")).to_have_text("Showing saved results.")
+    expect(page.locator("#status-message")).to_have_text(re.compile(r"^Saved results from "))
     expect(page.locator("#random-film")).to_be_visible()
     expect(page.locator("#stats-section")).to_be_visible()
-    expect(page.locator("#retry-scan")).to_have_text("Scan again")
+    expect(page.locator("#retry-scan")).to_have_text("Scan now")
     # A rare filter set from a link sits behind "More filters"; the summary must still show it.
     page.goto(app_server["url"] + "/?votes=1000")
     expect(page.locator("#min-votes")).to_be_hidden()
@@ -278,6 +278,45 @@ def test_filters_from_a_link_survive_the_scan(app_server, page):
     expect(page.locator("#favorite-status-filter")).to_be_hidden()
     page.locator("#favorites-view").click()
     expect(page.locator("#favorite-status-filter")).to_be_visible()
+
+
+def test_keyboard_keeps_its_place(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"])
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    # The star redraws the card; the focus must stay on the same star.
+    star = page.locator('article.film[data-key="949"] button.favorite')
+    star.focus()
+    page.keyboard.press("Enter")
+    expect(star).to_have_attribute("aria-pressed", "true")
+    expect(star).to_be_focused()
+    # Details open from the keyboard and Escape brings the focus back to the button.
+    details = page.locator('article.film[data-key="949"] .film-details-button')
+    details.focus()
+    page.keyboard.press("Enter")
+    expect(page.locator("#film-details-modal")).to_be_visible()
+    # Bootstrap moves the focus into the dialog once it has faded in; Escape works from then on.
+    page.wait_for_function("document.getElementById('film-details-modal').contains(document.activeElement)")
+    page.keyboard.press("Escape")
+    expect(page.locator("#film-details-modal")).to_be_hidden()
+    expect(details).to_be_focused()
+
+
+def test_phone_panel_stays_open_while_choosing(app_server, page):
+    expect = playwright_api.expect
+    page.set_viewport_size({"width": 375, "height": 800})
+    page.goto(app_server["url"])
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    page.locator("#provider-toggle").click()
+    expect(page.locator("#provider-done")).to_be_focused()
+    for name, checked in (("Arte", True), ("Netflix", False), ("Netflix", True)):
+        box = page.locator(f'#provider-filters input[value="{name}"]')
+        box.set_checked(checked)
+        expect(page.locator("#provider-panel")).to_have_class(re.compile("show"))
+    expect(page.locator("#provider-done")).to_have_text("Done · 2 films")
+    page.locator("#provider-done").click()
+    expect(page.locator("#provider-panel")).not_to_have_class(re.compile("show"))
+    expect(page.locator("#provider-toggle")).to_be_focused()
 
 
 def test_a_note_that_could_not_be_saved_is_marked(app_server, page):

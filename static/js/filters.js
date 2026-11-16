@@ -2,6 +2,43 @@ export function selectedProviders(inputs) {
   return new Set([...inputs].filter(input => input.checked).map(input => input.value));
 }
 
+// Every filter control and the label of its chip, in the order of the chips.
+export const FILTER_CONTROLS = [
+  ['film-search', 'Search'], ['availability-filter', 'Availability'], ['genre-filter', 'Genre'],
+  ['runtime-filter', 'Runtime'], ['min-rating', 'Rating'], ['kind-filter', 'Offer'],
+  ['year-from', 'From'], ['year-to', 'To'], ['min-votes', 'Votes'], ['keyword-filter', 'Keyword'],
+  ['media-filter', 'Media'], ['change-filter', 'Changes'], ['provider-count-filter', 'Services'],
+  ['exclusive-filter', 'Only on one of my services'],
+];
+
+// A control is set when it differs from its first option, its empty value or "unchecked".
+export function isFilterSet(input) {
+  if (input.type === 'checkbox') return Boolean(input.checked);
+  if (input.options) return input.value !== input.options[0]?.value;
+  return Boolean(input.value);
+}
+
+export function clearFilter(input) {
+  if (input.type === 'checkbox') input.checked = false;
+  else input.value = input.options ? input.options[0].value : '';
+  if (input.dataset) delete input.dataset.pending;
+}
+
+// The chips for the set filters: [{id, label, text}].
+export function activeFilters(doc) {
+  return FILTER_CONTROLS.map(([id, label]) => [doc.getElementById(id), id, label])
+    .filter(([input]) => input && isFilterSet(input))
+    .map(([input, id, label]) => ({
+      id,
+      label,
+      text: input.type === 'checkbox' ? '' : input.options ? input.options[input.selectedIndex]?.text ?? input.value : input.value,
+    }));
+}
+
+export function resetFilters(doc) {
+  FILTER_CONTROLS.forEach(([id]) => { const input = doc.getElementById(id); if (input) clearFilter(input); });
+}
+
 // Reads the filter controls into a plain object for filtering.js.
 export function readFilters(doc, favoritesOnly) {
   const value = id => doc.getElementById(id).value;
@@ -10,6 +47,7 @@ export function readFilters(doc, favoritesOnly) {
   return {
     query: value('film-search').toLowerCase().trim(),
     availability: value('availability-filter'),
+    exclusive: Boolean(doc.getElementById('exclusive-filter')?.checked),
     kind: value('kind-filter'),
     minRating: Number(value('min-rating')) || 0,
     minVotes: Number(value('min-votes')) || 0,

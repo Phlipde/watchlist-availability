@@ -1,0 +1,1 @@
+<nav class="page-nav" aria-label="Pages">{% for href, label in [('/', 'Watchlist'), ('/subscriptions', 'My subscriptions'), ('/matches', 'Matches'), ('/status', 'Status'), ('/settings', 'Settings')] %}<a href="{{ href }}"{% if request.path == href %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>

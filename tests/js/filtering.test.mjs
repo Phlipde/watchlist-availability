@@ -81,7 +81,7 @@ test('minimum providers only counts selected providers', () => {
 
 test('exclusive availability shows the films the server marked', () => {
   const marked = films.map((film, index) => ({...film, only_on_my_services: index === 0}));
-  const view = filterFilms(marked, [], {...baseFilters, availability: 'exclusive'}, context(['Netflix', 'Arte']));
+  const view = filterFilms(marked, [], {...baseFilters, exclusive: true}, context(['Netflix', 'Arte']));
   assert.deepEqual(view.sections.Paid.map(film => film.title), ['Alpha']);
   assert.equal(view.visibleCount, 1);
 });
@@ -149,4 +149,25 @@ test('years entered the wrong way round are swapped', async () => {
   assert.equal(filters.yearTo, 2020);
   values['year-to'] = '';
   assert.deepEqual([readFilters(doc, false).yearFrom, readFilters(doc, false).yearTo], [2020, 9999]);
+});
+
+test('every set filter gets a chip and reset clears them all', async () => {
+  const {FILTER_CONTROLS, activeFilters, resetFilters} = await import('../../static/js/filters.js');
+  const select = (value, values) => ({value, options: values.map(item => ({value: item, text: `Label ${item}`})), get selectedIndex() { return values.indexOf(this.value); }, dataset: {}});
+  const controls = {
+    'film-search': {value: 'heat', dataset: {}},
+    'min-rating': select('7', ['0', '7']),
+    'media-filter': select('trailer', ['all', 'trailer']),
+    'provider-count-filter': select('2', ['0', '2']),
+    'change-filter': select('all', ['all', 'added']),
+    'exclusive-filter': {type: 'checkbox', checked: true, dataset: {}},
+  };
+  const doc = {getElementById: id => controls[id] ?? null};
+  assert.equal(FILTER_CONTROLS.length, 14);
+  assert.deepEqual(activeFilters(doc).map(chip => chip.label), ['Search', 'Rating', 'Media', 'Services', 'Only on one of my services']);
+  assert.equal(activeFilters(doc).find(chip => chip.id === 'min-rating').text, 'Label 7');
+  resetFilters(doc);
+  assert.deepEqual(activeFilters(doc), []);
+  assert.equal(controls['min-rating'].value, '0');
+  assert.equal(controls['exclusive-filter'].checked, false);
 });

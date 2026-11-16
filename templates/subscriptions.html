@@ -6,11 +6,11 @@
   <title>My subscriptions · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261116-3') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261116-6') }}" rel="stylesheet">
 </head>
 <body>
   <main class="page">
-    <p class="meta"><a href="/"><i class="ti ti-arrow-left" aria-hidden="true"></i> Back to the watchlist</a> · <a href="/settings">Settings</a> · <a href="/status">Status</a> · <a href="/matches">Matches</a></p>
+    {% include "partials/page-nav.html" %}
     <h1 class="page-title">My subscriptions</h1>
     <p class="meta"><label for="subscriptions-country">Country</label>
       <select class="form-select form-select-sm w-auto d-inline-block ms-1" id="subscriptions-country">{% for code in countries %}<option value="{{ code }}" {% if code == country %}selected{% endif %}>{{ code }}</option>{% endfor %}</select>
@@ -42,7 +42,7 @@
           <tfoot><tr><th>Total</th><th data-label="Total per month">{{ '%.2f'|format(costs.monthly_total) }}</th><th colspan="4"></th></tr></tfoot>
         </table>
       </div>
-      <p class="hint">“Only here”: films none of your other services has and no provider shows for free, so you lose them when you cancel. The reminder date (end of a trial or the cancellation deadline) is shown on the status page.</p>
+      <p class="hint">“Only here”: films none of your other services has and no service shows for free, so you lose them when you cancel. The reminder date (end of a trial or the cancellation deadline) is shown on the status page.</p>
       {% else %}
       <p class="meta">No subscriptions saved for {{ country }}. Tick your services below and save.</p>
       {% endif %}
@@ -80,6 +80,6 @@
     <ul class="meta">{% for film in costs.rent_only %}<li>{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</li>{% endfor %}</ul>
     {% else %}<p class="meta">No film is only available to rent.</p>{% endif %}
   </main>
-  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261116-3') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261116-6') }}" type="module"></script>
 </body>
 </html>

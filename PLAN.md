@@ -2,7 +2,7 @@
 
 Stand: 2026-11-15. Jede Etappe ist ein eigener Commit mit eigenen Tests; die App bleibt nach jedem Schritt lauffähig. Docker für Unraid kommt bewusst zuletzt. Struktur-Umbauten sind mit „(Struktur)“ markiert und stehen jeweils vor den Schritten, die darauf aufbauen.
 
-Als Nächstes offen: Etappe 9g (Barrierefreiheit), 9h und 9i (Hauptseite), danach weiter mit Etappe 10.
+Als Nächstes offen: Etappe 9h und 9i (Hauptseite), danach weiter mit Etappe 10.
 
 ## Teil A: Fehler und Struktur
 
@@ -228,29 +228,32 @@ Alle 13 Filter, die Sortierung und „Any / All selected services“ am 2026-11-
 
 ### Etappe 9g: Barrierefreiheit
 Tastatur und Fokus:
-- [ ] Seitenleiste: festes `aria-hidden="true"` entfernen; Escape schließt das Panel nur, wenn es offen ist (WDG #1).
-- [ ] Filmkarte ist kein `role="button"` mehr; der Knopf „Details“ öffnet den Dialog, der Mausklick auf die Karte bleibt (WDG #2). Danach bekommen Stern, „Details“, Status und Notiz den Filmtitel im Namen, der Stern `aria-pressed` (WDG #14).
-- [ ] Sichtbarer Fokus an Favoriten-Status und Notiz (`outline: none` und `!important` weg, WDG #3) und an „Restore from file“ / „Import favorites“ (WDG #11).
-- [ ] Fokus bleibt am Ort: nach Favoriten-Klick und auf `/matches` nach „Looks right“, „Use this“, „Undo correction“ (WDG #4); auf `/matches` bleibt auch die Markierung „gespeichert“ an der Zeile, sonst Toast (ID #7).
-- [ ] Dialoge geben den Fokus an den Auslöser zurück: eine Hilfsfunktion `openModal(id)` für alle vier Dialoge (WDG #5); jeder Dialog bekommt `aria-labelledby` (WDG #6).
-- [ ] Mobiles Filterpanel: schließt nicht mehr nach jedem Häkchen, Fokus geht beim Öffnen hinein und beim Schließen zurück; oben ein Knopf „Done · n films“ (WDG #10, DC #10).
-- [ ] „Random“ öffnet gleich das Detailfenster des Films (WDG #26, DC #19).
+- [x] Seitenleiste: festes `aria-hidden="true"` entfernen; Escape schließt das Panel nur, wenn es offen ist (WDG #1).
+- [x] Filmkarte ist kein `role="button"` mehr; der Knopf „Details“ öffnet den Dialog, der Mausklick auf die Karte bleibt (WDG #2). Danach bekommen Stern, „Details“, Status und Notiz den Filmtitel im Namen, der Stern `aria-pressed` (WDG #14).
+- [x] Sichtbarer Fokus an Favoriten-Status und Notiz (`outline: none` und `!important` weg, WDG #3) und an „Restore from file“ / „Import favorites“ (WDG #11).
+- [x] Fokus bleibt am Ort: nach Favoriten-Klick und auf `/matches` nach „Looks right“, „Use this“, „Undo correction“ (WDG #4); auf `/matches` bleibt auch die Markierung „gespeichert“ an der Zeile, sonst Toast (ID #7).
+- [x] Dialoge geben den Fokus an den Auslöser zurück: eine Hilfsfunktion `openModal(id)` für alle vier Dialoge (WDG #5); jeder Dialog bekommt `aria-labelledby` (WDG #6).
+- [x] Mobiles Filterpanel: schließt nicht mehr nach jedem Häkchen, Fokus geht beim Öffnen hinein und beim Schließen zurück; oben ein Knopf „Done · n films“ (WDG #10, DC #10).
+- [x] „Random“ öffnet gleich das Detailfenster des Films (WDG #26, DC #19).
 
 Ansagen für Screenreader:
-- [ ] Scan: `aria-valuenow`/`min`/`max` am Balken, `role="status"` an der Meldung, `role="alert"` am Fehler (WDG #7).
-- [ ] Trefferzahl mit `aria-live="polite"`, `aria-busy` am Raster während des Ladens (WDG #8); Vorschläge im Abend-Modus mit `aria-live` (WDG #27).
-- [ ] `role="group"` bzw. `role="status"` an den `div`s, die heute nur ein `aria-label` tragen (WDG #9).
-- [ ] Kleinigkeiten: `aria-hidden="true"` an Icons neben Text (WDG #18), Filter-Chips sagen „Remove filter …“ (WDG #19), versteckter Text „films“ / „services selected“ an den Zahlen der Dienstliste (WDG #20), Filmtitel als `<h3>` (WDG #21), Navigation in `<nav>` (WDG #22, zusammen mit DC #17 in Etappe 9h), `alt=""` am Poster auf `/matches` (WDG #30).
+- [x] Scan: `aria-valuenow`/`min`/`max` am Balken, `role="status"` an der Meldung, `role="alert"` am Fehler (WDG #7).
+- [x] Trefferzahl mit `aria-live="polite"`, `aria-busy` am Raster während des Ladens (WDG #8); Vorschläge im Abend-Modus mit `aria-live` (WDG #27).
+- [x] `role="group"` bzw. `role="status"` an den `div`s, die heute nur ein `aria-label` tragen (WDG #9).
+- [x] Kleinigkeiten: `aria-hidden="true"` an Icons neben Text (WDG #18), Filter-Chips sagen „Remove filter …“ (WDG #19), versteckter Text „films“ / „services selected“ an den Zahlen der Dienstliste (WDG #20), Filmtitel als `<h3>` (WDG #21), Navigation in `<nav>` (WDG #22, zusammen mit DC #17 in Etappe 9h), `alt=""` am Poster auf `/matches` (WDG #30).
 
 Lesbarkeit und Handy:
-- [ ] Nicht verfügbare Karten: Deckkraft nur auf das Poster, Text bleibt in `--muted` (WDG #15, Kontrast heute geschätzt 2,5:1).
-- [ ] `100dvh` statt `100vh` im mobilen Panel (WDG #16).
-- [ ] Touch-Ziele mindestens 44 px: Vergleichs-Checkbox, Filter-Chips, Favoriten-Status und Notiz (WDG #17).
-- [ ] Schrift in vier Stufen als Variablen, nichts unter 12 px: `.75rem` für Pillen und Zähler, `.875rem` für Knöpfe, Filter, Tabellen und Angaben auf der Karte, `1rem` für Erklärtexte und Filmtitel (DG #3, ersetzt WDG #28). Heute zwölf Zwischengrößen von 9,9 bis 16,8 px. Die wirkungslose Angabe `font-family: Georgia` entfällt.
-- [ ] `prefers-reduced-motion` beachten, in CSS und beim sanften Scrollen (WDG #24).
-- [ ] Sichtbare Beschriftung „from“/„to“ an den Jahresfeldern (WDG #23).
-- [ ] Suche zeichnet erst nach rund 150 ms Pause neu (WDG #25); Leerzeichen bei „Database:“ auf der Status-Seite (WDG #29).
+- [x] Nicht verfügbare Karten: Deckkraft nur auf das Poster, Text bleibt in `--muted` (WDG #15, Kontrast heute geschätzt 2,5:1).
+- [x] `100dvh` statt `100vh` im mobilen Panel (WDG #16).
+- [x] Touch-Ziele mindestens 44 px: Vergleichs-Checkbox, Filter-Chips, Favoriten-Status und Notiz (WDG #17).
+- [x] Schrift in vier Stufen als Variablen, nichts unter 12 px: `.75rem` für Pillen und Zähler, `.875rem` für Knöpfe, Filter, Tabellen und Angaben auf der Karte, `1rem` für Erklärtexte und Filmtitel (DG #3, ersetzt WDG #28). Heute zwölf Zwischengrößen von 9,9 bis 16,8 px. Die wirkungslose Angabe `font-family: Georgia` entfällt.
+- [x] `prefers-reduced-motion` beachten, in CSS und beim sanften Scrollen (WDG #24).
+- [x] Sichtbare Beschriftung „from“/„to“ an den Jahresfeldern (WDG #23).
+- [x] Suche zeichnet erst nach rund 150 ms Pause neu (WDG #25); Leerzeichen bei „Database:“ auf der Status-Seite (WDG #29).
 - Prüfung: Browser-Tests für die Tastatur-Wege (Stern bei Film n, Fokus bleibt; Details öffnen und mit Escape schließen, Fokus zurück; drei Dienste im mobilen Panel wählen). Kontrast im Browser messen, mobiles Panel auf einem echten Handy ansehen. Kein Test mit Screenreader geplant.
+- Ergebnis (2026-11-16): alle Punkte umgesetzt bis auf `<nav>` (WDG #22), das wie geplant mit DC #17 in Etappe 9h kommt. Gemessen mit der Datenkopie: kein sichtbarer Text unter 12 px (vorher ab 9,9 px; zuletzt noch die Bootstrap-Badges), Text auf nicht verfügbaren Karten 7,0:1 statt etwa 2,5:1, 196 Filmtitel als `<h3>`, kein `role="button"` mehr. „Random“ öffnet das Detailfenster; das mobile Panel ist 100 % hoch, der Fokus geht beim Öffnen auf „Done · n films“. Nebenbei behoben: Der Knopf „Filters“ war auch auf dem Desktop sichtbar, weil die spätere Regel `.btn` das `display: none` überschrieb. Neue Browser-Tests: Stern und „Details“ per Tastatur (Fokus bleibt bzw. kommt zurück), mobiles Panel bleibt beim Wählen offen.
+- Abweichungen: 44-px-Ziele nur bei Touch-Bedienung (`pointer: coarse`), damit die Desktop-Ansicht dicht bleibt; die Vergleichs-Checkbox hat überall eine 44-px-Fläche. Die vierte Schriftstufe ist `--fs-heading` (2rem); Seitentitel und der Stern behalten ihre eigene Größe.
+- Nicht geprüft: Screenreader (war nicht geplant), echtes Handy (nur 375 px im Browser), `/matches` mit Fokus nach dem Speichern (kein unsicherer Treffer in der Kopie).
 
 ### Etappe 9h: Hauptseite aufräumen (Filter, Begriffe, erster Bildschirm)
 In einem Rutsch, damit die Seite nur einmal „umzieht“.

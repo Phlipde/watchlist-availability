@@ -6,11 +6,11 @@
   <title>Status · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261116-3') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261116-6') }}" rel="stylesheet">
 </head>
 <body>
   <main class="page">
-    <p class="meta"><a href="/"><i class="ti ti-arrow-left" aria-hidden="true"></i> Back to the watchlist</a> · <a href="/settings">Settings</a> · <a href="/subscriptions">My subscriptions</a> · <a href="/matches">Matches</a></p>
+    {% include "partials/page-nav.html" %}
     <h1 class="page-title">Status</h1>
     {% if not status.tmdb_api_key_set %}<p class="error">The TMDB API key is missing, so no scan can run.</p>{% endif %}
 
@@ -23,7 +23,7 @@
       <div class="analysis-item">Favorites: <strong>{{ status.counts.favorites }}</strong></div>
       <div class="analysis-item">Stored changes: <strong>{{ status.counts.changes }}</strong></div>
       <div class="analysis-item">Matches to check: <strong><a href="/matches">{{ status.uncertain_matches }}</a></strong></div>
-      <div class="analysis-item">Providers from TMDB ({{ status.country }}): <strong>{% if status.provider_catalog.count %}{{ status.provider_catalog.count }}, <span class="time" data-time="{{ status.provider_catalog.fetched_at }}"></span>{% else %}not loaded yet{% endif %}</strong></div>
+      <div class="analysis-item">Services from TMDB ({{ status.country }}): <strong>{% if status.provider_catalog.count %}{{ status.provider_catalog.count }}, <span class="time" data-time="{{ status.provider_catalog.fetched_at }}"></span>{% else %}not loaded yet{% endif %}</strong></div>
       <div class="analysis-item">Database: <strong>{% if status.database_bytes %}{{ '%.1f'|format(status.database_bytes / 1000000) }} MB{% else %}–{% endif %}</strong></div>
     </div>
 
@@ -44,7 +44,7 @@
             <td class="time" data-time="{{ job.started_at }}"></td>
             <td>{{ {'manual': 'page', 'schedule': 'schedule', 'resume': 'after restart'}.get(job.trigger, job.trigger) }}</td>
             <td>{{ job.country }}</td>
-            <td><span class="status-{{ job.status }}">{{ job.status }}</span>{% if job.reused %} · reused{% endif %}{% if job.status in ('error', 'interrupted') and job.message %}<br><small>{{ job.message }}</small>{% endif %}</td>
+            <td><span class="pill status-{{ job.status }}">{{ job.status }}</span>{% if job.reused %} · reused{% endif %}{% if job.status in ('error', 'interrupted') and job.message %}<br><small>{{ job.message }}</small>{% endif %}</td>
             <td>{{ job.duration_seconds }} s</td>
             <td>{{ job.completed }}/{{ job.total }}</td>
             <td>{{ job.available }}</td>
@@ -63,7 +63,7 @@
     document.querySelectorAll('.time').forEach(element => {
       const seconds = Number(element.dataset.time);
       if (!seconds) return;
-      element.textContent = element.dataset.past && seconds * 1000 < Date.now() ? element.dataset.past : new Date(seconds * 1000).toLocaleString();
+      element.textContent = element.dataset.past && seconds * 1000 < Date.now() ? element.dataset.past : new Date(seconds * 1000).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'});
     });
   </script>
 </body>

@@ -1,7 +1,7 @@
-import {escapeHtml, numberText} from './ui.js';
+import {dateTime, escapeHtml, numberText} from './ui.js';
 import {createAppState, createScanState} from './state.js';
 import {availabilityByOffer, changeSummary, renderResults} from './rendering.js';
-import {readFilters, selectedProviders, updateProviderCount, updateProviderFilmCounts} from './filters.js';
+import {activeFilters, clearFilter, readFilters, resetFilters, selectedProviders, updateProviderCount, updateProviderFilmCounts} from './filters.js';
 import {eveningSuggestions, filmKey, filterFilms} from './filtering.js';
 import {updateScanFeedback} from './scans.js';
 import {favoriteLabel} from './favorites.js';
@@ -33,8 +33,18 @@ const state = createAppState();
       document.getElementById('cancel-scan').hidden = true;
       document.getElementById('cancel-scan').disabled = false;
       const button = document.getElementById('retry-scan');
-      button.innerHTML = `<i class="ti ti-arrow-clockwise" aria-hidden="true"></i> ${failed ? 'Retry scan' : 'Scan again'}`;
+      button.innerHTML = `<i class="ti ti-arrow-clockwise" aria-hidden="true"></i> ${failed ? 'Retry scan' : 'Scan now'}`;
       button.hidden = false;
+      // No scan running: the panel shrinks to one line with the message and the button.
+      document.getElementById('loading-panel').classList.add('idle');
+      document.getElementById('grey-unavailable-label').hidden = true;
+    }
+    function showScanRunning() {
+      document.getElementById('loading-panel').classList.remove('idle');
+      document.getElementById('cancel-scan').hidden = false;
+      document.getElementById('retry-scan').hidden = true;
+      // Greying out only means something while a new scan checks the old films.
+      document.getElementById('grey-unavailable-label').hidden = !scanState.rescanInProgress;
     }
     function showScanError(message, toastText) {
       document.getElementById('error-message').textContent = message;
@@ -44,7 +54,7 @@ const state = createAppState();
     }
     // Saved results and no scan running: show the panel as finished.
     function showSavedPanel() {
-      document.getElementById('status-message').textContent = 'Showing saved results.';
+      document.getElementById('status-message').textContent = state.lastScan ? `Saved results from ${dateTime(state.lastScan)}.` : 'Saved results.';
       document.getElementById('scan-phase').textContent = 'Saved';
       document.getElementById('current-title').textContent = '';
       document.getElementById('scan-live-stats').textContent = `${state.films.length} available · ${state.unavailable.length} unavailable`;
@@ -109,6 +119,11 @@ const state = createAppState();
       document.getElementById('scan-summary').hidden = !state.lastScan;
       document.getElementById('favorite-status-filter').hidden = !state.favoritesOnly;
       document.getElementById('favorites-empty')?.toggleAttribute('hidden', !(state.favoritesOnly && view.visibleCount === 0 && view.unavailable.length === 0));
+      document.getElementById('favorites-banner').hidden = !state.favoritesOnly;
+      // "Why is my film missing?": say so and offer the way out instead of an empty page.
+      const nothing = view.visibleCount === 0 && (view.unavailable.length === 0 || (selected.size === 0 && filters.availability !== 'unavailable'));
+      document.getElementById('filters-empty').hidden = state.favoritesOnly || !nothing;
+      document.getElementById('empty-subscriptions').hidden = selected.size > 0;
       syncUrl();
       updateFilterChips();
     }
@@ -133,17 +148,19 @@ const state = createAppState();
       });
     }
     function updateFilterChips() {
-      const filters = [['film-search', 'Search'], ['availability-filter', 'Availability'], ['kind-filter', 'Offer'], ['min-rating', 'Rating'], ['min-votes', 'Votes'], ['genre-filter', 'Genre'], ['keyword-filter', 'Keyword'], ['runtime-filter', 'Runtime'], ['year-from', 'From'], ['year-to', 'To']];
-      document.getElementById('filter-chips').innerHTML = filters.map(([id, label]) => {
-        const input = document.getElementById(id);
-        const value = input.value;
-        const text = input.options ? input.options[input.selectedIndex].text : value;
-        const active = value && value !== 'all' && value !== '0';
-        return active ? `<button class="filter-chip" type="button" data-filter-id="${id}" aria-label="Remove filter ${label}: ${escapeHtml(text)}">${label}: ${escapeHtml(text)} <i class="ti ti-x" aria-hidden="true"></i></button>` : '';
-      }).join('');
+      const chips = activeFilters(document).map(({id, label, text}) => {
+        const name = text ? `${label}: ${escapeHtml(text)}` : label;
+        return `<button class="filter-chip" type="button" data-filter-id="${id}" aria-label="Remove filter ${name}">${name} <i class="ti ti-x" aria-hidden="true"></i></button>`;
+      });
+      if (chips.length) chips.push('<button class="filter-chip filter-reset" type="button" data-reset-filters>Reset filters</button>');
+      document.getElementById('filter-chips').innerHTML = chips.join('');
       // A set filter behind "More filters" must not be forgotten: count it on the summary.
-      const hidden = [...document.querySelectorAll('#more-filters select, #more-filters input')].filter(input => input.value && !['all', '0'].includes(input.value)).length;
+      const hidden = activeFilters(document).filter(({id}) => document.getElementById(id).closest('#more-filters')).length;
       document.getElementById('more-filters-count').textContent = hidden ? `(${hidden} active)` : '';
+    }
+    function resetAllFilters() {
+      resetFilters(document);
+      renderFilms();
     }
     function fillSelect(select, allText, values) {
       // A value from a link waits in data-pending until a scan brings films that have it.
@@ -220,6 +237,8 @@ const state = createAppState();
       document.getElementById('total-count').textContent = scopedFilms.length;
       document.getElementById('free-count').textContent = scopedFilms.filter(film => Object.entries(film.providers).some(([provider, kinds]) => (scope === 'all' || selected.has(provider)) && kinds.some(kind => ['free', 'ads'].includes(kind)))).length;
       document.getElementById('paid-count').textContent = scopedFilms.filter(film => Object.entries(film.providers).some(([provider, kinds]) => (scope === 'all' || selected.has(provider)) && kinds.some(kind => ['flatrate', 'rent'].includes(kind)))).length;
+      const hasKind = (film, kinds) => Object.entries(film.providers).some(([provider, offered]) => (scope === 'all' || selected.has(provider)) && offered.some(kind => kinds.includes(kind)));
+      document.getElementById('both-count').textContent = scopedFilms.filter(film => hasKind(film, ['free', 'ads']) && hasKind(film, ['flatrate', 'rent'])).length;
       document.getElementById('unavailable-count').textContent = state.unavailable.length;
       document.getElementById('coverage-percent').textContent = `${state.films.length ? Math.round(scopedFilms.length / state.films.length * 100) : 0}%`;
       document.getElementById('average-providers').textContent = scopedFilms.length ? (scopedFilms.reduce((total, film) => total + scopedProviderCount(film), 0) / scopedFilms.length).toFixed(1) : '0';
@@ -264,7 +283,7 @@ const state = createAppState();
       document.querySelectorAll('[data-provider-label]').forEach(label => {
         const isFree = freeServices.has(label.dataset.providerLabel);
         const tag = label.querySelector('.free-tag');
-        if (isFree && !tag) label.querySelector('.provider-name').insertAdjacentHTML('afterend', '<span class="free-tag">Free</span>');
+        if (isFree && !tag) label.querySelector('.provider-name').insertAdjacentHTML('afterend', '<span class="free-tag pill pill-ok">Mostly free</span>');
         if (!isFree) tag?.remove();
       });
     }
@@ -337,7 +356,7 @@ const state = createAppState();
           `${job.message} ${job.failed.length} lookup${job.failed.length === 1 ? '' : 's'} failed.`;
       }
       if (job.source_name) { document.getElementById('source-name').textContent = job.source_name; document.getElementById('result-meta').hidden = false; document.getElementById('film-filters').hidden = false; }
-      if (job.last_updated) document.getElementById('last-updated').textContent = `Last updated ${new Date(job.last_updated * 1000).toLocaleString()}`;
+      if (job.last_updated) document.getElementById('last-updated').textContent = `Last updated ${dateTime(job.last_updated)}`;
       if (state.films.length) { showResultTools(); updateStats(); }
       if (job.status === 'complete' || job.status === 'cancelled') { if (job.status === 'complete') setProgress(100); else document.getElementById('progress-bar').classList.add('cancelled'); document.getElementById('progress-count').textContent = job.status === 'complete' ? 'Complete' : 'Cancelled'; showScanButton();       if (job.status === 'complete') {
         scanState.rescanInProgress = false;
@@ -361,7 +380,7 @@ const state = createAppState();
         results.innerHTML = '<div class="skeleton-grid" role="status" aria-label="Loading films"><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div></div>';
       }
       showToast(scanState.rescanInProgress ? 'Updating availability. Previous results remain visible.' : 'Starting watchlist scan...');
-      document.getElementById('cancel-scan').hidden = false; document.getElementById('retry-scan').hidden = true; document.getElementById('error-message').hidden = true;
+      showScanRunning(); document.getElementById('error-message').hidden = true;
       document.getElementById('progress-bar').classList.remove('cancelled');
       state.unavailable = [];
       if (!scanState.rescanInProgress) document.getElementById('unavailable-panel').hidden = true;
@@ -404,7 +423,7 @@ const state = createAppState();
       showResultTools();
       if (snapshot.created) {
         document.getElementById('last-updated').textContent =
-          `Last updated ${new Date(snapshot.created * 1000).toLocaleString()}`;
+          `Last updated ${dateTime(snapshot.created)}`;
       }
       return snapshot;
     }
@@ -424,8 +443,7 @@ const state = createAppState();
     function resumeScan(jobId) {
       scanState.currentJob = jobId;
       scanState.resultsReceived = 0;
-      document.getElementById('cancel-scan').hidden = false;
-      document.getElementById('retry-scan').hidden = true;
+      showScanRunning();
       showToast('Reconnecting to the scan...');
       pollScan();
     }
@@ -441,6 +459,8 @@ const state = createAppState();
       const previous = state.favorites.get(key);
       const film = state.films.find(movie => filmKey(movie) === key);
       if (!previous && !film) return;
+      // Disabling the button below takes the focus away, so remember it first.
+      const hadFocus = document.activeElement === button && results.contains(button);
       button.disabled = true;
       let response;
       try {
@@ -457,7 +477,6 @@ const state = createAppState();
       }
       if (previous) state.favorites.delete(key);
       else state.favorites.set(key, {...film, key, status: 'plan', notes: ''});
-      const hadFocus = document.activeElement === button && results.contains(button);
       renderFilms();
       // The redraw replaces the card: put the focus back on the same star.
       if (hadFocus) results.querySelector(`.film[data-key="${CSS.escape(key)}"] .favorite`)?.focus();
@@ -546,7 +565,17 @@ const state = createAppState();
     });
     document.getElementById('stats-scope').addEventListener('change', updateStats);
     reorderProviders();
-    document.getElementById('filter-chips').addEventListener('click', event => { const button = event.target.closest('.filter-chip'); if (!button) return; const input = document.getElementById(button.dataset.filterId); input.value = input.options ? input.options[0].value : ''; input.dispatchEvent(new Event('input', {bubbles: true})); });
+    document.getElementById('filter-chips').addEventListener('click', event => {
+      const button = event.target.closest('.filter-chip');
+      if (!button) return;
+      if (button.hasAttribute('data-reset-filters')) { resetAllFilters(); return; }
+      const input = document.getElementById(button.dataset.filterId);
+      clearFilter(input);
+      input.dispatchEvent(new Event('input', {bubbles: true}));
+    });
+    document.getElementById('empty-reset').addEventListener('click', resetAllFilters);
+    document.getElementById('empty-subscriptions').addEventListener('click', () => document.getElementById('reset-providers').click());
+    document.getElementById('favorites-show-all').addEventListener('click', () => setFavoritesOnly(false));
     results.addEventListener('click', event => { const favoriteButton = event.target.closest('.favorite'); if (favoriteButton) { event.preventDefault(); toggleFavorite(favoriteButton); } });
     function showFilmDetails(key, opener = document.activeElement) {
       const film = [...state.films, ...state.unavailable].find(item => filmKey(item) === key);
@@ -563,7 +592,7 @@ const state = createAppState();
       const poster = film.poster_path ? `<img class="film-modal-poster" src="${imageBaseUrl}${escapeHtml(film.poster_path)}" alt="Poster for ${escapeHtml(film.title)}">` : '';
       const favoriteButtonClass = state.favorites.has(key) ? 'btn-accent' : 'btn-outline-secondary';
       const selectedForCompare = state.compareKeys.has(key);
-      document.getElementById('film-details-content').innerHTML = `<div class="film-modal-layout">${poster}<div><p class="film-modal-meta">${numberText(film.year, 'Year unknown')}${numberText(film.rating) ? ` · TMDB ${Number(film.rating).toFixed(1)}/10` : ''}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}</p><p>${escapeHtml(film.overview || 'No description available.')}</p><p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p>${credits}${keywords}</div></div><h6 class="film-modal-section-title">Availability</h6>${providerRows || '<p class="empty">No provider data available.</p>'}<div class="film-modal-actions"><button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-star" aria-hidden="true"></i> ${favoriteLabel(state.favorites.has(key))}</button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-columns-gap" aria-hidden="true"></i> ${selectedForCompare ? 'Remove from comparison' : 'Add to comparison'}</button>${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb" aria-hidden="true"></i> TMDB</a>` : ''}${trailerLink}<a class="film-link" href="${letterboxdSearch}" target="_blank" rel="noreferrer"><i class="ti ti-device-tv" aria-hidden="true"></i> Search Letterboxd</a></div>`;
+      document.getElementById('film-details-content').innerHTML = `<div class="film-modal-layout">${poster}<div><p class="film-modal-meta">${numberText(film.year, 'Year unknown')}${numberText(film.rating) ? ` · TMDB ${Number(film.rating).toFixed(1)}/10` : ''}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}</p><p>${escapeHtml(film.overview || 'No description available.')}</p><p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p>${credits}${keywords}</div></div><h6 class="film-modal-section-title">Availability</h6>${providerRows || '<p class="empty">No service data available.</p>'}<div class="film-modal-actions"><button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-star" aria-hidden="true"></i> ${favoriteLabel(state.favorites.has(key))}</button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-columns-gap" aria-hidden="true"></i> ${selectedForCompare ? 'Remove from comparison' : 'Add to comparison'}</button>${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb" aria-hidden="true"></i> TMDB</a>` : ''}${trailerLink}<a class="film-link" href="${letterboxdSearch}" target="_blank" rel="noreferrer"><i class="ti ti-device-tv" aria-hidden="true"></i> Search Letterboxd</a></div>`;
       openModal('film-details-modal', opener);
     }
     results.addEventListener('click', event => {
@@ -629,6 +658,7 @@ const state = createAppState();
         changes: document.getElementById('change-filter').value,
         providers: [...selectedProviders(providerInputs)].join(','),
         minproviders: document.getElementById('provider-count-filter').value,
+        only: document.getElementById('exclusive-filter').checked ? '1' : '',
         favoriteStatus: document.getElementById('favorite-status-filter').value,
         favorites: state.favoritesOnly ? '1' : '',
       };
@@ -643,7 +673,7 @@ const state = createAppState();
     // Typing in the search redraws only after a short pause, not on every key.
     let searchTimer;
     document.getElementById('film-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(renderFilms, 150); });
-    ['availability-filter', 'kind-filter', 'genre-filter', 'keyword-filter', 'runtime-filter', 'year-from', 'year-to', 'min-rating', 'min-votes', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => document.getElementById(id).addEventListener('input', renderFilms));
+    ['exclusive-filter', 'availability-filter', 'kind-filter', 'genre-filter', 'keyword-filter', 'runtime-filter', 'year-from', 'year-to', 'min-rating', 'min-votes', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => document.getElementById(id).addEventListener('input', renderFilms));
     const initialUrl = new URL(location.href).searchParams;
     const setInitial = (id, parameter, fallback) => {
       const element = document.getElementById(id);
@@ -668,14 +698,23 @@ const state = createAppState();
     setInitial('change-filter', 'changes', 'all');
     setInitial('provider-count-filter', 'minproviders', '0');
     setInitial('favorite-status-filter', 'favoriteStatus', 'all');
+    // Older links used availability=exclusive for what is now its own checkbox.
+    document.getElementById('exclusive-filter').checked = initialUrl.get('only') === '1' || initialUrl.get('availability') === 'exclusive';
     const urlProviders = initialUrl.get('providers');
     if (urlProviders) providerInputs.forEach(input => { input.checked = urlProviders.split(',').includes(input.value); });
     ['match-mode', 'sort-order', 'favorite-status-filter'].forEach(id => document.getElementById(id).addEventListener('change', renderFilms));
     const favoritesButton = document.getElementById('favorites-view');
     state.favoritesOnly = initialUrl.get('favorites') === '1';
+    // The button keeps its name; whether the view is on is said by aria-pressed and the line above the films.
+    function setFavoritesOnly(on) {
+      state.favoritesOnly = on;
+      favoritesButton.classList.toggle('active', on);
+      favoritesButton.setAttribute('aria-pressed', String(on));
+      renderFilms();
+    }
     favoritesButton.classList.toggle('active', state.favoritesOnly);
-    favoritesButton.innerHTML = state.favoritesOnly ? '<i class="ti ti-grid" aria-hidden="true"></i> All films' : '<i class="ti ti-star-fill" aria-hidden="true"></i> My favorites';
-    favoritesButton.addEventListener('click', event => { state.favoritesOnly = !state.favoritesOnly; event.currentTarget.classList.toggle('active', state.favoritesOnly); event.currentTarget.innerHTML = state.favoritesOnly ? '<i class="ti ti-grid" aria-hidden="true"></i> All films' : '<i class="ti ti-star-fill" aria-hidden="true"></i> My favorites'; renderFilms(); });
+    favoritesButton.setAttribute('aria-pressed', String(state.favoritesOnly));
+    favoritesButton.addEventListener('click', () => setFavoritesOnly(!state.favoritesOnly));
     document.getElementById('random-film').addEventListener('click', showRandomFilm);
     document.getElementById('evening-mode').addEventListener('click', showEveningSuggestions);
     document.getElementById('evening-form').addEventListener('submit', event => { event.preventDefault(); renderEveningSuggestions(); });
@@ -706,7 +745,7 @@ const state = createAppState();
       const desktop = localStorage.getItem('watchlistLayout') === 'desktop';
       document.body.classList.toggle('layout-desktop', desktop);
       layoutToggle.classList.toggle('active', desktop);
-      layoutToggle.innerHTML = desktop ? '<i class="ti ti-layout-sidebar" aria-hidden="true"></i> Responsive layout' : '<i class="ti ti-layout-sidebar" aria-hidden="true"></i> Desktop layout';
+      layoutToggle.setAttribute('aria-pressed', String(desktop));
     }
     layoutToggle?.addEventListener('click', () => {
       localStorage.setItem('watchlistLayout', document.body.classList.contains('layout-desktop') ? 'responsive' : 'desktop');
@@ -757,7 +796,7 @@ const state = createAppState();
         return {key: record.key || `${record.title}|${record.year}`, title: record.title, year: record.year, status: record.status, notes: record.notes};
       });
     }
-    document.getElementById('export-csv').addEventListener('click', () => download('watchlist.csv', ['Title,Year,Providers', ...state.films.map(film => [film.title, film.year, Object.keys(film.providers).join('; ')].map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))].join('\n'), 'text/csv'));
+    document.getElementById('export-csv').addEventListener('click', () => download('watchlist.csv', ['Title,Year,Services', ...state.films.map(film => [film.title, film.year, Object.keys(film.providers).join('; ')].map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))].join('\n'), 'text/csv'));
     function download(name, data, type) { const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([data], {type})); link.download = name; link.click(); URL.revokeObjectURL(link.href); }
     // The offline worker was removed; drop the one older versions installed.
     navigator.serviceWorker?.getRegistrations().then(found => found.forEach(worker => worker.unregister()));

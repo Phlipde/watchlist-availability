@@ -6,11 +6,11 @@
   <title>Title matches · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261116-3') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261116-6') }}" rel="stylesheet">
 </head>
 <body>
   <main class="page">
-    <p class="meta"><a href="/"><i class="ti ti-arrow-left" aria-hidden="true"></i> Back to the watchlist</a> · <a href="/settings">Settings</a> · <a href="/status">Status</a></p>
+    {% include "partials/page-nav.html" %}
     <h1 class="page-title">Title matches</h1>
     {% if not tmdb_api_key_set %}<p class="error">The TMDB API key is missing, so films cannot be searched or corrected.</p>{% endif %}
     <p class="hint">Most films are matched through the TMDB link on their Letterboxd page. The films below were matched by a title search, were not found, or have a different release year on TMDB. Check them and correct a wrong match; a correction is kept for good and is part of the backup.</p>
@@ -25,6 +25,6 @@
     <ul class="match-list" id="match-list"></ul>
   </main>
   <script>window.MATCHES_PAGE = {{ client_config|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/matches.js', v='20261116-3') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/matches.js', v='20261116-6') }}" type="module"></script>
 </body>
 </html>

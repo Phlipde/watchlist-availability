@@ -1,5 +1,8 @@
-import {escapeHtml, numberText} from './ui.js';
+import {dateTime, escapeHtml, numberText} from './ui.js';
 import {filmKey, sectionProviders, selectedChanges, selectedKinds} from './filtering.js';
+
+// "Free" alone was read three ways; the section says what it holds.
+const SECTION_TITLES = {Free: 'Free & with ads', Paid: 'Paid'};
 
 const OFFER_TYPES = {
   free: ['Free', 'ti ti-gift'],
@@ -11,7 +14,7 @@ const OFFER_TYPES = {
 export function offerBadges(kinds) {
   return [...new Set(kinds)].map(kind => {
     const [label, icon] = OFFER_TYPES[kind] || [kind, 'ti ti-circle'];
-    return `<span class="badge offer-badge offer-${escapeHtml(kind)}"><i class="${icon}" aria-hidden="true"></i> ${escapeHtml(label)}</span>`;
+    return `<span class="pill offer-badge offer-${escapeHtml(kind)}"><i class="${icon}" aria-hidden="true"></i> ${escapeHtml(label)}</span>`;
   }).join('');
 }
 
@@ -47,7 +50,7 @@ export function changeSummary(changes, selected, lastScan) {
   const rows = relevant.slice(0, 60).map(change =>
     `<li>${day(change.created)} · ${escapeHtml(change.title)}: ${change.change === 'added' ? 'new on' : 'no longer on'} ${escapeHtml(change.provider)}</li>`
   ).join('');
-  return (lastScan ? `<p>Last successful scan: ${new Date(lastScan * 1000).toLocaleString()}.</p>` : '')
+  return (lastScan ? `<p>Last successful scan: ${dateTime(lastScan)}.</p>` : '')
     + `<p>Last 14 days on your selected services: ${added} new, ${relevant.length - added} no longer available.</p>`
     + (rows ? `<ul class="change-list">${rows}</ul>` : '')
     + (relevant.length > 60 ? `<p>… and ${relevant.length - 60} more.</p>` : '');
@@ -64,7 +67,7 @@ export function filmCard(film, section, context) {
   const links = `${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer">TMDB</a>` : ''}${trailerId ? ` · <button class="film-link trailer-link" data-trailer="${escapeHtml(trailerId)}" type="button">Trailer</button>` : ''}`;
   const favorite = context.favorites.has(key);
   const savedFavorite = context.favorites.get(key) || {};
-  const providerBadges = providers.map(provider => `<span class="badge rounded-pill provider-badge me-1 mb-1" data-provider="${escapeHtml(provider)}">${escapeHtml(provider)}</span>`).join('');
+  const providerBadges = providers.map(provider => `<span class="pill pill-service me-1 mb-1" data-provider="${escapeHtml(provider)}">${escapeHtml(provider)}</span>`).join('');
   const changeBadges = changeBadgesFor(film, context.selected);
   const title = escapeHtml(film.title);
   const favoriteButton = `<button class="favorite" type="button" aria-label="Favorite: ${title}" aria-pressed="${favorite}" data-favorite="${favorite ? 'true' : 'false'}"><span aria-hidden="true">${favorite ? '★' : '☆'}</span></button>`;
@@ -72,20 +75,20 @@ export function filmCard(film, section, context) {
   const grey = context.greyKeys.has(key) ? ' rescan-unavailable' : '';
   const favoriteControls = `<div class="film-actions"><select class="favorite-status" aria-label="Favorite status for ${title}" ${favorite ? '' : 'hidden'}><option value="plan" ${savedFavorite.status === 'plan' ? 'selected' : ''}>Plan</option><option value="watching" ${savedFavorite.status === 'watching' ? 'selected' : ''}>Watching</option><option value="watched" ${savedFavorite.status === 'watched' ? 'selected' : ''}>Watched</option></select><input class="favorite-note" aria-label="Note for ${title}" placeholder="Note" value="${escapeHtml(savedFavorite.notes || '')}" ${favorite ? '' : 'hidden'}></div>`;
   // The card is clickable with the mouse; keyboard users reach the details through the "Details" button.
-  return `<article class="film${grey}" data-key="${escapeHtml(key)}" data-section="${section}"><div class="poster"><label class="comparison-toggle"><input class="comparison-check" type="checkbox" aria-label="Compare ${title}" ${compareChecked}></label>${poster}${favoriteButton}</div><div class="film-info"><h3 class="film-title">${title}</h3><span class="year">${numberText(film.year, 'Year unknown')} · ${rating}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}</span><p class="providers">${providerBadges}</p><div class="offer-badges">${offerBadges(kinds)}</div>${links ? `<p class="film-links">${links}</p>` : ''}${changeBadges ? `<p class="provider-changes">${changeBadges}</p>` : ''}<button class="film-details-button" type="button" data-key="${escapeHtml(key)}" aria-label="Details: ${title}"><i class="ti ti-info-circle" aria-hidden="true"></i> Details</button>${favoriteControls}</div></article>`;
+  return `<article class="film${grey}" data-key="${escapeHtml(key)}" data-section="${section}"><div class="poster"><label class="comparison-toggle"><input class="comparison-check" type="checkbox" aria-label="Compare ${title}" ${compareChecked}></label>${poster}${favoriteButton}</div><div class="film-info"><h3 class="film-title">${title}</h3><span class="year">${numberText(film.year, 'Year unknown')} · ${rating}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}</span><p class="providers">${providerBadges}</p><div class="offer-badges">${offerBadges(kinds)}</div>${links ? `<p class="film-links">${links}</p>` : ''}${changeBadges ? `<p class="provider-changes">${changeBadges}</p>` : ''}<button class="btn btn-sm btn-outline-secondary film-details-button" type="button" data-key="${escapeHtml(key)}" aria-label="Details: ${title}"><i class="ti ti-info-circle" aria-hidden="true"></i> Details</button>${favoriteControls}</div></article>`;
 }
 
 export function unavailableCard(film, selected) {
   const key = filmKey(film);
   const changeBadges = changeBadgesFor(film, selected);
-  return `<article class="film unavailable-card" data-key="${escapeHtml(key)}" data-section="Unavailable"><div class="film-info"><h3 class="film-title">${escapeHtml(film.title)}</h3><span class="year">${numberText(film.year, 'Year unknown')} · <span class="badge offer-unavailable"><i class="ti ti-eye-off" aria-hidden="true"></i> Unavailable</span></span>${changeBadges ? `<p class="provider-changes">${changeBadges}</p>` : ''}<button class="film-details-button" type="button" data-key="${escapeHtml(key)}" aria-label="Details: ${escapeHtml(film.title)}"><i class="ti ti-info-circle" aria-hidden="true"></i> Details</button></div></article>`;
+  return `<article class="film unavailable-card" data-key="${escapeHtml(key)}" data-section="Unavailable"><div class="film-info"><h3 class="film-title">${escapeHtml(film.title)}</h3><span class="year">${numberText(film.year, 'Year unknown')} · <span class="pill pill-neutral"><i class="ti ti-eye-off" aria-hidden="true"></i> Unavailable</span></span>${changeBadges ? `<p class="provider-changes">${changeBadges}</p>` : ''}<button class="btn btn-sm btn-outline-secondary film-details-button" type="button" data-key="${escapeHtml(key)}" aria-label="Details: ${escapeHtml(film.title)}"><i class="ti ti-info-circle" aria-hidden="true"></i> Details</button></div></article>`;
 }
 
 // Draws the Free/Paid sections and the unavailable list from the result of filterFilms().
 export function renderResults(view, containers, context) {
   containers.results.innerHTML = Object.entries(view.sections)
     .filter(([, films]) => films.length)
-    .map(([section, films]) => `<div class="result-section" data-section="${section}"><h2>${section}</h2><div class="films">${films.map(film => filmCard(film, section, context)).join('')}</div></div>`)
+    .map(([section, films]) => `<div class="result-section" data-section="${section}"><h2>${SECTION_TITLES[section] || section}</h2><div class="films">${films.map(film => filmCard(film, section, context)).join('')}</div></div>`)
     .join('');
   containers.unavailableResults.innerHTML = view.unavailable.map(film => unavailableCard(film, context.selected)).join('');
 }

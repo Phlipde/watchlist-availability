@@ -64,7 +64,7 @@ function commonMatches(film, filters, context) {
     && (filters.genre === 'all' || (film.genres || []).includes(filters.genre))
     && (filters.keyword === 'all' || (film.keywords || []).includes(filters.keyword))
     // The server decides this with the rule of the costs page (watchlist_app/costs.py).
-    && (filters.availability !== 'exclusive' || film.only_on_my_services === true)
+    && (!filters.exclusive || film.only_on_my_services === true)
     && runtimeMatches(filters.runtime, Number(film.runtime) || 0)
     && (filters.media === 'all' || (filters.media === 'trailer' && Boolean(film.trailer_url)))
     && (filters.change === 'all' || changeTypes(film, context.selected).includes(filters.change))
@@ -86,7 +86,7 @@ export function matchesSection(film, section, filters, context) {
   // "No longer available" also shows films that just left every selected provider.
   const leftSelected = filters.change === 'removed' && selectedChanges(film, selected).removed.length > 0;
   if (!providerMatch && !leftSelected) return false;
-  if (!['all', 'available', 'exclusive', section].includes(filters.availability)) return false;
+  if (!['all', 'available', section].includes(filters.availability)) return false;
   if (filters.kind !== 'all') {
     // The offer type must come from a selected provider and belong to this section.
     if (!SECTION_KINDS[section].includes(filters.kind)) return false;
