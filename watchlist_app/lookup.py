@@ -76,5 +76,6 @@ def lookup_film(
         "tmdb_id": tmdb_id,
         "poster_path": poster_path,
         "details": details or {},
+        "release": ((details or {}).get("release_dates") or {}).get(country) or {},
         "providers": {provider: set(kinds) for provider, kinds in providers.items()},
     }

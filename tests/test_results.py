@@ -40,6 +40,14 @@ class TestFilmResults:
             )
         ]
 
+    def test_release_dates_become_film_fields(self):
+        found = {
+            **_found({"Netflix": {"flatrate"}}),
+            "release": {"certification": "12", "cinema": "2026-03-05", "home": "2026-06-01"},
+        }
+        film = results.make_film(WatchlistEntry("Inception", 2010), found, None)
+        assert (film.certification, film.cinema_date, film.home_date) == ("12", "2026-03-05", "2026-06-01")
+
     def test_position_on_the_watchlist_is_kept(self):
         entries = [WatchlistEntry("Inception", 2010), WatchlistEntry("Alien", 1979)]
         found = _run(entries, {"Netflix": "Netflix"}, {"Netflix": {"flatrate"}})
@@ -232,5 +240,6 @@ def test_tmdb_details_reach_the_film():
     found = {"tmdb_id": 27205, "details": bundle["details"], "providers": {}}
     film = make_film(WatchlistEntry("Inception", 2010), found, None).to_dict()
     for name, value in bundle["details"].items():
-        if name != "tmdb_title":
+        # release_dates holds every country; the scanned one arrives as "release" (see lookup).
+        if name not in {"tmdb_title", "release_dates"}:
             assert film[name] == value, name

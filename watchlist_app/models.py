@@ -49,6 +49,10 @@ class Film:
     collection: str | None = None  # TMDB film series, e.g. "Alien Collection"
     watchlist_position: int | None = None  # 0 = most recently added to the watchlist
     similar_ids: list[int] = field(default_factory=list)  # TMDB ids TMDB recommends for this film
+    # For the scanned country: age rating ("12", "PG-13") and first cinema and home release dates.
+    certification: str | None = None
+    cinema_date: str | None = None
+    home_date: str | None = None
     providers: dict[str, list[str]] = field(default_factory=dict)
 
     @property

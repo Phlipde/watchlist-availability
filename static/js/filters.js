@@ -8,7 +8,7 @@ export const FILTER_CONTROLS = [
   ['runtime-filter', 'Runtime'], ['min-rating', 'Rating'], ['kind-filter', 'Offer'],
   ['year-from', 'From'], ['year-to', 'To'], ['min-votes', 'Votes'], ['keyword-filter', 'Keyword'],
   ['media-filter', 'Media'], ['change-filter', 'Changes'], ['provider-count-filter', 'Services'],
-  ['exclusive-filter', 'Only on one of my services'],
+  ['exclusive-filter', 'Only on one of my services'], ['age-filter', 'Age rating'],
 ];
 
 // A control is set when it differs from its first option, its empty value or "unchecked".
@@ -53,6 +53,7 @@ export function readFilters(doc, favoritesOnly) {
     minVotes: Number(value('min-votes')) || 0,
     genre: value('genre-filter'),
     keyword: value('keyword-filter'),
+    age: doc.getElementById('age-filter')?.value ?? 'all',
     runtime: value('runtime-filter'),
     mode: value('match-mode'),
     yearFrom: years[0],

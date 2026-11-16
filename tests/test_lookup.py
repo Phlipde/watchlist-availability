@@ -63,6 +63,20 @@ class TestLookupFilm:
         assert us["providers"] == {"Hulu": {"ads"}}
         assert gb["providers"] == {}
 
+    def test_release_dates_of_the_scanned_country(self, store):
+        bundle = {
+            **BUNDLE,
+            "details": {**BUNDLE["details"], "release_dates": {"DE": {"certification": "12"}}},
+        }
+        with (
+            patch("watchlist_app.letterboxd.fetch_tmdb_id", return_value=1),
+            patch("watchlist_app.tmdb.get_movie_bundle", return_value=bundle),
+        ):
+            de = lookup.lookup_film("Inception", 2010, "inception", "DE", API_KEY, store)
+            us = lookup.lookup_film("Inception", 2010, "inception", "US", API_KEY, store)
+        assert de["release"] == {"certification": "12"}
+        assert us["release"] == {}
+
     def test_stale_providers_refetched_but_id_kept(self, store):
         with (
             patch("watchlist_app.letterboxd.fetch_tmdb_id", return_value=1) as letterboxd_id,

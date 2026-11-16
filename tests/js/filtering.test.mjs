@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
-import {eveningSuggestions, filterFilms, matchesSection, selectedChanges, selectedKinds, similarOnServices, sortFilms} from '../../static/js/filtering.js';
+import {eveningSuggestions, filterFilms, matchesSection, selectedChanges, selectedKinds, similarOnServices, sortFilms, ageMatches, sortRatings, comingSoon} from '../../static/js/filtering.js';
 
 const baseFilters = {
   query: '', availability: 'all', kind: 'all', minRating: 0, minVotes: 0, genre: 'all', keyword: 'all', runtime: 'all', mode: 'any',
@@ -163,7 +163,7 @@ test('every set filter gets a chip and reset clears them all', async () => {
     'exclusive-filter': {type: 'checkbox', checked: true, dataset: {}},
   };
   const doc = {getElementById: id => controls[id] ?? null};
-  assert.equal(FILTER_CONTROLS.length, 14);
+  assert.equal(FILTER_CONTROLS.length, 15);
   assert.deepEqual(activeFilters(doc).map(chip => chip.label), ['Search', 'Rating', 'Media', 'Services', 'Only on one of my services']);
   assert.equal(activeFilters(doc).find(chip => chip.id === 'min-rating').text, 'Label 7');
   resetFilters(doc);
@@ -225,4 +225,25 @@ test('similar films: only watchlist films on own services, in TMDB order, not wa
   assert.deepEqual(titles(similarOnServices(heat, films, new Set(['Netflix', 'Arte']))), ['Three', 'One', 'Four']);
   assert.deepEqual(titles(similarOnServices(heat, films, new Set(['Netflix']), new Set(['1']))), ['Four']);
   assert.deepEqual(similarOnServices({key: 'x', title: 'Old scan'}, films, new Set(['Netflix'])), []);
+});
+
+test('age rating: up to a number, exact for other systems, unrated films out', () => {
+  assert.equal(ageMatches('all', undefined), true);
+  assert.equal(ageMatches(undefined, '18'), true);
+  assert.equal(ageMatches('12', '6'), true);
+  assert.equal(ageMatches('12', '16'), false);
+  assert.equal(ageMatches('12', null), false);
+  assert.equal(ageMatches('PG-13', 'PG-13'), true);
+  assert.equal(ageMatches('PG-13', 'R'), false);
+  assert.deepEqual(sortRatings(['16', 'PG', '6', null, '12', '6', 'G']), ['6', '12', '16', 'G', 'PG']);
+});
+
+test('coming soon: only future dates, soonest first', () => {
+  const films = [
+    {title: 'Out', cinema_date: '2025-01-01', home_date: '2025-05-01'},
+    {title: 'Home later', cinema_date: '2026-01-01', home_date: '2026-12-01'},
+    {title: 'Cinema soon', cinema_date: '2026-11-20'},
+    {title: 'No dates'},
+  ];
+  assert.deepEqual(comingSoon(films, '2026-11-16').map(film => film.title), ['Cinema soon', 'Home later']);
 });

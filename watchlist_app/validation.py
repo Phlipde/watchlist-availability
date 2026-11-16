@@ -122,6 +122,9 @@ def clean_film(data) -> dict | None:
         similar_ids=[n for n in similar[:40] if type(n) is int and 0 < n < 10**9]
         if isinstance(similar, list)
         else [],
+        certification=text(data.get("certification"), 20),
+        cinema_date=_matching(data.get("cinema_date"), _DATE_RE),
+        home_date=_matching(data.get("home_date"), _DATE_RE),
     )
     film.providers = {name: kinds for name, kinds in providers.items()}
     return film.to_dict()

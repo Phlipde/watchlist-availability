@@ -35,6 +35,7 @@ def make_film(entry: WatchlistEntry, found: dict, targets: dict[str, str] | None
     """
     available = found.get("providers") or {}
     details = found.get("details") or {}
+    release = found.get("release") or {}
     if targets is None:
         offered = {name: sort_kinds(kinds) for name, kinds in display_providers(available).items() if kinds}
     else:
@@ -63,6 +64,9 @@ def make_film(entry: WatchlistEntry, found: dict, targets: dict[str, str] | None
         trailer_url=details.get("trailer_url"),
         collection=details.get("collection"),
         similar_ids=details.get("similar_ids") or [],
+        certification=release.get("certification"),
+        cinema_date=release.get("cinema"),
+        home_date=release.get("home"),
         providers=offered,
     )
 

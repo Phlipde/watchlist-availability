@@ -43,6 +43,7 @@ BUNDLES = {
             "runtime": 120,
             "genres": ["Action"],
             "trailer_url": "https://www.youtube.com/watch?v=abc",
+            "release_dates": {"DE": {"certification": "16", "home": "2099-03-01"}},
         },
         "providers": {"DE": {"Netflix": ["flatrate"]}, "GB": {"BBC iPlayer": ["free"]}},
     },
@@ -237,6 +238,24 @@ def test_similar_film_on_own_service_opens_from_the_details(app_server, page):
     expect(similar).to_have_text("Similar on your services: Heat (1995) · Netflix")
     similar.get_by_role("button", name="Heat (1995)").click()
     expect(page.locator("#film-details-title")).to_have_text("Heat")
+
+
+def test_coming_soon_and_age_rating(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"])
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    # Heat comes out at home in 2099 and is rated 16 in Germany.
+    page.locator("#coming-panel summary").click()
+    expect(page.locator("#coming-list")).to_contain_text("Heat (1995)")
+    expect(page.locator("#coming-list")).to_contain_text("rated 16")
+    page.locator("#coming-list .coming-pick").click()
+    expect(page.locator("#film-details-content .film-modal-release")).to_contain_text("Coming at home")
+    page.locator("#film-details-modal .btn-close").click()
+    expect(page.locator("#film-details-modal")).to_be_hidden()
+    page.locator("#more-filters summary").click()
+    page.locator("#age-filter").select_option("16")
+    expect(page.locator("#visible-count")).to_have_text("1")
+    expect(page.locator("#age-filter option[value='16']")).to_have_text("Up to 16")
 
 
 def test_free_labels_follow_the_country(app_server, page):

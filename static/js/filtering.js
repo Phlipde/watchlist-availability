@@ -63,6 +63,7 @@ function commonMatches(film, filters, context) {
       .some(value => String(value).toLowerCase().includes(filters.query))
     && (filters.genre === 'all' || (film.genres || []).includes(filters.genre))
     && (filters.keyword === 'all' || (film.keywords || []).includes(filters.keyword))
+    && ageMatches(filters.age, film.certification)
     // The server decides this with the rule of the costs page (watchlist_app/costs.py).
     && (!filters.exclusive || film.only_on_my_services === true)
     && runtimeMatches(filters.runtime, Number(film.runtime) || 0)
@@ -73,6 +74,30 @@ function commonMatches(film, filters, context) {
     && (Number(film.vote_count) || 0) >= filters.minVotes
     && year >= filters.yearFrom
     && year <= filters.yearTo;
+}
+
+// Age rating filter: "up to 12" for numeric ratings (FSK and most of Europe); other systems
+// ("PG-13") match exactly. Films without a rating are left out once a limit is set.
+export function ageMatches(limit, certification) {
+  if (!limit || limit === 'all') return true;
+  if (!certification) return false;
+  const numeric = value => /^\d+$/.test(value);
+  return numeric(limit) && numeric(certification) ? Number(certification) <= Number(limit) : certification === limit;
+}
+
+// Ratings in a sensible order: numbers ascending, then the others alphabetically.
+export function sortRatings(values) {
+  return [...new Set(values.filter(Boolean))].sort((a, b) => {
+    const [x, y] = [/^\d+$/.test(a), /^\d+$/.test(b)];
+    return x && y ? Number(a) - Number(b) : x !== y ? (x ? -1 : 1) : a.localeCompare(b);
+  });
+}
+
+// Watchlist films with a cinema or home release still ahead (dates "YYYY-MM-DD"), soonest first.
+export function comingSoon(films, today) {
+  const next = film => [film.cinema_date, film.home_date].filter(date => date && date >= today).sort()[0];
+  return films.filter(next)
+    .sort((a, b) => next(a).localeCompare(next(b)) || String(a.title).localeCompare(String(b.title)));
 }
 
 // Should the film get a card in this section ("Free" or "Paid")?

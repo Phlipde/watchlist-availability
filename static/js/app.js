@@ -2,7 +2,7 @@ import {dateTime, escapeHtml, numberText} from './ui.js';
 import {createAppState, createScanState} from './state.js';
 import {availabilityByOffer, changeSummary, compareButtonState, favoriteFields, renderResults} from './rendering.js';
 import {activeFilters, clearFilter, readFilters, resetFilters, selectedProviders, updateProviderCount, updateProviderFilmCounts} from './filters.js';
-import {eveningSuggestions, filmKey, filterFilms, recentlyRemoved, similarOnServices} from './filtering.js';
+import {comingSoon, eveningSuggestions, filmKey, filterFilms, recentlyRemoved, similarOnServices, sortRatings} from './filtering.js';
 import {updateScanFeedback} from './scans.js';
 import {favoriteLabel} from './favorites.js';
 
@@ -130,6 +130,7 @@ const state = createAppState();
       document.getElementById('scan-summary-content').innerHTML = changeSummary(state.changes, selected, state.lastScan);
       renderRecentlyRemoved();
       renderTonight();
+      renderComingSoon();
       document.getElementById('scan-summary').hidden = !state.lastScan;
       document.getElementById('favorite-status-filter').hidden = !state.favoritesOnly;
       document.getElementById('favorites-empty')?.toggleAttribute('hidden', !(state.favoritesOnly && view.visibleCount === 0 && view.unavailable.length === 0));
@@ -198,6 +199,9 @@ const state = createAppState();
     function populateGenres() {
       fillSelect(document.getElementById('genre-filter'), 'All genres', [...new Set(state.films.flatMap(film => film.genres || []))].sort());
       fillSelect(document.getElementById('keyword-filter'), 'All keywords', [...new Set(state.films.flatMap(film => film.keywords || []))].sort());
+      const age = document.getElementById('age-filter');
+      fillSelect(age, 'Any age rating', sortRatings([...state.films, ...state.unavailable].map(film => film.certification)));
+      [...age.options].slice(1).forEach(option => { if (/^\d+$/.test(option.value)) option.textContent = `Up to ${option.value}`; });
     }
     function updateAnalysis() {
       const counts = {};
@@ -230,6 +234,29 @@ const state = createAppState();
       if ([...genre.options].some(option => option.value === savedGenre)) genre.value = savedGenre;
       document.getElementById('evening-runtime').value = localStorage.getItem('eveningRuntime') || '150';
       openModal('evening-modal');
+    }
+    // "15 Mar 2027" for a date "2027-03-15".
+    function day(date) {
+      return new Date(`${date}T00:00:00`).toLocaleDateString([], {dateStyle: 'medium'});
+    }
+    function today() {
+      return new Date().toLocaleDateString('sv');  // local date as YYYY-MM-DD
+    }
+    // Cinema and home releases still ahead, e.g. "in cinemas 5 Mar 2027 · at home 1 Jun 2027".
+    function upcomingText(film) {
+      return [['in cinemas', film.cinema_date], ['at home', film.home_date]]
+        .filter(([, date]) => date && date >= today())
+        .map(([label, date]) => `${label} ${day(date)}`).join(' · ');
+    }
+    function renderComingSoon() {
+      const films = comingSoon([...state.films, ...state.unavailable], today());
+      document.getElementById('coming-panel').hidden = films.length === 0;
+      document.getElementById('coming-count').textContent = films.length;
+      document.getElementById('coming-list').innerHTML = films.map(film => {
+        const title = escapeHtml(film.title) + (film.year ? ` (${numberText(film.year)})` : '');
+        const rating = film.certification ? ` · rated ${escapeHtml(film.certification)}` : '';
+        return `<li><button class="film-link coming-pick" type="button" data-key="${escapeHtml(filmKey(film))}">${title}</button> · ${escapeHtml(upcomingText(film))}${rating}</li>`;
+      }).join('');
     }
     // The own services a film runs on without extra cost.
     function includedOn(film, subscriptions) {
@@ -270,6 +297,10 @@ const state = createAppState();
       if (pick) showFilmDetails(pick.dataset.key, pick);
     });
     document.getElementById('tonight-change').addEventListener('click', showEveningSuggestions);
+    document.getElementById('coming-list').addEventListener('click', event => {
+      const pick = event.target.closest('.coming-pick');
+      if (pick) showFilmDetails(pick.dataset.key, pick);
+    });
     document.getElementById('evening-results').addEventListener('click', event => {
       const pick = event.target.closest('.evening-pick');
       if (!pick) return;
@@ -722,10 +753,12 @@ const state = createAppState();
       const similarLine = similar.length
         ? `<p class="film-modal-similar">Similar on your services: ${similar.map(item => `<button class="film-link series-pick" type="button" data-key="${escapeHtml(filmKey(item))}">${escapeHtml(item.title)}${item.year ? ` (${numberText(item.year)})` : ''}</button> · ${escapeHtml(includedOn(item, own))}`).join(', ')}</p>`
         : '';
+      const upcoming = upcomingText(film);
+      const releaseLine = upcoming ? `<p class="film-modal-release">Coming ${escapeHtml(upcoming)}</p>` : '';
       const poster = film.poster_path ? `<img class="film-modal-poster" src="${imageBaseUrl}${escapeHtml(film.poster_path)}" alt="Poster for ${escapeHtml(film.title)}">` : '';
       const favoriteButtonClass = state.favorites.has(key) ? 'btn-accent' : 'btn-outline-secondary';
       const selectedForCompare = state.compareKeys.has(key);
-      document.getElementById('film-details-content').innerHTML = `<div class="film-modal-layout">${poster}<div><p class="film-modal-meta">${numberText(film.year, 'Year unknown')}${numberText(film.rating) ? ` · TMDB ${Number(film.rating).toFixed(1)}/10` : ''}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}</p><p>${escapeHtml(film.overview || 'No description available.')}</p><p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p>${credits}${seriesLine}${similarLine}${keywords}</div></div><div class="film-modal-actions">${watchLink}<button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-star" aria-hidden="true"></i> ${favoriteLabel(state.favorites.has(key))}</button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-columns-gap" aria-hidden="true"></i> ${selectedForCompare ? 'Remove from comparison' : 'Add to comparison'}</button>${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb" aria-hidden="true"></i> TMDB</a>` : ''}${trailerLink}<a class="film-link" href="${letterboxdSearch}" target="_blank" rel="noreferrer"><i class="ti ti-device-tv" aria-hidden="true"></i> Search Letterboxd</a></div><h6 class="film-modal-section-title">Availability</h6>${providerRows || '<p class="empty">No service data available.</p>'}<div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${savedFavorite ? favoriteFields(key, film.title, savedFavorite) : ''}</div>`;
+      document.getElementById('film-details-content').innerHTML = `<div class="film-modal-layout">${poster}<div><p class="film-modal-meta">${numberText(film.year, 'Year unknown')}${numberText(film.rating) ? ` · TMDB ${Number(film.rating).toFixed(1)}/10` : ''}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}${film.certification ? ` · rated ${escapeHtml(film.certification)}` : ''}</p><p>${escapeHtml(film.overview || 'No description available.')}</p><p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p>${releaseLine}${credits}${seriesLine}${similarLine}${keywords}</div></div><div class="film-modal-actions">${watchLink}<button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-star" aria-hidden="true"></i> ${favoriteLabel(state.favorites.has(key))}</button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-columns-gap" aria-hidden="true"></i> ${selectedForCompare ? 'Remove from comparison' : 'Add to comparison'}</button>${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb" aria-hidden="true"></i> TMDB</a>` : ''}${trailerLink}<a class="film-link" href="${letterboxdSearch}" target="_blank" rel="noreferrer"><i class="ti ti-device-tv" aria-hidden="true"></i> Search Letterboxd</a></div><h6 class="film-modal-section-title">Availability</h6>${providerRows || '<p class="empty">No service data available.</p>'}<div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${savedFavorite ? favoriteFields(key, film.title, savedFavorite) : ''}</div>`;
       openModal('film-details-modal', opener);
     }
     results.addEventListener('click', event => {
@@ -794,6 +827,7 @@ const state = createAppState();
         match: document.getElementById('match-mode').value,
         genre: document.getElementById('genre-filter').dataset.pending || document.getElementById('genre-filter').value,
         keyword: document.getElementById('keyword-filter').dataset.pending || document.getElementById('keyword-filter').value,
+        age: document.getElementById('age-filter').dataset.pending || document.getElementById('age-filter').value,
         runtime: document.getElementById('runtime-filter').value,
         from: document.getElementById('year-from').value,
         to: document.getElementById('year-to').value,
@@ -819,15 +853,15 @@ const state = createAppState();
     // Typing in the search redraws only after a short pause, not on every key.
     let searchTimer;
     document.getElementById('film-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(renderFilms, 150); });
-    ['exclusive-filter', 'availability-filter', 'kind-filter', 'genre-filter', 'keyword-filter', 'runtime-filter', 'year-from', 'year-to', 'min-rating', 'min-votes', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => document.getElementById(id).addEventListener('input', renderFilms));
+    ['exclusive-filter', 'availability-filter', 'kind-filter', 'genre-filter', 'keyword-filter', 'age-filter', 'runtime-filter', 'year-from', 'year-to', 'min-rating', 'min-votes', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => document.getElementById(id).addEventListener('input', renderFilms));
     const initialUrl = new URL(location.href).searchParams;
     const setInitial = (id, parameter, fallback) => {
       const element = document.getElementById(id);
       const value = initialUrl.get(parameter) ?? fallback;
       if (element && (!element.options || [...element.options].some(option => option.value === value))) element.value = value;
-      else if (element && ['genre-filter', 'keyword-filter'].includes(id) && value !== 'all') element.dataset.pending = value;
+      else if (element && ['genre-filter', 'keyword-filter', 'age-filter'].includes(id) && value !== 'all') element.dataset.pending = value;
     };
-    ['genre-filter', 'keyword-filter'].forEach(id => document.getElementById(id).addEventListener('input', event => delete event.target.dataset.pending));
+    ['genre-filter', 'keyword-filter', 'age-filter'].forEach(id => document.getElementById(id).addEventListener('input', event => delete event.target.dataset.pending));
     setInitial('film-search', 'q', window.WATCHLIST_CONFIG.initialFilters.query);
     setInitial('availability-filter', 'availability', window.WATCHLIST_CONFIG.initialFilters.availability);
     setInitial('kind-filter', 'kind', window.WATCHLIST_CONFIG.initialFilters.kind);
@@ -837,6 +871,7 @@ const state = createAppState();
     setInitial('match-mode', 'match', 'any');
     setInitial('genre-filter', 'genre', 'all');
     setInitial('keyword-filter', 'keyword', 'all');
+    setInitial('age-filter', 'age', 'all');
     setInitial('runtime-filter', 'runtime', 'all');
     setInitial('year-from', 'from', '');
     setInitial('year-to', 'to', '');

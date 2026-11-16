@@ -79,7 +79,41 @@ def _details_from_movie(data: dict, tmdb_id: int) -> dict:
         "trailer_url": f"https://www.youtube.com/watch?v={trailer['key']}" if trailer else None,
         "collection": (data.get("belongs_to_collection") or {}).get("name") or None,
         "similar_ids": _similar_ids(data, tmdb_id),
+        "release_dates": _release_dates(data),
     }
+
+
+# Everything the scan needs about a film comes in this one request.
+_APPENDED = "videos,watch/providers,credits,keywords,recommendations,similar,release_dates"
+_CINEMA_TYPES = {2, 3}  # TMDB release types: limited and wide theatrical
+_HOME_TYPES = {4, 5}  # digital and physical
+
+
+def _release_dates(data: dict) -> dict[str, dict[str, str]]:
+    """Per country: the age rating and the first cinema and home release ("YYYY-MM-DD")."""
+    result: dict[str, dict[str, str]] = {}
+    for country in (data.get("release_dates") or {}).get("results", []):
+        code = country.get("iso_3166_1")
+        if not isinstance(code, str):
+            continue
+        info: dict[str, str] = {}
+        for release in sorted(country.get("release_dates", []), key=lambda item: item.get("type") != 3):
+            date = str(release.get("release_date") or "")[:10]
+            kind = (
+                "cinema"
+                if release.get("type") in _CINEMA_TYPES
+                else "home"
+                if release.get("type") in _HOME_TYPES
+                else None
+            )
+            if kind and date and (kind not in info or date < info[kind]):
+                info[kind] = date
+            # The rating of the wide cinema release first (sorted above), else the first one given.
+            if release.get("certification") and "certification" not in info:
+                info["certification"] = str(release["certification"]).strip()
+        if info:
+            result[code] = info
+    return result
 
 
 def _similar_ids(data: dict, tmdb_id: int) -> list[int]:
@@ -196,7 +230,7 @@ def get_movie_bundle(tmdb_id: int, api_key: str | None = None) -> dict | None:
         f"/movie/{tmdb_id}",
         {
             "api_key": api_key,
-            "append_to_response": "videos,watch/providers,credits,keywords,recommendations,similar",
+            "append_to_response": _APPENDED,
         },
     )
     if data is None:

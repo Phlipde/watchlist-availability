@@ -2,7 +2,7 @@
 
 Stand: 2026-11-16. Jede Etappe ist ein eigener Commit mit eigenen Tests; die App bleibt nach jedem Schritt lauffähig. Docker für Unraid kommt bewusst zuletzt. Struktur-Umbauten sind mit „(Struktur)“ markiert und stehen jeweils vor den Schritten, die darauf aufbauen.
 
-Als Nächstes offen: Etappe 11. Offene Punkte aus der Design-Runde stehen in Etappe 9k.
+Als Nächstes offen: Etappe 12. Offene Punkte aus der Design-Runde stehen in Etappe 9k.
 
 ## Teil A: Fehler und Struktur
 
@@ -331,11 +331,16 @@ Kritik der Hauptseite mit `/impeccable critique` (2026-11-16): 24 von 40 Punkten
 - [ ] Danach `/impeccable critique` erneut und mit 24/40 vergleichen.
 
 ### Etappe 11: Startdatum (eigene Etappe)
-- [ ] Für noch nicht erschienene Watchlist-Filme Kino- und Heimkino-Start anzeigen (TMDB „release_dates“ je Land).
-- [ ] Eigene Ansicht „Demnächst“ mit Sortierung nach Datum.
+- [x] Für noch nicht erschienene Watchlist-Filme Kino- und Heimkino-Start anzeigen (TMDB „release_dates“ je Land).
+- [x] Eigene Ansicht „Demnächst“ mit Sortierung nach Datum.
 - [ ] Meldung, sobald ein solcher Film streambar wird (nutzt die Historie; Zustellung kommt mit Etappe 16).
-- [ ] Altersfreigabe (FSK je Land) anzeigen und als Filter unter „More filters“, etwa für Filmabende mit Kindern. Kommt aus derselben Abfrage „release_dates“.
+- [x] Altersfreigabe (FSK je Land) anzeigen und als Filter unter „More filters“, etwa für Filmabende mit Kindern. Kommt aus derselben Abfrage „release_dates“.
 - Baut auf Zeitplan (Etappe 7) und Historie (Etappe 6) auf.
+- Ergebnis (2026-11-16): Keine zusätzliche TMDB-Abfrage; „release_dates“ kommt mit der Abfrage des Scans (`append_to_response`). Gespeichert wird je Land die Freigabe (die des breiten Kinostarts zuerst) und der jeweils erste Kino- (Typ 2/3) und Heimkino-Start (digital/physisch, Typ 4/5); der Film bekommt die Werte des gescannten Landes (`certification`, `cinema_date`, `home_date`, geprüft beim Import).
+  - „Demnächst“ ist ein einklappbarer Kasten „Coming soon (n)“ über „Not currently available“, sortiert nach dem nächsten Termin; jede Zeile öffnet die Details. Das Detailfenster zeigt „rated 16“ und „Coming in cinemas … · at home …“, nur für Termine in der Zukunft.
+  - Filter „Age rating“ unter „More filters“: bei Zahlen „Up to 12“ (FSK und die meisten Länder Europas), andere Systeme wie „PG-13“ genau; Filme ohne Freigabe fallen raus, sobald ein Wert gewählt ist. Steht im Link als `age=`.
+  - Offen: die Meldung, sobald ein solcher Film streambar wird; sie braucht die Zustellung aus Etappe 16 (heute zeigt „Newly available“ die Änderung schon an).
+  - Erscheint erst, wenn der Scan die TMDB-Daten neu holt (nach 24 Stunden). Tests: Python (Daten aus der TMDB-Antwort, Land beim Nachschlagen, Felder am Film, Prüfung beim Import), JS (Freigabe-Filter, Sortierung der Werte, „Coming soon“), Browser (Kasten, Details, Filter).
 
 ### Etappe 12: Mehr Daten pro Film
 - [ ] Letterboxd-Durchschnittsbewertung: steht auf der Filmseite, die der Scan für die TMDB-ID ohnehin lädt; keine zusätzliche Abfrage. Als Sortierung und als Filter unter „More filters“; ersetzt die TMDB-Bewertung in der sichtbaren Reihe, falls sie sich als nützlicher erweist.
