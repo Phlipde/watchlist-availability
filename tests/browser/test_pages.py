@@ -53,6 +53,7 @@ BUNDLES = {
             "release_date": "1979-05-25",
             "overview": "In space.",
             "rating": 8.1,
+            "similar_ids": [949, 111],
         },
         "providers": {"DE": {"Arte": ["free"]}, "GB": {"Arte": ["flatrate"]}},
     },
@@ -223,6 +224,19 @@ def free_tagged(page) -> list[str]:
             "labels => labels.map(l => l.dataset.providerLabel)"
         )
     )
+
+
+def test_similar_film_on_own_service_opens_from_the_details(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"])
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    page.locator("#select-all-providers").click()
+    page.locator('article.film[data-key="348"] .film-details-button').click()
+    # Heat runs on Netflix (a subscription); Heat 2 is not on the watchlist.
+    similar = page.locator("#film-details-content .film-modal-similar")
+    expect(similar).to_have_text("Similar on your services: Heat (1995) · Netflix")
+    similar.get_by_role("button", name="Heat (1995)").click()
+    expect(page.locator("#film-details-title")).to_have_text("Heat")
 
 
 def test_free_labels_follow_the_country(app_server, page):

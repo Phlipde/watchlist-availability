@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
-import {eveningSuggestions, filterFilms, matchesSection, selectedChanges, selectedKinds, sortFilms} from '../../static/js/filtering.js';
+import {eveningSuggestions, filterFilms, matchesSection, selectedChanges, selectedKinds, similarOnServices, sortFilms} from '../../static/js/filtering.js';
 
 const baseFilters = {
   query: '', availability: 'all', kind: 'all', minRating: 0, minVotes: 0, genre: 'all', keyword: 'all', runtime: 'all', mode: 'any',
@@ -210,4 +210,19 @@ test('recently removed lists each film once, only for own services', async () =>
   ];
   const removed = recentlyRemoved(changes, new Set(['Netflix', 'Arte']));
   assert.deepEqual(removed.map(item => [item.title, item.providers]), [['Heat', ['Arte', 'Netflix']]]);
+});
+
+test('similar films: only watchlist films on own services, in TMDB order, not watched', () => {
+  const heat = {key: '949', title: 'Heat', similar_ids: [3, 2, 1, 4, 949], providers: {}};
+  const films = [
+    heat,
+    {key: '1', title: 'One', providers: {Netflix: ['flatrate']}},
+    {key: '2', title: 'Two', providers: {Netflix: ['rent']}},
+    {key: '3', title: 'Three', providers: {Arte: ['free']}},
+    {key: '4', title: 'Four', providers: {Netflix: ['flatrate']}},
+  ];
+  const titles = list => list.map(film => film.title);
+  assert.deepEqual(titles(similarOnServices(heat, films, new Set(['Netflix', 'Arte']))), ['Three', 'One', 'Four']);
+  assert.deepEqual(titles(similarOnServices(heat, films, new Set(['Netflix']), new Set(['1']))), ['Four']);
+  assert.deepEqual(similarOnServices({key: 'x', title: 'Old scan'}, films, new Set(['Netflix'])), []);
 });

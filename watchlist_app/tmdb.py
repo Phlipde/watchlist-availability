@@ -78,7 +78,19 @@ def _details_from_movie(data: dict, tmdb_id: int) -> dict:
         "tmdb_url": f"https://www.themoviedb.org/movie/{tmdb_id}",
         "trailer_url": f"https://www.youtube.com/watch?v={trailer['key']}" if trailer else None,
         "collection": (data.get("belongs_to_collection") or {}).get("name") or None,
+        "similar_ids": _similar_ids(data, tmdb_id),
     }
+
+
+def _similar_ids(data: dict, tmdb_id: int) -> list[int]:
+    """TMDB's recommendations first, then its similar films; each id once, never the film itself."""
+    ids: list[int] = []
+    for part in ("recommendations", "similar"):
+        for item in (data.get(part) or {}).get("results", []):
+            film_id = item.get("id")
+            if isinstance(film_id, int) and film_id != tmdb_id and film_id not in ids:
+                ids.append(film_id)
+    return ids[:40]
 
 
 def _request_json(path: str, params: dict) -> dict | None:
@@ -182,7 +194,10 @@ def get_movie_bundle(tmdb_id: int, api_key: str | None = None) -> dict | None:
     """
     data = _request_json(
         f"/movie/{tmdb_id}",
-        {"api_key": api_key, "append_to_response": "videos,watch/providers,credits,keywords"},
+        {
+            "api_key": api_key,
+            "append_to_response": "videos,watch/providers,credits,keywords,recommendations,similar",
+        },
     )
     if data is None:
         return None

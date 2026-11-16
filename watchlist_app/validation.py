@@ -92,6 +92,7 @@ def clean_film(data) -> dict | None:
     genres = data.get("genres")
     cast = data.get("cast")
     keywords = data.get("keywords")
+    similar = data.get("similar_ids")
     film = Film(
         title=title,
         year=year(data.get("year")),
@@ -118,6 +119,9 @@ def clean_film(data) -> dict | None:
         trailer_url=_matching(data.get("trailer_url"), _TRAILER_URL_RE),
         collection=text(data.get("collection"), 200),
         watchlist_position=integer(data.get("watchlist_position"), 0, 10**6),
+        similar_ids=[n for n in similar[:40] if type(n) is int and 0 < n < 10**9]
+        if isinstance(similar, list)
+        else [],
     )
     film.providers = {name: kinds for name, kinds in providers.items()}
     return film.to_dict()

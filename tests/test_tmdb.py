@@ -12,7 +12,10 @@ class TestMovieBundle:
         with patch("watchlist_app.tmdb._http_get", return_value=response(MOVIE)) as get:
             bundle = tmdb.get_movie_bundle(27205, API_KEY)
         assert get.call_count == 1
-        assert get.call_args[1]["params"]["append_to_response"] == "videos,watch/providers,credits,keywords"
+        assert (
+            get.call_args[1]["params"]["append_to_response"]
+            == "videos,watch/providers,credits,keywords,recommendations,similar"
+        )
         assert bundle["poster_path"] == "/p.jpg"
         assert bundle["details"]["runtime"] == 148
         assert bundle["details"]["release_date"] == "2010-07-15"
@@ -34,6 +37,16 @@ class TestMovieBundle:
         with patch("watchlist_app.tmdb._http_get", return_value=response(movie)):
             bundle = tmdb.get_movie_bundle(348, API_KEY)
         assert bundle["details"]["collection"] == "Alien Collection"
+
+    def test_similar_films_recommendations_first_each_once(self):
+        movie = {
+            **MOVIE,
+            "recommendations": {"results": [{"id": 11}, {"id": 27205}, {"id": 12}]},
+            "similar": {"results": [{"id": 12}, {"id": 13}, {"id": "x"}]},
+        }
+        with patch("watchlist_app.tmdb._http_get", return_value=response(movie)):
+            bundle = tmdb.get_movie_bundle(27205, API_KEY)
+        assert bundle["details"]["similar_ids"] == [11, 12, 13]
 
     def test_buy_only_country_is_left_out(self):
         with patch("watchlist_app.tmdb._http_get", return_value=response(MOVIE)):

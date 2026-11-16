@@ -1,8 +1,8 @@
 # Plan: Fehler beheben, Struktur verbessern, Funktionen ergänzen, dann Docker
 
-Stand: 2026-11-15. Jede Etappe ist ein eigener Commit mit eigenen Tests; die App bleibt nach jedem Schritt lauffähig. Docker für Unraid kommt bewusst zuletzt. Struktur-Umbauten sind mit „(Struktur)“ markiert und stehen jeweils vor den Schritten, die darauf aufbauen.
+Stand: 2026-11-16. Jede Etappe ist ein eigener Commit mit eigenen Tests; die App bleibt nach jedem Schritt lauffähig. Docker für Unraid kommt bewusst zuletzt. Struktur-Umbauten sind mit „(Struktur)“ markiert und stehen jeweils vor den Schritten, die darauf aufbauen.
 
-Als Nächstes offen: Etappe 10 („Ähnliche Filme“), danach Etappe 11.
+Als Nächstes offen: Etappe 11. Offene Punkte aus der Design-Runde stehen in Etappe 9k.
 
 ## Teil A: Fehler und Struktur
 
@@ -283,6 +283,7 @@ In einem Rutsch, damit die Seite nur einmal „umzieht“.
 - Ergebnis (2026-11-16): alles umgesetzt bis auf das optionale DG #5 (Farbvariablen, bleibt für Etappe 14). Erster Bildschirm mit der Datenkopie: Auf dem Handy (375 px) beginnt die erste Filmkarte bei 965 px statt 1632 px, keine überlappenden Knöpfe mehr; auf dem Desktop steht die Scan-Anzeige in einer Zeile. Statistik: „8 free · 162 paid · (1 in both)“ bei 169 Filmen. Chips für alle 14 Filter (das Kontrollkästchen „Only on one of my services“ zählt mit), „Reset filters“ als letzter Chip und im leeren Zustand. Alte Links mit `availability=exclusive` setzen das neue Kontrollkästchen. „Details“ behält die Klasse `film-details-button` nur noch als Haken für das Skript, ohne eigenen Stil. Nebenbei: Die Kopfzeile stand außerhalb von `<main>` und klebte am Bildschirmrand; „My subscriptions“ in der Seitenleiste ragte nach der größeren Knopfschrift aus 9g heraus. Neue Tests: JS-Test für Chips und „Reset filters“, Browser-Test für den leeren Zustand; zwei Browser-Tests an die neuen Texte angepasst.
 - Abweichung: Den Knopf im ruhenden Scan nenne ich „Scan now“, nach einem Fehler „Retry scan“ (9f hatte „Scan again“). Die Bildschirmfotos vorher/nachher liegen nur in der Sitzung, nicht als Dateien.
 - Offen: eine Woche nutzen und notieren, welche Filter gesetzt werden.
+- Nachtrag (Etappe 9k): Standard ist jetzt „Available only“ mit Sortierung nach Bewertung, „Everything (incl. unavailable)“ ist die zweite Option. Das Menü heißt „More“ und enthält auch „Share link“. Am Handy gibt es „Services“ und „Sort & filter“ statt „Filters“, die Filter sind dort eingeklappt; die Zahlen oben (243 px, 965 px) gelten nicht mehr.
 
 ### Etappe 9i: Vom Vorschlag bis „gesehen“
 - [x] Abend-Modus: Vorschläge sind Knöpfe, die das Detailfenster öffnen, mit „· on Netflix“ dahinter; Hinweis „Uses the subscriptions saved in Settings.“ (DC #13). Genre und Laufzeit in `localStorage` merken (ID #13).
@@ -295,6 +296,7 @@ In einem Rutsch, damit die Seite nur einmal „umzieht“.
 - Prüfung: JS-Tests für `eveningSuggestions` ohne gesehene Filme und für den Zähler am Vergleich; Test für das Feld `link` aus einer TMDB-Antwort und in der Sicherung; Browser-Test für „Undo“.
 - Ergebnis (2026-11-16): alle sieben Punkte umgesetzt und mit der Datenkopie im Browser geprüft: Abend-Vorschläge öffnen das Detailfenster („The Pianist … · on Netflix“), Netflix steht im Detailfenster oben mit „Your service“, „Compare (2)“ wird ab zwei Filmen aktiv, auf den Karten stehen ohne Favoriten-Ansicht keine Status- und Notizfelder mehr.
 - Abweichung: „Where to watch“ speichert kein Feld `link`. TMDB baut die Seite aus Film-ID und Land (`https://www.themoviedb.org/movie/949/watch?locale=DE`, geprüft: 200, Quelle JustWatch); die Adresse entsteht im Browser aus der schon geprüften `tmdb_url`. Damit entfallen Änderungen an Datenbank, Sicherung und `validation.py` und die Tests dafür. Der Hinweis im Abend-Modus nennt „My subscriptions“ statt „Settings“ (seit 9e).
+- Nachtrag (Etappe 9k): „Compare“ ist jetzt immer aktiv und schaltet den Vergleichsmodus ein, erst dann erscheinen die Kästchen. Die Abend-Vorschläge stehen zusätzlich als Poster-Leiste „Tonight“ oben. Im Detailfenster sind fremde Dienste eingeklappt.
 - Tests: JS-Tests für den Abend-Modus ohne gesehene Filme und für „Compare (n)“; Browser-Test für „Undo“ (Notiz kommt mit zurück); der Notiz-Test wechselt jetzt in die Favoriten-Ansicht.
 
 ### Etappe 10: Entscheidungshilfe
@@ -303,12 +305,30 @@ In einem Rutsch, damit die Seite nur einmal „umzieht“.
 - [x] „Läuft bald aus“ / „kürzlich entfernt“ aus der Historie (TMDB liefert kein Ablaufdatum).
 - [x] Gewichtete Sortierung: Bewertung pro Laufzeit, am längsten auf der Watchlist, Anzahl eigener Abos.
 - [x] Filmreihen (TMDB „Collections“) zusammen anzeigen.
-- [ ] Ähnliche Filme: zu einem Watchlist-Film zeigen, was Vergleichbares auf den eigenen Abos läuft (TMDB „similar“ / „recommendations“).
+- [x] Ähnliche Filme: zu einem Watchlist-Film zeigen, was Vergleichbares auf den eigenen Abos läuft (TMDB „similar“ / „recommendations“).
 - Ergebnis (2026-11-16): Auswahl mit dem Nutzer: drei Punkte gebaut, „Ähnliche Filme“ bleibt offen (braucht eigene TMDB-Abfragen je Vorschlag).
   - Kürzlich entfernt: Kasten „Recently gone from your services (n)“ über den Filmen, je Film eine Zeile mit den Diensten und dem Datum, aus den gespeicherten Änderungen der letzten 14 Tage und nur für die eigenen Abos. „Läuft bald aus“ geht nicht, TMDB liefert kein Ablaufdatum.
   - Sortierungen: „rating per hour“, „longest on watchlist“, „on most of my services“, „film series together“. Die Position auf der Watchlist kommt aus der Reihenfolge der Letterboxd-Seite (zuletzt Hinzugefügtes zuerst, angenommen, nicht nachgeprüft); der CSV-Export wird nach seiner Spalte „Date“ genauso sortiert.
   - Filmreihen: Feld `collection` aus `belongs_to_collection` der ohnehin gemachten TMDB-Abfrage; im Detailfenster „Part of … : also on your watchlist …“ mit Links, dazu die Sortierung „film series together“.
+  - Ähnliche Filme (nachgeholt, 2026-11-16): Mit dem Nutzer entschieden, nur Filme von der eigenen Watchlist vorzuschlagen; Vorschläge außerhalb der Watchlist bleiben unter „Nicht im Plan“. Die TMDB-Abfrage des Scans holt „recommendations“ und „similar“ gleich mit (`append_to_response`, keine zusätzliche Abfrage); gespeichert werden nur die IDs im neuen Feld `similar_ids` (höchstens 40, Empfehlungen zuerst). Das Detailfenster zeigt „Similar on your services: …“ mit bis zu 5 Watchlist-Filmen, die auf einem eigenen Abo ohne Zusatzkosten laufen, ohne gesehene; ein Klick öffnet deren Details. Erscheint erst, wenn der Scan die TMDB-Daten neu geholt hat. Tests: Python (IDs aus der Antwort, Prüfung beim Import), JS (`similarOnServices`), Browser (Zeile und Klick).
   - Nicht im Browser geprüft: Reihen, Position und „Kürzlich entfernt“, weil der gespeicherte Scan der Kopie von vorher stammt und keine Änderungen hat. Reihe und Position erscheinen nach dem nächsten Scan (gespeicherte TMDB-Daten werden nach ihrer Gültigkeit neu geholt). Abgedeckt durch Tests: zwei Python-Tests (Reihe, Position), zwei JS-Tests (Sortierungen, „Kürzlich entfernt“).
+
+### Etappe 9k: Design-Runde mit Impeccable (Hauptseite)
+Kritik der Hauptseite mit `/impeccable critique` (2026-11-16): 24 von 40 Punkten. Größte Probleme: am Handy kein Film auf dem ersten Bildschirm, Startansicht als Katalog von A bis Z, Abend-Modus versteckt. Bericht in `.impeccable/critique/`, Produktbeschreibung in `PRODUCT.md`.
+- [x] Werkzeugleiste kürzen: „Share“ und alle Exporte in ein Menü „More“; die Vergleichs-Kästchen auf den Postern erst nach einem Klick auf „Compare“ (Vergleichsmodus), „Clear selection“ beendet ihn.
+- [x] Detailfenster: Aktionen mit „Where to watch“ über der Verfügbarkeit; fremde Dienste eingeklappt unter „Other services (n)“, wenn der Film auf einem eigenen Dienst läuft; höchstens 5 Stichworte.
+- [x] Startansicht: Sortierung nach Bewertung und „Available only“ statt Titel und „Everything“. Im geteilten Link fallen nur diese Standardwerte weg, „Everything“ bleibt erhalten.
+- [x] Handy: Sortierung, Werkzeugleiste und Filter hinter dem Knopf „Sort & filter“; sichtbar bleiben Suche und Chips. Der bisherige Knopf „Filters“ öffnete die Dienste und heißt jetzt „Services“.
+- [x] „Tonight on your services“: drei Poster mit den Abend-Vorschlägen (gespeicherte Laufzeit und Genre) über den Bedienelementen; „Change“ öffnet das bisherige Fenster. In der Favoriten-Ansicht ausgeblendet.
+- [x] Layout: Filter, Chips und Raster stehen zusammen; die fünf sichtbaren Filter in einer Reihe; 48 px zwischen „Free“ und „Paid“ statt 1 px; 44 px Tippflächen auf Touch-Geräten; TMDB- und Trailer-Links auf den Karten nur noch auf dem Desktop.
+- [x] Dienste-Leiste: Suche und Sortierung in einer Reihe, „My subscriptions“ als erster Knopf über die volle Breite, Hilfetext ans Ende; Zähler als lesbare Pille statt grauem Abzeichen (Kontrast 2,5:1).
+- Ergebnis (2026-11-16): Handy (375 px) erstes Poster bei 573 px statt 923 px, „Tonight“ ganz auf dem ersten Bildschirm; Desktop: Liste der Dienste beginnt bei 296 px statt 421 px. Layout-Prüfung des Detektors ohne Befund. Der Notiz-Test wartet jetzt auf das Ende des Scans (er tippte, während der fertige Scan die Karte neu zeichnete).
+- [ ] „Paid“ umbenennen, etwa „On your subscriptions“; für Abo-Kunden sagt „Paid“ nichts (`/impeccable clarify`).
+- [ ] „Shuffle“ für „Tonight“: heute immer die drei am besten bewerteten Filme.
+- [ ] Filmkarten sind hoch (Desktop rund 570 px, Handy rund 480 px). „Details“ bleibt als Weg für Tastatur und Screenreader; kürzer machen ohne ihn zu verlieren.
+- [ ] Notiz geht verloren, wenn ein Scan fertig wird, während man tippt (die Karten werden neu gezeichnet).
+- [ ] Ein Film aus „Tonight“ steht im Raster noch einmal; vermutlich in Ordnung, nach einer Woche Nutzung entscheiden.
+- [ ] Danach `/impeccable critique` erneut und mit 24/40 vergleichen.
 
 ### Etappe 11: Startdatum (eigene Etappe)
 - [ ] Für noch nicht erschienene Watchlist-Filme Kino- und Heimkino-Start anzeigen (TMDB „release_dates“ je Land).
@@ -319,7 +339,7 @@ In einem Rutsch, damit die Seite nur einmal „umzieht“.
 
 ### Etappe 12: Mehr Daten pro Film
 - [ ] Letterboxd-Durchschnittsbewertung: steht auf der Filmseite, die der Scan für die TMDB-ID ohnehin lädt; keine zusätzliche Abfrage. Als Sortierung und als Filter unter „More filters“; ersetzt die TMDB-Bewertung in der sichtbaren Reihe, falls sie sich als nützlicher erweist.
-- [ ] Reihenfolge der Watchlist speichern: die Letterboxd-Seite ist nach „zuletzt hinzugefügt“ sortiert, die Position ersetzt das Aufnahmedatum auch ohne CSV-Export.
+- [x] (In Etappe 10 erledigt: `watchlist_position`.) Reihenfolge der Watchlist speichern: die Letterboxd-Seite ist nach „zuletzt hinzugefügt“ sortiert, die Position ersetzt das Aufnahmedatum auch ohne CSV-Export.
 - [ ] Letterboxd-Daten: Datum der Aufnahme in die Watchlist (nur im CSV-Export), eigene Bewertung.
 - [ ] Originalsprache und Herkunftsland als Filter unter „More filters“ (steckt schon in der TMDB-Antwort).
 - [ ] Verfügbarkeit in anderen Ländern („in DE nicht, aber in GB auf Netflix“); der TMDB-Aufruf liefert alle Länder ohne zusätzliche Abfragen.
@@ -328,14 +348,14 @@ In einem Rutsch, damit die Seite nur einmal „umzieht“.
 
 ### Etappe 13: Übersicht und Auswertung
 - [ ] Watchlist-Statistik über Zeit: Zugänge, weggeschaute Filme, Abdeckung je Dienst (braucht gespeicherte Scan-Stände aus Etappe 6).
-- [ ] „Staubfänger“: Filme, die lange auf der Liste stehen und seit Monaten verfügbar sind (braucht das Watchlist-Datum oder die Reihenfolge aus Etappe 12).
+- [ ] „Staubfänger“: Filme, die lange auf der Liste stehen und seit Monaten verfügbar sind (die Reihenfolge gibt es seit Etappe 10).
 - [ ] Laufzeit-Summe der verfügbaren Filme je Dienst.
 - [ ] Eigene Schlagworte pro Film und Filter danach (unter „More filters“).
 
 ### Etappe 14: Bedienung
 - [ ] Listenansicht (kompakte, sortierbare Tabelle) neben der Kartenansicht.
 - [ ] Gespeicherte Filter als Knöpfe.
-- [ ] Filter auf dem Handy einklappbar: mit „More filters“ (Etappe 9h) ist der Bereich nur noch 243 px hoch; erst nach einer Woche Nutzung entscheiden, ob noch nötig.
+- [x] (In Etappe 9k erledigt: „Sort & filter“.) Filter auf dem Handy einklappbar: mit „More filters“ (Etappe 9h) ist der Bereich nur noch 243 px hoch; erst nach einer Woche Nutzung entscheiden, ob noch nötig.
 - [ ] Favoriten-Status mit dem Letterboxd-Tagebuch abgleichen; gesehene Filme ausblenden.
 - [ ] Helles Design und Farbwahl. Erst nach den Farb-Variablen aus Etappe 9h (DG #5); die App ist heute bewusst nur dunkel und bleibt es auch bei hellem System.
 - [ ] Tastatur-Bedienung: `/` Suche, `r` Random, Pfeiltasten durch die Karten, `f` Favorit; nur wenn der Fokus nicht in einem Eingabefeld ist, Kürzel im `title` des Knopfs (ID #17).

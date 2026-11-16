@@ -62,6 +62,7 @@ def make_film(entry: WatchlistEntry, found: dict, targets: dict[str, str] | None
         tmdb_url=details.get("tmdb_url"),
         trailer_url=details.get("trailer_url"),
         collection=details.get("collection"),
+        similar_ids=details.get("similar_ids") or [],
         providers=offered,
     )
 
