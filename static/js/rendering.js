@@ -19,16 +19,18 @@ export function offerBadges(kinds) {
 }
 
 // Availability in the details window: one group per offer type (Free, With ads, Subscription,
-// Rent), providers in alphabetical order, each with its logo when TMDB has one.
-export function availabilityByOffer(providers, logos = {}, logoBaseUrl = '') {
+// Rent). The user's own services come first and are marked, the rest in alphabetical order,
+// each with its logo when TMDB has one.
+export function availabilityByOffer(providers, logos = {}, logoBaseUrl = '', own = new Set()) {
   const entries = Object.entries(providers || {});
   return Object.entries(OFFER_TYPES).map(([kind, [label, icon]]) => {
     const names = entries.filter(([, kinds]) => kinds.includes(kind)).map(([name]) => name)
-      .sort((a, b) => a.localeCompare(b, undefined, {sensitivity: 'base'}));
+      .sort((a, b) => Number(own.has(b)) - Number(own.has(a)) || a.localeCompare(b, undefined, {sensitivity: 'base'}));
     if (!names.length) return '';
     const rows = names.map(name => {
       const logo = logos[name] ? `<img class="provider-logo" src="${escapeHtml(logoBaseUrl + logos[name])}" alt="" loading="lazy">` : '';
-      return `<li>${logo}<span>${escapeHtml(name)}</span></li>`;
+      const mine = own.has(name) ? ' <span class="pill pill-ok">Your service</span>' : '';
+      return `<li${own.has(name) ? ' class="own-service"' : ''}>${logo}<span>${escapeHtml(name)}</span>${mine}</li>`;
     }).join('');
     return `<section class="film-offer-group" data-offer="${kind}"><h6 class="film-offer-heading"><i class="${icon}" aria-hidden="true"></i> ${label}</h6><ul class="film-provider-list">${rows}</ul></section>`;
   }).join('');
@@ -56,7 +58,19 @@ export function changeSummary(changes, selected, lastScan) {
     + (relevant.length > 60 ? `<p>… and ${relevant.length - 60} more.</p>` : '');
 }
 
-// context: {imageBaseUrl, selected: Set, favorites: Map, compareKeys: Set, greyKeys: Set}
+// Status and note of a favorite; data-key lets the same fields work on the card and in the details.
+export function favoriteFields(key, title, saved = {}) {
+  const name = escapeHtml(title);
+  const option = (value, label) => `<option value="${value}" ${saved.status === value ? 'selected' : ''}>${label}</option>`;
+  return `<div class="film-actions"><select class="favorite-status" data-key="${escapeHtml(key)}" aria-label="Favorite status for ${name}">${option('plan', 'Plan')}${option('watching', 'Watching')}${option('watched', 'Watched')}</select><input class="favorite-note" data-key="${escapeHtml(key)}" aria-label="Note for ${name}" placeholder="Note" value="${escapeHtml(saved.notes || '')}"></div>`;
+}
+
+// The compare button says how many films are chosen and only works from two.
+export function compareButtonState(count) {
+  return {text: count ? `Compare (${count})` : 'Compare', disabled: count < 2};
+}
+
+// context: {imageBaseUrl, selected: Set, favorites: Map, compareKeys: Set, greyKeys: Set, favoritesOnly}
 export function filmCard(film, section, context) {
   const key = filmKey(film);
   const providers = sectionProviders(film, section).filter(provider => context.selected.has(provider));
@@ -73,9 +87,11 @@ export function filmCard(film, section, context) {
   const favoriteButton = `<button class="favorite" type="button" aria-label="Favorite: ${title}" aria-pressed="${favorite}" data-favorite="${favorite ? 'true' : 'false'}"><span aria-hidden="true">${favorite ? '★' : '☆'}</span></button>`;
   const compareChecked = context.compareKeys.has(key) ? 'checked' : '';
   const grey = context.greyKeys.has(key) ? ' rescan-unavailable' : '';
-  const favoriteControls = `<div class="film-actions"><select class="favorite-status" aria-label="Favorite status for ${title}" ${favorite ? '' : 'hidden'}><option value="plan" ${savedFavorite.status === 'plan' ? 'selected' : ''}>Plan</option><option value="watching" ${savedFavorite.status === 'watching' ? 'selected' : ''}>Watching</option><option value="watched" ${savedFavorite.status === 'watched' ? 'selected' : ''}>Watched</option></select><input class="favorite-note" aria-label="Note for ${title}" placeholder="Note" value="${escapeHtml(savedFavorite.notes || '')}" ${favorite ? '' : 'hidden'}></div>`;
+  // Status and note only in the favorites view (and in the details), so the cards do not jump.
+  const favoriteControls = favorite && context.favoritesOnly ? favoriteFields(key, film.title, savedFavorite) : '';
+  const watched = savedFavorite.status === 'watched' ? ' <span class="pill pill-neutral">Watched</span>' : '';
   // The card is clickable with the mouse; keyboard users reach the details through the "Details" button.
-  return `<article class="film${grey}" data-key="${escapeHtml(key)}" data-section="${section}"><div class="poster"><label class="comparison-toggle"><input class="comparison-check" type="checkbox" aria-label="Compare ${title}" ${compareChecked}></label>${poster}${favoriteButton}</div><div class="film-info"><h3 class="film-title">${title}</h3><span class="year">${numberText(film.year, 'Year unknown')} · ${rating}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}</span><p class="providers">${providerBadges}</p><div class="offer-badges">${offerBadges(kinds)}</div>${links ? `<p class="film-links">${links}</p>` : ''}${changeBadges ? `<p class="provider-changes">${changeBadges}</p>` : ''}<button class="btn btn-sm btn-outline-secondary film-details-button" type="button" data-key="${escapeHtml(key)}" aria-label="Details: ${title}"><i class="ti ti-info-circle" aria-hidden="true"></i> Details</button>${favoriteControls}</div></article>`;
+  return `<article class="film${grey}" data-key="${escapeHtml(key)}" data-section="${section}"><div class="poster"><label class="comparison-toggle"><input class="comparison-check" type="checkbox" aria-label="Compare ${title}" ${compareChecked}><span aria-hidden="true">Compare</span></label>${poster}${favoriteButton}</div><div class="film-info"><h3 class="film-title">${title}${watched}</h3><span class="year">${numberText(film.year, 'Year unknown')} · ${rating}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}</span><p class="providers">${providerBadges}</p><div class="offer-badges">${offerBadges(kinds)}</div>${links ? `<p class="film-links">${links}</p>` : ''}${changeBadges ? `<p class="provider-changes">${changeBadges}</p>` : ''}<button class="btn btn-sm btn-outline-secondary film-details-button" type="button" data-key="${escapeHtml(key)}" aria-label="Details: ${title}"><i class="ti ti-info-circle" aria-hidden="true"></i> Details</button>${favoriteControls}</div></article>`;
 }
 
 export function unavailableCard(film, selected) {

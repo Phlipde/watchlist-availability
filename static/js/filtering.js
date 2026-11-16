@@ -126,9 +126,11 @@ export function filterFilms(films, unavailable, filters, context) {
 }
 
 // Evening mode: the three best-rated films that fit the time and genre and run on an own service.
-export function eveningSuggestions(films, {maximum, genre, subscriptions}) {
+// Films in `skip` (watched ones) are left out.
+export function eveningSuggestions(films, {maximum, genre, subscriptions, skip = new Set()}) {
   return films
-    .filter(film => (!maximum || (film.runtime > 0 && film.runtime <= maximum))
+    .filter(film => !skip.has(filmKey(film))
+      && (!maximum || (film.runtime > 0 && film.runtime <= maximum))
       && (genre === 'all' || (film.genres || []).includes(genre))
       && Object.entries(film.providers || {}).some(([provider, kinds]) =>
         subscriptions.has(provider) && kinds.some(kind => ['free', 'ads', 'flatrate'].includes(kind))))

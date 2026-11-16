@@ -319,6 +319,44 @@ def test_phone_panel_stays_open_while_choosing(app_server, page):
     expect(page.locator("#provider-toggle")).to_be_focused()
 
 
+def test_no_match_offers_a_way_out(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"])
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    page.locator("#film-search").fill("nothing like this")
+    expect(page.locator("#filters-empty")).to_be_visible()
+    expect(page.locator("#filter-chips")).to_contain_text("Reset filters")
+    page.locator("#empty-reset").click()
+    expect(page.locator("#film-search")).to_have_value("")
+    expect(page.locator("#filters-empty")).to_be_hidden()
+    expect(page.locator("#visible-count")).to_have_text("1")
+    # Without any ticked service the empty state offers the saved subscriptions.
+    page.locator("#clear-providers").click()
+    expect(page.locator("#empty-subscriptions")).to_be_visible()
+    page.locator("#empty-subscriptions").click()
+    expect(page.locator("#visible-count")).to_have_text("1")
+
+
+def test_removed_favorite_comes_back_with_undo(app_server, page):
+    expect = playwright_api.expect
+    store = app_server["store"]
+    page.goto(app_server["url"])
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    star = page.locator('article.film[data-key="949"] button.favorite')
+    star.click()
+    expect(star).to_have_attribute("aria-pressed", "true")
+    page.locator("#favorites-view").click()
+    page.locator('article.film[data-key="949"] .favorite-note').fill("with Lisa")
+    page.locator('article.film[data-key="949"] .favorite-note').blur()
+    assert wait_until(lambda: store.list_favorites()[0].get("notes") == "with Lisa")
+    page.locator("#favorites-view").click()
+    star.click()
+    assert wait_until(lambda: store.list_favorites() == [])
+    page.locator("#toast-undo").click()
+    assert wait_until(lambda: [f.get("notes") for f in store.list_favorites()] == ["with Lisa"])
+    expect(star).to_have_attribute("aria-pressed", "true")
+
+
 def test_a_note_that_could_not_be_saved_is_marked(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"])
@@ -326,6 +364,9 @@ def test_a_note_that_could_not_be_saved_is_marked(app_server, page):
     card = page.locator('article.film[data-key="949"]')
     card.locator("button.favorite").click()
     expect(card.locator("button.favorite")).to_have_attribute("data-favorite", "true")
+    # Status and note sit on the card only in the favorites view.
+    expect(card.locator(".favorite-note")).to_have_count(0)
+    page.locator("#favorites-view").click()
     page.route(
         "**/api/favorites/*",
         lambda route: route.abort() if route.request.method == "PATCH" else route.continue_(),

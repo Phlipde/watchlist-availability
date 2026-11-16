@@ -1,6 +1,6 @@
 import {dateTime, escapeHtml, numberText} from './ui.js';
 import {createAppState, createScanState} from './state.js';
-import {availabilityByOffer, changeSummary, renderResults} from './rendering.js';
+import {availabilityByOffer, changeSummary, compareButtonState, favoriteFields, renderResults} from './rendering.js';
 import {activeFilters, clearFilter, readFilters, resetFilters, selectedProviders, updateProviderCount, updateProviderFilmCounts} from './filters.js';
 import {eveningSuggestions, filmKey, filterFilms} from './filtering.js';
 import {updateScanFeedback} from './scans.js';
@@ -19,15 +19,26 @@ const state = createAppState();
     const toastElement = document.getElementById('app-toast');
     const toast = window.bootstrap ? bootstrap.Toast.getOrCreateInstance(toastElement, {autohide: false}) : {show() {}, hide() {}};
     let toastTimer;
+    let toastUndo = null;
     // An error must not look like routine feedback: red border, announced at once, shown longer.
-    function showToast(message, error = false) {
+    // With `undo` the toast offers "Undo" for about five seconds.
+    function showToast(message, error = false, undo = null) {
       document.getElementById('toast-message').textContent = message;
       toastElement.classList.toggle('toast-error', error);
       toastElement.setAttribute('role', error ? 'alert' : 'status');
+      toastUndo = undo;
+      document.getElementById('toast-undo').hidden = !undo;
       clearTimeout(toastTimer);
       toast.show();
-      toastTimer = setTimeout(() => toast.hide(), error ? 6000 : 2400);
+      toastTimer = setTimeout(() => { toastUndo = null; toast.hide(); }, error ? 6000 : undo ? 5000 : 2400);
     }
+    document.getElementById('toast-undo').addEventListener('click', () => {
+      const undo = toastUndo;
+      toastUndo = null;
+      toast.hide();
+      undo?.();
+    });
+    const watchedKeys = () => new Set([...state.favorites.values()].filter(film => film.status === 'watched').map(film => film.key));
     // After a scan the button starts another one; "Retry" is only right after an error.
     function showScanButton(failed = false) {
       document.getElementById('cancel-scan').hidden = true;
@@ -109,6 +120,7 @@ const state = createAppState();
         favorites: state.favorites,
         compareKeys: state.compareKeys,
         greyKeys: greyKeys(),
+        favoritesOnly: state.favoritesOnly,
       });
       document.getElementById('unavailable-panel').hidden = view.unavailable.length === 0;
       document.getElementById('unavailable-badge').textContent = view.unavailable.length;
@@ -189,23 +201,45 @@ const state = createAppState();
     function showRandomFilm() {
       const visible = state.view ? [...new Map(Object.values(state.view.sections).flat().map(film => [filmKey(film), film])).values()] : [];
       if (!visible.length) return showToast('No film matches the current filters.');
-      const film = visible[Math.floor(Math.random() * visible.length)];
+      const watched = watchedKeys();
+      const unseen = visible.filter(film => !watched.has(filmKey(film)));
+      if (!unseen.length) return showToast('You have watched every film that matches the filters.');
+      const film = unseen[Math.floor(Math.random() * unseen.length)];
       showFilmDetails(filmKey(film));
     }
     function showEveningSuggestions() {
       const genre = document.getElementById('evening-genre');
       genre.innerHTML = '<option value="all">Any genre</option>' + [...new Set(state.films.flatMap(film => film.genres || []))]
         .sort().map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+      // The last evening's choice is the likely one again.
+      const savedGenre = localStorage.getItem('eveningGenre');
+      if ([...genre.options].some(option => option.value === savedGenre)) genre.value = savedGenre;
+      document.getElementById('evening-runtime').value = localStorage.getItem('eveningRuntime') || '150';
       openModal('evening-modal');
     }
     function renderEveningSuggestions() {
       const maximum = Number(document.getElementById('evening-runtime').value);
       const genre = document.getElementById('evening-genre').value;
-      const suggestions = eveningSuggestions(state.films, {maximum, genre, subscriptions: mySubscriptions()});
+      localStorage.setItem('eveningRuntime', String(maximum || ''));
+      localStorage.setItem('eveningGenre', genre);
+      const subscriptions = mySubscriptions();
+      const suggestions = eveningSuggestions(state.films, {maximum, genre, subscriptions, skip: watchedKeys()});
+      const onServices = film => Object.entries(film.providers || {})
+        .filter(([provider, kinds]) => subscriptions.has(provider) && kinds.some(kind => ['free', 'ads', 'flatrate'].includes(kind)))
+        .map(([provider]) => provider).sort().join(', ');
       document.getElementById('evening-results').innerHTML = suggestions.length
-        ? `<ol class="evening-suggestions">${suggestions.map(film => `<li><strong>${escapeHtml(film.title)}</strong> · ${numberText(film.runtime, '?')} min · TMDB ${numberText(film.rating, '?')}/10</li>`).join('')}</ol>`
+        ? `<ol class="evening-suggestions">${suggestions.map(film => `<li><button class="film-link evening-pick" type="button" data-key="${escapeHtml(filmKey(film))}">${escapeHtml(film.title)}</button> · ${numberText(film.runtime, '?')} min · TMDB ${numberText(film.rating) ? Number(film.rating).toFixed(1) : '?'}/10 · on ${escapeHtml(onServices(film))}</li>`).join('')}</ol>`
         : '<p class="empty">No matching films on your subscriptions.</p>';
     }
+    document.getElementById('evening-results').addEventListener('click', event => {
+      const pick = event.target.closest('.evening-pick');
+      if (!pick) return;
+      // One dialog at a time: the details replace the evening mode, the focus later goes back to its button.
+      const opener = modalOpeners.get('evening-modal');
+      modalOpeners.delete('evening-modal');
+      bootstrap.Modal.getInstance(document.getElementById('evening-modal'))?.hide();
+      showFilmDetails(pick.dataset.key, opener);
+    });
     function compareFilms() {
       const films = state.films.filter(film => state.compareKeys.has(filmKey(film)));
       if (films.length < 2 || films.length > 4) return showToast('Select 2 to 4 films to compare.');
@@ -215,11 +249,22 @@ const state = createAppState();
       document.getElementById('compare-table').innerHTML = `<thead><tr><th>Metric</th>${films.map(film => `<th>${escapeHtml(film.title)}</th>`).join('')}</tr></thead><tbody><tr><th>Year</th>${films.map(film => `<td>${numberText(film.year, '-')}</td>`).join('')}</tr><tr><th>Rating</th>${films.map(film => `<td>${numberText(film.rating, '-')}</td>`).join('')}</tr><tr><th>Runtime</th>${films.map(film => `<td>${numberText(film.runtime) ? `${numberText(film.runtime)} min` : '-'}</td>`).join('')}</tr><tr><th>Genres</th>${films.map(film => `<td>${escapeHtml((film.genres || []).join(', ') || '-')}</td>`).join('')}</tr><tr><th>Offers</th>${films.map(film => `<td>${offerCell(film)}</td>`).join('')}</tr>${providerRows}</tbody>`;
       openModal('compare-modal');
     }
+    function updateCompareButton() {
+      const {text, disabled} = compareButtonState(state.compareKeys.size);
+      const button = document.getElementById('compare-films');
+      button.innerHTML = `<i class="ti ti-columns-gap" aria-hidden="true"></i> ${text}`;
+      button.disabled = disabled;
+    }
     function setCompared(key, checked) {
       if (checked) state.compareKeys.add(key);
       else state.compareKeys.delete(key);
       document.querySelectorAll(`.film[data-key="${CSS.escape(key)}"] .comparison-check`).forEach(check => { check.checked = checked; });
+      updateCompareButton();
     }
+    document.getElementById('clear-compare').addEventListener('click', () => {
+      [...state.compareKeys].forEach(key => setCompared(key, false));
+      bootstrap.Modal.getInstance(document.getElementById('compare-modal'))?.hide();
+    });
     function updateStats() {
       const selected = new Set([...providerInputs].filter(input => input.checked).map(input => input.value));
       updateProviderFilmCounts(state.films, document.querySelectorAll('.provider-film-count[data-provider-count]'));
@@ -478,6 +523,9 @@ const state = createAppState();
       if (previous) state.favorites.delete(key);
       else state.favorites.set(key, {...film, key, status: 'plan', notes: ''});
       renderFilms();
+      if (previous) showToast(`Removed "${previous.title || film?.title || 'film'}" from favorites.`, false, () => restoreFavorite(previous));
+      const fields = document.getElementById('modal-favorite-fields');
+      if (fields?.dataset.key === key) fields.innerHTML = state.favorites.has(key) ? favoriteFields(key, state.favorites.get(key).title || film?.title || '', state.favorites.get(key)) : '';
       // The redraw replaces the card: put the focus back on the same star.
       if (hadFocus) results.querySelector(`.film[data-key="${CSS.escape(key)}"] .favorite`)?.focus();
       document.querySelectorAll(`.modal-favorite[data-key="${CSS.escape(key)}"]`).forEach(modalButton => {
@@ -488,9 +536,21 @@ const state = createAppState();
         modalButton.disabled = false;
       });
     }
+    // Undo after removing: the favorite comes back with its status and note.
+    async function restoreFavorite(previous) {
+      try {
+        const response = await fetch('/api/favorites', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(previous)});
+        if (!response.ok) throw new Error();
+      } catch {
+        showToast('Could not restore the favorite.', true);
+        return;
+      }
+      state.favorites.set(previous.key, previous);
+      renderFilms();
+      showToast(`"${previous.title}" is back in your favorites.`);
+    }
     async function updateFavoriteField(control) {
-      const card = control.closest('.film');
-      const key = card.dataset.key;
+      const key = control.dataset.key || control.closest('.film')?.dataset.key;
       const field = control.classList.contains('favorite-status') ? 'status' : 'notes';
       let response;
       try {
@@ -588,11 +648,15 @@ const state = createAppState();
         ? `<p class="film-modal-credits">${film.director ? `Directed by ${escapeHtml(film.director)}` : ''}${film.director && film.cast?.length ? ' · ' : ''}${film.cast?.length ? `Cast: ${escapeHtml(film.cast.join(', '))}` : ''}</p>`
         : '';
       const keywords = film.keywords?.length ? `<p class="film-modal-keywords">${escapeHtml(film.keywords.join(', '))}</p>` : '';
-      const providerRows = availabilityByOffer(film.providers, window.WATCHLIST_CONFIG.providerLogos, window.WATCHLIST_CONFIG.logoBaseUrl);
+      const providerRows = availabilityByOffer(film.providers, window.WATCHLIST_CONFIG.providerLogos, window.WATCHLIST_CONFIG.logoBaseUrl, mySubscriptions());
+      // TMDB's watch page (JustWatch data) for the shown country; tmdb_url is checked on the server.
+      const country = document.getElementById('country-select').value;
+      const watchLink = film.tmdb_url ? `<a class="btn btn-sm btn-accent" href="${escapeHtml(`${film.tmdb_url}/watch?locale=${encodeURIComponent(country)}`)}" target="_blank" rel="noreferrer"><i class="ti ti-player-play" aria-hidden="true"></i> Where to watch</a>` : '';
+      const savedFavorite = state.favorites.get(key);
       const poster = film.poster_path ? `<img class="film-modal-poster" src="${imageBaseUrl}${escapeHtml(film.poster_path)}" alt="Poster for ${escapeHtml(film.title)}">` : '';
       const favoriteButtonClass = state.favorites.has(key) ? 'btn-accent' : 'btn-outline-secondary';
       const selectedForCompare = state.compareKeys.has(key);
-      document.getElementById('film-details-content').innerHTML = `<div class="film-modal-layout">${poster}<div><p class="film-modal-meta">${numberText(film.year, 'Year unknown')}${numberText(film.rating) ? ` · TMDB ${Number(film.rating).toFixed(1)}/10` : ''}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}</p><p>${escapeHtml(film.overview || 'No description available.')}</p><p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p>${credits}${keywords}</div></div><h6 class="film-modal-section-title">Availability</h6>${providerRows || '<p class="empty">No service data available.</p>'}<div class="film-modal-actions"><button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-star" aria-hidden="true"></i> ${favoriteLabel(state.favorites.has(key))}</button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-columns-gap" aria-hidden="true"></i> ${selectedForCompare ? 'Remove from comparison' : 'Add to comparison'}</button>${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb" aria-hidden="true"></i> TMDB</a>` : ''}${trailerLink}<a class="film-link" href="${letterboxdSearch}" target="_blank" rel="noreferrer"><i class="ti ti-device-tv" aria-hidden="true"></i> Search Letterboxd</a></div>`;
+      document.getElementById('film-details-content').innerHTML = `<div class="film-modal-layout">${poster}<div><p class="film-modal-meta">${numberText(film.year, 'Year unknown')}${numberText(film.rating) ? ` · TMDB ${Number(film.rating).toFixed(1)}/10` : ''}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}</p><p>${escapeHtml(film.overview || 'No description available.')}</p><p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p>${credits}${keywords}</div></div><h6 class="film-modal-section-title">Availability</h6>${providerRows || '<p class="empty">No service data available.</p>'}<div class="film-modal-actions">${watchLink}<button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-star" aria-hidden="true"></i> ${favoriteLabel(state.favorites.has(key))}</button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-columns-gap" aria-hidden="true"></i> ${selectedForCompare ? 'Remove from comparison' : 'Add to comparison'}</button>${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb" aria-hidden="true"></i> TMDB</a>` : ''}${trailerLink}<a class="film-link" href="${letterboxdSearch}" target="_blank" rel="noreferrer"><i class="ti ti-device-tv" aria-hidden="true"></i> Search Letterboxd</a></div><div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${savedFavorite ? favoriteFields(key, film.title, savedFavorite) : ''}</div>`;
       openModal('film-details-modal', opener);
     }
     results.addEventListener('click', event => {
@@ -638,6 +702,7 @@ const state = createAppState();
     });
     document.getElementById('trailer-modal').addEventListener('hidden.bs.modal', () => { document.getElementById('trailer-frame').src = ''; });
     results.addEventListener('change', event => { if (event.target.classList.contains('favorite-status')) updateFavoriteField(event.target); });
+    document.getElementById('film-details-content').addEventListener('change', event => { if (event.target.matches('.favorite-status, .favorite-note')) updateFavoriteField(event.target).then(renderFilms); });
     results.addEventListener('change', event => { if (event.target.classList.contains('favorite-note')) updateFavoriteField(event.target); });
     function syncUrl() {
       const url = new URL(location.href);
@@ -719,6 +784,7 @@ const state = createAppState();
     document.getElementById('evening-mode').addEventListener('click', showEveningSuggestions);
     document.getElementById('evening-form').addEventListener('submit', event => { event.preventDefault(); renderEveningSuggestions(); });
     document.getElementById('compare-films').addEventListener('click', compareFilms);
+    updateCompareButton();
     document.getElementById('cancel-scan').addEventListener('click', async event => {
       if (!scanState.currentJob || event.currentTarget.disabled) return;
       event.currentTarget.disabled = true;

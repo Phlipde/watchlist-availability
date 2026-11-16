@@ -64,6 +64,7 @@
     .film-modal-poster { width: 112px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .375rem; }
     .film-modal-section-title { margin: 18px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
     .film-provider-list { display: grid; gap: 6px; padding: 0; margin: 0; list-style: none; font: var(--fs-body) system-ui, sans-serif; }
+    .film-provider-list li.own-service { border-color: rgba(76,175,80,.5); }
     .film-provider-list li { display: flex; align-items: center; gap: 10px; padding: 7px 9px; border: 1px solid var(--line); border-radius: .375rem; }
     .film-offer-group + .film-offer-group { margin-top: 12px; }
     .film-offer-heading { margin: 0 0 6px; color: var(--accent); font: 600 var(--fs-small) system-ui, sans-serif; }
@@ -164,7 +165,9 @@
     .filter-chip { border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; background: rgba(232,184,107,.1); color: var(--accent); font: var(--fs-small) system-ui, sans-serif; cursor: pointer; }
     .analysis-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin: 14px 0 20px; }
     .analysis-item { padding: 10px 12px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font: var(--fs-small) system-ui, sans-serif; }
-    .comparison-toggle { position: absolute; top: 0; left: 0; z-index: 3; width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer; }
+    /* A visible label on the poster; the whole pill is the 44px-high hit area. */
+    .comparison-toggle { position: absolute; top: 0; left: 0; z-index: 3; min-height: 44px; display: flex; align-items: center; gap: 6px; padding: 0 10px; cursor: pointer; }
+    .comparison-toggle span { padding: 2px 8px 2px 4px; border-radius: 999px; background: rgba(16,20,18,.82); color: var(--ink); font: var(--fs-small) system-ui, sans-serif; }
     .comparison-check { width: 19px; height: 19px; accent-color: var(--accent); }
     .skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 18px; }
     .skeleton-card { overflow: hidden; border-radius: .5rem; background: var(--panel); }
@@ -264,7 +267,7 @@ main.page a { color: var(--accent); }
   .subscriptions-table tfoot th:empty { display: none; }
   .subscriptions-table input { max-width: 170px; }
 }
-.provider-actions .btn { flex: 1 1 45%; }
+.provider-actions .btn { flex: 1 1 45%; white-space: normal; line-height: 1.2; }
 .change-list { margin: 6px 0 0; padding-left: 18px; font: var(--fs-body) system-ui, sans-serif; }
 
 /* Title matches page */

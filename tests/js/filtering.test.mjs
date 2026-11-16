@@ -171,3 +171,19 @@ test('every set filter gets a chip and reset clears them all', async () => {
   assert.equal(controls['min-rating'].value, '0');
   assert.equal(controls['exclusive-filter'].checked, false);
 });
+
+test('evening mode skips watched films', () => {
+  const films = [
+    {key: '1', title: 'Seen', rating: 9, runtime: 100, providers: {Netflix: ['flatrate']}},
+    {key: '2', title: 'New', rating: 7, runtime: 100, providers: {Netflix: ['flatrate']}},
+  ];
+  const picks = eveningSuggestions(films, {maximum: 120, genre: 'all', subscriptions: new Set(['Netflix']), skip: new Set(['1'])});
+  assert.deepEqual(picks.map(film => film.title), ['New']);
+});
+
+test('the compare button counts the chosen films and needs two', async () => {
+  const {compareButtonState} = await import('../../static/js/rendering.js');
+  assert.deepEqual(compareButtonState(0), {text: 'Compare', disabled: true});
+  assert.deepEqual(compareButtonState(1), {text: 'Compare (1)', disabled: true});
+  assert.deepEqual(compareButtonState(3), {text: 'Compare (3)', disabled: false});
+});

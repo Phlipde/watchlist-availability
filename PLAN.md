@@ -2,7 +2,7 @@
 
 Stand: 2026-11-15. Jede Etappe ist ein eigener Commit mit eigenen Tests; die App bleibt nach jedem Schritt lauffähig. Docker für Unraid kommt bewusst zuletzt. Struktur-Umbauten sind mit „(Struktur)“ markiert und stehen jeweils vor den Schritten, die darauf aufbauen.
 
-Als Nächstes offen: Etappe 9h und 9i (Hauptseite), danach weiter mit Etappe 10.
+Als Nächstes offen: Etappe 10.
 
 ## Teil A: Fehler und Struktur
 
@@ -257,39 +257,45 @@ Lesbarkeit und Handy:
 
 ### Etappe 9h: Hauptseite aufräumen (Filter, Begriffe, erster Bildschirm)
 In einem Rutsch, damit die Seite nur einmal „umzieht“.
-- [ ] Chips für alle 13 Filter (es fehlen „Media“, „Availability changes“, „Minimum providers“) und ein Knopf „Reset filters“ (DC #1).
-- [ ] Leerer Zustand: „No film matches these filters.“ mit „Reset filters“ und, ohne gewählten Dienst, „Select my subscriptions“ (DC #2).
-- [ ] „Free“ eindeutig machen: Abschnitt heißt „Free & with ads“, das Dienst-Abzeichen „Mostly free“; der Filter „Availability“ behält nur eine Achse, die erste Option heißt „Everything (incl. unavailable)“, „Only on one of my services“ wird ein eigenes Kontrollkästchen (DC #3).
-- [ ] Überall „service“ statt „provider“; „Rental shops“ bleibt (DC #14).
-- [ ] Werkzeugleiste kürzen: die fünf Export- und Import-Knöpfe in ein `<details>` „Export / import“ oder auf die Einstellungsseite neben die Sicherung; nur ein Knopf in Akzentfarbe (DC #4).
-- [ ] „Any / All selected services“ in die Seitenleiste zu den Diensten (DC #5).
+- [x] Chips für alle 13 Filter (es fehlen „Media“, „Availability changes“, „Minimum providers“) und ein Knopf „Reset filters“ (DC #1).
+- [x] Leerer Zustand: „No film matches these filters.“ mit „Reset filters“ und, ohne gewählten Dienst, „Select my subscriptions“ (DC #2).
+- [x] „Free“ eindeutig machen: Abschnitt heißt „Free & with ads“, das Dienst-Abzeichen „Mostly free“; der Filter „Availability“ behält nur eine Achse, die erste Option heißt „Everything (incl. unavailable)“, „Only on one of my services“ wird ein eigenes Kontrollkästchen (DC #3).
+- [x] Überall „service“ statt „provider“; „Rental shops“ bleibt (DC #14).
+- [x] Werkzeugleiste kürzen: die fünf Export- und Import-Knöpfe in ein `<details>` „Export / import“ oder auf die Einstellungsseite neben die Sicherung; nur ein Knopf in Akzentfarbe (DC #4).
+- [x] „Any / All selected services“ in die Seitenleiste zu den Diensten (DC #5).
 - [x] Seltene Filter in `<details>` „More filters (n active)“; sichtbar bleiben Suche, Verfügbarkeit, Genre, Laufzeit, Bewertung (DC #6). Der offene Punkt zum Stichwort-Filter (3676 Einträge) bleibt in Etappe 9c. Vorgezogen und erledigt (2026-11-16): Sichtbar bleiben die fünf genannten; Angebotsart, Jahr von/bis, Stimmen, Stichwort, Medien, Änderungen und Anzahl der Dienste liegen unter „More filters“, die Zusammenfassung zählt gesetzte Filter („More filters (2 active)“). Auf dem Handy ist der Filterbereich 243 px statt 578 px hoch. Browser-Test für den Zähler.
 - Regel für neue Filter: Die sichtbare Reihe bleibt bei diesen fünf. Jeder neue Filter kommt unter „More filters“, auch die aus den Etappen 11 bis 14. Ein neuer Filter darf nur in die sichtbare Reihe, wenn er dort einen anderen ersetzt.
-- [ ] Ruhender Scan als eine Zeile („Saved results from … · Scan now“), Statistik unter die Ergebnisse oder in ein `<details>`, Überschrift höchstens 3rem (DC #7). „Grey out films found unavailable“ nur während eines neuen Scans zeigen (ID #16).
-- [ ] Favoriten-Ansicht deutlich machen: Zeile „Showing your favorites only · Show all films“ über dem Raster, Knopf heißt fest „My favorites“ mit `aria-pressed` (ID #9).
-- [ ] „Desktop layout“ über 800 px ausblenden und in „Wide view“ umbenennen (DC #9).
-- [ ] Eine gemeinsame Navigation `partials/page-nav.html` in `<nav>` mit allen Seiten, die aktuelle mit `aria-current="page"` (DC #17, WDG #22). Nach Etappe 9e, weil dort `/costs` entfällt.
-- [ ] Einleitungstext kürzen oder streichen (DC #18).
-- [ ] Kopfzeile auf dem Handy: die sechs Knöpfe überlappen und „Status“ ist abgeschnitten; umbrechen lassen oder nur „Filters“ als Knopf zeigen, die Seitenlinks in die gemeinsame Navigation (DC #21). Dabei das Länder-Select als Steuerelement gestalten (Rahmen, Pfeil; Rest von DC #15 aus Etappe 9f).
-- [ ] Statistik-Zeile geht auf: „8 free · 162 paid“ ergibt 170 bei 169 Filmen; „(1 in both)“ ergänzen oder kürzen (DC #24; dass die Statistik der Auswahl nicht folgte, ist mit 9f behoben). Der Balken füllt sich bei gespeicherten Ergebnissen nicht mehr von 0 auf 100 % (entfällt mit der einzeiligen Scan-Anzeige).
+- [x] Ruhender Scan als eine Zeile („Saved results from … · Scan now“), Statistik unter die Ergebnisse oder in ein `<details>`, Überschrift höchstens 3rem (DC #7). „Grey out films found unavailable“ nur während eines neuen Scans zeigen (ID #16).
+- [x] Favoriten-Ansicht deutlich machen: Zeile „Showing your favorites only · Show all films“ über dem Raster, Knopf heißt fest „My favorites“ mit `aria-pressed` (ID #9).
+- [x] „Desktop layout“ über 800 px ausblenden und in „Wide view“ umbenennen (DC #9).
+- [x] Eine gemeinsame Navigation `partials/page-nav.html` in `<nav>` mit allen Seiten, die aktuelle mit `aria-current="page"` (DC #17, WDG #22). Nach Etappe 9e, weil dort `/costs` entfällt.
+- [x] Einleitungstext kürzen oder streichen (DC #18).
+- [x] Kopfzeile auf dem Handy: die sechs Knöpfe überlappen und „Status“ ist abgeschnitten; umbrechen lassen oder nur „Filters“ als Knopf zeigen, die Seitenlinks in die gemeinsame Navigation (DC #21). Dabei das Länder-Select als Steuerelement gestalten (Rahmen, Pfeil; Rest von DC #15 aus Etappe 9f).
+- [x] Statistik-Zeile geht auf: „8 free · 162 paid“ ergibt 170 bei 169 Filmen; „(1 in both)“ ergänzen oder kürzen (DC #24; dass die Statistik der Auswahl nicht folgte, ist mit 9f behoben). Der Balken füllt sich bei gespeicherten Ergebnissen nicht mehr von 0 auf 100 % (entfällt mit der einzeiligen Scan-Anzeige).
 - Farbe und Bausteine, aus [reviews/design-guide.md](reviews/design-guide.md) (DG, 6 Empfehlungen, im Browser gemessen; dort stehen die genauen Werte):
-  - [ ] Bernstein nur für Bedienung: der Dienstname auf der Karte wird eine neutrale Pille (`#252d29` / `#d9d3c7`), damit er nicht wie „With ads“ aussieht (DG #1).
-  - [ ] Eine Klasse `.pill` mit den Tönen ok, warn, danger, neutral für Angebotsart, „Free“ am Dienst, Ergebnis auf der Status-Seite und Hinweis auf `/matches`; heute vier verschiedene Bausteine (DG #2).
-  - [ ] Zeitpunkte ohne Sekunden über eine Hilfsfunktion in `static/js/ui.js` („15 Nov 2026, 23:10“), an vier Stellen (DG #4).
-  - [ ] „Details“ auf der Karte als normaler `btn btn-sm`, `.film-details-button` entfällt (DG #6).
-  - [ ] Optional: fast gleiche Farbwerte durch fünf neue Variablen ersetzen (51 Werte bei 6 Variablen, DG #5). Voraussetzung für „Helles Design“ in Etappe 14.
+  - [x] Bernstein nur für Bedienung: der Dienstname auf der Karte wird eine neutrale Pille (`#252d29` / `#d9d3c7`), damit er nicht wie „With ads“ aussieht (DG #1).
+  - [x] Eine Klasse `.pill` mit den Tönen ok, warn, danger, neutral für Angebotsart, „Free“ am Dienst, Ergebnis auf der Status-Seite und Hinweis auf `/matches`; heute vier verschiedene Bausteine (DG #2).
+  - [x] Zeitpunkte ohne Sekunden über eine Hilfsfunktion in `static/js/ui.js` („15 Nov 2026, 23:10“), an vier Stellen (DG #4).
+  - [x] „Details“ auf der Karte als normaler `btn btn-sm`, `.film-details-button` entfällt (DG #6).
+  - [-] Optional: fast gleiche Farbwerte durch fünf neue Variablen ersetzen (51 Werte bei 6 Variablen, DG #5). Voraussetzung für „Helles Design“ in Etappe 14.
 - Kleinere Variante: nur DC #1 und #2 (wenige Zeilen, beseitigen „Warum fehlt mein Film?“), den Umbau der Seite später.
 - Prüfung: JS-Tests für Chips und „Reset filters“, Browser-Test für den leeren Zustand; vorhandene Browser-Tests an die neuen Texte anpassen. Bildschirmfoto vom ersten Bildschirm auf Desktop und Handy, vorher und nachher. Danach eine Woche nutzen und notieren, welche Filter gesetzt werden (URL-Parameter).
+- Ergebnis (2026-11-16): alles umgesetzt bis auf das optionale DG #5 (Farbvariablen, bleibt für Etappe 14). Erster Bildschirm mit der Datenkopie: Auf dem Handy (375 px) beginnt die erste Filmkarte bei 965 px statt 1632 px, keine überlappenden Knöpfe mehr; auf dem Desktop steht die Scan-Anzeige in einer Zeile. Statistik: „8 free · 162 paid · (1 in both)“ bei 169 Filmen. Chips für alle 14 Filter (das Kontrollkästchen „Only on one of my services“ zählt mit), „Reset filters“ als letzter Chip und im leeren Zustand. Alte Links mit `availability=exclusive` setzen das neue Kontrollkästchen. „Details“ behält die Klasse `film-details-button` nur noch als Haken für das Skript, ohne eigenen Stil. Nebenbei: Die Kopfzeile stand außerhalb von `<main>` und klebte am Bildschirmrand; „My subscriptions“ in der Seitenleiste ragte nach der größeren Knopfschrift aus 9g heraus. Neue Tests: JS-Test für Chips und „Reset filters“, Browser-Test für den leeren Zustand; zwei Browser-Tests an die neuen Texte angepasst.
+- Abweichung: Den Knopf im ruhenden Scan nenne ich „Scan now“, nach einem Fehler „Retry scan“ (9f hatte „Scan again“). Die Bildschirmfotos vorher/nachher liegen nur in der Sitzung, nicht als Dateien.
+- Offen: eine Woche nutzen und notieren, welche Filter gesetzt werden.
 
 ### Etappe 9i: Vom Vorschlag bis „gesehen“
-- [ ] Abend-Modus: Vorschläge sind Knöpfe, die das Detailfenster öffnen, mit „· on Netflix“ dahinter; Hinweis „Uses the subscriptions saved in Settings.“ (DC #13). Genre und Laufzeit in `localStorage` merken (ID #13).
-- [ ] „Watched“ wirkt: „Random“ und Abend-Modus überspringen gesehene Filme; kleines Abzeichen „Watched“ im Raster (ID #10).
-- [ ] Link zum Ansehen: Feld `link` aus der TMDB-Antwort „watch/providers“ (JustWatch-Seite je Land) speichern und im Detailfenster als Hauptknopf „Where to watch“ zeigen (ID #11). Vorher prüfen, ob TMDB das Feld für alle Länder liefert; nur als gültige `https://www.themoviedb.org/`-Adresse ausgeben (`validation.py`).
-- [ ] Detailfenster zeigt die eigenen Abos: in jeder Gruppe zuerst und markiert (DC #22). Heute sehen fremde Dienste wie MUBI genauso aus wie ein eigener.
-- [ ] Rückgängig nach dem Entfernen eines Favoriten: Toast mit „Undo“, rund 5 s, stellt Status und Notiz wieder her (DC #11; aus Etappe 14 vorgezogen).
-- [ ] Vergleich: Knopf „Compare (n)“, aktiv ab 2; Checkbox sichtbar beschriftet; „Clear selection“ im Vergleichsdialog (DC #12, ID #8).
-- [ ] Status und Notiz lassen die Karte nicht mehr springen: nur in der Favoriten-Ansicht und im Detailfenster zeigen (ID #15).
+- [x] Abend-Modus: Vorschläge sind Knöpfe, die das Detailfenster öffnen, mit „· on Netflix“ dahinter; Hinweis „Uses the subscriptions saved in Settings.“ (DC #13). Genre und Laufzeit in `localStorage` merken (ID #13).
+- [x] „Watched“ wirkt: „Random“ und Abend-Modus überspringen gesehene Filme; kleines Abzeichen „Watched“ im Raster (ID #10).
+- [x] Link zum Ansehen: Feld `link` aus der TMDB-Antwort „watch/providers“ (JustWatch-Seite je Land) speichern und im Detailfenster als Hauptknopf „Where to watch“ zeigen (ID #11). Vorher prüfen, ob TMDB das Feld für alle Länder liefert; nur als gültige `https://www.themoviedb.org/`-Adresse ausgeben (`validation.py`).
+- [x] Detailfenster zeigt die eigenen Abos: in jeder Gruppe zuerst und markiert (DC #22). Heute sehen fremde Dienste wie MUBI genauso aus wie ein eigener.
+- [x] Rückgängig nach dem Entfernen eines Favoriten: Toast mit „Undo“, rund 5 s, stellt Status und Notiz wieder her (DC #11; aus Etappe 14 vorgezogen).
+- [x] Vergleich: Knopf „Compare (n)“, aktiv ab 2; Checkbox sichtbar beschriftet; „Clear selection“ im Vergleichsdialog (DC #12, ID #8).
+- [x] Status und Notiz lassen die Karte nicht mehr springen: nur in der Favoriten-Ansicht und im Detailfenster zeigen (ID #15).
 - Prüfung: JS-Tests für `eveningSuggestions` ohne gesehene Filme und für den Zähler am Vergleich; Test für das Feld `link` aus einer TMDB-Antwort und in der Sicherung; Browser-Test für „Undo“.
+- Ergebnis (2026-11-16): alle sieben Punkte umgesetzt und mit der Datenkopie im Browser geprüft: Abend-Vorschläge öffnen das Detailfenster („The Pianist … · on Netflix“), Netflix steht im Detailfenster oben mit „Your service“, „Compare (2)“ wird ab zwei Filmen aktiv, auf den Karten stehen ohne Favoriten-Ansicht keine Status- und Notizfelder mehr.
+- Abweichung: „Where to watch“ speichert kein Feld `link`. TMDB baut die Seite aus Film-ID und Land (`https://www.themoviedb.org/movie/949/watch?locale=DE`, geprüft: 200, Quelle JustWatch); die Adresse entsteht im Browser aus der schon geprüften `tmdb_url`. Damit entfallen Änderungen an Datenbank, Sicherung und `validation.py` und die Tests dafür. Der Hinweis im Abend-Modus nennt „My subscriptions“ statt „Settings“ (seit 9e).
+- Tests: JS-Tests für den Abend-Modus ohne gesehene Filme und für „Compare (n)“; Browser-Test für „Undo“ (Notiz kommt mit zurück); der Notiz-Test wechselt jetzt in die Favoriten-Ansicht.
 
 ### Etappe 10: Entscheidungshilfe
 - [x] Zufallsknopf („Würfeln“): ein Film aus der aktuellen Filteransicht. Erster, einfacher Schritt zum Abend-Modus.
