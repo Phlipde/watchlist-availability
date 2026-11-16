@@ -77,6 +77,7 @@ def _details_from_movie(data: dict, tmdb_id: int) -> dict:
         "release_date": data.get("release_date") or None,
         "tmdb_url": f"https://www.themoviedb.org/movie/{tmdb_id}",
         "trailer_url": f"https://www.youtube.com/watch?v={trailer['key']}" if trailer else None,
+        "collection": (data.get("belongs_to_collection") or {}).get("name") or None,
     }
 
 

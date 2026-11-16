@@ -116,6 +116,8 @@ def clean_film(data) -> dict | None:
         release_date=_matching(data.get("release_date"), _DATE_RE),
         tmdb_url=_matching(data.get("tmdb_url"), _TMDB_URL_RE),
         trailer_url=_matching(data.get("trailer_url"), _TRAILER_URL_RE),
+        collection=text(data.get("collection"), 200),
+        watchlist_position=integer(data.get("watchlist_position"), 0, 10**6),
     )
     film.providers = {name: kinds for name, kinds in providers.items()}
     return film.to_dict()

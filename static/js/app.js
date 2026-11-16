@@ -2,7 +2,7 @@ import {dateTime, escapeHtml, numberText} from './ui.js';
 import {createAppState, createScanState} from './state.js';
 import {availabilityByOffer, changeSummary, compareButtonState, favoriteFields, renderResults} from './rendering.js';
 import {activeFilters, clearFilter, readFilters, resetFilters, selectedProviders, updateProviderCount, updateProviderFilmCounts} from './filters.js';
-import {eveningSuggestions, filmKey, filterFilms} from './filtering.js';
+import {eveningSuggestions, filmKey, filterFilms, recentlyRemoved} from './filtering.js';
 import {updateScanFeedback} from './scans.js';
 import {favoriteLabel} from './favorites.js';
 
@@ -112,7 +112,7 @@ const state = createAppState();
       if (!state.films.length && !state.unavailable.length) return;
       const selected = selectedProviders(providerInputs);
       const filters = readFilters(document, state.favoritesOnly);
-      const view = filterFilms(state.films, state.unavailable, filters, {selected, favorites: state.favorites});
+      const view = filterFilms(state.films, state.unavailable, filters, {selected, favorites: state.favorites, subscriptions: mySubscriptions()});
       state.view = view;
       renderResults(view, {results, unavailableResults: document.getElementById('unavailable-results')}, {
         imageBaseUrl,
@@ -128,6 +128,7 @@ const state = createAppState();
       document.getElementById('provider-done-count').textContent = view.visibleCount;
       results.setAttribute('aria-busy', 'false');
       document.getElementById('scan-summary-content').innerHTML = changeSummary(state.changes, selected, state.lastScan);
+      renderRecentlyRemoved();
       document.getElementById('scan-summary').hidden = !state.lastScan;
       document.getElementById('favorite-status-filter').hidden = !state.favoritesOnly;
       document.getElementById('favorites-empty')?.toggleAttribute('hidden', !(state.favoritesOnly && view.visibleCount === 0 && view.unavailable.length === 0));
@@ -158,6 +159,18 @@ const state = createAppState();
             list.appendChild(label);
           });
       });
+    }
+    // Films that just left one of the user's services, from the stored changes of the last 14 days.
+    function renderRecentlyRemoved() {
+      const removed = recentlyRemoved(state.changes, mySubscriptions());
+      const known = new Set([...state.films, ...state.unavailable].map(filmKey));
+      document.getElementById('recently-removed').hidden = removed.length === 0;
+      document.getElementById('recently-removed-count').textContent = removed.length;
+      document.getElementById('recently-removed-list').innerHTML = removed.map(item => {
+        const title = escapeHtml(item.title) + (item.year ? ` (${numberText(item.year)})` : '');
+        const name = known.has(item.film_key) ? `<button class="film-link removed-pick" type="button" data-key="${escapeHtml(item.film_key)}">${title}</button>` : title;
+        return `<li>${name} · no longer on ${escapeHtml(item.providers.join(', '))} · ${new Date(item.created * 1000).toLocaleDateString([], {dateStyle: 'medium'})}</li>`;
+      }).join('');
     }
     function updateFilterChips() {
       const chips = activeFilters(document).map(({id, label, text}) => {
@@ -653,10 +666,18 @@ const state = createAppState();
       const country = document.getElementById('country-select').value;
       const watchLink = film.tmdb_url ? `<a class="btn btn-sm btn-accent" href="${escapeHtml(`${film.tmdb_url}/watch?locale=${encodeURIComponent(country)}`)}" target="_blank" rel="noreferrer"><i class="ti ti-player-play" aria-hidden="true"></i> Where to watch</a>` : '';
       const savedFavorite = state.favorites.get(key);
+      // Other films of the same series on the watchlist, oldest first.
+      const series = film.collection
+        ? [...state.films, ...state.unavailable].filter(item => item.collection === film.collection && filmKey(item) !== key)
+          .sort((a, b) => (Number(a.year) || 0) - (Number(b.year) || 0))
+        : [];
+      const seriesLine = film.collection
+        ? `<p class="film-modal-series">Part of ${escapeHtml(film.collection)}${series.length ? `: also on your watchlist ${series.map(item => `<button class="film-link series-pick" type="button" data-key="${escapeHtml(filmKey(item))}">${escapeHtml(item.title)}${item.year ? ` (${numberText(item.year)})` : ''}</button>`).join(', ')}` : ''}</p>`
+        : '';
       const poster = film.poster_path ? `<img class="film-modal-poster" src="${imageBaseUrl}${escapeHtml(film.poster_path)}" alt="Poster for ${escapeHtml(film.title)}">` : '';
       const favoriteButtonClass = state.favorites.has(key) ? 'btn-accent' : 'btn-outline-secondary';
       const selectedForCompare = state.compareKeys.has(key);
-      document.getElementById('film-details-content').innerHTML = `<div class="film-modal-layout">${poster}<div><p class="film-modal-meta">${numberText(film.year, 'Year unknown')}${numberText(film.rating) ? ` · TMDB ${Number(film.rating).toFixed(1)}/10` : ''}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}</p><p>${escapeHtml(film.overview || 'No description available.')}</p><p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p>${credits}${keywords}</div></div><h6 class="film-modal-section-title">Availability</h6>${providerRows || '<p class="empty">No service data available.</p>'}<div class="film-modal-actions">${watchLink}<button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-star" aria-hidden="true"></i> ${favoriteLabel(state.favorites.has(key))}</button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-columns-gap" aria-hidden="true"></i> ${selectedForCompare ? 'Remove from comparison' : 'Add to comparison'}</button>${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb" aria-hidden="true"></i> TMDB</a>` : ''}${trailerLink}<a class="film-link" href="${letterboxdSearch}" target="_blank" rel="noreferrer"><i class="ti ti-device-tv" aria-hidden="true"></i> Search Letterboxd</a></div><div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${savedFavorite ? favoriteFields(key, film.title, savedFavorite) : ''}</div>`;
+      document.getElementById('film-details-content').innerHTML = `<div class="film-modal-layout">${poster}<div><p class="film-modal-meta">${numberText(film.year, 'Year unknown')}${numberText(film.rating) ? ` · TMDB ${Number(film.rating).toFixed(1)}/10` : ''}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}</p><p>${escapeHtml(film.overview || 'No description available.')}</p><p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p>${credits}${seriesLine}${keywords}</div></div><h6 class="film-modal-section-title">Availability</h6>${providerRows || '<p class="empty">No service data available.</p>'}<div class="film-modal-actions">${watchLink}<button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-star" aria-hidden="true"></i> ${favoriteLabel(state.favorites.has(key))}</button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-columns-gap" aria-hidden="true"></i> ${selectedForCompare ? 'Remove from comparison' : 'Add to comparison'}</button>${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb" aria-hidden="true"></i> TMDB</a>` : ''}${trailerLink}<a class="film-link" href="${letterboxdSearch}" target="_blank" rel="noreferrer"><i class="ti ti-device-tv" aria-hidden="true"></i> Search Letterboxd</a></div><div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${savedFavorite ? favoriteFields(key, film.title, savedFavorite) : ''}</div>`;
       openModal('film-details-modal', opener);
     }
     results.addEventListener('click', event => {
@@ -702,6 +723,15 @@ const state = createAppState();
     });
     document.getElementById('trailer-modal').addEventListener('hidden.bs.modal', () => { document.getElementById('trailer-frame').src = ''; });
     results.addEventListener('change', event => { if (event.target.classList.contains('favorite-status')) updateFavoriteField(event.target); });
+    // Another film of the series replaces the content; the focus later still goes back to the first opener.
+    document.getElementById('film-details-content').addEventListener('click', event => {
+      const pick = event.target.closest('.series-pick');
+      if (pick) showFilmDetails(pick.dataset.key, modalOpeners.get('film-details-modal'));
+    });
+    document.getElementById('recently-removed-list').addEventListener('click', event => {
+      const pick = event.target.closest('.removed-pick');
+      if (pick) showFilmDetails(pick.dataset.key);
+    });
     document.getElementById('film-details-content').addEventListener('change', event => { if (event.target.matches('.favorite-status, .favorite-note')) updateFavoriteField(event.target).then(renderFilms); });
     results.addEventListener('change', event => { if (event.target.classList.contains('favorite-note')) updateFavoriteField(event.target); });
     function syncUrl() {

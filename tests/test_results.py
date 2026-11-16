@@ -35,8 +35,17 @@ class TestFilmResults:
                 overview="Plot",
                 runtime=100,
                 genres=["Drama"],
+                watchlist_position=0,
                 providers={"Netflix": ["flatrate"]},
             )
+        ]
+
+    def test_position_on_the_watchlist_is_kept(self):
+        entries = [WatchlistEntry("Inception", 2010), WatchlistEntry("Alien", 1979)]
+        found = _run(entries, {"Netflix": "Netflix"}, {"Netflix": {"flatrate"}})
+        assert sorted((film.title, film.watchlist_position) for film in found) == [
+            ("Alien", 1),
+            ("Inception", 0),
         ]
 
     def test_rent_only_film_kept(self):
@@ -68,7 +77,7 @@ class TestFilmResults:
             lookup=lambda *args: None,
             unavailable_callback=unavailable.append,
         )
-        assert unavailable == [Film(title="Unknown", year=1900)]
+        assert unavailable == [Film(title="Unknown", year=1900, watchlist_position=0)]
 
     def test_display_names_map_to_tmdb_names(self):
         found = _run(

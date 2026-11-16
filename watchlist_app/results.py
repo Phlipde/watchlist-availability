@@ -61,6 +61,7 @@ def make_film(entry: WatchlistEntry, found: dict, targets: dict[str, str] | None
         release_date=details.get("release_date"),
         tmdb_url=details.get("tmdb_url"),
         trailer_url=details.get("trailer_url"),
+        collection=details.get("collection"),
         providers=offered,
     )
 
@@ -97,8 +98,11 @@ def build_results(
         except Exception as exc:  # one broken film must not stop the scan
             return "failed", exc
         if found is None:
-            return "unavailable", Film(title=entry.title, year=clean_year(entry.year))
+            return "unavailable", Film(
+                title=entry.title, year=clean_year(entry.year), watchlist_position=index
+            )
         film = make_film(entry, found, targets)
+        film.watchlist_position = index
         return ("available" if film.providers else "unavailable"), film
 
     available: dict[int, Film] = {}

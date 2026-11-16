@@ -22,11 +22,18 @@ class TestMovieBundle:
         assert bundle["details"]["cast"] == ["Leonardo DiCaprio", "Joseph Gordon-Levitt"]
         assert bundle["details"]["keywords"] == ["heist", "dream"]
         assert bundle["details"]["trailer_url"].endswith("v=abc")
+        assert bundle["details"]["collection"] is None
         assert bundle["providers"]["DE"] == {
             "Netflix": ["flatrate", "rent"],
             "Apple TV Store": ["rent"],
         }
         assert bundle["providers"]["US"] == {"Pluto TV": ["ads"]}
+
+    def test_film_series_is_kept(self):
+        movie = {**MOVIE, "belongs_to_collection": {"id": 8091, "name": "Alien Collection"}}
+        with patch("watchlist_app.tmdb._http_get", return_value=response(movie)):
+            bundle = tmdb.get_movie_bundle(348, API_KEY)
+        assert bundle["details"]["collection"] == "Alien Collection"
 
     def test_buy_only_country_is_left_out(self):
         with patch("watchlist_app.tmdb._http_get", return_value=response(MOVIE)):

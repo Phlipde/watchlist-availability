@@ -2,7 +2,7 @@
 
 Stand: 2026-11-15. Jede Etappe ist ein eigener Commit mit eigenen Tests; die App bleibt nach jedem Schritt lauffähig. Docker für Unraid kommt bewusst zuletzt. Struktur-Umbauten sind mit „(Struktur)“ markiert und stehen jeweils vor den Schritten, die darauf aufbauen.
 
-Als Nächstes offen: Etappe 10.
+Als Nächstes offen: Etappe 10 („Ähnliche Filme“), danach Etappe 11.
 
 ## Teil A: Fehler und Struktur
 
@@ -300,10 +300,15 @@ In einem Rutsch, damit die Seite nur einmal „umzieht“.
 ### Etappe 10: Entscheidungshilfe
 - [x] Zufallsknopf („Würfeln“): ein Film aus der aktuellen Filteransicht. Erster, einfacher Schritt zum Abend-Modus.
 - [x] Abend-Modus: Zeit und Genre angeben, drei Vorschläge aus den eigenen Abos.
-- [ ] „Läuft bald aus“ / „kürzlich entfernt“ aus der Historie (TMDB liefert kein Ablaufdatum).
-- [ ] Gewichtete Sortierung: Bewertung pro Laufzeit, am längsten auf der Watchlist, Anzahl eigener Abos.
-- [ ] Filmreihen (TMDB „Collections“) zusammen anzeigen.
+- [x] „Läuft bald aus“ / „kürzlich entfernt“ aus der Historie (TMDB liefert kein Ablaufdatum).
+- [x] Gewichtete Sortierung: Bewertung pro Laufzeit, am längsten auf der Watchlist, Anzahl eigener Abos.
+- [x] Filmreihen (TMDB „Collections“) zusammen anzeigen.
 - [ ] Ähnliche Filme: zu einem Watchlist-Film zeigen, was Vergleichbares auf den eigenen Abos läuft (TMDB „similar“ / „recommendations“).
+- Ergebnis (2026-11-16): Auswahl mit dem Nutzer: drei Punkte gebaut, „Ähnliche Filme“ bleibt offen (braucht eigene TMDB-Abfragen je Vorschlag).
+  - Kürzlich entfernt: Kasten „Recently gone from your services (n)“ über den Filmen, je Film eine Zeile mit den Diensten und dem Datum, aus den gespeicherten Änderungen der letzten 14 Tage und nur für die eigenen Abos. „Läuft bald aus“ geht nicht, TMDB liefert kein Ablaufdatum.
+  - Sortierungen: „rating per hour“, „longest on watchlist“, „on most of my services“, „film series together“. Die Position auf der Watchlist kommt aus der Reihenfolge der Letterboxd-Seite (zuletzt Hinzugefügtes zuerst, angenommen, nicht nachgeprüft); der CSV-Export wird nach seiner Spalte „Date“ genauso sortiert.
+  - Filmreihen: Feld `collection` aus `belongs_to_collection` der ohnehin gemachten TMDB-Abfrage; im Detailfenster „Part of … : also on your watchlist …“ mit Links, dazu die Sortierung „film series together“.
+  - Nicht im Browser geprüft: Reihen, Position und „Kürzlich entfernt“, weil der gespeicherte Scan der Kopie von vorher stammt und keine Änderungen hat. Reihe und Position erscheinen nach dem nächsten Scan (gespeicherte TMDB-Daten werden nach ihrer Gültigkeit neu geholt). Abgedeckt durch Tests: zwei Python-Tests (Reihe, Position), zwei JS-Tests (Sortierungen, „Kürzlich entfernt“).
 
 ### Etappe 11: Startdatum (eigene Etappe)
 - [ ] Für noch nicht erschienene Watchlist-Filme Kino- und Heimkino-Start anzeigen (TMDB „release_dates“ je Land).

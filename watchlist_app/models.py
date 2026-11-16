@@ -46,6 +46,8 @@ class Film:
     release_date: str | None = None
     tmdb_url: str | None = None
     trailer_url: str | None = None
+    collection: str | None = None  # TMDB film series, e.g. "Alien Collection"
+    watchlist_position: int | None = None  # 0 = most recently added to the watchlist
     providers: dict[str, list[str]] = field(default_factory=dict)
 
     @property

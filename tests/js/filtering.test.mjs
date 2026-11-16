@@ -187,3 +187,28 @@ test('the compare button counts the chosen films and needs two', async () => {
   assert.deepEqual(compareButtonState(1), {text: 'Compare (1)', disabled: true});
   assert.deepEqual(compareButtonState(3), {text: 'Compare (3)', disabled: false});
 });
+
+test('weighted sorts: rating per hour, longest on the watchlist, own services, series', () => {
+  const list = [
+    {title: 'Long', rating: 8, runtime: 180, watchlist_position: 0, providers: {Netflix: ['flatrate']}},
+    {title: 'Short', rating: 7, runtime: 90, watchlist_position: 5, providers: {Netflix: ['flatrate'], Arte: ['free']}, collection: 'B Collection', year: 2001},
+    {title: 'Unknown', providers: {}, collection: 'B Collection', year: 1999},
+    {title: 'Alien', rating: 8, runtime: 117, watchlist_position: 2, providers: {}, collection: 'A Collection', year: 1979},
+  ];
+  assert.deepEqual(titles(sortFilms(list, 'rating-per-hour')), ['Short', 'Alien', 'Long', 'Unknown']);
+  assert.deepEqual(titles(sortFilms(list, 'watchlist-oldest')), ['Short', 'Alien', 'Long', 'Unknown']);
+  assert.deepEqual(titles(sortFilms(list, 'own-services', {subscriptions: new Set(['Netflix', 'Arte'])})), ['Short', 'Long', 'Alien', 'Unknown']);
+  assert.deepEqual(titles(sortFilms(list, 'series')), ['Alien', 'Unknown', 'Short', 'Long']);
+});
+
+test('recently removed lists each film once, only for own services', async () => {
+  const {recentlyRemoved} = await import('../../static/js/filtering.js');
+  const changes = [
+    {created: 10, film_key: '1', title: 'Heat', provider: 'Netflix', change: 'removed'},
+    {created: 20, film_key: '1', title: 'Heat', provider: 'Arte', change: 'removed'},
+    {created: 30, film_key: '2', title: 'Alien', provider: 'MUBI', change: 'removed'},
+    {created: 40, film_key: '3', title: 'Up', provider: 'Netflix', change: 'added'},
+  ];
+  const removed = recentlyRemoved(changes, new Set(['Netflix', 'Arte']));
+  assert.deepEqual(removed.map(item => [item.title, item.providers]), [['Heat', ['Arte', 'Netflix']]]);
+});

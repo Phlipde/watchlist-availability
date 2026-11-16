@@ -178,11 +178,12 @@ def parse_watchlist_csv(text: str) -> list[WatchlistEntry]:
     missing = [column for column in ("Name", "Year") if column not in columns]
     if missing:
         raise ValueError(f"Missing columns in the CSV: {missing}. Make sure the file comes from Letterboxd.")
-    return [
-        WatchlistEntry(title=row["Name"].strip(), year=clean_year(row["Year"] or None))
-        for row in reader
-        if (row.get("Name") or "").strip()
-    ]
+    rows = [row for row in reader if (row.get("Name") or "").strip()]
+    # The website lists the most recently added film first; sort the export the same way so that
+    # the position on the watchlist means the same for both sources.
+    if "Date" in columns:
+        rows.sort(key=lambda row: row.get("Date") or "", reverse=True)
+    return [WatchlistEntry(title=row["Name"].strip(), year=clean_year(row["Year"] or None)) for row in rows]
 
 
 def load_watchlist(csv_path: Path) -> list[WatchlistEntry]:

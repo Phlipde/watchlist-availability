@@ -180,9 +180,10 @@ class TestWatchlistCsv:
             "2024-01-02,Untitled,,y\n"
         )
         entries = letterboxd.load_watchlist(self._csv(content, tmp_path))
+        # Most recently added first, as on the website.
         assert entries == [
-            WatchlistEntry("Crouching Tiger, Hidden Dragon", 2000),
             WatchlistEntry("Untitled", None),
+            WatchlistEntry("Crouching Tiger, Hidden Dragon", 2000),
         ]
 
     def test_rows_without_name_skipped(self):

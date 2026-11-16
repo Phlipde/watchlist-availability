@@ -101,9 +101,23 @@ export function matchesUnavailable(film, filters, context) {
   return commonMatches(film, filters, context);
 }
 
-export function sortFilms(films, order) {
+// Missing values always go last, whatever the direction.
+const last = value => (value === null || value === undefined || Number.isNaN(value) ? -Infinity : value);
+const ratingPerHour = film => (Number(film.rating) && Number(film.runtime) > 0 ? Number(film.rating) / (Number(film.runtime) / 60) : null);
+
+// context.subscriptions (the user's own services) is only needed for "own-services".
+export function sortFilms(films, order, context = {}) {
   const byTitle = (a, b) => String(a.title).toLowerCase().localeCompare(String(b.title).toLowerCase());
+  const own = film => Object.keys(film.providers || {}).filter(provider => context.subscriptions?.has(provider)).length;
   const compare = {
+    'rating-per-hour': (a, b) => last(ratingPerHour(b)) - last(ratingPerHour(a)),
+    // Position 0 is the film added last, so the highest position has waited longest.
+    'watchlist-oldest': (a, b) => last(b.watchlist_position) - last(a.watchlist_position),
+    'own-services': (a, b) => own(b) - own(a),
+    // Films of one series stand together, oldest first; films without a series follow by title.
+    series: (a, b) => (a.collection ? 0 : 1) - (b.collection ? 0 : 1)
+      || String(a.collection || '').localeCompare(String(b.collection || ''))
+      || (a.collection ? (Number(a.year) || 0) - (Number(b.year) || 0) : 0),
     'year-desc': (a, b) => (Number(b.year) || 0) - (Number(a.year) || 0),
     'year-asc': (a, b) => (Number(a.year) || 0) - (Number(b.year) || 0),
     rating: (a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0),
@@ -118,11 +132,26 @@ export function filterFilms(films, unavailable, filters, context) {
   const sections = {};
   const visibleKeys = new Set();
   SECTIONS.forEach(section => {
-    sections[section] = sortFilms(films.filter(film => matchesSection(film, section, filters, context)), filters.sort);
+    sections[section] = sortFilms(films.filter(film => matchesSection(film, section, filters, context)), filters.sort, context);
     sections[section].forEach(film => visibleKeys.add(filmKey(film)));
   });
-  const unavailableMatches = sortFilms(unavailable.filter(film => matchesUnavailable(film, filters, context)), filters.sort);
+  const unavailableMatches = sortFilms(unavailable.filter(film => matchesUnavailable(film, filters, context)), filters.sort, context);
   return {sections, unavailable: unavailableMatches, visibleCount: visibleKeys.size};
+}
+
+// Films that left one of the user's services recently: one entry per film, newest first,
+// with every service it left.
+export function recentlyRemoved(changes, subscriptions) {
+  const byFilm = new Map();
+  (changes || [])
+    .filter(change => change.change === 'removed' && subscriptions.has(change.provider))
+    .sort((a, b) => b.created - a.created)
+    .forEach(change => {
+      const known = byFilm.get(change.film_key);
+      if (known) known.providers.push(change.provider);
+      else byFilm.set(change.film_key, {...change, providers: [change.provider]});
+    });
+  return [...byFilm.values()];
 }
 
 // Evening mode: the three best-rated films that fit the time and genre and run on an own service.

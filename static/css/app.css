@@ -58,6 +58,9 @@
     .film-link { padding: 0; border: 0; background: none; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
     .film-link:hover, .film-link:focus-visible { color: #f4cf91; }
     .film-modal-meta, .film-modal-genres { color: var(--muted); font: var(--fs-body) system-ui, sans-serif; }
+    .film-modal-series { font: var(--fs-body) system-ui, sans-serif; }
+    .recently-removed { margin: 0 0 18px; padding: 10px 14px; border: 1px solid rgba(168,92,77,.5); border-radius: .5rem; }
+    .recently-removed summary { cursor: pointer; font: var(--fs-body) system-ui, sans-serif; }
     .film-modal-credits, .film-modal-keywords { color: var(--muted); font: var(--fs-body) system-ui, sans-serif; }
     .evening-suggestions { padding-left: 1.4rem; }
     .film-modal-layout { display: grid; grid-template-columns: 112px 1fr; gap: 16px; }
