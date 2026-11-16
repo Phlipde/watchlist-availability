@@ -13,7 +13,7 @@ from watchlist_app.config import COUNTRIES
 from watchlist_app.scan_service import ScanService, with_changes
 from watchlist_app.settings import SCAN_INTERVALS_HOURS, AppSettings
 from watchlist_app.store import Store
-from watchlist_app.tmdb import _TMDB_IMAGE_BASE_URL
+from watchlist_app.tmdb import _TMDB_IMAGE_BASE_URL, _TMDB_LOGO_BASE_URL
 
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
@@ -118,6 +118,12 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
 
     @app.route("/")
     def index():
+        latest = store.latest_scan(settings.country)
+        free_services = (
+            providers.mostly_free_from_scan(latest["results"], latest["unavailable"])
+            if latest
+            else providers.MOSTLY_FREE
+        )
         initial_filters = {
             "query": request.args.get("q", ""),
             "availability": request.args.get("availability", "all"),
@@ -128,7 +134,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         return page(
             "index.html",
             provider_groups=providers.provider_groups(settings.loaded_providers()),
-            mostly_free_providers=providers.MOSTLY_FREE,
+            mostly_free_providers=free_services,
             selected=settings.subscriptions(),
             country=settings.country,
             countries=list(COUNTRIES),
@@ -138,6 +144,14 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
                 "initialFilters": initial_filters,
                 "subscriptions": {country: settings.subscriptions(country) for country in COUNTRIES},
                 "rentalShops": sorted(providers.RENTAL_SHOPS),
+                "freeServices": sorted(free_services),
+                "logoBaseUrl": _TMDB_LOGO_BASE_URL,
+                # Logos of the providers loaded from TMDB, for the availability in the details.
+                "providerLogos": {
+                    providers.display_name(item["name"]): path
+                    for item in store.provider_catalog()
+                    if (path := validation.image_path(item["logo_path"]))
+                },
             },
         )
 
@@ -185,11 +199,17 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
 
     @app.get("/api/latest")
     def latest_result():
-        scan = store.latest_scan(request.args.get("country") or None)
+        country = request.args.get("country") or None
+        scan = store.latest_scan(country)
         if not scan:
-            return jsonify({"available": False})
+            return jsonify({"available": False, "stale": True})
         annotated = with_changes(store, scan["country"], scan["results"], scan["unavailable"])
-        return jsonify({"available": True, **scan, **annotated})
+        annotated["results"] = costs.mark_only_on_my_services(
+            annotated["results"], settings.subscriptions(scan["country"])
+        )
+        # Older than a day (or the schedule interval) counts as stale, also with the schedule off.
+        stale = time.time() >= scan["created"] + max(settings.scan_interval_hours, 24) * 3600
+        return jsonify({"available": True, "stale": stale, **scan, **annotated})
 
     @app.route("/api/scan", methods=["GET", "POST"])
     def start_scan():
@@ -220,7 +240,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
 
     @app.get("/api/scan/<job_id>")
     def scan_status(job_id: str):
-        status = service.status(job_id)
+        status = service.status(job_id, start=request.args.get("from", 0, type=int))
         if status is None:
             return jsonify({"error": "Scan not found."}), 404
         return jsonify(status)

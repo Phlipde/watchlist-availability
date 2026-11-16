@@ -12,10 +12,15 @@ class TestMovieBundle:
         with patch("watchlist_app.tmdb._http_get", return_value=response(MOVIE)) as get:
             bundle = tmdb.get_movie_bundle(27205, API_KEY)
         assert get.call_count == 1
-        assert get.call_args[1]["params"]["append_to_response"] == "videos,watch/providers"
+        assert get.call_args[1]["params"]["append_to_response"] == "videos,watch/providers,credits,keywords"
         assert bundle["poster_path"] == "/p.jpg"
         assert bundle["details"]["runtime"] == 148
         assert bundle["details"]["release_date"] == "2010-07-15"
+        assert bundle["details"]["popularity"] == 42.5
+        assert bundle["details"]["vote_count"] == 1234
+        assert bundle["details"]["director"] == "Christopher Nolan"
+        assert bundle["details"]["cast"] == ["Leonardo DiCaprio", "Joseph Gordon-Levitt"]
+        assert bundle["details"]["keywords"] == ["heist", "dream"]
         assert bundle["details"]["trailer_url"].endswith("v=abc")
         assert bundle["providers"]["DE"] == {
             "Netflix": ["flatrate", "rent"],

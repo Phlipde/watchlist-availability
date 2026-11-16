@@ -79,6 +79,14 @@ class TestScans:
         rows = store._read("SELECT created FROM scans ORDER BY created")
         assert [row[0] for row in rows] == [2, 3, 4]
 
+    def test_scans_of_one_country_do_not_push_out_another(self, store, monkeypatch):
+        monkeypatch.setattr(store_module, "MAX_SCANS", 2)
+        self._save(store, "GB", created=0, title="British")
+        for created in range(1, 6):
+            self._save(store, "DE", created=created)
+        assert store.latest_scan("GB")["results"][0]["title"] == "British"
+        assert len(store._read("SELECT id FROM scans WHERE country = 'DE'")) == 2
+
 
 class TestFavorites:
     def test_add_update_remove(self, store):

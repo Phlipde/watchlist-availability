@@ -110,13 +110,33 @@ class TestScanStart:
 
 class TestLatestAndFavoritesApi:
     def test_latest_scan_per_country(self, client, store):
-        assert client.get("/api/latest?country=DE").get_json() == {"available": False}
+        assert client.get("/api/latest?country=DE").get_json() == {"available": False, "stale": True}
         store.save_scan("DE", "src", "k", [{"key": "1", "title": "Heat", "providers": {}}], [], {})
         answer = client.get("/api/latest?country=DE").get_json()
         assert answer["available"] is True
+        assert answer["stale"] is False
         assert answer["results"][0]["title"] == "Heat"
         assert answer["changes"] == []
-        assert client.get("/api/latest?country=GB").get_json() == {"available": False}
+        assert client.get("/api/latest?country=GB").get_json() == {"available": False, "stale": True}
+
+    def test_latest_scan_sends_free_services_of_its_country(self, client, store):
+        # The page keeps its labels on a country switch, so each scan brings its own list.
+        free = {"BBC iPlayer": ["free"]}
+        store.save_scan("GB", "src", "k", [{"key": "1", "title": "Heat", "providers": free}], [], {})
+        assert "BBC iPlayer" in client.get("/api/latest?country=GB").get_json()["free_services"]
+
+    def test_latest_scan_reports_old_results_as_stale(self, client, store, settings, monkeypatch):
+        store.save_scan("DE", "src", "k", [{"key": "1", "title": "Heat", "providers": {}}], [], {}, created=1)
+        settings.update({"scan_interval_hours": 24})
+        monkeypatch.setattr(routes.time, "time", lambda: 24 * 60 * 60 + 1)
+        assert client.get("/api/latest?country=DE").get_json()["stale"] is True
+
+    def test_old_results_are_stale_with_the_schedule_off(self, client, store, monkeypatch):
+        store.save_scan("DE", "src", "k", [{"key": "1", "title": "Heat", "providers": {}}], [], {}, created=1)
+        monkeypatch.setattr(routes.time, "time", lambda: 24 * 60 * 60 - 1)
+        assert client.get("/api/latest?country=DE").get_json()["stale"] is False
+        monkeypatch.setattr(routes.time, "time", lambda: 24 * 60 * 60 + 1)
+        assert client.get("/api/latest?country=DE").get_json()["stale"] is True
 
     def test_favorite_lifecycle(self, client):
         assert client.post("/api/favorites", json={"title": "Heat"}).status_code == 400
@@ -178,8 +198,10 @@ class TestPages:
         config = json.loads(page.split("window.WATCHLIST_CONFIG = ")[1].split(";</script>")[0])
         assert config["subscriptions"]["DE"] == ["MUBI"]
         assert "Apple TV Store" in config["rentalShops"]
+        assert "Arte" in config["freeServices"]
         assert 'value="MUBI" checked' in page
         assert 'id="rental-providers"' in page
+        assert 'id="free-providers"' in page
 
     def test_settings_page(self, client):
         page = client.get("/settings").get_data(as_text=True)
@@ -373,3 +395,29 @@ def test_loaded_providers_appear_on_the_pages(client, store, settings):
     assert saved.status_code == 200
     assert settings.subscriptions() == ["Brand New Stream", "Prime Video"]
     assert client.get("/api/status").get_json()["provider_catalog"]["count"] == 2
+
+
+def test_latest_marks_films_only_on_one_own_service(client, store, settings):
+    settings.update({"subscriptions": ["Netflix", "MUBI"]})
+    films = [
+        {"key": "1", "title": "Alien", "providers": {"Netflix": ["flatrate"]}},
+        {"key": "2", "title": "Heat", "providers": {"Netflix": ["flatrate"], "MUBI": ["flatrate"]}},
+    ]
+    store.save_scan("DE", "src", "k", films, [], {})
+    results = client.get("/api/latest?country=DE").get_json()["results"]
+    marks = [film["only_on_my_services"] for film in results]
+    assert marks == [True, False]
+
+
+def test_provider_logos_reach_the_page_under_their_display_name(client, store):
+    store.save_provider_catalog(
+        "DE",
+        [
+            {"name": "Amazon Prime Video", "logo_path": "/prime.png"},
+            {"name": "Odd", "logo_path": '"><script>x()</script>'},
+            {"name": "No Logo"},
+        ],
+    )
+    page = client.get("/").get_data(as_text=True)
+    config = json.loads(page.split("window.WATCHLIST_CONFIG = ", 1)[1].split(";</script>", 1)[0])
+    assert config["providerLogos"] == {"Prime Video": "/prime.png"}

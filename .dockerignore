@@ -11,3 +11,4 @@ __pycache__
 .watchlist_favorites.sqlite3
 .watchlist_films.sqlite3
 tests
+.env

@@ -188,7 +188,16 @@ class TestScanService:
         status = restarted.status(job_id)
         assert status["status"] == "complete"
         assert status["results"][0]["key"] == "949"
+        assert "only_on_my_services" in status["results"][0]  # for the page filter
         assert status["last_updated"] is not None
+
+    def test_a_running_scan_sends_only_new_films(self, store, settings):
+        service = ScanService(store, settings, thread_factory=IdleThread)
+        job_id, _ = service.start("DE", entries=ENTRIES)
+        service._live[job_id]["results"] = [{"key": "1", "providers": {}}, {"key": "2", "providers": {}}]
+        assert [film["key"] for film in service.status(job_id, start=1)["results"]] == ["2"]
+        service._live[job_id]["status"] = "complete"
+        assert len(service.status(job_id, start=1)["results"]) == 2  # finished: always everything
 
     def test_interrupted_scan_is_closed_and_started_again(self, store, settings):
         ScanService(store, settings, thread_factory=IdleThread).start("GB")

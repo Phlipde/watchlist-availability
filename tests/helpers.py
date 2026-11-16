@@ -20,12 +20,19 @@ MOVIE = {
     "id": 27205,
     "overview": "A thief.",
     "vote_average": 8.4,
+    "popularity": 42.5,
+    "vote_count": 1234,
     "backdrop_path": "/b.jpg",
     "poster_path": "/p.jpg",
     "runtime": 148,
     "release_date": "2010-07-15",
     "genres": [{"name": "Action"}],
     "videos": {"results": [{"site": "YouTube", "type": "Trailer", "key": "abc"}]},
+    "credits": {
+        "crew": [{"job": "Director", "name": "Christopher Nolan"}],
+        "cast": [{"name": "Leonardo DiCaprio"}, {"name": "Joseph Gordon-Levitt"}],
+    },
+    "keywords": {"keywords": [{"name": "heist"}, {"name": "dream"}]},
     "watch/providers": {
         "results": {
             "DE": {

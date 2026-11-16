@@ -8,6 +8,7 @@ browser: `playwright install chromium`, or an installed Chrome or Edge.
 """
 
 import json
+import re
 import threading
 import time
 from pathlib import Path
@@ -39,8 +40,11 @@ BUNDLES = {
             "release_date": "1995-12-15",
             "overview": "A thief.",
             "rating": 8.0,
+            "runtime": 120,
+            "genres": ["Action"],
+            "trailer_url": "https://www.youtube.com/watch?v=abc",
         },
-        "providers": {"DE": {"Netflix": ["flatrate"]}},
+        "providers": {"DE": {"Netflix": ["flatrate"]}, "GB": {"BBC iPlayer": ["free"]}},
     },
     348: {
         "poster_path": None,
@@ -50,7 +54,7 @@ BUNDLES = {
             "overview": "In space.",
             "rating": 8.1,
         },
-        "providers": {"DE": {"Arte": ["free"]}},
+        "providers": {"DE": {"Arte": ["free"]}, "GB": {"Arte": ["flatrate"]}},
     },
     111: {
         "poster_path": None,
@@ -190,6 +194,89 @@ def test_scan_filters_and_favorite(app_server, page):
     expect(page.locator('article.film[data-key="949"] button.favorite')).to_have_attribute(
         "data-favorite", "true"
     )
+
+
+def test_evening_mode_suggests_from_subscriptions(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"])
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    page.locator("#evening-mode").click()
+    page.locator("#evening-runtime").fill("120")
+    page.locator("#evening-genre").select_option("Action")
+    page.get_by_role("button", name="Suggest films").click()
+    expect(page.locator("#evening-results")).to_contain_text("Heat")
+    expect(page.locator("#evening-results")).not_to_contain_text("Alien")
+
+
+def test_trailer_from_the_details_window_is_in_front(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"])
+    page.locator('article.film[data-key="949"] .film-details-button').click()
+    page.locator("#film-details-content .trailer-link").click()
+    expect(page.locator("#trailer-modal")).to_be_visible()
+    expect(page.locator("#film-details-modal")).to_be_hidden()
+
+
+def free_tagged(page) -> list[str]:
+    return sorted(
+        page.locator("label:has(.free-tag)").evaluate_all(
+            "labels => labels.map(l => l.dataset.providerLabel)"
+        )
+    )
+
+
+def test_free_labels_follow_the_country(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"])
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    assert "Arte" in free_tagged(page) and "BBC iPlayer" not in free_tagged(page)
+    # A country switch scans without reloading the page; the labels must follow the new scan.
+    page.locator("#country-select").select_option("GB")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    assert wait_until(lambda: "BBC iPlayer" in free_tagged(page))
+    assert "Arte" not in free_tagged(page)
+    # Back to a country that already has a scan: its saved films are shown, no new scan.
+    requests: list[str] = []
+    page.on("request", lambda request: requests.append(f"{request.method} {request.url}"))
+    page.locator("#country-select").select_option("DE")
+    expect(page.locator("#status-message")).to_have_text("Showing saved results.")
+    assert wait_until(lambda: "Arte" in free_tagged(page))
+    assert not [line for line in requests if line.startswith("POST") and line.endswith("/api/scan")]
+
+
+def test_saved_results_show_the_tools(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"])
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    # A second visit finds the saved scan and starts none: sorting, random and the rest must still be there.
+    page.goto(app_server["url"])
+    expect(page.locator("#status-message")).to_have_text("Showing saved results.")
+    expect(page.locator("#random-film")).to_be_visible()
+    expect(page.locator("#stats-section")).to_be_visible()
+    expect(page.locator("#retry-scan")).to_have_text("Scan again")
+    # A rare filter set from a link sits behind "More filters"; the summary must still show it.
+    page.goto(app_server["url"] + "/?votes=1000")
+    expect(page.locator("#min-votes")).to_be_hidden()
+    expect(page.locator("#more-filters summary")).to_have_text("More filters (1 active)")
+
+
+def test_a_note_that_could_not_be_saved_is_marked(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"])
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    card = page.locator('article.film[data-key="949"]')
+    card.locator("button.favorite").click()
+    expect(card.locator("button.favorite")).to_have_attribute("data-favorite", "true")
+    page.route(
+        "**/api/favorites/*",
+        lambda route: route.abort() if route.request.method == "PATCH" else route.continue_(),
+    )
+    card.locator(".favorite-note").fill("Watch with Lisa")
+    card.locator(".favorite-note").blur()
+    expect(card.locator(".favorite-note")).to_have_class(re.compile("is-invalid"))
+    expect(page.locator("#app-toast")).to_have_class(re.compile("toast-error"))
+    expect(page.locator("#toast-message")).to_contain_text("Could not save the note")
+    assert app_server["store"].list_favorites()[0].get("notes", "") == ""
 
 
 def test_settings_are_saved_and_checked(app_server, page):

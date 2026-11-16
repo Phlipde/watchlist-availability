@@ -27,7 +27,7 @@ function show(text, failed = false) {
 async function requestJson(url, options = {}) {
   const response = await fetch(url, options);
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `Request failed (${response.status}).`);
+  if (!response.ok) throw new Error(data.error || (response.status >= 500 ? 'The app reported an error. The Status page shows the last scans; reload and try again.' : `The app refused the request (${response.status}). Reload the page and try again.`));
   return data;
 }
 

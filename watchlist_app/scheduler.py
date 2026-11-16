@@ -1,5 +1,6 @@
 """Automatic scans on a schedule."""
 
+import logging
 import threading
 import time
 
@@ -47,7 +48,7 @@ def start_scheduler(store: Store, settings: AppSettings, service: ScanService) -
             try:
                 run_due_scan(store, settings, service)
             except Exception:  # the schedule must survive a failed check
-                pass
+                logging.exception("Scheduled scan check failed")
             time.sleep(CHECK_SECONDS)
 
     thread = threading.Thread(target=loop, name="watchlist-scheduler", daemon=True)

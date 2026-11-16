@@ -30,6 +30,11 @@ class TestOverview:
         assert (mubi["films"], mubi["per_film"], mubi["only_here"]) == (2, None, [])
         assert result["monthly_total"] == 12.0
 
+    def test_only_on_my_services(self):
+        assert costs.only_on_my_services(FILMS[1], ["Netflix", "MUBI"])
+        assert not costs.only_on_my_services(FILMS[0], ["Netflix", "MUBI"])
+        assert not costs.only_on_my_services(FILMS[2], ["MUBI"])
+
     def test_rotation(self):
         result = costs.overview(FILMS, ["Netflix", "MUBI"], {})
         assert (result["cancel"], result["cancel_loses_nothing"]) == (["MUBI"], True)
@@ -38,6 +43,11 @@ class TestOverview:
     def test_free_services_are_never_cancelled(self):
         result = costs.overview(FILMS, ["Netflix", "Arte", "MUBI"], {"MUBI": {"price": 0}})
         assert result["cancel"] == ["Netflix"]
+
+    def test_services_free_in_the_scan_are_never_cancelled(self):
+        # BBC iPlayer is not on the built-in free list, but the scan shows it free.
+        films = [*FILMS, film("Brief Encounter", **{"BBC iPlayer": ["free"]})]
+        assert "BBC iPlayer" not in costs.overview(films, ["Netflix", "BBC iPlayer"], {})["cancel"]
 
     def test_cancel_the_service_with_fewest_own_films_when_each_has_some(self):
         result = costs.overview(FILMS, ["Netflix", "Disney+"], {})

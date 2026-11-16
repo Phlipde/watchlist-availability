@@ -35,6 +35,11 @@ class Film:
     poster_path: str | None = None
     overview: str = ""
     rating: float | None = None
+    popularity: float | None = None
+    vote_count: int | None = None
+    director: str | None = None
+    cast: list[str] = field(default_factory=list)
+    keywords: list[str] = field(default_factory=list)
     backdrop_path: str | None = None
     runtime: int | None = None
     genres: list[str] = field(default_factory=list)
@@ -61,4 +66,6 @@ class Film:
             provider: sort_kinds(kinds) for provider, kinds in (data.get("providers") or {}).items()
         }
         values["genres"] = list(data.get("genres") or [])
+        values["cast"] = list(data.get("cast") or [])
+        values["keywords"] = list(data.get("keywords") or [])
         return cls(**values)

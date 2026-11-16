@@ -6,7 +6,7 @@
   <title>Costs · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261115-6') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261116-1') }}" rel="stylesheet">
 </head>
 <body>
   <main class="page">
@@ -52,6 +52,6 @@
     <ul class="meta">{% for film in costs.rent_only %}<li>{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</li>{% endfor %}</ul>
     {% else %}<p class="meta">No film is only available to rent.</p>{% endif %}
   </main>
-  <script src="{{ url_for('static', filename='js/costs.js', v='20261115-6') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/costs.js', v='20261116-1') }}" type="module"></script>
 </body>
 </html>

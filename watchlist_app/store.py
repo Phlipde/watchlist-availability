@@ -9,7 +9,7 @@ from pathlib import Path
 from . import validation
 from .models import Film, legacy_key
 
-MAX_SCANS = 30
+MAX_SCANS = 30  # per country
 MAX_JOBS = 100
 BACKUP_VERSION = 1
 # Time of the last match correction; a recent scan is not reused after it.
@@ -346,9 +346,11 @@ class Store:
                 json.dumps(stats),
             ),
         )
+        # Per country: a daily scan of one country must not push out the only scan of another.
         self._write(
-            "DELETE FROM scans WHERE id NOT IN (SELECT id FROM scans ORDER BY created DESC LIMIT ?)",
-            (MAX_SCANS,),
+            "DELETE FROM scans WHERE country = ? AND id NOT IN "
+            "(SELECT id FROM scans WHERE country = ? ORDER BY created DESC LIMIT ?)",
+            (country, country, MAX_SCANS),
         )
         assert cursor.lastrowid is not None
         return cursor.lastrowid

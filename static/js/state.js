@@ -16,9 +16,10 @@ export function createScanState() {
   return {
     currentJob: undefined,
     pollDelay: 350,
+    pollFailures: 0,
     lastPollSignature: '',
     rescanInProgress: false,
-    pendingResults: [],
+    resultsReceived: 0,
     pendingUnavailable: [],
   };
 }

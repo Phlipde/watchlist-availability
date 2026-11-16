@@ -207,3 +207,21 @@ def test_without_targets_every_provider_is_kept():
     found = {"tmdb_id": 1, "providers": {"Amazon Prime Video": {"rent", "flatrate"}, "Other": set()}}
     film = make_film(WatchlistEntry("A", 2000), found, None)
     assert film.providers == {"Prime Video": ["flatrate", "rent"]}
+
+
+def test_tmdb_details_reach_the_film():
+    # Every detail field the scan fetches must end up on the film the page receives.
+    from unittest.mock import patch
+
+    from tests.helpers import API_KEY, MOVIE, response
+    from watchlist_app import tmdb
+    from watchlist_app.models import WatchlistEntry
+    from watchlist_app.results import make_film
+
+    with patch("watchlist_app.tmdb._http_get", return_value=response(MOVIE)):
+        bundle = tmdb.get_movie_bundle(27205, API_KEY)
+    found = {"tmdb_id": 27205, "details": bundle["details"], "providers": {}}
+    film = make_film(WatchlistEntry("Inception", 2010), found, None).to_dict()
+    for name, value in bundle["details"].items():
+        if name != "tmdb_title":
+            assert film[name] == value, name

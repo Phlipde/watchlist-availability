@@ -3,7 +3,7 @@
 import datetime
 from typing import Any
 
-from .providers import MOSTLY_FREE
+from .providers import mostly_free_from_scan
 
 WATCH_KINDS = frozenset({"free", "ads", "flatrate"})  # watchable without paying per film
 FREE_KINDS = frozenset({"free", "ads"})
@@ -15,6 +15,16 @@ def _watchable(film: dict, name: str) -> bool:
 
 def _free_anywhere(film: dict) -> bool:
     return any(FREE_KINDS & set(kinds) for kinds in film.get("providers", {}).values())
+
+
+def only_on_my_services(film: dict, subscriptions: list[str]) -> bool:
+    """Whether a film would be lost when cancelling any one own service."""
+    return not _free_anywhere(film) and sum(_watchable(film, name) for name in subscriptions) == 1
+
+
+def mark_only_on_my_services(films: list[dict], subscriptions: list[str]) -> list[dict]:
+    """Copies of the films with `only_on_my_services`, for the page filter of the same name."""
+    return [{**film, "only_on_my_services": only_on_my_services(film, subscriptions)} for film in films]
 
 
 def _label(film: dict) -> dict:
@@ -30,12 +40,7 @@ def overview(films: list[dict], subscriptions: list[str], costs: dict[str, dict]
     services: list[dict[str, Any]] = []
     for name in subscriptions:
         on = [film for film in films if _watchable(film, name)]
-        only = [
-            film
-            for film in on
-            if not _free_anywhere(film)
-            and not any(_watchable(film, other) for other in subscriptions if other != name)
-        ]
+        only = [film for film in on if only_on_my_services(film, subscriptions)]
         price = (costs.get(name) or {}).get("price")
         services.append(
             {
@@ -62,7 +67,8 @@ def overview(films: list[dict], subscriptions: list[str], costs: dict[str, dict]
 
     # Cancel what loses nothing first, then the service with the fewest films of its own.
     # Free services (and ones saved with price 0) cost nothing to keep.
-    paid = [item for item in services if item["name"] not in MOSTLY_FREE and item["price"] != 0]
+    free = mostly_free_from_scan(films, [])  # the same rule as the "Free" label in the sidebar
+    paid = [item for item in services if item["name"] not in free and item["price"] != 0]
     ranked = sorted(paid, key=lambda item: (len(item["only_here"]), -(item["price"] or 0)))
     loses_nothing = [item["name"] for item in ranked if not item["only_here"]]
     rent_only = [

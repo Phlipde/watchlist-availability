@@ -154,6 +154,23 @@ MOSTLY_FREE: frozenset[str] = frozenset(
     }
 )
 
+
+def mostly_free_from_scan(results: list[dict], unavailable: list[dict]) -> frozenset[str]:
+    """Providers that offer at least half of their scanned films free or with ads.
+
+    A provider without films in the scan keeps its place on the MOSTLY_FREE list.
+    """
+    offered: dict[str, int] = {}
+    free: dict[str, int] = {}
+    for film in [*results, *unavailable]:
+        for provider, kinds in film.get("providers", {}).items():
+            offered[provider] = offered.get(provider, 0) + 1
+            if any(kind in {"free", "ads"} for kind in kinds):
+                free[provider] = free.get(provider, 0) + 1
+    by_data = {provider for provider, count in offered.items() if free.get(provider, 0) * 2 >= count}
+    return frozenset(by_data | (MOSTLY_FREE - offered.keys()))
+
+
 # Shops where films are rented one by one; kept apart from subscriptions.
 RENTAL_SHOPS: frozenset[str] = frozenset(
     {

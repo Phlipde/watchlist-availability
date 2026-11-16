@@ -1,17 +1,17 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
-import {filterFilms, matchesSection, selectedChanges, selectedKinds, sortFilms} from '../../static/js/filtering.js';
+import {eveningSuggestions, filterFilms, matchesSection, selectedChanges, selectedKinds, sortFilms} from '../../static/js/filtering.js';
 
 const baseFilters = {
-  query: '', availability: 'all', kind: 'all', minRating: 0, genre: 'all', runtime: 'all', mode: 'any',
+  query: '', availability: 'all', kind: 'all', minRating: 0, minVotes: 0, genre: 'all', keyword: 'all', runtime: 'all', mode: 'any',
   yearFrom: 0, yearTo: 9999, media: 'all', change: 'all', minimumProviders: 0, favoriteStatus: 'all',
   sort: 'title', favoritesOnly: false,
 };
 const films = [
-  {title: 'Alpha', year: 2001, rating: 7.5, runtime: 100, genres: ['Drama'], providers: {Netflix: ['flatrate'], 'Apple TV Store': ['rent']}},
-  {title: 'Beta', year: 1999, rating: 6, runtime: 80, genres: ['Comedy'], providers: {Arte: ['free'], Netflix: ['flatrate']}},
-  {title: 'Gamma', year: 2020, rating: 8, runtime: 130, genres: ['Drama'], providers: {'Apple TV Store': ['rent']}},
+  {title: 'Alpha', director: 'Nolan', year: 2001, rating: 7.5, popularity: 12, vote_count: 1000, keywords: ['heist'], runtime: 100, genres: ['Drama'], providers: {Netflix: ['flatrate'], 'Apple TV Store': ['rent']}},
+  {title: 'Beta', year: 1999, rating: 6, popularity: 30, vote_count: 100, runtime: 80, genres: ['Comedy'], providers: {Arte: ['free'], Netflix: ['flatrate']}},
+  {title: 'Gamma', year: 2020, rating: 8, popularity: 20, vote_count: 10000, runtime: 130, genres: ['Drama'], providers: {'Apple TV Store': ['rent']}},
 ];
 const unavailable = [{title: 'Delta', year: 2010}];
 const context = (selected, favorites = new Map()) => ({selected: new Set(selected), favorites});
@@ -67,6 +67,16 @@ test('common filters', () => {
   assert.equal(count({runtime: 'long'}), 1);
   assert.equal(count({yearFrom: 2000, yearTo: 2010}), 1);
   assert.equal(count({minimumProviders: 2}), 2);
+  assert.equal(count({minVotes: 1000}), 2);
+  assert.equal(count({query: 'nolan'}), 1);
+  assert.equal(count({keyword: 'heist'}), 1);
+});
+
+test('exclusive availability shows the films the server marked', () => {
+  const marked = films.map((film, index) => ({...film, only_on_my_services: index === 0}));
+  const view = filterFilms(marked, [], {...baseFilters, availability: 'exclusive'}, context(['Netflix', 'Arte']));
+  assert.deepEqual(view.sections.Paid.map(film => film.title), ['Alpha']);
+  assert.equal(view.visibleCount, 1);
 });
 
 test('favorites filter uses the status', () => {
@@ -98,4 +108,27 @@ test('sorting breaks ties by title', () => {
   const list = [{title: 'b', year: 2000}, {title: 'a', year: 2000}, {title: 'c', year: 2010}];
   assert.deepEqual(titles(sortFilms(list, 'year-desc')), ['c', 'a', 'b']);
   assert.deepEqual(titles(sortFilms(list, 'title')), ['a', 'b', 'c']);
+});
+
+test('sorts by popularity and vote count', () => {
+  assert.deepEqual(titles(sortFilms(films, 'popularity')), ['Beta', 'Gamma', 'Alpha']);
+  assert.deepEqual(titles(sortFilms(films, 'votes')), ['Gamma', 'Alpha', 'Beta']);
+});
+
+test('evening mode picks up to three films that fit, on own services, best rated first', () => {
+  const film = (title, rating, runtime, providers, genres = ['Drama']) => ({title, rating, runtime, providers, genres});
+  const evening = [
+    film('Long', 9, 150, {Netflix: ['flatrate']}),
+    film('Rent only', 9, 90, {Netflix: ['rent']}),
+    film('Elsewhere', 9, 90, {MUBI: ['flatrate']}),
+    film('Comedy', 9, 90, {Netflix: ['flatrate']}, ['Comedy']),
+    film('Exactly two hours', 6, 120, {Netflix: ['flatrate']}),
+    film('Free', 8, 95, {Arte: ['free']}),
+    film('Good', 7, 100, {Netflix: ['flatrate']}),
+    film('Unknown runtime', 9.5, 0, {Netflix: ['flatrate']}),
+    film('Fourth', 5, 80, {Netflix: ['flatrate']}),
+  ];
+  const picks = eveningSuggestions(evening, {maximum: 120, genre: 'Drama', subscriptions: new Set(['Netflix', 'Arte'])});
+  assert.deepEqual(picks.map(f => f.title), ['Free', 'Good', 'Exactly two hours']);
+  assert.equal(eveningSuggestions(evening, {maximum: 0, genre: 'all', subscriptions: new Set(['Netflix'])})[0].title, 'Unknown runtime');
 });

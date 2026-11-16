@@ -58,8 +58,13 @@ function commonMatches(film, filters, context) {
     && (filters.favoriteStatus === 'all' || context.favorites.get(key)?.status === filters.favoriteStatus)
   );
   return favoriteMatch
-    && String(film.title).toLowerCase().includes(filters.query)
+    && [film.title, film.director, ...(film.cast || []), ...(film.keywords || [])]
+      .filter(Boolean)
+      .some(value => String(value).toLowerCase().includes(filters.query))
     && (filters.genre === 'all' || (film.genres || []).includes(filters.genre))
+    && (filters.keyword === 'all' || (film.keywords || []).includes(filters.keyword))
+    // The server decides this with the rule of the costs page (watchlist_app/costs.py).
+    && (filters.availability !== 'exclusive' || film.only_on_my_services === true)
     && runtimeMatches(filters.runtime, Number(film.runtime) || 0)
     && (filters.media === 'all'
       || (filters.media === 'trailer' && Boolean(film.trailer_url))
@@ -67,6 +72,7 @@ function commonMatches(film, filters, context) {
     && (filters.change === 'all' || changeTypes(film, context.selected).includes(filters.change))
     && Object.keys(film.providers || {}).length >= filters.minimumProviders
     && (Number(film.rating) || 0) >= filters.minRating
+    && (Number(film.vote_count) || 0) >= filters.minVotes
     && year >= filters.yearFrom
     && year <= filters.yearTo;
 }
@@ -82,7 +88,7 @@ export function matchesSection(film, section, filters, context) {
   // "No longer available" also shows films that just left every selected provider.
   const leftSelected = filters.change === 'removed' && selectedChanges(film, selected).removed.length > 0;
   if (!providerMatch && !leftSelected) return false;
-  if (!['all', 'available', section].includes(filters.availability)) return false;
+  if (!['all', 'available', 'exclusive', section].includes(filters.availability)) return false;
   if (filters.kind !== 'all') {
     // The offer type must come from a selected provider and belong to this section.
     if (!SECTION_KINDS[section].includes(filters.kind)) return false;
@@ -103,6 +109,8 @@ export function sortFilms(films, order) {
     'year-desc': (a, b) => (Number(b.year) || 0) - (Number(a.year) || 0),
     'year-asc': (a, b) => (Number(a.year) || 0) - (Number(b.year) || 0),
     rating: (a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0),
+    popularity: (a, b) => (Number(b.popularity) || 0) - (Number(a.popularity) || 0),
+    votes: (a, b) => (Number(b.vote_count) || 0) - (Number(a.vote_count) || 0),
   }[order];
   return [...films].sort((a, b) => (compare ? compare(a, b) : 0) || byTitle(a, b));
 }
@@ -117,4 +125,15 @@ export function filterFilms(films, unavailable, filters, context) {
   });
   const unavailableMatches = sortFilms(unavailable.filter(film => matchesUnavailable(film, filters, context)), filters.sort);
   return {sections, unavailable: unavailableMatches, visibleCount: visibleKeys.size};
+}
+
+// Evening mode: the three best-rated films that fit the time and genre and run on an own service.
+export function eveningSuggestions(films, {maximum, genre, subscriptions}) {
+  return films
+    .filter(film => (!maximum || (film.runtime > 0 && film.runtime <= maximum))
+      && (genre === 'all' || (film.genres || []).includes(genre))
+      && Object.entries(film.providers || {}).some(([provider, kinds]) =>
+        subscriptions.has(provider) && kinds.some(kind => ['free', 'ads', 'flatrate'].includes(kind))))
+    .sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0) || String(a.title).localeCompare(String(b.title)))
+    .slice(0, 3);
 }

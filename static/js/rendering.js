@@ -15,10 +15,20 @@ export function offerBadges(kinds) {
   }).join('');
 }
 
-export function offerBadgesForProviders(providers) {
-  return Object.entries(providers || {}).map(([provider, kinds]) =>
-    `<li><span>${escapeHtml(provider)}</span><span class="provider-offers">${offerBadges(kinds)}</span></li>`
-  ).join('');
+// Availability in the details window: one group per offer type (Free, With ads, Subscription,
+// Rent), providers in alphabetical order, each with its logo when TMDB has one.
+export function availabilityByOffer(providers, logos = {}, logoBaseUrl = '') {
+  const entries = Object.entries(providers || {});
+  return Object.entries(OFFER_TYPES).map(([kind, [label, icon]]) => {
+    const names = entries.filter(([, kinds]) => kinds.includes(kind)).map(([name]) => name)
+      .sort((a, b) => a.localeCompare(b, undefined, {sensitivity: 'base'}));
+    if (!names.length) return '';
+    const rows = names.map(name => {
+      const logo = logos[name] ? `<img class="provider-logo" src="${escapeHtml(logoBaseUrl + logos[name])}" alt="" loading="lazy">` : '';
+      return `<li>${logo}<span>${escapeHtml(name)}</span></li>`;
+    }).join('');
+    return `<section class="film-offer-group" data-offer="${kind}"><h6 class="film-offer-heading"><i class="${icon}" aria-hidden="true"></i> ${label}</h6><ul class="film-provider-list">${rows}</ul></section>`;
+  }).join('');
 }
 
 function changeBadgesFor(film, selected) {
@@ -51,7 +61,7 @@ export function filmCard(film, section, context) {
   const poster = film.poster_path ? `<img src="${context.imageBaseUrl}${escapeHtml(film.poster_path)}" alt="Poster for ${escapeHtml(film.title)}" loading="lazy">` : '<div class="no-poster">No poster available</div>';
   const rating = numberText(film.rating) ? `TMDB ${Number(film.rating).toFixed(1)}/10` : 'No rating';
   const trailerId = film.trailer_url ? new URL(film.trailer_url).searchParams.get('v') : null;
-  const links = `${film.tmdb_url ? `<a href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer">TMDB</a>` : ''}${trailerId ? ` · <button class="btn btn-link btn-sm p-0 trailer-link" data-trailer="${escapeHtml(trailerId)}" type="button">Trailer</button>` : ''}`;
+  const links = `${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer">TMDB</a>` : ''}${trailerId ? ` · <button class="film-link trailer-link" data-trailer="${escapeHtml(trailerId)}" type="button">Trailer</button>` : ''}`;
   const favorite = context.favorites.has(key);
   const savedFavorite = context.favorites.get(key) || {};
   const providerBadges = providers.map(provider => `<span class="badge rounded-pill provider-badge me-1 mb-1" data-provider="${escapeHtml(provider)}">${escapeHtml(provider)}</span>`).join('');

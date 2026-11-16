@@ -5,7 +5,7 @@ export function updateScanFeedback(job) {
   const scanStats = document.getElementById('scan-live-stats');
   if (phase) phase.textContent = job.phase || 'Scanning';
   if (scanStats) {
-    scanStats.textContent = `${job.completed || 0} checked · ${(job.results || []).length} available · ${(job.unavailable || []).length} unavailable · ${(job.failed || []).length} failed`;
+    scanStats.textContent = `${job.completed || 0} checked · ${job.stats?.total ?? (job.results || []).length} available · ${(job.unavailable || []).length} unavailable · ${(job.failed || []).length} failed`;
   }
   const failurePanel = document.getElementById('scan-failures');
   const failureList = document.getElementById('failed-list');

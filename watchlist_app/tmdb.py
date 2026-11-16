@@ -11,6 +11,7 @@ import time
 import requests
 
 _TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500"
+_TMDB_LOGO_BASE_URL = "https://image.tmdb.org/t/p/w92"
 _API_BASE_URL = "https://api.themoviedb.org/3"
 _MONETIZATION_TYPES = ("free", "ads", "flatrate", "rent")
 _MAX_ATTEMPTS = 3
@@ -53,10 +54,23 @@ def _details_from_movie(data: dict, tmdb_id: int) -> dict:
         (video for video in videos if video.get("site") == "YouTube" and video.get("type") == "Trailer"),
         None,
     )
+    credits = data.get("credits", {})
+    directors = [
+        p.get("name") for p in credits.get("crew", []) if p.get("job") == "Director" and p.get("name")
+    ]
+    cast = [p.get("name") for p in credits.get("cast", []) if p.get("name")][:5]
+    keywords = [
+        keyword.get("name") for keyword in data.get("keywords", {}).get("keywords", []) if keyword.get("name")
+    ]
     return {
         "tmdb_title": data.get("title") or "",
         "overview": data.get("overview", ""),
         "rating": data.get("vote_average"),
+        "popularity": data.get("popularity"),
+        "vote_count": data.get("vote_count"),
+        "director": directors[0] if directors else None,
+        "cast": cast,
+        "keywords": keywords,
         "backdrop_path": data.get("backdrop_path"),
         "runtime": data.get("runtime"),
         "genres": [genre.get("name") for genre in data.get("genres", [])],
@@ -167,7 +181,7 @@ def get_movie_bundle(tmdb_id: int, api_key: str | None = None) -> dict | None:
     """
     data = _request_json(
         f"/movie/{tmdb_id}",
-        {"api_key": api_key, "append_to_response": "videos,watch/providers"},
+        {"api_key": api_key, "append_to_response": "videos,watch/providers,credits,keywords"},
     )
     if data is None:
         return None

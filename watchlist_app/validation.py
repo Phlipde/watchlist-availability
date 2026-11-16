@@ -14,6 +14,8 @@ from .models import OFFER_KINDS, Film
 
 MAX_TEXT = 500
 MAX_OVERVIEW = 5000
+MAX_PEOPLE = 5
+MAX_KEYWORDS = 50
 MAX_NOTES = 2000
 MAX_FILMS_PER_SCAN = 20000
 FAVORITE_STATUSES = ("plan", "watching", "watched")
@@ -62,6 +64,11 @@ def _matching(value, pattern: re.Pattern) -> str | None:
     return value if isinstance(value, str) and pattern.fullmatch(value) else None
 
 
+def image_path(value) -> str | None:
+    """A TMDB image path such as "/abc.png", or None."""
+    return _matching(value, _IMAGE_PATH_RE)
+
+
 def year(value) -> int | None:
     return integer(value, 1870, 2200)
 
@@ -83,6 +90,8 @@ def clean_film(data) -> dict | None:
                 if allowed:
                     providers[name] = allowed
     genres = data.get("genres")
+    cast = data.get("cast")
+    keywords = data.get("keywords")
     film = Film(
         title=title,
         year=year(data.get("year")),
@@ -90,6 +99,15 @@ def clean_film(data) -> dict | None:
         poster_path=_matching(data.get("poster_path"), _IMAGE_PATH_RE),
         overview=text(data.get("overview"), MAX_OVERVIEW) or "",
         rating=number(data.get("rating"), 0, 10),
+        popularity=number(data.get("popularity"), 0, 10**9),
+        vote_count=integer(data.get("vote_count"), 0, 10**9),
+        director=text(data.get("director"), 200),
+        cast=[person[:200] for person in cast[:MAX_PEOPLE] if isinstance(person, str)]
+        if isinstance(cast, list)
+        else [],
+        keywords=[keyword[:100] for keyword in keywords[:MAX_KEYWORDS] if isinstance(keyword, str)]
+        if isinstance(keywords, list)
+        else [],
         backdrop_path=_matching(data.get("backdrop_path"), _IMAGE_PATH_RE),
         runtime=integer(data.get("runtime"), 0, 2000),  # TMDB reports 0 for films not yet released
         genres=[genre[:100] for genre in genres[:30] if isinstance(genre, str)]

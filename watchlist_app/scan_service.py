@@ -6,6 +6,7 @@ state of every run in the database so it is still known after a restart.
 """
 
 import hashlib
+import logging
 import threading
 import time
 import uuid
@@ -13,7 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import partial
 
-from . import history, letterboxd, matches, providers, tmdb
+from . import costs, history, letterboxd, matches, providers, tmdb
 from .lookup import film_key, lookup_film
 from .models import Film, WatchlistEntry
 from .results import build_results
@@ -84,6 +85,8 @@ def with_changes(store: Store, country: str, results: list[dict], unavailable: l
         "results": history.apply_changes(results, changes),
         "unavailable": history.apply_changes(unavailable, changes),
         "changes": changes,
+        # The page does not reload on a country switch, so the free list travels with the films.
+        "free_services": sorted(providers.mostly_free_from_scan(results, unavailable)),
     }
 
 
@@ -120,6 +123,7 @@ class ScanOutcome:
     reused: bool = False
     scan_id: int | None = None
     failed: list[dict] = field(default_factory=list)
+    free_services: list[str] = field(default_factory=list)
 
 
 def perform_scan(
@@ -346,12 +350,20 @@ class ScanService:
 
     # ----- progress -----
 
-    def status(self, job_id: str) -> dict | None:
-        """The state of a scan for the browser, from memory or, after a restart, the database."""
+    def status(self, job_id: str, start: int = 0) -> dict | None:
+        """The state of a scan for the browser, from memory or, after a restart, the database.
+
+        While a scan runs, only the films found after the first `start` are sent; the
+        page already has those. A finished scan always sends every film.
+        """
         with self._lock:
             job = self._live.get(job_id)
             if job is not None:
-                return {key: value for key, value in job.items() if key != "entries"}
+                live = {key: value for key, value in job.items() if key != "entries"}
+                if live["status"] == "running":
+                    live["results"] = live["results"][max(start, 0) :]
+        if job is not None:
+            return self._mark_own_services(live)
         stored = self._store.get_job(job_id)
         if stored is None:
             return None
@@ -361,22 +373,28 @@ class ScanService:
             if scan
             else {"results": [], "unavailable": [], "changes": []}
         )
-        return {
-            "job_id": stored["id"],
-            "status": stored["status"],
-            "trigger": stored["trigger"],
-            "phase": stored["phase"],
-            "message": stored["message"],
-            "completed": stored["completed"],
-            "total": stored["total"],
-            "current_title": "",
-            **films,
-            "stats": result_stats(films["results"]),
-            "failed": stored["failed"],
-            "last_updated": scan["created"] if scan else None,
-            "country": stored["country"],
-            "source_name": stored["source_name"],
-        }
+        return self._mark_own_services(
+            {
+                "job_id": stored["id"],
+                "status": stored["status"],
+                "trigger": stored["trigger"],
+                "phase": stored["phase"],
+                "message": stored["message"],
+                "completed": stored["completed"],
+                "total": stored["total"],
+                "current_title": "",
+                **films,
+                "stats": result_stats(films["results"]),
+                "failed": stored["failed"],
+                "last_updated": scan["created"] if scan else None,
+                "country": stored["country"],
+                "source_name": stored["source_name"],
+            }
+        )
+
+    def _mark_own_services(self, status: dict) -> dict:
+        own = self._settings.subscriptions(status["country"])
+        return {**status, "results": costs.mark_only_on_my_services(status["results"], own)}
 
     # ----- the scan itself -----
 
@@ -473,6 +491,7 @@ class ScanService:
                 results=outcome.results,
                 unavailable=outcome.unavailable,
                 changes=outcome.changes,
+                free_services=outcome.free_services,
                 stats=result_stats(outcome.results),
                 completed=len(entries),
                 last_updated=outcome.created,
@@ -482,4 +501,5 @@ class ScanService:
         except (FileNotFoundError, ValueError, letterboxd.LetterboxdError) as exc:
             finish("error", "Error", str(exc))
         except Exception:
+            logging.exception("Scan %s failed", job_id)
             finish("error", "Error", "The scan failed unexpectedly.")
