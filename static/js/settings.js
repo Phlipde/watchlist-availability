@@ -1,47 +1,34 @@
-// Settings page: save the form through the API and handle backup restore.
+// Settings page: save watchlist, country and schedule through the API and handle backup restore.
 const form = document.getElementById('settings-form');
 const country = document.getElementById('country');
-const boxes = [...form.querySelectorAll('input[name="subscriptions"]')];
-const subscriptions = window.SETTINGS_PAGE.subscriptions;
-
 function show(id, text, failed = false) {
   const element = document.getElementById(id);
   element.textContent = text;
   element.classList.toggle('text-danger', failed);
 }
 
-function updateCount() {
-  document.getElementById('subscription-count').textContent = boxes.filter(box => box.checked).length;
-}
-
-// Subscriptions are saved per country: show the list of the chosen country.
-function showSubscriptions() {
-  const chosen = new Set(subscriptions[country.value] || []);
-  boxes.forEach(box => { box.checked = chosen.has(box.value); });
-  updateCount();
-}
-
-country.addEventListener('change', showSubscriptions);
-boxes.forEach(box => box.addEventListener('change', updateCount));
-showSubscriptions();
-
 form.addEventListener('submit', async event => {
   event.preventDefault();
-  const chosen = boxes.filter(box => box.checked).map(box => box.value);
-  const response = await fetch('/api/settings', {
-    method: 'PUT',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      letterboxd_username: document.getElementById('letterboxd-username').value,
-      country: country.value,
-      scan_interval_hours: Number(document.getElementById('scan-interval').value),
-      subscriptions: chosen,
-    }),
-  });
-  const data = await response.json();
-  if (!response.ok) return show('settings-message', data.error || 'Could not save the settings.', true);
-  subscriptions[country.value] = chosen;
-  show('settings-message', 'Saved.');
+  const button = document.getElementById('settings-save');
+  button.disabled = true;
+  try {
+    const response = await fetch('/api/settings', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        letterboxd_username: document.getElementById('letterboxd-username').value,
+        country: country.value,
+        scan_interval_hours: Number(document.getElementById('scan-interval').value),
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) return show('settings-message', data.error || 'Could not save the settings.', true);
+    show('settings-message', 'Saved.');
+  } catch {
+    show('settings-message', 'Could not reach the app.', true);
+  } finally {
+    button.disabled = false;
+  }
 });
 
 document.getElementById('backup-file').addEventListener('change', async event => {

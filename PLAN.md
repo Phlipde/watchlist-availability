@@ -2,7 +2,7 @@
 
 Stand: 2026-11-15. Jede Etappe ist ein eigener Commit mit eigenen Tests; die App bleibt nach jedem Schritt lauffähig. Docker für Unraid kommt bewusst zuletzt. Struktur-Umbauten sind mit „(Struktur)“ markiert und stehen jeweils vor den Schritten, die darauf aufbauen.
 
-Als Nächstes offen: Etappe 9j (Filter-Fehler), 9e (Seite „My subscriptions“), 9g (Barrierefreiheit), 9h und 9i (Hauptseite), danach weiter mit Etappe 10.
+Als Nächstes offen: Etappe 9g (Barrierefreiheit), 9h und 9i (Hauptseite), danach weiter mit Etappe 10.
 
 ## Teil A: Fehler und Struktur
 
@@ -174,24 +174,26 @@ Heute listet das Detailfenster unter „Availability“ jeden Anbieter einzeln, 
 
 ### Etappe 9e: Eine Seite „My subscriptions“ statt Abo-Auswahl in den Einstellungen plus Kosten-Seite
 Heute ist ein Abo auf zwei Seiten verteilt: Auf `/settings` wählt man die Dienste je Land (Abschnitt „My subscriptions“), auf `/costs` trägt man für dieselben Dienste Preis und Erinnerung ein und sieht die Auswertung. Wer ein Abo hinzufügt, muss danach die Seite wechseln, um den Preis einzutragen. Dazu kommt: Auf `/settings` hängt die Abo-Liste am Land-Feld der App. Wer die GB-Abos bearbeitet und speichert, stellt damit auch das Land der App auf GB um.
-- [ ] Neue Seite `/subscriptions` („My subscriptions“) mit drei Teilen, in dieser Reihenfolge:
+- [x] Neue Seite `/subscriptions` („My subscriptions“) mit drei Teilen, in dieser Reihenfolge:
   1. Eigene Abos als Tabelle: Dienst (mit Logo aus Etappe 9d), Preis pro Monat, Erinnerung, Watchlist-Filme, pro Film, „Only here“. Darunter die Summe.
   2. „Add or remove services“: die heutige Auswahl aus den Einstellungen (Gruppen, aufklappbar). Ein neu angehakter Dienst erscheint nach dem Speichern sofort als Zeile in der Tabelle, ein abgewählter verschwindet samt Preis.
   3. Auswertung wie heute auf `/costs`: Rotation („Cancel“, „Book for a month“) und „Only to rent“.
-- [ ] Ein Knopf „Save“ speichert Auswahl, Preise und Erinnerungen zusammen, über das vorhandene `PUT /api/settings` (`subscriptions` und `costs`; `AppSettings.update` prüft schon, dass Preise nur für eigene Abos gelten).
-- [ ] Land auf der Seite wählbar (`/subscriptions?country=GB`), ohne das Land der App zu ändern. Dafür nimmt `PUT /api/settings` ein Feld `subscriptions_country`, das nur bestimmt, für welches Land Abos und Preise gespeichert werden. Standard ist das Land der App.
-- [ ] `/costs` leitet dauerhaft auf `/subscriptions` weiter (alte Lesezeichen). `templates/costs.html` und `static/js/costs.js` gehen in der neuen Seite auf, `costs.overview` bleibt unverändert.
-- [ ] Einstellungen: Der Abschnitt „My subscriptions“ wird durch einen Link auf die neue Seite ersetzt; `static/js/settings.js` speichert keine Abos mehr. Übrig bleiben Watchlist, Land, Zeitplan und Sicherung.
-- [ ] Links anpassen: Kopfzeile der Hauptseite, Status-Seite („Set on the costs page“) und die Seitenleiste („My subscriptions“ wählt weiter die Dienste aus; ein kleiner Link „edit“ führt zur neuen Seite).
+- [x] Ein Knopf „Save“ speichert Auswahl, Preise und Erinnerungen zusammen, über das vorhandene `PUT /api/settings` (`subscriptions` und `costs`; `AppSettings.update` prüft schon, dass Preise nur für eigene Abos gelten).
+- [x] Land auf der Seite wählbar (`/subscriptions?country=GB`), ohne das Land der App zu ändern. Dafür nimmt `PUT /api/settings` ein Feld `subscriptions_country`, das nur bestimmt, für welches Land Abos und Preise gespeichert werden. Standard ist das Land der App.
+- [x] `/costs` leitet dauerhaft auf `/subscriptions` weiter (alte Lesezeichen). `templates/costs.html` und `static/js/costs.js` gehen in der neuen Seite auf, `costs.overview` bleibt unverändert.
+- [x] Einstellungen: Der Abschnitt „My subscriptions“ wird durch einen Link auf die neue Seite ersetzt; `static/js/settings.js` speichert keine Abos mehr. Übrig bleiben Watchlist, Land, Zeitplan und Sicherung.
+- [x] Links anpassen: Kopfzeile der Hauptseite, Status-Seite („Set on the costs page“) und die Seitenleiste („My subscriptions“ wählt weiter die Dienste aus; ein kleiner Link „edit“ führt zur neuen Seite).
 - Nicht geändert: Speicherung (`subscriptions:<Land>`, `subscription_costs:<Land>`), Sicherung und die Regeln der Kosten-Seite.
 - Kleinere Variante: beide Seiten behalten und nur Preis und Erinnerung als zwei Felder neben jeden angehakten Dienst in den Einstellungen setzen; die Auswertung bliebe auf `/costs`.
 - Aus den Design-Reviews, gleich mit umsetzen (die Seiten werden ohnehin neu gebaut):
-  - [ ] Ungespeicherte Häkchen gehen beim Länderwechsel nicht mehr verloren (ID #2). Entfällt von selbst, weil das Land über `?country=` gewechselt wird; bei ungespeicherten Änderungen vorher nachfragen.
-  - [ ] „Saved.“ bleibt nach dem Speichern sichtbar, statt im Reload zu verschwinden (ID #6): nach dem Speichern auf `/subscriptions?saved=1` laden und die Meldung im Template zeigen.
-  - [ ] Speichern-Knopf während des Sendens sperren, bei Netzwerk- oder Serverfehler „Could not reach the app.“ zeigen (WDG #13). Gilt auch für `static/js/settings.js`.
-  - [ ] Dienst-Checkboxen je Gruppe mit `role="group"` und `aria-label` (WDG #31).
-  - [ ] Tabelle passt aufs Handy: jede Zeile als Block untereinander statt 622 px Breite in 375 px; kostenlose Dienste ohne Preis- und Datumsfeld oder in einer eigenen kurzen Liste (DC #23). Das Zeitplan-Select in den Einstellungen bekommt `max-width: 100%` (DC #25).
+  - [x] Ungespeicherte Häkchen gehen beim Länderwechsel nicht mehr verloren (ID #2). Entfällt von selbst, weil das Land über `?country=` gewechselt wird; bei ungespeicherten Änderungen vorher nachfragen.
+  - [x] „Saved.“ bleibt nach dem Speichern sichtbar, statt im Reload zu verschwinden (ID #6): nach dem Speichern auf `/subscriptions?saved=1` laden und die Meldung im Template zeigen.
+  - [x] Speichern-Knopf während des Sendens sperren, bei Netzwerk- oder Serverfehler „Could not reach the app.“ zeigen (WDG #13). Gilt auch für `static/js/settings.js`.
+  - [x] Dienst-Checkboxen je Gruppe mit `role="group"` und `aria-label` (WDG #31).
+  - [x] Tabelle passt aufs Handy: jede Zeile als Block untereinander statt 622 px Breite in 375 px; kostenlose Dienste ohne Preis- und Datumsfeld oder in einer eigenen kurzen Liste (DC #23). Das Zeitplan-Select in den Einstellungen bekommt `max-width: 100%` (DC #25).
 - Prüfung: Tests für `/subscriptions` (Tabelle, Auswertung, Land über `?country=`), für `subscriptions_country` (GB-Abos speichern lässt das Land der App auf DE) und die Weiterleitung von `/costs`. Browser-Test: Dienst anhaken, Preis eintragen, speichern, Zeile mit „pro Film“ erscheint; vorhandene Browser-Tests für die Einstellungen anpassen. Bildschirmfoto mit echten Daten.
+- Ergebnis (2026-11-16): `/subscriptions` ersetzt `/costs` (301-Weiterleitung) und den Abo-Abschnitt der Einstellungen. Tabelle mit Logos, Auswahl und Auswertung auf einer Seite, ein „Save“ für alles. `?country=GB` bearbeitet die GB-Abos, das Land der App bleibt (Feld `subscriptions_country`). Kostenlose Dienste zeigen „Free“ statt Preis- und Datumsfeld. Auf 375 px ist jede Zeile ein Block, keine waagrechte Scrollleiste. Mit echten Daten im Browser geprüft (10 Abos, 10 Logos). Neue Tests: fünf in `tests/test_web.py` (Weiterleitung, anderes Land, unbekanntes Land, kostenlose Dienste, „Saved.“) und ein Browser-Test (Preis eintragen, Dienst anhaken, speichern).
+- Abweichung: Die Sicherheitsabfrage beim Länderwechsel ist ein `confirm()`; dazu warnt der Browser beim Verlassen der Seite mit ungespeicherten Änderungen. Nicht im Browser nachgestellt: Meldung „Could not reach the app.“ bei gestopptem Server.
 
 ### Etappen 9f bis 9i: Befunde aus den Design-Reviews
 Drei Reviews vom 2026-11-15, aus dem Code beurteilt: [reviews/web-design-guidelines.md](reviews/web-design-guidelines.md) (WDG, 31 Befunde), [reviews/design-critique.md](reviews/design-critique.md) (DC, 25; davon 20–25 aus der Nachprüfung im Browser mit echten Daten, die 12 der ersten 19 bestätigt und 5 nicht geprüft hat) und [reviews/interaction-design.md](reviews/interaction-design.md) (ID, 17). Doppelte Funde sind zusammengefasst; die Nummern verweisen auf die Reviews, dort stehen Ort und kleinste Lösung. Die Zeilennummern dort gelten für den Stand vom 2026-11-15 und verschieben sich mit jeder Etappe. Vier Befunde stehen in Etappe 9e (ID #2, ID #6, WDG #13, WDG #31). Reihenfolge: 9f zuerst (Datenverlust, falsche Anzeige), dann 9g; 9h und 9i bauen die Hauptseite um und kommen danach.
@@ -214,14 +216,15 @@ Drei Reviews vom 2026-11-15, aus dem Code beurteilt: [reviews/web-design-guideli
 
 ### Etappe 9j: Filter-Fehler aus der Filter-Prüfung
 Alle 13 Filter, die Sortierung und „Any / All selected services“ am 2026-11-16 im Browser mit der Kopie der echten Daten geprüft (DE, 10 Abos ausgewählt, 169 sichtbare und 26 nicht verfügbare Filme): Für jede Einstellung die erwartete Zahl aus den Rohdaten berechnet und mit Trefferzahl, Karten und der Liste „nicht verfügbar“ verglichen. Suche (auch über Besetzung und Stichworte), Verfügbarkeit, Angebotsart, Jahr, Bewertung, Stimmen, Genre, Stichwort, Laufzeit, Medien und alle sechs Sortierungen stimmen. Schon im Plan und hier nicht doppelt: fehlende Chips (DC #1, Etappe 9h), kein leerer Zustand (DC #2), „Free“ mit drei Bedeutungen (DC #3), 3675 Stichworte (Etappe 9c).
-- [ ] „Minimum providers“ zählt alle Anbieter eines Films, auch Leih-Shops und nicht ausgewählte. Dadurch zeigt „2+ providers“ alle 169 Filme statt 17. Nur ausgewählte Anbieter zählen, wie bei der Angebotsart (`commonMatches` in `static/js/filtering.js`). JS-Test.
-- [ ] Genre und Stichwort aus einem Link gehen beim Laden verloren (`?genre=Horror` zeigt „All genres“): `setInitial` läuft, bevor `populateGenres` die Auswahl füllt. Den Wert aus der URL in `populateGenres` übernehmen, solange die Auswahl noch auf „all“ steht. Browser-Test mit `?genre=Action`.
-- [ ] Ein Klick auf den Chip „Rating“ oder „Votes“ lässt das Select leer stehen: der Chip setzt `all`, diese Selects haben aber `0` als ersten Wert. Auf den ersten Wert der Auswahl zurücksetzen (`input.options[0].value`).
-- [ ] „With poster“ entfernen: alle 430 Filme haben ein Poster, die Option filtert nichts. „With trailer“ bleibt (167 von 169).
-- [ ] Widersprüchliche Filter ergeben stumm 0 Treffer: „Free“ mit „Subscription“, oder „Year from“ größer als „Year to“. Die Jahre beim Lesen tauschen (`readFilters`); für den Rest zeigt der leere Zustand aus Etappe 9h (DC #2) den Ausweg „Reset filters“.
-- [ ] „All favorite statuses“ wirkt nur in der Favoriten-Ansicht, steht aber immer in der Werkzeugleiste. Nur in der Favoriten-Ansicht zeigen.
+- [x] „Minimum providers“ zählt alle Anbieter eines Films, auch Leih-Shops und nicht ausgewählte. Dadurch zeigt „2+ providers“ alle 169 Filme statt 17. Nur ausgewählte Anbieter zählen, wie bei der Angebotsart (`commonMatches` in `static/js/filtering.js`). JS-Test.
+- [x] Genre und Stichwort aus einem Link gehen beim Laden verloren (`?genre=Horror` zeigt „All genres“): `setInitial` läuft, bevor `populateGenres` die Auswahl füllt. Den Wert aus der URL in `populateGenres` übernehmen, solange die Auswahl noch auf „all“ steht. Browser-Test mit `?genre=Action`.
+- [x] Ein Klick auf den Chip „Rating“ oder „Votes“ lässt das Select leer stehen: der Chip setzt `all`, diese Selects haben aber `0` als ersten Wert. Auf den ersten Wert der Auswahl zurücksetzen (`input.options[0].value`).
+- [x] „With poster“ entfernen: alle 430 Filme haben ein Poster, die Option filtert nichts. „With trailer“ bleibt (167 von 169).
+- [x] Widersprüchliche Filter ergeben stumm 0 Treffer: „Free“ mit „Subscription“, oder „Year from“ größer als „Year to“. Die Jahre beim Lesen tauschen (`readFilters`); für den Rest zeigt der leere Zustand aus Etappe 9h (DC #2) den Ausweg „Reset filters“.
+- [x] „All favorite statuses“ wirkt nur in der Favoriten-Ansicht, steht aber immer in der Werkzeugleiste. Nur in der Favoriten-Ansicht zeigen.
 - Nicht prüfbar: „Availability changes“ (die Kopie hat keine gespeicherten Änderungen, beide Optionen zeigen 0); „Any / All selected services“ mit „All“ und zehn Diensten zeigt richtig 0, mit zwei Diensten nicht geprüft.
 - Prüfung: JS-Tests für „Minimum providers“ und die getauschten Jahre, Browser-Test für Genre aus dem Link; Gegenprobe mit denselben Zahlen wie oben.
+- Ergebnis (2026-11-16): alle sechs Punkte behoben. „2+ providers“ zeigt 17 statt 169 Filme; `?genre=Horror` bleibt nach dem Laden stehen; Jahre 2020 bis 2000 ergeben dieselben 4 Horror-Filme wie 2000 bis 2020; der Chip „Rating“ springt auf „Any TMDB rating“. Genre und Stichwort aus dem Link warten in `data-pending`, bis ein Scan Filme mit diesem Wert bringt. Neue Tests: zwei JS-Tests (Anbieter-Zahl, getauschte Jahre) und ein Browser-Test (Genre aus dem Link, Chip, Favoritenstatus). Nebenbei: `ruff` prüft die ruflo-Ordner (`.claude`, `.agents`, `.claude-flow`) nicht mehr, sonst schlägt `ruff format --check` an deren Code-Beispielen fehl.
 
 ### Etappe 9g: Barrierefreiheit
 Tastatur und Fokus:

@@ -5,6 +5,8 @@ export function selectedProviders(inputs) {
 // Reads the filter controls into a plain object for filtering.js.
 export function readFilters(doc, favoritesOnly) {
   const value = id => doc.getElementById(id).value;
+  // "Year from 2020, to 2000" means the same range as the other way round.
+  const years = [Number(value('year-from')) || 0, Number(value('year-to')) || 9999].sort((a, b) => a - b);
   return {
     query: value('film-search').toLowerCase().trim(),
     availability: value('availability-filter'),
@@ -15,8 +17,8 @@ export function readFilters(doc, favoritesOnly) {
     keyword: value('keyword-filter'),
     runtime: value('runtime-filter'),
     mode: value('match-mode'),
-    yearFrom: Number(value('year-from')) || 0,
-    yearTo: Number(value('year-to')) || 9999,
+    yearFrom: years[0],
+    yearTo: years[1],
     media: value('media-filter'),
     change: value('change-filter'),
     minimumProviders: Number(value('provider-count-filter')) || 0,

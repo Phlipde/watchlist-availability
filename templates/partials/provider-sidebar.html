@@ -1,9 +1,10 @@
-<aside id="provider-panel" class="rounded-3 shadow-sm provider-panel" aria-hidden="true">
+<aside id="provider-panel" class="rounded-3 shadow-sm provider-panel" aria-label="Services">
+        <button class="btn btn-sm btn-accent panel-done" id="provider-done" type="button">Done · <span id="provider-done-count">0</span> films</button>
         <div id="provider-filters">
-          <div class="provider-heading"><h2 class="h4">Services</h2><span class="badge rounded-pill text-bg-secondary" id="provider-count"></span></div>
+          <div class="provider-heading"><h2 class="h4">Services</h2><span class="badge rounded-pill text-bg-secondary"><span id="provider-count"></span><span class="visually-hidden"> services selected</span></span></div>
           <div class="provider-search"><input class="form-control form-control-sm" id="provider-search" type="search" placeholder="Search providers..." aria-label="Search providers"><select class="form-select form-select-sm mt-2" id="provider-sort" aria-label="Provider sort"><option value="selected">Selected first</option><option value="count">Most available</option><option value="name">A-Z</option></select></div>
-          <p class="filter-help">Choose services to show films available on them. <strong>Any selected service</strong> matches at least one service; <strong>All selected services</strong> requires every selected service. <strong>My subscriptions</strong> selects the services saved in Settings; <strong>Rental shops</strong> shows what you could rent instead.</p>
-          <div class="provider-actions"><button class="btn btn-sm btn-outline-secondary" id="select-all-providers" type="button"><i class="ti ti-checks"></i> All</button><button class="btn btn-sm btn-outline-secondary" id="clear-providers" type="button"><i class="ti ti-square"></i> Clear</button><button class="btn btn-sm btn-accent" id="reset-providers" type="button" title="Select the services saved in Settings"><i class="ti ti-user-check"></i> My subscriptions</button><button class="btn btn-sm btn-outline-secondary" id="rental-providers" type="button" title="Select only shops where films are rented one by one"><i class="ti ti-ticket"></i> Rental shops</button><button class="btn btn-sm btn-outline-secondary" id="free-providers" type="button" title="Select services marked Free"><i class="ti ti-gift"></i> Free services</button></div>
+          <p class="filter-help">Choose services to show films available on them. <strong>Any selected service</strong> matches at least one service; <strong>All selected services</strong> requires every selected service. <strong>My subscriptions</strong> selects your saved services (<a href="/subscriptions">edit</a>); <strong>Rental shops</strong> shows what you could rent instead.</p>
+          <div class="provider-actions"><button class="btn btn-sm btn-outline-secondary" id="select-all-providers" type="button"><i class="ti ti-checks" aria-hidden="true"></i> All</button><button class="btn btn-sm btn-outline-secondary" id="clear-providers" type="button"><i class="ti ti-square" aria-hidden="true"></i> Clear</button><button class="btn btn-sm btn-accent" id="reset-providers" type="button" title="Select the services saved on My subscriptions"><i class="ti ti-user-check" aria-hidden="true"></i> My subscriptions</button><button class="btn btn-sm btn-outline-secondary" id="rental-providers" type="button" title="Select only shops where films are rented one by one"><i class="ti ti-ticket" aria-hidden="true"></i> Rental shops</button><button class="btn btn-sm btn-outline-secondary" id="free-providers" type="button" title="Select services marked Free"><i class="ti ti-gift" aria-hidden="true"></i> Free services</button></div>
           {% for group, subgroups in provider_groups %}
             <section class="provider-group"><h3>{{ group }}</h3>
             {% if group == 'Amazon Channels' %}
@@ -11,7 +12,7 @@
                 <summary>Amazon Channels <span>({{ subgroups[0][1]|length }})</span></summary>
                 <div class="provider-list">
                   {% for provider in subgroups[0][1] %}
-                    <label data-provider-label="{{ provider }}"><input type="checkbox" value="{{ provider }}" {% if provider in selected %}checked{% endif %}> <span class="provider-name">{{ provider }}</span>{% if provider in mostly_free_providers %}<span class="free-tag">Free</span>{% endif %}<span class="provider-film-count" data-provider-count="{{ provider }}">0</span></label>
+                    <label data-provider-label="{{ provider }}"><input type="checkbox" value="{{ provider }}" {% if provider in selected %}checked{% endif %}> <span class="provider-name">{{ provider }}</span>{% if provider in mostly_free_providers %}<span class="free-tag">Free</span>{% endif %}<span class="provider-film-count" data-provider-count="{{ provider }}">0</span><span class="visually-hidden"> films</span></label>
                   {% endfor %}
                 </div>
               </details>
@@ -19,7 +20,7 @@
               <div class="provider-list">
                 {% for subgroup, providers in subgroups %}
                   {% for provider in providers %}
-                    <label data-provider-label="{{ provider }}"><input type="checkbox" value="{{ provider }}" {% if provider in selected %}checked{% endif %}> <span class="provider-name">{{ provider }}</span>{% if provider in mostly_free_providers %}<span class="free-tag">Free</span>{% endif %}<span class="provider-film-count" data-provider-count="{{ provider }}">0</span></label>
+                    <label data-provider-label="{{ provider }}"><input type="checkbox" value="{{ provider }}" {% if provider in selected %}checked{% endif %}> <span class="provider-name">{{ provider }}</span>{% if provider in mostly_free_providers %}<span class="free-tag">Free</span>{% endif %}<span class="provider-film-count" data-provider-count="{{ provider }}">0</span><span class="visually-hidden"> films</span></label>
                   {% endfor %}
                 {% endfor %}
               </div>

@@ -260,6 +260,26 @@ def test_saved_results_show_the_tools(app_server, page):
     expect(page.locator("#more-filters summary")).to_have_text("More filters (1 active)")
 
 
+def test_filters_from_a_link_survive_the_scan(app_server, page):
+    expect = playwright_api.expect
+    # The genre list is filled only when films arrive; the genre from the link must wait for it.
+    page.goto(app_server["url"] + "/?genre=Action&rating=7&providers=Netflix,Arte")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    expect(page.locator("#genre-filter")).to_have_value("Action")
+    expect(page.locator("#visible-count")).to_have_text("1")
+    assert visible_titles(page) == ["Heat"]
+    # The same link again, now from the saved scan.
+    page.reload()
+    expect(page.locator("#genre-filter")).to_have_value("Action")
+    # The rating chip goes back to the first option, not to an empty select.
+    page.locator('.filter-chip[data-filter-id="min-rating"]').click()
+    expect(page.locator("#min-rating")).to_have_value("0")
+    # The favorite status only belongs to the favorites view.
+    expect(page.locator("#favorite-status-filter")).to_be_hidden()
+    page.locator("#favorites-view").click()
+    expect(page.locator("#favorite-status-filter")).to_be_visible()
+
+
 def test_a_note_that_could_not_be_saved_is_marked(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"])
@@ -287,12 +307,28 @@ def test_settings_are_saved_and_checked(app_server, page):
     expect(page.locator("#settings-message")).to_contain_text("may only contain")
 
     page.locator("#letterboxd-username").fill("someone_else")
-    page.locator('input[name="subscriptions"][value="MUBI"]').check()
     page.get_by_role("button", name="Save settings").click()
     expect(page.locator("#settings-message")).to_have_text("Saved.")
+    assert app_server["settings"].letterboxd_username == "someone_else"
+
+
+def test_subscription_with_price_is_saved_in_one_go(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"])
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    page.goto(f"{app_server['url']}/subscriptions")
+    netflix = page.locator('tr[data-service="Netflix"]')
+    netflix.locator('[name="price"]').fill("10")
+    page.locator('input[name="subscriptions"][value="MUBI"]').check()
+    page.locator("#subscriptions-save").click()
+    # After saving the page reloads with the new row and the per-film price.
+    expect(page).to_have_url(re.compile(r"saved=1"))
+    expect(page.locator("#subscriptions-message")).to_have_text("Saved.")
+    expect(page.locator('tr[data-service="MUBI"]')).to_be_visible()
+    expect(netflix.locator('td[data-label="Per film"]')).to_have_text("10.00")
     settings = app_server["settings"]
-    assert settings.letterboxd_username == "someone_else"
     assert sorted(settings.subscriptions("DE")) == ["MUBI", "Netflix"]
+    assert settings.country == "DE"
 
 
 def test_title_match_is_corrected_and_undone(app_server, page):

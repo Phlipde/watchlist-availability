@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from flask import Flask, Response, jsonify, make_response, render_template, request, send_file
+from flask import Flask, Response, jsonify, make_response, redirect, render_template, request, send_file
 
 from watchlist_app import costs, letterboxd, matches, providers, scheduler, tmdb, validation
 from watchlist_app.config import COUNTRIES
@@ -116,6 +116,14 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         response.headers["Cache-Control"] = "no-store, max-age=0"
         return response
 
+    def provider_logos() -> dict[str, str]:
+        """Logos of the providers loaded from TMDB: {display name: checked image path}."""
+        return {
+            providers.display_name(item["name"]): path
+            for item in store.provider_catalog()
+            if (path := validation.image_path(item["logo_path"]))
+        }
+
     @app.route("/")
     def index():
         latest = store.latest_scan(settings.country)
@@ -147,11 +155,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
                 "freeServices": sorted(free_services),
                 "logoBaseUrl": _TMDB_LOGO_BASE_URL,
                 # Logos of the providers loaded from TMDB, for the availability in the details.
-                "providerLogos": {
-                    providers.display_name(item["name"]): path
-                    for item in store.provider_catalog()
-                    if (path := validation.image_path(item["logo_path"]))
-                },
+                "providerLogos": provider_logos(),
             },
         )
 
@@ -162,8 +166,6 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             settings=settings.as_dict(),
             countries=list(COUNTRIES),
             intervals=SCAN_INTERVALS_HOURS,
-            provider_groups=providers.provider_groups(settings.loaded_providers()),
-            subscriptions={country: settings.subscriptions(country) for country in COUNTRIES},
         )
 
     @app.get("/status")
@@ -172,12 +174,30 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
 
     @app.get("/costs")
     def costs_page():
-        scan = store.latest_scan(settings.country)
+        return redirect("/subscriptions", code=301)
+
+    @app.get("/subscriptions")
+    def subscriptions_page():
+        # Editing another country's subscriptions does not change the app's country.
+        country = request.args.get("country", settings.country)
+        if country not in COUNTRIES:
+            country = settings.country
+        scan = store.latest_scan(country)
+        own = settings.subscriptions(country)
         return page(
-            "costs.html",
-            country=settings.country,
+            "subscriptions.html",
+            country=country,
+            countries=list(COUNTRIES),
+            saved=request.args.get("saved") == "1",
             last_scan_at=scan["created"] if scan else None,
-            costs=costs.overview(scan["results"] if scan else [], settings.subscriptions(), settings.costs()),
+            costs=costs.overview(scan["results"] if scan else [], own, settings.costs(country)),
+            free_services=providers.mostly_free_from_scan(scan["results"], scan["unavailable"])
+            if scan
+            else providers.MOSTLY_FREE,
+            provider_groups=providers.provider_groups(settings.loaded_providers()),
+            selected=set(own),
+            logos=provider_logos(),
+            logo_base_url=_TMDB_LOGO_BASE_URL,
         )
 
     @app.get("/matches")

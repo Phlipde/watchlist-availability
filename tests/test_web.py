@@ -206,8 +206,9 @@ class TestPages:
     def test_settings_page(self, client):
         page = client.get("/settings").get_data(as_text=True)
         assert 'id="letterboxd-username"' in page
-        assert 'name="subscriptions" value="Netflix"' in page
+        assert 'href="/subscriptions"' in page and 'name="subscriptions"' not in page
         assert "Once a day" in page
+        assert 'name="subscriptions" value="Netflix"' in client.get("/subscriptions").get_data(as_text=True)
 
     def test_status_page_lists_scans(self, client, store):
         store.create_job("abc", "DE", "schedule", 100.0)
@@ -231,7 +232,7 @@ class TestCosts:
             "/api/settings", json={"costs": {"Netflix": {"price": "10", "remind_on": "2026-12-01"}}}
         )
         assert answer.status_code == 200
-        page = client.get("/costs").get_data(as_text=True)
+        page = client.get("/subscriptions").get_data(as_text=True)
         assert ">5.00<" in page and "10.00" in page and "Alien" in page
         status = client.get("/status").get_data(as_text=True)
         assert "2026-12-01" in status and "Netflix (DE)" in status
@@ -241,9 +242,44 @@ class TestCosts:
         answer = client.put("/api/settings", json={"costs": {"MUBI": {"price": 5}}})
         assert answer.status_code == 400
 
-    def test_costs_page_without_scan_or_subscriptions(self, client, settings):
+    def test_subscriptions_page_without_scan_or_subscriptions(self, client, settings):
         settings.update({"subscriptions": []})
-        assert "No subscriptions saved" in client.get("/costs").get_data(as_text=True)
+        assert "No subscriptions saved" in client.get("/subscriptions").get_data(as_text=True)
+
+    def test_old_costs_address_moves_to_subscriptions(self, client):
+        answer = client.get("/costs")
+        assert answer.status_code == 301 and answer.headers["Location"].endswith("/subscriptions")
+
+    def test_another_country_is_edited_without_switching_the_app(self, client, settings):
+        settings.update({"subscriptions": ["Netflix"]})
+        answer = client.put(
+            "/api/settings",
+            json={
+                "subscriptions_country": "GB",
+                "subscriptions": ["MUBI"],
+                "costs": {"MUBI": {"price": 7}},
+            },
+        )
+        assert answer.status_code == 200
+        assert settings.country == "DE"
+        assert settings.subscriptions("DE") == ["Netflix"]
+        assert settings.subscriptions("GB") == ["MUBI"]
+        assert settings.costs("GB")["MUBI"]["price"] == 7.0
+        page = client.get("/subscriptions?country=GB").get_data(as_text=True)
+        assert 'data-service="MUBI"' in page and 'data-service="Netflix"' not in page
+        assert 'value="GB" selected' in page
+
+    def test_unknown_country_is_refused(self, client):
+        answer = client.put("/api/settings", json={"subscriptions_country": "XX", "subscriptions": []})
+        assert answer.status_code == 400
+
+    def test_free_services_have_no_price_field(self, client, store, settings):
+        settings.update({"subscriptions": ["Arte", "Netflix"]})
+        films = [{"key": "1", "title": "Heat", "providers": {"Arte": ["free"], "Netflix": ["flatrate"]}}]
+        store.save_scan("DE", "letterboxd", None, films, [], {})
+        page = client.get("/subscriptions?saved=1").get_data(as_text=True)
+        assert "Price per month for Netflix" in page and "Price per month for Arte" not in page
+        assert "Saved." in page
 
     def test_costs_survive_a_backup(self, client, settings):
         settings.update({"subscriptions": ["Netflix"], "costs": {"Netflix": {"price": 9}}})
@@ -389,7 +425,7 @@ class TestMatches:
 def test_loaded_providers_appear_on_the_pages(client, store, settings):
     store.save_provider_catalog("DE", [{"name": "Brand New Stream"}, {"name": "Amazon Prime Video"}])
     assert b"Brand New Stream" in client.get("/").data
-    assert b"Brand New Stream" in client.get("/settings").data
+    assert b"Brand New Stream" in client.get("/subscriptions").data
     # A loaded provider can be saved as a subscription; the built-in name is kept for known ones.
     saved = client.put("/api/settings", json={"subscriptions": ["Brand New Stream", "Prime Video"]})
     assert saved.status_code == 200

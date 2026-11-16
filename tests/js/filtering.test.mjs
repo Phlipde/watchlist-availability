@@ -72,6 +72,13 @@ test('common filters', () => {
   assert.equal(count({keyword: 'heist'}), 1);
 });
 
+test('minimum providers only counts selected providers', () => {
+  const count = (selected, minimumProviders) => filterFilms(films, [], {...baseFilters, minimumProviders}, context(selected)).visibleCount;
+  // Alpha and Beta have two providers each, but only one of them is selected.
+  assert.equal(count(['Netflix'], 2), 0);
+  assert.equal(count(['Netflix', 'Arte'], 2), 1);
+});
+
 test('exclusive availability shows the films the server marked', () => {
   const marked = films.map((film, index) => ({...film, only_on_my_services: index === 0}));
   const view = filterFilms(marked, [], {...baseFilters, availability: 'exclusive'}, context(['Netflix', 'Arte']));
@@ -131,4 +138,15 @@ test('evening mode picks up to three films that fit, on own services, best rated
   const picks = eveningSuggestions(evening, {maximum: 120, genre: 'Drama', subscriptions: new Set(['Netflix', 'Arte'])});
   assert.deepEqual(picks.map(f => f.title), ['Free', 'Good', 'Exactly two hours']);
   assert.equal(eveningSuggestions(evening, {maximum: 0, genre: 'all', subscriptions: new Set(['Netflix'])})[0].title, 'Unknown runtime');
+});
+
+test('years entered the wrong way round are swapped', async () => {
+  const {readFilters} = await import('../../static/js/filters.js');
+  const values = {'year-from': '2020', 'year-to': '2000'};
+  const doc = {getElementById: id => ({value: values[id] ?? ''})};
+  const filters = readFilters(doc, false);
+  assert.equal(filters.yearFrom, 2000);
+  assert.equal(filters.yearTo, 2020);
+  values['year-to'] = '';
+  assert.deepEqual([readFilters(doc, false).yearFrom, readFilters(doc, false).yearTo], [2020, 9999]);
 });

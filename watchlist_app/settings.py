@@ -141,15 +141,17 @@ class AppSettings:
             if interval not in SCAN_INTERVALS_HOURS:
                 raise ValueError("Unsupported scan interval.")
             validated["scan_interval_hours"] = str(interval)
+        # The subscriptions page edits any country without switching the app's country.
+        country = changes.get("subscriptions_country") or validated.get("country", self.country)
+        if country not in config.COUNTRIES:
+            raise ValueError("Unsupported country.")
         if "subscriptions" in changes:
             names = changes["subscriptions"]
             known = self.known_providers()
             if not isinstance(names, list) or any(name not in known for name in names):
                 raise ValueError("Unknown provider in the subscriptions.")
-            country = validated.get("country", self.country)
             validated[f"subscriptions:{country}"] = json.dumps(names)
         if "costs" in changes:
-            country = validated.get("country", self.country)
             own = changes.get("subscriptions", self.subscriptions(country))
             validated[f"subscription_costs:{country}"] = json.dumps(
                 costs.clean_costs(changes["costs"], set(own))

@@ -6,11 +6,11 @@
   <title>Settings · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261116-1') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261116-3') }}" rel="stylesheet">
 </head>
 <body>
   <main class="page">
-    <p class="meta"><a href="/"><i class="ti ti-arrow-left"></i> Back to the watchlist</a> · <a href="/status">Status</a> · <a href="/costs">Costs</a> · <a href="/matches">Matches</a></p>
+    <p class="meta"><a href="/"><i class="ti ti-arrow-left" aria-hidden="true"></i> Back to the watchlist</a> · <a href="/status">Status</a> · <a href="/subscriptions">My subscriptions</a> · <a href="/matches">Matches</a></p>
     <h1 class="page-title">Settings</h1>
     {% if not settings.tmdb_api_key_set %}<p class="error">The TMDB API key is missing. Set <code>TMDB_API_KEY</code> in the environment (or <code>.env</code>) and restart the app.</p>{% endif %}
 
@@ -28,42 +28,30 @@
       <section class="settings-section">
         <h2 class="h4">Automatic scan</h2>
         <label class="form-label" for="scan-interval">Scan the watchlist</label>
-        <select class="form-select w-auto" id="scan-interval" name="scan_interval_hours">
+        <select class="form-select w-auto mw-100" id="scan-interval" name="scan_interval_hours">
           {% for hours in intervals %}<option value="{{ hours }}" {% if hours == settings.scan_interval_hours %}selected{% endif %}>{% if hours == 0 %}Never (only when the page is opened){% elif hours == 168 %}Once a week{% elif hours == 24 %}Once a day{% else %}Every {{ hours }} hours{% endif %}</option>{% endfor %}
         </select>
         <p class="hint">Runs in the background while the app is running, also when nobody has the page open.</p>
       </section>
 
       <section class="settings-section">
-        <h2 class="h4">My subscriptions <span class="badge rounded-pill text-bg-secondary" id="subscription-count"></span></h2>
-        <p class="hint">The services you can watch on. They are selected when the page opens and with the “My subscriptions” button. Saved per country.</p>
-        {% for group, subgroups in provider_groups %}
-          <details class="settings-group" {% if group == 'Services' %}open{% endif %}>
-            <summary>{{ group }}</summary>
-            {% for subgroup, names in subgroups %}
-              {% if subgroups|length > 1 %}<p class="subgroup">{{ subgroup }}</p>{% endif %}
-              <div class="settings-providers">
-                {% for provider in names %}<label><input type="checkbox" name="subscriptions" value="{{ provider }}"> {{ provider }}</label>{% endfor %}
-              </div>
-            {% endfor %}
-          </details>
-        {% endfor %}
+        <h2 class="h4">My subscriptions</h2>
+        <p class="hint">Services, prices and reminders per country are on the <a href="/subscriptions">My subscriptions</a> page.</p>
       </section>
 
-      <div class="toolbar"><button class="btn btn-accent" type="submit"><i class="ti ti-device-floppy"></i> Save settings</button><span class="feedback" id="settings-message" role="status"></span></div>
+      <div class="toolbar"><button class="btn btn-accent" id="settings-save" type="submit"><i class="ti ti-device-floppy" aria-hidden="true"></i> Save settings</button><span class="feedback" id="settings-message" role="status"></span></div>
     </form>
 
     <section class="settings-section">
       <h2 class="h4">Backup</h2>
       <p class="hint">One file with your settings, favorites, the change history and the last scan of each country. Film data is not included; the next scan fetches it again. The TMDB key is never part of a backup.</p>
       <div class="toolbar">
-        <a class="btn btn-outline-secondary" href="/api/backup" download><i class="ti ti-download"></i> Download backup</a>
-        <label class="btn btn-outline-secondary mb-0" for="backup-file"><i class="ti ti-upload"></i> Restore from file<input class="visually-hidden" id="backup-file" type="file" accept=".json,application/json"></label>
+        <a class="btn btn-outline-secondary" href="/api/backup" download><i class="ti ti-download" aria-hidden="true"></i> Download backup</a>
+        <label class="btn btn-outline-secondary mb-0" for="backup-file"><i class="ti ti-upload" aria-hidden="true"></i> Restore from file<input class="visually-hidden" id="backup-file" type="file" accept=".json,application/json"></label>
         <span class="feedback" id="backup-message" role="status"></span>
       </div>
     </section>
   </main>
-  <script>window.SETTINGS_PAGE = {{ {"subscriptions": subscriptions}|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/settings.js', v='20261116-1') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/settings.js', v='20261116-3') }}" type="module"></script>
 </body>
 </html>

@@ -6,25 +6,25 @@
   <title>Title matches · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261116-1') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261116-3') }}" rel="stylesheet">
 </head>
 <body>
   <main class="page">
-    <p class="meta"><a href="/"><i class="ti ti-arrow-left"></i> Back to the watchlist</a> · <a href="/settings">Settings</a> · <a href="/status">Status</a></p>
+    <p class="meta"><a href="/"><i class="ti ti-arrow-left" aria-hidden="true"></i> Back to the watchlist</a> · <a href="/settings">Settings</a> · <a href="/status">Status</a></p>
     <h1 class="page-title">Title matches</h1>
     {% if not tmdb_api_key_set %}<p class="error">The TMDB API key is missing, so films cannot be searched or corrected.</p>{% endif %}
     <p class="hint">Most films are matched through the TMDB link on their Letterboxd page. The films below were matched by a title search, were not found, or have a different release year on TMDB. Check them and correct a wrong match; a correction is kept for good and is part of the backup.</p>
 
     <div class="toolbar">
       <label class="form-check mb-0"><input class="form-check-input" id="show-all" type="checkbox"> <span class="form-check-label">Show all matches</span></label>
-      <button class="btn btn-sm btn-accent" id="rescan" type="button" hidden><i class="ti ti-refresh"></i> Scan now to apply corrections</button>
-      <span class="feedback" id="matches-message" role="status"></span>
+      <button class="btn btn-sm btn-accent" id="rescan" type="button" hidden><i class="ti ti-refresh" aria-hidden="true"></i> Scan now to apply corrections</button>
+      <span class="feedback" id="matches-message" role="status" tabindex="-1"></span>
     </div>
 
     <p class="meta" id="matches-empty" hidden>Nothing to check: every film of your watchlist has a certain match.</p>
     <ul class="match-list" id="match-list"></ul>
   </main>
   <script>window.MATCHES_PAGE = {{ client_config|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/matches.js', v='20261116-1') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/matches.js', v='20261116-3') }}" type="module"></script>
 </body>
 </html>

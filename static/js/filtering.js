@@ -66,11 +66,9 @@ function commonMatches(film, filters, context) {
     // The server decides this with the rule of the costs page (watchlist_app/costs.py).
     && (filters.availability !== 'exclusive' || film.only_on_my_services === true)
     && runtimeMatches(filters.runtime, Number(film.runtime) || 0)
-    && (filters.media === 'all'
-      || (filters.media === 'trailer' && Boolean(film.trailer_url))
-      || (filters.media === 'poster' && Boolean(film.poster_path)))
+    && (filters.media === 'all' || (filters.media === 'trailer' && Boolean(film.trailer_url)))
     && (filters.change === 'all' || changeTypes(film, context.selected).includes(filters.change))
-    && Object.keys(film.providers || {}).length >= filters.minimumProviders
+    && Object.keys(film.providers || {}).filter(provider => context.selected.has(provider)).length >= filters.minimumProviders
     && (Number(film.rating) || 0) >= filters.minRating
     && (Number(film.vote_count) || 0) >= filters.minVotes
     && year >= filters.yearFrom
