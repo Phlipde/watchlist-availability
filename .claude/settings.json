@@ -31,6 +31,26 @@
             "onFailure": "block"
           }
         ]
+      },
+      {
+        "matcher": "Bash|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/Philipp/AppData/Roaming/Python/Python314/Scripts/graphify.exe hook-guard search",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/Philipp/AppData/Roaming/Python/Python314/Scripts/graphify.exe hook-guard read",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -68,6 +88,16 @@
             "type": "command",
             "command": "node -e \"var a='.claude/helpers/auto-memory-hook.mjs import'.split(' '),e=process.env,fs=require('fs'),p=require('path'),f;f=p.join(e.CLAUDE_PROJECT_DIR?e.CLAUDE_PROJECT_DIR:'.',a[0]);if(!fs.existsSync(f))f=p.join((e.USERPROFILE?e.USERPROFILE:e.HOME?e.HOME:'.'),a[0]);var r=require('child_process').spawnSync(process.execPath,[f].concat(a.slice(1)),{stdio:'inherit'});process.exit(r.status===null?1:r.status)\"",
             "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/Philipp/AppData/Roaming/Python/Python314/Scripts/graphify.exe hook-guard compact",
+            "timeout": 10
           }
         ]
       }
