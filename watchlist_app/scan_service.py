@@ -209,7 +209,9 @@ def perform_scan(
     if is_cancelled and is_cancelled():
         return None
     results = [film.to_dict() for film in films]
-    previous = store.latest_scan(country, source_name=source_name)
+    earlier = store.recent_scans(country, source_name)
+    previous = earlier[0] if earlier else None
+    older = earlier[1] if len(earlier) > 1 else None
     # Scans before the provider list came from TMDB only knew the built-in providers;
     # comparing against them would report every newly known provider as "new on ...".
     compare_only = None
@@ -226,7 +228,9 @@ def perform_scan(
             country, source_name, saved_key, results, unavailable, stats, created=created
         )
         store.add_changes(
-            country, history.diff_scans(previous, results, unavailable, compare_only), created=created
+            country,
+            history.diff_scans(previous, results, unavailable, compare_only, older=older),
+            created=created,
         )
     store.touch_ids(seen, seen_at=created)
     store.rekey_favorites(films)

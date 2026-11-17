@@ -1,10 +1,10 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
-import {eveningSuggestions, filterFilms, matchesSection, selectedChanges, selectedKinds, similarOnServices, sortFilms, ageMatches, sortRatings, comingSoon, elsewhereOnServices} from '../../static/js/filtering.js';
+import {filmKey, bestRelaxation, countVisible, facetCounts, filterFilms, matchesSection, selectedChanges, selectedKinds, similarOnServices, sortFilms, ageMatches, sortRatings, comingSoon, elsewhereOnServices} from '../../static/js/filtering.js';
 
 const baseFilters = {
-  query: '', availability: 'all', kind: 'all', minRating: 0, minVotes: 0, genre: 'all', keyword: 'all', runtime: 'all', mode: 'any',
+  query: '', availability: 'all', kind: 'all', minRating: 0, minVotes: 0, genres: {include: [], exclude: []}, keyword: 'all', maxRuntime: 0, mode: 'any',
   yearFrom: 0, yearTo: 9999, media: 'all', change: 'all', minimumProviders: 0, favoriteStatus: 'all',
   sort: 'title', favoritesOnly: false,
 };
@@ -62,9 +62,12 @@ test('common filters', () => {
   const count = filters => filterFilms(films, [], {...baseFilters, ...filters}, ctx).visibleCount;
   assert.equal(count({query: 'alp'}), 1);
   assert.equal(count({minRating: 7}), 2);
-  assert.equal(count({genre: 'Drama'}), 2);
-  assert.equal(count({runtime: 'short'}), 1);
-  assert.equal(count({runtime: 'long'}), 1);
+  assert.equal(count({genres: {include: ['Drama'], exclude: []}}), 2);
+  // Several genres: any of them; an excluded genre drops the film.
+  assert.equal(count({genres: {include: ['Drama', 'Comedy'], exclude: []}}), 3);
+  assert.equal(count({genres: {include: [], exclude: ['Drama']}}), 1);
+  assert.equal(count({maxRuntime: 90}), 1);
+  assert.equal(count({maxRuntime: 120}), 2);
   assert.equal(count({yearFrom: 2000, yearTo: 2010}), 1);
   assert.equal(count({minimumProviders: 2}), 2);
   assert.equal(count({minVotes: 1000}), 2);
@@ -114,30 +117,37 @@ test('change filter only counts changes on selected providers', () => {
 test('sorting breaks ties by title', () => {
   const list = [{title: 'b', year: 2000}, {title: 'a', year: 2000}, {title: 'c', year: 2010}];
   assert.deepEqual(titles(sortFilms(list, 'year-desc')), ['c', 'a', 'b']);
-  assert.deepEqual(titles(sortFilms(list, 'title')), ['a', 'b', 'c']);
 });
 
-test('sorts by popularity and vote count', () => {
-  assert.deepEqual(titles(sortFilms(films, 'popularity')), ['Beta', 'Gamma', 'Alpha']);
-  assert.deepEqual(titles(sortFilms(films, 'votes')), ['Gamma', 'Alpha', 'Beta']);
-});
-
-test('evening mode picks up to three films that fit, on own services, best rated first', () => {
-  const film = (title, rating, runtime, providers, genres = ['Drama']) => ({title, rating, runtime, providers, genres});
-  const evening = [
-    film('Long', 9, 150, {Netflix: ['flatrate']}),
-    film('Rent only', 9, 90, {Netflix: ['rent']}),
-    film('Elsewhere', 9, 90, {MUBI: ['flatrate']}),
-    film('Comedy', 9, 90, {Netflix: ['flatrate']}, ['Comedy']),
-    film('Exactly two hours', 6, 120, {Netflix: ['flatrate']}),
-    film('Free', 8, 95, {Arte: ['free']}),
-    film('Good', 7, 100, {Netflix: ['flatrate']}),
-    film('Unknown runtime', 9.5, 0, {Netflix: ['flatrate']}),
-    film('Fourth', 5, 80, {Netflix: ['flatrate']}),
+test('the eight sorts: priority, runtime, recently added, newly available, random', () => {
+  const list = [
+    {key: '1', title: 'Fav', letterboxd_rating: 3, rating: 6, runtime: 150, watchlist_position: 4},
+    {key: '2', title: 'Top', letterboxd_rating: 4.5, rating: 8, runtime: 90, watchlist_position: 0, provider_changes: {added: ['Netflix']}},
+    {key: '3', title: 'Mid', letterboxd_rating: 3.5, rating: 9, runtime: 120, watchlist_position: 2},
+    {key: '4', title: 'None', rating: 7},
   ];
-  const picks = eveningSuggestions(evening, {maximum: 120, genre: 'Drama', subscriptions: new Set(['Netflix', 'Arte'])});
-  assert.deepEqual(picks.map(f => f.title), ['Free', 'Good', 'Exactly two hours']);
-  assert.equal(eveningSuggestions(evening, {maximum: 0, genre: 'all', subscriptions: new Set(['Netflix'])})[0].title, 'Unknown runtime');
+  assert.deepEqual(titles(sortFilms(list, 'priority', {favorites: new Map([['1', {}]])})), ['Fav', 'Top', 'Mid', 'None']);
+  assert.deepEqual(titles(sortFilms(list, 'rating')), ['Mid', 'Top', 'None', 'Fav']);
+  assert.deepEqual(titles(sortFilms(list, 'runtime')), ['Top', 'Mid', 'Fav', 'None']);
+  assert.deepEqual(titles(sortFilms(list, 'recent')), ['Top', 'Mid', 'Fav', 'None']);
+  assert.deepEqual(titles(sortFilms(list, 'new')), ['Top', 'Mid', 'Fav', 'None']);
+  // Random keeps its order for the same seed, so a redraw does not reshuffle the grid.
+  assert.deepEqual(titles(sortFilms(list, 'random', {seed: 7})), titles(sortFilms([...list].reverse(), 'random', {seed: 7})));
+});
+
+test('counts per option leave their own filter out; the best way out of an empty result', () => {
+  const ctx = context(['Netflix', 'Arte', 'Apple TV Store']);
+  const filters = {...baseFilters, genres: {include: ['Comedy'], exclude: []}, maxRuntime: 90};
+  assert.equal(countVisible(films, filters, ctx), 1);
+  const genres = facetCounts(films, filters, ctx, (f, c) => [{...f, genres: {include: [], exclude: []}}, c], film => film.genres || []);
+  assert.deepEqual(Object.fromEntries(genres), {Comedy: 1});
+  const empty = {...baseFilters, genres: {include: ['Drama'], exclude: []}, maxRuntime: 90};
+  assert.equal(countVisible(films, empty, ctx), 0);
+  const way = bestRelaxation(films, empty, ctx, [
+    {id: 'runtime', label: 'runtime', open: (f, c) => [{...f, maxRuntime: 0}, c]},
+    {id: 'genre', label: 'genre', open: (f, c) => [{...f, genres: {include: [], exclude: []}}, c]},
+  ]);
+  assert.deepEqual([way.id, way.count], ['runtime', 2]);
 });
 
 test('years entered the wrong way round are swapped', async () => {
@@ -156,60 +166,30 @@ test('every set filter gets a chip and reset clears them all', async () => {
   const select = (value, values) => ({value, options: values.map(item => ({value: item, text: `Label ${item}`})), get selectedIndex() { return values.indexOf(this.value); }, dataset: {}});
   const controls = {
     'film-search': {value: 'heat', dataset: {}},
-    'min-rating': select('7', ['0', '7']),
+    'rating-filter': select('tmdb:7', ['', 'tmdb:7']),
+    'cost-filter': {value: 'free', dataset: {default: 'all', text: 'Free'}},
     'media-filter': select('trailer', ['all', 'trailer']),
     'provider-count-filter': select('2', ['0', '2']),
     'change-filter': select('all', ['all', 'added']),
     'exclusive-filter': {type: 'checkbox', checked: true, dataset: {}},
   };
   const doc = {getElementById: id => controls[id] ?? null};
-  assert.equal(FILTER_CONTROLS.length, 18);
-  assert.deepEqual(activeFilters(doc).map(chip => chip.label), ['Search', 'Rating', 'Trailer', 'Services', 'Only on one of my services']);
-  assert.equal(activeFilters(doc).find(chip => chip.id === 'min-rating').text, 'Label 7');
+  assert.equal(FILTER_CONTROLS.length, 16);
+  assert.deepEqual(activeFilters(doc).map(chip => chip.label), ['Search', 'Cost', 'Rating', 'Trailer', 'Services', 'Only on one of my services']);
+  assert.equal(activeFilters(doc).find(chip => chip.id === 'rating-filter').text, 'Label tmdb:7');
+  // A hidden input behind a custom control carries its readable text and its default.
+  assert.equal(activeFilters(doc).find(chip => chip.id === 'cost-filter').text, 'Free');
   resetFilters(doc);
   assert.deepEqual(activeFilters(doc), []);
-  assert.equal(controls['min-rating'].value, '0');
+  assert.equal(controls['rating-filter'].value, '');
+  assert.equal(controls['cost-filter'].value, 'all');
   assert.equal(controls['exclusive-filter'].checked, false);
-});
-
-test('evening mode skips watched films', () => {
-  const films = [
-    {key: '1', title: 'Seen', rating: 9, runtime: 100, providers: {Netflix: ['flatrate']}},
-    {key: '2', title: 'New', rating: 7, runtime: 100, providers: {Netflix: ['flatrate']}},
-  ];
-  const picks = eveningSuggestions(films, {maximum: 120, genre: 'all', subscriptions: new Set(['Netflix']), skip: new Set(['1'])});
-  assert.deepEqual(picks.map(film => film.title), ['New']);
 });
 
 test('the compare button counts the chosen films', async () => {
   const {compareButtonState} = await import('../../static/js/rendering.js');
   assert.deepEqual(compareButtonState(0), {text: 'Compare'});
   assert.deepEqual(compareButtonState(3), {text: 'Compare (3)'});
-});
-
-test('weighted sorts: rating per hour, longest on the watchlist, own services, series', () => {
-  const list = [
-    {title: 'Long', rating: 8, runtime: 180, watchlist_position: 0, providers: {Netflix: ['flatrate']}},
-    {title: 'Short', rating: 7, runtime: 90, watchlist_position: 5, providers: {Netflix: ['flatrate'], Arte: ['free']}, collection: 'B Collection', year: 2001},
-    {title: 'Unknown', providers: {}, collection: 'B Collection', year: 1999},
-    {title: 'Alien', rating: 8, runtime: 117, watchlist_position: 2, providers: {}, collection: 'A Collection', year: 1979},
-  ];
-  assert.deepEqual(titles(sortFilms(list, 'rating-per-hour')), ['Short', 'Alien', 'Long', 'Unknown']);
-  assert.deepEqual(titles(sortFilms(list, 'watchlist-oldest')), ['Short', 'Alien', 'Long', 'Unknown']);
-  assert.deepEqual(titles(sortFilms(list, 'own-services', {subscriptions: new Set(['Netflix', 'Arte'])})), ['Short', 'Long', 'Alien', 'Unknown']);
-  assert.deepEqual(titles(sortFilms(list, 'series')), ['Alien', 'Unknown', 'Short', 'Long']);
-});
-
-test('recently removed lists each film once, only for own services', async () => {
-  const {recentlyRemoved} = await import('../../static/js/filtering.js');
-  const changes = [
-    {created: 10, film_key: '1', title: 'Heat', provider: 'Netflix', change: 'removed'},
-    {created: 20, film_key: '1', title: 'Heat', provider: 'Arte', change: 'removed'},
-    {created: 30, film_key: '2', title: 'Alien', provider: 'MUBI', change: 'removed'},
-    {created: 40, film_key: '3', title: 'Up', provider: 'Netflix', change: 'added'},
-  ];
-  const removed = recentlyRemoved(changes, new Set(['Netflix', 'Arte']));
-  assert.deepEqual(removed.map(item => [item.title, item.providers]), [['Heat', ['Arte', 'Netflix']]]);
 });
 
 test('similar films: only watchlist films on own services, in TMDB order, not watched', () => {
@@ -279,4 +259,14 @@ test('Letterboxd rating: minimum filter and sort, unrated films last', () => {
   const titles = extra => filterFilms(films, [], {...baseFilters, ...extra}, {selected: new Set(['Netflix']), favorites: new Map()}).sections.Paid.map(film => film.title);
   assert.deepEqual(titles({minLetterboxd: 4}), ['High']);
   assert.deepEqual(titles({sort: 'letterboxd'}), ['High', 'Low', 'Unrated']);
+});
+
+test('the merged list holds each film once, in order, and marks films of both sections', () => {
+  const view = filterFilms(films, [], baseFilters, context(['Netflix', 'Arte']));
+  const keys = view.films.map(film => film.title);
+  assert.equal(new Set(keys).size, keys.length);
+  assert.deepEqual(keys, [...keys].sort());  // sort 'title' in the test setup
+  const section = title => view.sectionOf.get(filmKey(view.films.find(film => film.title === title)));
+  assert.equal(section('Beta'), 'All');  // free on Arte and on a paid service
+  assert.equal(section('Alpha'), 'Paid');
 });

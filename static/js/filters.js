@@ -1,26 +1,24 @@
-export function selectedProviders(inputs) {
-  return new Set([...inputs].filter(input => input.checked).map(input => input.value));
-}
-
 // Every filter control and the label of its chip, in the order of the chips.
+// Genres and services are not single controls; the filter bar makes their chips (filterbar.js).
 export const FILTER_CONTROLS = [
-  ['film-search', 'Search'], ['availability-filter', 'Availability'], ['genre-filter', 'Genre'],
-  ['runtime-filter', 'Runtime'], ['min-rating', 'Rating'], ['kind-filter', 'Offer'],
+  ['film-search', 'Search'], ['cost-filter', 'Cost'], ['runtime-filter', 'Runtime'], ['rating-filter', 'Rating'],
   ['year-from', 'From'], ['year-to', 'To'], ['min-votes', 'Votes'], ['keyword-filter', 'Keyword'],
   ['media-filter', 'Trailer'], ['change-filter', 'Changes'], ['provider-count-filter', 'Services'],
   ['exclusive-filter', 'Only on one of my services'], ['age-filter', 'Age rating'],
-  ['language-filter', 'Language'], ['origin-filter', 'Country'], ['letterboxd-filter', 'Letterboxd'],
+  ['language-filter', 'Language'], ['origin-filter', 'Country'], ['show-unavailable', 'Also not available'],
 ];
 
-// A control is set when it differs from its first option, its empty value or "unchecked".
+// A control is set when it differs from its default (data-default), first option, empty value or "unchecked".
 export function isFilterSet(input) {
   if (input.type === 'checkbox') return Boolean(input.checked);
+  if (input.dataset?.default !== undefined) return input.value !== input.dataset.default;
   if (input.options) return input.value !== input.options[0]?.value;
   return Boolean(input.value);
 }
 
 export function clearFilter(input) {
   if (input.type === 'checkbox') input.checked = false;
+  else if (input.dataset?.default !== undefined) input.value = input.dataset.default;
   else input.value = input.options ? input.options[0].value : '';
   if (input.dataset) delete input.dataset.pending;
 }
@@ -32,7 +30,8 @@ export function activeFilters(doc) {
     .map(([input, id, label]) => ({
       id,
       label,
-      text: input.type === 'checkbox' ? '' : input.options ? input.options[input.selectedIndex]?.text ?? input.value : input.value,
+      // Hidden inputs behind a custom control carry their readable value in data-text.
+      text: input.type === 'checkbox' ? '' : input.dataset?.text || (input.options ? input.options[input.selectedIndex]?.text ?? input.value : input.value),
     }));
 }
 
@@ -40,62 +39,40 @@ export function resetFilters(doc) {
   FILTER_CONTROLS.forEach(([id]) => { const input = doc.getElementById(id); if (input) clearFilter(input); });
 }
 
-// Reads the filter controls into a plain object for filtering.js.
-export function readFilters(doc, favoritesOnly) {
-  const value = id => doc.getElementById(id).value;
+// Cost (the segmented control) as the sections and offer type filtering.js knows.
+export const COST = {all: ['available', 'all'], free: ['Free', 'all'], subscription: ['Paid', 'flatrate'], rent: ['Paid', 'rent']};
+
+// Reads the filter controls into a plain object for filtering.js; genres come from the filter bar.
+export function readFilters(doc, favoritesOnly, genres = {include: [], exclude: []}) {
+  const value = id => doc.getElementById(id)?.value ?? '';
   // "Year from 2020, to 2000" means the same range as the other way round.
   const years = [Number(value('year-from')) || 0, Number(value('year-to')) || 9999].sort((a, b) => a - b);
+  const [availability, kind] = COST[value('cost-filter')] || COST.all;
+  const showUnavailable = Boolean(doc.getElementById('show-unavailable')?.checked);
+  const [source, minimum] = value('rating-filter').split(':');
   return {
     query: value('film-search').toLowerCase().trim(),
-    availability: value('availability-filter'),
+    // Films that are nowhere to stream only show on request, and only without a cost filter.
+    availability: availability === 'available' && showUnavailable ? 'all' : availability,
     exclusive: Boolean(doc.getElementById('exclusive-filter')?.checked),
-    kind: value('kind-filter'),
-    minRating: Number(value('min-rating')) || 0,
+    kind,
+    minRating: source === 'tmdb' ? Number(minimum) || 0 : 0,
     minVotes: Number(value('min-votes')) || 0,
-    genre: value('genre-filter'),
-    keyword: value('keyword-filter'),
+    genres,
+    keyword: value('keyword-filter') || 'all',
     age: doc.getElementById('age-filter')?.value ?? 'all',
     language: doc.getElementById('language-filter')?.value ?? 'all',
     origin: doc.getElementById('origin-filter')?.value ?? 'all',
-    minLetterboxd: Number(doc.getElementById('letterboxd-filter')?.value) || 0,
-    runtime: value('runtime-filter'),
-    mode: value('match-mode'),
+    minLetterboxd: source === 'lb' ? Number(minimum) || 0 : 0,
+    maxRuntime: Number(value('runtime-filter')) || 0,
+    mode: value('match-mode') || 'any',
     yearFrom: years[0],
     yearTo: years[1],
-    media: value('media-filter'),
-    change: value('change-filter'),
+    media: value('media-filter') || 'all',
+    change: value('change-filter') || 'all',
     minimumProviders: Number(value('provider-count-filter')) || 0,
-    favoriteStatus: value('favorite-status-filter'),
+    favoriteStatus: value('favorite-status-filter') || 'all',
     sort: value('sort-order'),
     favoritesOnly,
   };
-}
-
-export function updateProviderCount(inputs, target) {
-  target.textContent = `${[...inputs].filter(input => input.checked).length}/${inputs.length}`;
-}
-
-export function updateProviderFilmCounts(films, countElements) {
-  const counts = new Map();
-  films.forEach(film => Object.keys(film.providers || {}).forEach(provider => {
-    counts.set(provider, (counts.get(provider) || 0) + 1);
-  }));
-  countElements.forEach(element => {
-    const count = counts.get(element.dataset.providerCount) || 0;
-    const label = element.closest('label');
-    element.textContent = count;
-    if (label) {
-      // Hide providers without films, but keep their selection (e.g. after a country switch).
-      label.dataset.providerAvailable = count > 0 ? 'true' : 'false';
-      label.hidden = count === 0;
-    }
-  });
-  document.querySelectorAll('.provider-list').forEach(list => {
-    list.hidden = !list.querySelector('label:not([hidden])');
-    const heading = list.previousElementSibling;
-    if (heading?.classList.contains('subgroup')) heading.hidden = list.hidden;
-  });
-  document.querySelectorAll('.channel-dropdown').forEach(dropdown => {
-    dropdown.hidden = !dropdown.querySelector('label:not([hidden])');
-  });
 }

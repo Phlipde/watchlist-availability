@@ -42,11 +42,15 @@ export function changeTypes(film, selected) {
   return Object.keys(changes).filter(change => changes[change].length);
 }
 
-function runtimeMatches(runtime, minutes) {
-  return runtime === 'all'
-    || (runtime === 'short' && minutes > 0 && minutes < 90)
-    || (runtime === 'medium' && minutes >= 90 && minutes <= 120)
-    || (runtime === 'long' && minutes > 120);
+// Runtime limit in minutes (0 = any); films without a runtime drop out once a limit is set.
+function runtimeMatches(maximum, minutes) {
+  return !maximum || (minutes > 0 && minutes <= maximum);
+}
+
+// Genres: any of the included ones, none of the excluded ones.
+function genresMatch(genres, filmGenres = []) {
+  return (!genres.include.length || genres.include.some(genre => filmGenres.includes(genre)))
+    && !genres.exclude.some(genre => filmGenres.includes(genre));
 }
 
 // Filters that apply the same way to available and unavailable films.
@@ -61,14 +65,14 @@ function commonMatches(film, filters, context) {
     && [film.title, film.director, ...(film.cast || []), ...(film.keywords || [])]
       .filter(Boolean)
       .some(value => String(value).toLowerCase().includes(filters.query))
-    && (filters.genre === 'all' || (film.genres || []).includes(filters.genre))
+    && genresMatch(filters.genres, film.genres)
     && (filters.keyword === 'all' || (film.keywords || []).includes(filters.keyword))
     && ageMatches(filters.age, film.certification)
     && (!filters.language || filters.language === 'all' || film.original_language === filters.language)
     && (!filters.origin || filters.origin === 'all' || (film.origin_countries || []).includes(filters.origin))
     // The server decides this with the rule of the costs page (watchlist_app/costs.py).
     && (!filters.exclusive || film.only_on_my_services === true)
-    && runtimeMatches(filters.runtime, Number(film.runtime) || 0)
+    && runtimeMatches(filters.maxRuntime, Number(film.runtime) || 0)
     && (filters.media === 'all' || (filters.media === 'trailer' && Boolean(film.trailer_url)))
     && (filters.change === 'all' || changeTypes(film, context.selected).includes(filters.change))
     && Object.keys(film.providers || {}).filter(provider => context.selected.has(provider)).length >= filters.minimumProviders
@@ -131,29 +135,61 @@ export function matchesUnavailable(film, filters, context) {
 
 // Missing values always go last, whatever the direction.
 const last = value => (value === null || value === undefined || Number.isNaN(value) ? -Infinity : value);
-const ratingPerHour = film => (Number(film.rating) && Number(film.runtime) > 0 ? Number(film.rating) / (Number(film.runtime) / 60) : null);
+const numberOrNull = value => (value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? null : Number(value));
 
-// context.subscriptions (the user's own services) is only needed for "own-services".
+// A fixed shuffle per seed: the order stays put while the page redraws (scan polls, favorites).
+function shuffleRank(key, seed) {
+  let hash = 2166136261 ^ seed;
+  for (const char of String(key)) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
+  return hash >>> 0;
+}
+
+// The eight sorts of the filter bar (names in web/routes.py SORTS). context: favorites (Map, for
+// "priority") and seed (number, for "random").
 export function sortFilms(films, order, context = {}) {
   const byTitle = (a, b) => String(a.title).toLowerCase().localeCompare(String(b.title).toLowerCase());
-  const own = film => Object.keys(film.providers || {}).filter(provider => context.subscriptions?.has(provider)).length;
+  const letterboxd = (a, b) => last(numberOrNull(b.letterboxd_rating)) - last(numberOrNull(a.letterboxd_rating));
+  const tmdb = (a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0);
+  const favorite = film => Number(Boolean(context.favorites?.has(filmKey(film))));
+  const added = film => Number((film.provider_changes?.added || []).length > 0);
   const compare = {
-    'rating-per-hour': (a, b) => last(ratingPerHour(b)) - last(ratingPerHour(a)),
-    // Position 0 is the film added last, so the highest position has waited longest.
-    'watchlist-oldest': (a, b) => last(b.watchlist_position) - last(a.watchlist_position),
-    'own-services': (a, b) => own(b) - own(a),
-    // Films of one series stand together, oldest first; films without a series follow by title.
-    series: (a, b) => (a.collection ? 0 : 1) - (b.collection ? 0 : 1)
-      || String(a.collection || '').localeCompare(String(b.collection || ''))
-      || (a.collection ? (Number(a.year) || 0) - (Number(b.year) || 0) : 0),
+    // Favorites first, then the community's rating, then TMDB's.
+    priority: (a, b) => favorite(b) - favorite(a) || letterboxd(a, b) || tmdb(a, b),
+    letterboxd: (a, b) => letterboxd(a, b) || tmdb(a, b),
+    rating: tmdb,
+    runtime: (a, b) => (numberOrNull(a.runtime) || Infinity) - (numberOrNull(b.runtime) || Infinity),
     'year-desc': (a, b) => (Number(b.year) || 0) - (Number(a.year) || 0),
-    'year-asc': (a, b) => (Number(a.year) || 0) - (Number(b.year) || 0),
-    rating: (a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0),
-    popularity: (a, b) => (Number(b.popularity) || 0) - (Number(a.popularity) || 0),
-    votes: (a, b) => (Number(b.vote_count) || 0) - (Number(a.vote_count) || 0),
-    letterboxd: (a, b) => last(b.letterboxd_rating) - last(a.letterboxd_rating),
-  }[order];
-  return [...films].sort((a, b) => (compare ? compare(a, b) : 0) || byTitle(a, b));
+    // Position 0 is the film added last.
+    recent: (a, b) => (numberOrNull(a.watchlist_position) ?? Infinity) - (numberOrNull(b.watchlist_position) ?? Infinity),
+    new: (a, b) => added(b) - added(a) || letterboxd(a, b),
+    random: (a, b) => shuffleRank(filmKey(a), context.seed || 0) - shuffleRank(filmKey(b), context.seed || 0),
+  }[order] || (() => 0);
+  return [...films].sort((a, b) => compare(a, b) || byTitle(a, b));
+}
+
+// How many available films the filters show (each film once); no sorting, so it is cheap to repeat.
+export function countVisible(films, filters, context) {
+  return films.filter(film => SECTIONS.some(section => matchesSection(film, section, filters, context))).length;
+}
+
+// Counts per option of one filter, with that filter itself left out ("what if I picked this?").
+// open(filters, context) returns the filters and context without the facet; keysOf(film) the
+// film's values for it (only values that match `section` when given).
+export function facetCounts(films, filters, context, open, keysOf) {
+  const [openFilters, openContext] = open(filters, context);
+  const counts = new Map();
+  films.filter(film => SECTIONS.some(section => matchesSection(film, section, openFilters, openContext)))
+    .forEach(film => new Set(keysOf(film)).forEach(key => counts.set(key, (counts.get(key) || 0) + 1)));
+  return counts;
+}
+
+// For an empty result: the one filter whose removal brings back the most films.
+// candidates: [{id, label, open(filters, context) -> [filters, context]}]
+export function bestRelaxation(films, filters, context, candidates) {
+  return candidates
+    .map(candidate => ({...candidate, count: countVisible(films, ...candidate.open(filters, context))}))
+    .filter(candidate => candidate.count > 0)
+    .sort((a, b) => b.count - a.count)[0] || null;
 }
 
 // Returns what to show: films per section, matching unavailable films and the visible count.
@@ -165,22 +201,11 @@ export function filterFilms(films, unavailable, filters, context) {
     sections[section].forEach(film => visibleKeys.add(filmKey(film)));
   });
   const unavailableMatches = sortFilms(unavailable.filter(film => matchesUnavailable(film, filters, context)), filters.sort, context);
-  return {sections, unavailable: unavailableMatches, visibleCount: visibleKeys.size};
-}
-
-// Films that left one of the user's services recently: one entry per film, newest first,
-// with every service it left.
-export function recentlyRemoved(changes, subscriptions) {
-  const byFilm = new Map();
-  (changes || [])
-    .filter(change => change.change === 'removed' && subscriptions.has(change.provider))
-    .sort((a, b) => b.created - a.created)
-    .forEach(change => {
-      const known = byFilm.get(change.film_key);
-      if (known) known.providers.push(change.provider);
-      else byFilm.set(change.film_key, {...change, providers: [change.provider]});
-    });
-  return [...byFilm.values()];
+  // One list, each film once, in the chosen order. A film that matches both sections gets a card for "All".
+  const sectionOf = new Map();
+  SECTIONS.forEach(section => sections[section].forEach(film => sectionOf.set(filmKey(film), sectionOf.has(filmKey(film)) ? 'All' : section)));
+  const merged = new Map(SECTIONS.flatMap(section => sections[section]).map(film => [filmKey(film), film]));
+  return {sections, films: sortFilms([...merged.values()], filters.sort, context), sectionOf, unavailable: unavailableMatches, visibleCount: visibleKeys.size};
 }
 
 // Watchlist films TMDB recommends for `film` that run on an own service without extra cost,
@@ -205,17 +230,4 @@ export function elsewhereOnServices(byCountry, subscriptions, current) {
       .map(([provider]) => provider).sort()])
     .filter(([, services]) => services.length)
     .sort(([a], [b]) => a.localeCompare(b));
-}
-
-// Tonight: the best-rated films (three by default) that fit the time and genre and run on one of the services.
-// Films in `skip` (watched ones) are left out.
-export function eveningSuggestions(films, {maximum, genre, subscriptions, skip = new Set(), limit = 3}) {
-  return films
-    .filter(film => !skip.has(filmKey(film))
-      && (!maximum || (film.runtime > 0 && film.runtime <= maximum))
-      && (genre === 'all' || (film.genres || []).includes(genre))
-      && Object.entries(film.providers || {}).some(([provider, kinds]) =>
-        subscriptions.has(provider) && kinds.some(kind => ['free', 'ads', 'flatrate'].includes(kind))))
-    .sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0) || String(a.title).localeCompare(String(b.title)))
-    .slice(0, limit);
 }

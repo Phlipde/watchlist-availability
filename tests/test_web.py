@@ -199,9 +199,8 @@ class TestPages:
         assert config["subscriptions"]["DE"] == ["MUBI"]
         assert "Apple TV Store" in config["rentalShops"]
         assert "Arte" in config["freeServices"]
-        assert 'value="MUBI" checked' in page
-        assert 'id="rental-providers"' in page
-        assert 'id="free-providers"' in page
+        # The services menu is drawn in the browser from this config; the sidebar is gone.
+        assert 'id="services-menu"' in page and 'id="provider-panel"' not in page
 
     def test_settings_page(self, client):
         page = client.get("/settings").get_data(as_text=True)
@@ -428,7 +427,6 @@ class TestMatches:
 
 def test_loaded_providers_appear_on_the_pages(client, store, settings):
     store.save_provider_catalog("DE", [{"name": "Brand New Stream"}, {"name": "Amazon Prime Video"}])
-    assert b"Brand New Stream" in client.get("/").data
     assert b"Brand New Stream" in client.get("/subscriptions").data
     # A loaded provider can be saved as a subscription; the built-in name is kept for known ones.
     saved = client.put("/api/settings", json={"subscriptions": ["Brand New Stream", "Prime Video"]})
@@ -475,3 +473,33 @@ def test_other_countries_come_from_stored_offers(client, store):
     countries = client.get("/api/films/949/countries").get_json()
     assert countries == {"DE": {"Netflix": ["flatrate"]}, "GB": {"Netflix": ["flatrate"], "MUBI": ["rent"]}}
     assert client.get("/api/films/1/countries").get_json() == {}
+
+
+class TestHeader:
+    PAGES = [
+        "/",
+        "/watchlist",
+        "/subscriptions",
+        "/stats",
+        "/settings",
+        "/settings/data",
+        "/settings/matches",
+    ]
+
+    def test_every_page_has_the_same_header(self, client):
+        headers = set()
+        for path in self.PAGES:
+            html = client.get(path).get_data(as_text=True)
+            start = html.index('<header class="app-header"')
+            head = html[start : html.index("</header>", start)]
+            assert 'id="country-select"' in head, path
+            assert 'class="page-nav"' in head, path
+            assert 'id="sync-toggle"' in head, path
+            headers.add(head.count("<a ") >= 5)
+        assert headers == {True}
+
+    def test_sort_menu_groups_the_sorts_with_a_line_each(self, client):
+        html = client.get("/watchlist").get_data(as_text=True)
+        assert html.count('class="sort-option"') == 8
+        assert "Favorites first, then the Letterboxd rating." in html
+        assert 'id="sort-order" value="priority"' in html

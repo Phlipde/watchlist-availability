@@ -393,7 +393,7 @@ Leitregeln, jede Etappe wird daran geprüft:
 1. Inhalt vor Bedienung: erster Film auf jedem Bildschirm ohne Scrollen, am Desktop zwei volle Poster-Reihen.
 2. Jede Funktion genau einmal.
 3. Einstellen ist nicht Filtern: Abos in den Settings, Genre und Laufzeit in der Filterleiste.
-4. Kosten zuerst: Free → Subscription → With ads → Rent, in Sortierung, Abschnitten und Farben.
+4. Kosten zuerst: Free → Subscription → With ads → Rent, in Umschalter, Karten und Farben (Abschnittsüberschriften im Raster entfallen mit K3b).
 5. Veränderung (neu, gerade weg) steht oben, nicht eingeklappt. Gezeigt wird nur, was die Daten belegen; nichts wird geschätzt.
 6. Alles ohne Hover erreichbar; Hover beschleunigt nur.
 7. Möglichst wenige Schritte zum Film (echte Direkt-Links gibt es nicht, siehe „Nicht im Plan“).
@@ -413,7 +413,19 @@ Entscheidungen 2026-11-17:
   - Kalender-Zeitfenster und „Auf Fernseher öffnen“ entfallen (kein Kalender, keine Direkt-Links).
   - Favoriten-Status Plan/Watching/Watched wird zu Favorit (♥), „Watched“ und „Not now“; die Notiz bleibt (K4).
   - Tastenkürzel nach Konzept (`r` Zufall, `s` gesehen); `s` für Shuffle aus Etappe 14 entfällt.
-Seiten (Ziel): Tonight (Start) · Watchlist · Subscriptions · Settings (mit „Data & status“ und Matches).
+Seiten (Ziel): Tonight (Start, `/`) · Watchlist (`/watchlist`) · Subscriptions · Stats · Settings (mit „Data & status“ und Matches).
+Abgleich mit dem zweiten Auftrag `film-app-prompt.md` (Downloads, 2026-11-17): deckt sich weitgehend mit K1 bis K6. Bestätigt am selben Tag: gebaute Karte bleibt (alle Dienste, Bewertung in der Textzeile), heutiges Aussehen und nur dunkel, Oberfläche nur Englisch (keine Übersetzungsdatei), keine neuen Datenquellen außer der PWA (kein IMDb, keine Direkt-Links, keine TMDB-Gesamtsuche), kein „Leaving soon“ ohne echtes Datum. Abweichung vom Auftrag: fünf statt vier Seiten, weil „Stats“ ausdrücklich gewünscht war (Zahlen zur eigenen Watchlist, keine Fremd-Statistiken wie bei Trakt).
+Arbeitsweise (aus dem Auftrag):
+- Eine Etappe nach der anderen; danach kurz berichten (was geändert, welche Dateien, was testen) und auf OK warten.
+- Sync, Letterboxd-Import und Dienst-Auswahl funktionieren nach jeder Etappe; neue Logik (Ereignisse, Filter, Sortierung) bekommt Unit-Tests.
+- Vor dem Löschen von Daten oder Dateien auflisten, was genau wegfällt, und fragen.
+- Farben, Abstände, Radien und Schriftgrößen nur als Tokens in `app.css`.
+Abnahme am Ende jeder Etappe:
+- Desktop 1440 × 900: erster Film ohne Scrollen, mindestens zwei volle Reihen (ab K3); Handy 390 × 844: nichts nur per Hover.
+- Keine Funktion doppelt; jeder Filterzustand per Adresse reproduzierbar, Zurück funktioniert.
+- Detailfenster: genau ein Hauptknopf, keine umbrechende Knopfreihe (ab K4).
+- Kontrast aller Texte mindestens 4,5:1, mit Werkzeug gemessen; Filter auf 456 Filme unter 100 ms.
+- Tests grün, keine Konsolenfehler; Screenshots vorher/nachher für Hauptansicht und Detailfenster (Desktop und Handy).
 
 ### Etappe K1: Aufräumen (nach 9l)
 - [x] Überschrift „Find your next film.“ weg; Kopfzeile 56 px, beim Scrollen klebend und 48 px.
@@ -431,6 +443,7 @@ Seiten (Ziel): Tonight (Start) · Watchlist · Subscriptions · Settings (mit �
   - „Wide view“ entfernt (Knopf, Code und CSS; eine gespeicherte Wahl wird gelöscht).
   - Werkzeugleiste, Filter und „Tonight“-Auswahl einheitlich 36 px hoch.
   - Notiz: Ein Neuzeichnen beim Tippen übernimmt Text und Cursor ins neue Feld (Browser-Test).
+  - Offen aus dem zweiten Auftrag: Tokens für Abstände (4/8/12/16/24/32/48), Radien (6/8/12 px) und Schriftgrößen (12/13/14/16/20/24) anlegen und die Komponenten darauf umstellen; Kontrast von `--muted` auf allen Flächen mit Werkzeug prüfen. Eine Variante je Komponente: Knopf 36 px, Chip 28 px rund, Abzeichen 20 px.
   - Nicht erledigt: „Available only“ als Schalter; das Feld wird in K2 durch den Kosten-Umschalter ersetzt, Umbau vorher wäre doppelte Arbeit. Ziel „zwei volle Poster-Reihen bei 1440 × 900“ noch nicht erreicht: „Tonight“, Werkzeugleiste und Filter stehen über dem Raster (erste Karte bei 873 px); das lösen K2 (eine Leiste) und K3 (Tonight als eigene Seite). Am Handy sind die ersten Filme (Tonight) bei 137 px sichtbar.
 
 ### Etappe K1b: Nachbesserung und Statistik-Seite (2026-11-17, auf Rückmeldung)
@@ -439,31 +452,111 @@ Seiten (Ziel): Tonight (Start) · Watchlist · Subscriptions · Settings (mit �
 - [x] Statistik als eigene Seite `/stats` (Navigation „Stats“), statt des Kastens unten auf der Hauptseite (dort nur noch ein Link). Rechnung in `statistics.js` (getestet), Darstellung in `stats-page.js`: 16 Kennzahlen (Filme, verfügbar, auf eigenen Abos mit Stunden, gratis, im Abo, nur Leihen, nicht verfügbar, demnächst, Stunden gesamt, Ø Laufzeit, Ø Letterboxd, Ø TMDB, Jahre, Favoriten, neu und weg in 30 Tagen); eigene Abos mit „nur in diesem“ (was eine Kündigung kostet); Angebotsarten, Genres, Jahrzehnte, Laufzeit, Bewertungen (Letterboxd und TMDB), Sprache, Herkunftsland, Altersfreigabe, Regie, Schauspieler, Filmreihen, Stichworte; Änderungen je Dienst (30 Tage) und je Woche (8 Wochen); „Waiting longest“ und „Best rated on your subscriptions“; Tabelle aller Dienste mit Filmen, „Only here“, Stunden und Angebotsarten. Balkenlisten einfarbig mit Zahl daneben, Anteil im Tooltip, lange Listen hinter „Show n more“. Deckt die Punkte aus Etappe 13 (Laufzeit-Summe je Dienst, „Staubfänger“) zum Teil ab; Statistik über die Zeit (gespeicherte Scan-Stände) fehlt noch.
 
 ### Etappe K2: Eine Filterleiste (Watchlist-Seite)
-- [ ] Seitenleiste fällt weg. Eine klebende Leiste, eine Zeile: Suche (`/`), Dienste-Chip (bis 4 Logos + „+8“, Popover mit Gruppen My subscriptions · Free · Rent, Häkchen und Filmzahl je Dienst), Kosten als Umschalter All · Free · Subscription · Rent (ersetzt „Available only“), Genre (Mehrfachauswahl, Alt-Klick schließt aus), Laufzeit, Bewertung (Quelle Letterboxd oder TMDB), „Filters (n)“ für den Rest, Sortierung rechts.
-- [ ] Eine Quelle für „meine Dienste“: Settings → My services legt sie fest, der Chip filtert nur. Details („Your service“, „Similar on your services“) und Tonight nutzen dieselbe Quelle (offener 9k-Punkt).
-- [ ] Aktive Filter als Chips in einer zweiten Zeile, nur wenn welche aktiv sind, davor „47 of 456 films“, dahinter „Reset all“; eine Live-Region sagt die Anzahl an.
-- [ ] Trefferzahl je Option unter Berücksichtigung der anderen Filter; Optionen mit 0 Treffern grau, nicht versteckt. Filter wirken sofort, ohne Animation.
-- [ ] Leerer Zustand: „No film fits. Without the runtime filter there would be 12.“ mit Knopf, der genau diesen Filter entfernt.
-- [ ] Sortierung auf acht: Priority · Letterboxd · TMDB · Runtime · Year · Recently added · Newly available · Random. „Priority“ = Favoriten zuerst, dann Letterboxd. Ersetzt den 9k-Punkt (11 Einträge ohne Erklärung).
-- [ ] Ganzer Zustand in der Adresse (Filter und `film=` aus 9l); Vor und Zurück funktionieren.
+- [x] Seitenleiste fällt weg. Eine klebende Leiste, eine Zeile: Suche (`/`), Dienste-Chip (bis 4 Logos + „+8“, Popover mit Gruppen My subscriptions · Free · Rent, Häkchen und Filmzahl je Dienst), Kosten als Umschalter All · Free · Subscription · Rent (ersetzt „Available only“), Genre (Mehrfachauswahl, Alt-Klick schließt aus), Laufzeit, Bewertung (Quelle Letterboxd oder TMDB), „Filters (n)“ für den Rest, Sortierung rechts.
+- [x] Eine Quelle für „meine Dienste“: Settings → My services legt sie fest, der Chip filtert nur. Details („Your service“, „Similar on your services“) und Tonight nutzen dieselbe Quelle (offener 9k-Punkt).
+- [x] Aktive Filter als Chips in einer zweiten Zeile, nur wenn welche aktiv sind, davor „47 of 456 films“, dahinter „Reset all“; eine Live-Region sagt die Anzahl an.
+- [x] Trefferzahl je Option unter Berücksichtigung der anderen Filter; Optionen mit 0 Treffern grau, nicht versteckt. Filter wirken sofort, ohne Animation.
+- [x] Leerer Zustand: „No film fits. Without the runtime filter there would be 12.“ mit Knopf, der genau diesen Filter entfernt.
+- [x] Sortierung auf acht: Priority · Letterboxd · TMDB · Runtime · Year · Recently added · Newly available · Random. „Priority“ = Favoriten zuerst, dann Letterboxd. Ersetzt den 9k-Punkt (11 Einträge ohne Erklärung).
+- [x] Ganzer Zustand in der Adresse (Filter und `film=` aus 9l); Vor und Zurück funktionieren.
 - [ ] Die Liste aller Dienste nur noch in Settings → My services (Gruppen My subscriptions · Free · Rental shops · Others; Voreinstellungen „Free only“ und „All rental shops“ nur dort).
-- [ ] Handy: ein Knopf „Filters“ öffnet ein Blatt von unten mit aufklappbaren Abschnitten und festem Knopf „Show 47 films“.
+- [x] Handy: ein Knopf „Filters“ öffnet ein Blatt von unten mit aufklappbaren Abschnitten und festem Knopf „Show 47 films“.
+- [ ] Aus dem zweiten Auftrag: Watchlist zieht nach `/watchlist` um (`/` wird in K3 „Tonight“; alte Links mit Filtern leiten weiter). „Filters (n)“ enthält Jahrzehnt, Sprache, Land, Altersfreigabe, nur Favoriten und „auch nicht verfügbare zeigen“ (deutsche Untertitel nicht: keine Daten). Laufzeit mit festen Stufen plus Schieberegler. Popover: Escape schließt, Pfeiltasten wandern, Leertaste hakt an. Eine Live-Region sagt die Trefferzahl. Messen: Filter auf 456 Filme unter 100 ms.
 - Beim Bauen messen: Trefferzahlen je Option bei 456 Filmen unter 100 ms.
+- Ergebnis (2026-11-17):
+  - Eine Leiste unter der Kopfzeile, klebend: Suche · Dienste (Logo-Stapel + „+n“, Menü mit Gruppen My subscriptions · Free · Rental shops, je Gruppe „All“, Filmzahl je Dienst, „any/all“, Clear, Link zu den Abos) · Kosten als Umschalter All · Free · Subscription · Rent mit Zahl · Genre (Mehrfachauswahl, „No“ oder Alt-Klick schließt aus, Zahl je Genre) · Runtime (Stufen und Schieberegler) · Rating (Letterboxd oder TMDB in einer Auswahl) · Filters (n) · Sortierung. Neu: `filterbar.js`; Popovers als `<details>` mit Escape, Klick daneben und Pfeiltasten.
+  - Eine Quelle: die angehakten Dienste gelten jetzt auch im Detailfenster („Your service“, „Similar on your services“) und für „Recently gone“ (so wie für Tonight entschieden). Abweichung vom Plan: Die Liste aller Dienste stand schon auf der Abo-Seite; dort bleibt sie, Settings bekommt keine zweite.
+  - Chips: „47 of 430 films“ in der Zeile darunter; Chips für Dienste (wenn anders als die Abos), Genres, Ausschlüsse und jedes Feld; „Reset all“ setzt auch die Dienste zurück.
+  - Leeres Ergebnis: „Without the runtime filter there would be 12.“ mit Knopf, der genau diesen Filter entfernt.
+  - Acht Sortierungen: Priority (Standard; Favoriten, dann Letterboxd) · Letterboxd · TMDB · Shortest first · Newest first · Recently added · Newly available · Random (gleiche Reihenfolge pro Besuch). Entfallen: Titel, älteste, Trending, Stimmen, Bewertung pro Stunde, am längsten auf der Watchlist, auf meisten Abos, Filmreihen zusammen. Alte Links mit diesen Werten fallen auf Priority zurück.
+  - Adresse: `cost`, `genre`, `nogenre`, `max`, `rating=lb:3.5|tmdb:7`, `unavailable=1`, `match`; alte Links (`availability`, `kind`, `runtime=short|medium`, `rating=7`, `lb`) werden umgedeutet.
+  - Handy: „Filters“ öffnet die Leiste als Blatt von unten (Dialog, Seite dahinter `inert`, Escape, „Show 47 films“).
+  - Weggezogen statt gelöscht: CSV-Upload ins Sync-Feld, „any/all“ und der Hinweis „filtert nur“ ins Dienste-Menü; „Mostly free“ steht im Menü. „Offer type“ (free/ads/flatrate/rent) entfällt, der Kosten-Umschalter deckt es ab; „Unavailable only“ wird zu „Also show films not available“.
+  - Gemessen mit der Datenkopie (430 Filme): Filtern 4 ms, alle Zählungen 19 ms; mit dem Neuzeichnen der rund 170 Karten 60–140 ms. Die Grenze von 100 ms reißt also das Zeichnen, nicht die Logik (Virtualisierung o. Ä. in K6).
+  - Offen: Umzug nach `/watchlist` mit K3 (vorher nur eine Weiterleitung); „zwei volle Reihen bei 1440 × 900“ erst mit K3 (Tonight über dem Raster). `templates/partials/provider-sidebar.html` gelöscht (2026-11-17).
 
 ### Etappe K3: Veränderung sichtbar machen (Startseite „Tonight“)
-- [ ] Ereignisse aus dem gespeicherten Verlauf (Etappe 6), überall gleich: New (grün, „New · since 12 Nov“) und Gone (gedämpftes Rot, „Gone since 10 Nov“), beide mit echtem Datum aus dem Scan. Wechselt ein Film nur zwischen zwei eigenen Diensten, gibt es kein Ereignis.
-- [ ] „Gone“ zeigt den Ausweg: „Gone from Netflix · now on Prime (subscription)“ oder „Rent only“.
-- [ ] Startseite „Tonight“ als Feed aus waagerechten Reihen: New on your services → Free (free und ads) → eine Reihe je Abo nach Filmzahl („On Netflix (73)“) → Recently gone (eingeklappt, ganz unten). Leere Reihen fehlen. Je Reihe Titel und Zahl, rechts „See all →“ (Watchlist mit passendem Filter). Einrasten an Kartenkanten, Kanten ausgeblendet (Designregel), Pfeilknöpfe bei Hover und Fokus, am Handy 2,5 Karten sichtbar.
-- [ ] Kontextzeile: „285 films available on 12 services · synced 2 h ago“, Klick auf die Dienste öffnet die Auswahl; Knopf „Pick for me“ (Zufall aus den Treffern, öffnet die Details; „Again“ ohne Wiederholung in der Sitzung). Ersetzt „Shuffle“.
-- [ ] Schnellfilter-Chips über den Reihen, Mehrfachauswahl: Under 2 h · Under 100 min · Highly rated · Free only (· With partner, erst mit Etappe 15). Ersetzt Laufzeit und Genre im heutigen „Tonight“-Kasten.
-- [ ] Badge „Gone“ auf den Karten (Badge aus 9l).
-- [ ] Änderungsprotokoll als Tab „Changes“ auf der Watchlist-Seite (Datum · Film · Dienst · Ereignis, neueste zuerst, filterbar); ersetzt „Scan changes“ und den Kasten „Recently gone“. Damit erledigt sich der 9k-Punkt „Film aus Tonight steht doppelt im Raster“.
+- [x] Ereignisse aus dem gespeicherten Verlauf (Etappe 6), überall gleich: New (grün, „New · since 12 Nov“) und Gone (gedämpftes Rot, „Gone since 10 Nov“), beide mit echtem Datum aus dem Scan. Wechselt ein Film nur zwischen zwei eigenen Diensten, gibt es kein Ereignis.
+- [x] „Gone“ zeigt den Ausweg: „Gone from Netflix · now on Prime (subscription)“ oder „Rent only“.
+- [x] Startseite „Tonight“ als Feed aus waagerechten Reihen: New on your services → Free (free und ads) → eine Reihe je Abo nach Filmzahl („On Netflix (73)“) → Recently gone (eingeklappt, ganz unten). Leere Reihen fehlen. Je Reihe Titel und Zahl, rechts „See all →“ (Watchlist mit passendem Filter). Einrasten an Kartenkanten, Kanten ausgeblendet (Designregel), Pfeilknöpfe bei Hover und Fokus, am Handy 2,5 Karten sichtbar.
+- [x] Kontextzeile: „285 films available on 12 services · synced 2 h ago“, Klick auf die Dienste öffnet die Auswahl; Knopf „Pick for me“ (Zufall aus den Treffern, öffnet die Details; „Again“ ohne Wiederholung in der Sitzung). Ersetzt „Shuffle“.
+- [x] Schnellfilter-Chips über den Reihen, Mehrfachauswahl: Under 2 h · Under 100 min · Highly rated · Free only (· With partner, erst mit Etappe 15). Ersetzt Laufzeit und Genre im heutigen „Tonight“-Kasten.
+- [x] Badge „Gone“ auf den Karten (Badge aus 9l).
+- [x] Aus dem zweiten Auftrag: Ein Film gilt erst als „gone“, wenn ihn zwei Scans nacheinander nicht finden (schützt vor TMDB-Aussetzern). Unit-Tests für New, Gone, Wechsel zwischen zwei eigenen Diensten und die Zwei-Scan-Regel. Reihen sortiert: Favoriten zuerst, dann Letterboxd. „Pick for me“ auch mit `r`. Am Handy 2,5 Karten je Reihe sichtbar.
+- [x] Änderungsprotokoll als Tab „Changes“ auf der Watchlist-Seite (Datum · Film · Dienst · Ereignis, neueste zuerst, filterbar); ersetzt „Scan changes“ und den Kasten „Recently gone“. Damit erledigt sich der 9k-Punkt „Film aus Tonight steht doppelt im Raster“.
 - Fertig, wenn: 1440 × 900 zeigt Kontextzeile, Chips, die erste Reihe ganz und den Titel der zweiten.
+- Ergebnis (2026-11-17):
+  - `/` ist jetzt „Tonight“, die Watchlist liegt unter `/watchlist`. Alte Links auf `/` mit Filtern leiten dorthin weiter (301); `/?film=` öffnet den Film auf Tonight. Navigation: Tonight · Watchlist · Subscriptions · Stats · Settings.
+  - Tonight: Kontextzeile („168 films available on 10 services · synced 4 h ago“, die Dienste verlinken auf die Abo-Seite statt eines eigenen Menüs), „Pick for me“ (auch Taste `r`, „Again“ ohne Wiederholung im Besuch), Chips Under 2 h · Under 100 min · Highly rated (Letterboxd ≥ 3.7, sonst TMDB ≥ 7.5) · Free only (im Browser gespeichert). Reihen: New on your services (14 Tage) → Free → eine Reihe je angehaktem Abo nach Filmzahl; je „See all →“ zur passend gefilterten Watchlist. Waagerecht scrollend mit Einrasten, Kante ausgeblendet, Pfeile bei Hover/Fokus, am Handy rund 2,5 Karten. Gesehene Filme fehlen, Favoriten zuerst. „Recently gone“ (30 Tage) unten eingeklappt mit „now on Prime Video (subscription)“ / „rent only on …“ / „not streaming anywhere“.
+  - Zwei-Scan-Regel im Backend (`history.diff_scans(..., older=)`, `store.recent_scans`): „removed“ erst nach zwei Scans ohne den Dienst, ein Dienst nach einem Aussetzer zurück ist nicht „neu“. Verlauf jetzt 30 statt 14 Tage. Wechsel zwischen zwei angehakten Diensten erzeugt weder „New“ noch „Gone“ (`events.js`).
+  - Watchlist: Tabs Films · Changes; Changes ist eine Tabelle (Datum · Film · Dienst · Ereignis), filterbar nach Dienst, Ereignis und „nur angehakte Dienste“. Der alte Tonight-Kasten, „Recently gone“ und „Scan changes“ sind dort weg (damit auch die Doppelung aus 9k). Karten zeigen „Gone“, wenn ein angehakter Dienst den Film verloren hat.
+  - Abnahme: 1440 × 900 zeigt Kontextzeile, Chips, die erste Reihe ganz (Unterkante 589 px) und den Titel der zweiten (617 px). Handy: erste Reihe ab 252 px.
+  - Tests: Python (Zwei-Scan-Regel, Rückkehr nach Aussetzer, Scan-Ablauf), JS (`events.test.mjs`: New, Wechsel, Gone mit „now on“, Reihen, Chips, Pick), Browser (Tonight, Weiterleitung). Entfernt: Abend-Logik `eveningSuggestions`, `recentlyRemoved`, `changeSummary` und ihre Tests.
+
+### Etappe K3b: Kopfzeile, Filter und Sortierung (2026-11-17, auf Rückmeldung; gebaut 2026-11-18)
+Aufgenommen aus: „Kopfzeile überall gleich“, „Filter am Handy verbuggt“, „Free & with ads / Subscription & rent unten entfernen“, „weitere Filter verbuggt“, „Sortierung besser unterteilen“. Abgleich mit dem Plan: Kopfzeile und Sortierung waren in K1/K2 nur als eigene Punkte erledigt, eine einheitliche Kopfzeile auf allen Seiten war nicht geplant. Die Abschnitte standen in Leitregel 4 („Kosten zuerst … in Abschnitten“) und werden hier bewusst gestrichen, weil der Kosten-Umschalter oben dasselbe leistet; die Karten zeigen die Angebotsart weiter an jedem Dienst (Ad, €).
+Befund (am 2026-11-17 mit der Datenkopie gemessen):
+- Kopfzeile: Nur Tonight und Watchlist haben die Kopfzeile mit Land und Sync-Punkt. Subscriptions, Stats und Settings haben stattdessen eine eigene Zeile nur mit der Navigation, ohne Land und ohne Sync, dafür mit sichtbarer Überschrift. Am Handy ist die Kopfzeile 117 px hoch (Markenzeile, darunter ein Knopf „Filters“ über die volle Breite); der Knopf steht auch dort, wo es keine Filter gibt (Tonight).
+- Filter-Blatt am Handy: Es ist 495 px hoch und endet bei 832 px; die untere Navigation beginnt bei 783 px und überdeckt den Knopf „Show n films“ (Höhe 772–816 px). Bewertung und Sortierung sind 36 px hoch, der Rest 44 px. Felder haben keine sichtbaren Beschriftungen (nur die Voreinstellung als Text), das Blatt hat keine Überschrift und kein ×. Nicht geprüft: Bildschirmfoto im Browser-Fenster war verzerrt, die Werte stammen aus den Messungen der Elemente.
+- „Filters (n)“: zwölf Felder in einem Raster ohne Gruppen; Auswahlfelder zeigen nur „Any language“, „Any country“ usw., ohne Beschriftung, was sie bedeuten, sobald etwas gewählt ist. Bei 1024 px bricht die Leiste in zwei Zeilen um (101 px hoch).
+- Abschnitte im Raster: „Free & with ads“ und „Subscription & rent“ (`SECTION_TITLES` in `rendering.js`).
+- Sortierung: acht Einträge in einer flachen Auswahl mit dem Vorsatz „Sort:“, ohne Erklärung („Priority“).
+Plan:
+- [x] Eine Kopfzeile auf allen Seiten, ein Partial: Marke · Seiten-Navigation · Land · Sync-Punkt (am Handy: Marke, Land, Sync in einer Zeile à 56 px, Seiten unten wie heute). Der Knopf „Filters“ wandert aus der Kopfzeile in die Seite (Watchlist; auf Tonight entfällt er). Sync-Punkt und Land funktionieren dann überall; die Überschrift jeder Seite bleibt sichtbar im Inhalt (Seitentitel, nicht in der Kopfzeile). Seiten: `index.html`, `subscriptions.html`, `stats.html`, `settings.html`, `status.html`, `matches.html`; `app.js` verdrahtet Land und Sync heute nur auf der Hauptseite, das Skript muss auf den anderen Seiten dafür geladen werden (klein, eigene Datei `header.js`).
+- [x] Abschnitte „Free & with ads“ / „Subscription & rent“ im Raster entfallen: ein Raster, Reihenfolge nach der Sortierung. `SECTION_TITLES`, die Gruppierung in `renderResults` und die zugehörigen Tests/CSS gehen weg; die Abschnitts-Logik für die Dienst-Zeile auf der Karte (`SECTION_KINDS`) bleibt, sie bestimmt, welche Angebote die Karte zeigt. Das ändert die Reihenfolge: Priority sortiert Favoriten dann Letterboxd, nicht mehr „erst gratis, dann bezahlt“; der Umschalter „Free / Subscription / Rent“ ersetzt das.
+- [x] Filter-Blatt am Handy neu: Überschrift „Filters“ mit ×, Blatt bis 90 dvh, untere Navigation und Kopfzeile darunter versteckt, solange es offen ist, fester Fuß mit „Show n films“ und „Reset“ (über der Systemleiste, `env(safe-area-inset-bottom)`), alle Felder 44 px, Seite dahinter gesperrt (`overscroll-behavior`), Beschriftung über jedem Feld, Abschnitte Search · Where (Dienste, Kosten) · Film (Genre, Laufzeit, Bewertung) · More. Prüfung mit 390 × 844 und 360 × 640 (kleines Handy), mit geöffneter Tastatur.
+- [x] „Filters (n)“ gruppieren und beschriften: Release (Year from/to, Age rating, Original language, Country) · Quality (Minimum votes, Keyword, Trailer) · Availability (On n+ services, Only on one of my services, Newly available / No longer available, Also show films not available). Sichtbare Beschriftung über jedem Feld, die Voreinstellung bleibt „Any …“. Menü hat `max-height` und scrollt innerhalb des Fensters; am Handy sind die Gruppen die Abschnitte im Blatt.
+- [x] Jeden der 16 Filter durchprüfen (Desktop 1440 und 1024, Tablet 768, Handy 390): setzen → Chip erscheint → Zahl stimmt gegen die Rechnung aus `/api/latest` → Adresse enthält ihn → Zurück stellt ihn her → „Reset all“ löscht ihn. Gefundene Fehler einzeln beheben, je Fehler ein Browser-Test. Bei 1024 px soll die Leiste in einer Zeile oder in einer sauberen zweiten Zeile stehen (kein Abschneiden).
+- [x] Sortierung als Menü mit Erklärung (entschieden 2026-11-18, `<details>`-Popover wie die anderen Filter, Auswahl per Radio, Pfeiltasten): Gruppen Best rated (Priority: favorites first, then Letterboxd · Letterboxd rating · TMDB rating) · By film (Shortest first · Newest first) · By availability (Recently added: when it joined your Letterboxd list · Newly available: when a service added it) · Random (same order per visit). Je Eintrag eine Zeile Erklärung; der Knopf zeigt „Sort: Priority“. Am Handy ein Abschnitt im Blatt.
+- Abnahme: Alle Seiten zeigen dieselbe Kopfzeile (gleiche Höhe, gleiche Elemente); am Handy sind „Show n films“ und alle Felder erreichbar und tippbar; kein Filter schneidet Text ab; Tests grün, keine Konsolenfehler; Bildschirmfotos vorher/nachher.
+- Ergebnis (2026-11-18):
+  - Korrektur zum Befund: Der Knopf „Show n films“ war nicht von der Navigation überdeckt (die Messung zeigte einen Treffer im Knopf). Der Fehler war ein Außenabstand von 12 px (`margin-bottom` der Leiste), der das Blatt über den Bildschirmrand hob, sodass darunter die Navigation hervorschaute.
+  - Kopfzeile: ein Partial (`header.html`) für alle sieben Seiten, direkt unter dem Seitenrand (volle Breite), gleiche Höhe und gleiche Lage von Marke, Navigation, Land und Sync-Punkt (gemessen). Auf Tonight/Watchlist öffnet der Punkt das Scan-Feld, auf den anderen Seiten ist er ein Link zu Settings → Data & status mit „Synced“ oder „Out of date“ (nur frisch oder älter als 24 h; „Scan failed“ gibt es dort nicht). Das Land ändert auf den anderen Seiten die Einstellung und öffnet die Watchlist (`header.js`). Der Knopf „Filters“ steht am Handy über der Leiste in der Seite, nicht mehr in der Kopfzeile; auf Tonight gibt es ihn nicht. Handy-Kopfzeile eine Zeile à 56 px (vorher 117 px).
+  - Raster: keine Abschnittsüberschriften mehr; `filterFilms` liefert zusätzlich `films` (jeder Film einmal, in der gewählten Reihenfolge) und `sectionOf` (Film in beiden Abschnitten bekommt die Karte „All“ mit allen angehakten Diensten; der Kosten-Umschalter begrenzt weiter, welche Angebote gelten). Tonight verwendet unverändert „Free“ und „Paid“.
+  - Filter-Blatt am Handy: Überschrift mit ×, Beschriftungen (Services, Cost, Rating, Sort by), alle Felder 44 px, abgedunkelte Seite dahinter (Tippen schließt), Seite gesperrt, bis 90 dvh, Fuß mit „Reset“ und „Show n films“.
+  - „Filters“: drei Gruppen (Release · Quality · Availability) mit sichtbaren Beschriftungen, am Handy untereinander. Auswahlfelder haben wieder ihren Pfeil.
+  - Sortierung: Menü mit Gruppen Best rated · By film · By availability · Other und einer Zeile Erklärung je Eintrag; Knopf „Sort: Priority“. `SORTS` in `web/routes.py` trägt Gruppe und Text; `#sort-order` ist jetzt ein verstecktes Feld.
+  - Filter durchgeprüft (Datenkopie, 168 sichtbar): Alter, Sprache, Land, Stimmen, Trailer, Änderungen, Mindestzahl Dienste (0 Treffer stimmt: kein Film läuft auf 3 angehakten Diensten), „Only on one of my services“ (131 = Daten), Jahr von/bis, „Also show films not available“ (26 weitere), Bewertung, Laufzeit, Kosten, Suche; jeder setzt Chip und Adresse und lässt sich zurücksetzen. Keine Fehler gefunden, die das Blatt-Problem überstiegen.
+  - Offen: Bei 1024 px steht die Leiste in zwei Zeilen (Bewertung und Sortierung rutschen nach unten); das löst K3c (Filter rutschen in „Filters“). Bewertung ist noch ein Auswahlfeld statt Panel (K3c).
+
+### Etappe K3c: Filterleiste nach Abschnitt 5 (2026-11-18, aus `abschnitt-5-filter.md`; geplant, nichts gebaut)
+Abgleich: Das meiste steht seit K2 (eine Leiste, Kosten mit Zahlen, Logo-Stapel mit Menü, Genre mit Ausschluss, Chips, Trefferzahl je Option, Leer-Hinweis, Zustand in der Adresse, Sortierung mit Text). K3c baut nur den Unterschied. K3b (Fehler und Aufräumen) kommt zuerst, K3c danach, weil beide dieselben Dateien berühren (`film-filters.html`, `filterbar.js`, `app.css`).
+Übernommen:
+- [ ] Dienste-Menü: Suche im Menü (fehlt), Kopfschalter „Only my services“ (Standard an; aus zeigt die Gruppe „All others“), Zusatz bei Verwechslungsgefahr („Prime Video“ / „Prime Video Channels“, „Apple TV+“ / „Apple TV Store“), Breite 360 px, höchstens 70 % der Höhe. „All“ je Gruppe, „Reset“ und der Link zu den Abos sind schon da.
+- [ ] Jahr, Laufzeit, Bewertung als Panels mit Schnellwahl-Chips, Regler und „Reset“ nur bei aktivem Filter: Jahr (Chips 2020s · 2010s · 2000s · Before 2000, Zwei-Griff-Regler 1920 bis heute, ersetzt „Year from/to“ in „Filters“), Laufzeit (Chips vorhanden, Regler 5-min-Schritte, bis 3 h+), Bewertung (Quelle Letterboxd | TMDB als Umschalter, Chips 3.5+ · 3.8+ · 4.0+, Regler 0.1-Schritte). Mindest-Stimmen (Any · 1k+ · 10k+ · 100k+) wandern in das Bewertungs-Panel, „Minimum votes“ aus „Filters“ entfällt. Chip und Regler sind gekoppelt. Pfeiltasten verschieben den Regler, Umschalt+Pfeil in 10er-Schritten.
+- [ ] Altersfreigabe als Chips statt Auswahlfeld, Mehrfachauswahl, immer von jung nach alt. Die Werte kommen aus den Daten des Landes (Deutschland 0 · 6 · 12 · 16 · 18, USA G · PG · PG-13 · R · NC-17 …); Überschrift „Age rating“, in Deutschland „FSK“.
+- [ ] „My favorites“ wandert aus der zweiten Werkzeugzeile als Schalter in „Filters“ (offener Punkt aus K2); die Leiste bleibt die einzige Filterzeile. Der Favoriten-Status-Filter (Plan/Watching/Watched) entfällt mit K4 (Favorit, Watched, Not now).
+- [ ] Aktive Chips: × löscht genau diesen Filter, Klick auf den Text öffnet das zugehörige Panel (heute löscht jeder Klick). Alle Chips bleiben, es gibt keinen aktiven Filter ohne Chip.
+- [ ] Kosten-Chips: eine Option mit 0 Treffern ist deaktiviert (40 %, nicht klickbar, Tooltip „No films with current filters“) statt nur grau.
+- [ ] Schmale Breiten (Tablet): Genre, Laufzeit und Bewertung wandern nacheinander in „Filters“; Kosten, Dienste und Suche bleiben sichtbar. Höhe Leiste plus Chip-Zeile höchstens ca. 100 px bei 1440 px, 1024 px bricht nicht in zwei Zeilen (bei K3b zuerst gemessen).
+- [ ] Panels: Pfeil am Auslöser dreht sich nach oben; Fokus kehrt nach dem Schließen zurück (ist schon so).
+Nicht übernommen (abgewogen):
+- „Leaving soon first“ als Sortierung: entfällt, TMDB liefert kein Ablaufdatum (entschieden 2026-11-17).
+- Sortierrichtung mit Pfeil („Letterboxd ↓“): jede Sortierung hat nur eine sinnvolle Richtung; das Sortier-Menü mit Erklärung (K3b) sagt sie in Worten.
+- Deutsche Untertitel: keine Daten.
+- Hinter dem Panel um 30 % abdunkeln: Filter wirken sofort, und man soll die Poster dahinter sehen; das Menü hebt sich mit hellerer Fläche (`--surface-raised`) ab.
+- Zwei-Griff-Regler für Laufzeit und Bewertung: ein Mindestwert (Bewertung) und ein Höchstwert (Laufzeit) decken die Fälle ab; nur das Jahr braucht zwei Griffe.
+- Neue Adress-Schlüssel (`svc`, `rt`, `genre=thriller,-horror`): bleiben wie heute (`providers`, `max`, `genre`/`nogenre`, `rating=lb:3.8`); auch Jahr (`from`/`to`) und Stimmen (`votes`) behalten ihre Schlüssel, es kommt kein neuer hinzu. Alte Links bleiben gültig.
+- Suche erst ab 2 Zeichen: bleibt ab dem ersten Zeichen (bei 430 Filmen 4 ms).
+Verschoben auf K6 (stand dort schon): Ansicht Grid · Compact · Table (Knöpfe in der Leiste ganz rechts) und gespeicherte Ansichten („Save view“ in der Chip-Zeile, Auswahl links in der Leiste, Chips auf Tonight).
+- Abnahme: Filter auf 430 Filmen unter 100 ms; jeder Zustand per Adresse reproduzierbar und mit Zurück herstellbar; alle Bedienelemente mit Tastatur; Tests (JS für Regler- und Chip-Kopplung, Jahr-Chips, Altersgruppen je Land; Browser für Dienste-Suche, Chip-Klick öffnet Panel) grün.
 
 ### Etappe K4: Details und Aktionen
 - [ ] Detailfenster als Schublade von rechts (Desktop 480 px), am Handy Blatt von unten (60 % hoch, hochziehen = ganzer Bildschirm, nach unten wischen schließt). Raster bleibt dahinter sichtbar; Fokus bleibt drin und kehrt zurück (wie heute `openModal`).
 - [ ] Aufbau: Backdrop 16:9 mit Titel und Jahr; Hauptknopf über die volle Breite für den günstigsten Weg („Where to watch on Netflix“, führt zur TMDB-Seite); Meta (Laufzeit · Genres · Altersfreigabe · Land · Regie, Regie filtert die Watchlist); Bewertungen Letterboxd · TMDB (Stimmen bei Hover/Tippen); Beschreibung 3 Zeilen mit „more“; „Where to watch“ nach Kosten (gibt es, 9d); Verlauf je Dienst der letzten 12 Monate als Zeitleiste; Trailer als Vorschaubild, startet nur auf Klick; Aktionen; „Similar on your services“ (höchstens 8).
 - [ ] ← und → blättern zum vorigen und nächsten Film der aktuellen Liste; die Adresse wechselt mit.
+- [ ] Feinheiten aus dem zweiten Auftrag:
+  - Kopf: kleines Poster (80 px) überlappt den Rand des Backdrops; Originaltitel klein darunter, wenn er abweicht. Raster dahinter zu 40 % abgedunkelt; Öffnen in 220 ms, bei reduzierter Bewegung sofort.
+  - Meta in einer Zeile ohne Umbruch: `2009 · 2h 21m · rated 12 · Sci-Fi, Drama`. Bewertungszeile: `Letterboxd ★ 3.7` · `TMDB 7.8`, eine Nachkommastelle, Stimmen beim Überfahren/Tippen.
+  - Hauptknopf 44 px in Amber mit Logo: „Watch on Netzkino · Free with ads“, „Your service“ als kleines Abzeichen darin; der bisherige Knopf „Where to watch“ fällt weg (Doppelung).
+  - Sekundäre Aktionen als eine Symbolleiste in einer Zeile: Favorite · Compare · Seen · Not now · Letterboxd · Share.
+  - Beschreibung 3 Zeilen mit „more“; Trailer als Vorschaubild mit Play, YouTube lädt erst beim Klick.
+  - „Where to watch“ als senkrechte Liste nach Free · Subscription · Rent, eigene Dienste grün umrandet, jede Zeile ein Link zur TMDB-Seite; unten klein „Something wrong? Report“ (öffnet eine Notiz).
+  - Andere Länder als Chips mit Flagge, darunter der VPN-Satz (bleibt).
+  - Regie und die ersten 5 Darsteller als Links, die die Watchlist nach der Person filtern; Kontrast mindestens 4,5:1.
+  - Stichworte als kleine Chips; „Similar on your services“ als Reihe aus 4–6 Mini-Postern (96 px) mit Dienst-Logo.
+  - Links unten als Chips: TMDB · Letterboxd · JustWatch.
+  - Daten beim Überfahren oder Sichtbarwerden der Karte vorladen, Öffnen unter 100 ms.
 - [ ] Schnellaktionen im Menü „⋯“ an der Karte (am Handy auch langes Drücken): Watched, Not now (30 Tage aus Tonight, unter „Filters“ wieder sichtbar; ersetzt „Nicht interessiert“ aus Etappe 14), Add to compare. Drei Tab-Stopps je Karte (Titel, ♥, ⋯).
 - [ ] Vergleichen über eine Leiste unten („3 to compare · Compare“, höchstens 4) statt Knopf und Vergleichsmodus; im Vergleich ist der beste Wert je Zeile hervorgehoben.
 - [ ] Watched: Karte ausgegraut mit ✓, optional Letterboxd zum Eintragen öffnen; Abgleich mit dem Letterboxd-Tagebuch (aus Etappe 14).
@@ -486,6 +579,7 @@ Seiten (Ziel): Tonight (Start) · Watchlist · Subscriptions · Settings (mit �
 - [ ] Leistung: erste Poster unter 1,5 s, Filter unter 100 ms, flüssiges Scrollen bei 456 Karten. Erst messen, dann `content-visibility: auto` vor einer virtuellen Liste. Poster mit `srcset` (w185/w342), Platzhalter in der Posterfarbe.
 - [ ] Deutsche Filmtitel als Option in Settings, Originaltitel im Tooltip und in den Details.
 - [ ] Optional: TV-Ansicht (große Karten, Pfeiltasten, nur die Tonight-Reihen).
+- [ ] Aus dem zweiten Auftrag: Overlay mit allen Tastenkürzeln auf `?`; Zoom auf 200 % ohne waagerechtes Scrollen (außer den Reihen); JavaScript unter 200 KB gzip messen. Wischgesten auf Karten bleiben weg (siehe Abweichungen).
 
 ### Etappe 11: Startdatum (eigene Etappe)
 - [x] Für noch nicht erschienene Watchlist-Filme Kino- und Heimkino-Start anzeigen (TMDB „release_dates“ je Land).

@@ -88,6 +88,14 @@ class TestPerformScan:
             with patch("watchlist_app.tmdb.get_movie_bundle", return_value=second):
                 outcome = perform_scan(store, ENTRIES, "src", "DE", "key")
         changes = outcome.results[0]["provider_changes"]
+        # MUBI is missing for the first time: "removed" waits for a second scan without it.
+        assert (changes["added"], changes["removed"]) == (["Arte"], [])
+        store._write("UPDATE films SET fetched_at = 0")
+        store._write("UPDATE scans SET watchlist_key = 'older list'")
+        with patch("watchlist_app.tmdb.search_movie_id", return_value=949):
+            with patch("watchlist_app.tmdb.get_movie_bundle", return_value=second):
+                outcome = perform_scan(store, ENTRIES, "src", "DE", "key")
+        changes = outcome.results[0]["provider_changes"]
         assert (changes["added"], changes["removed"]) == (["Arte"], ["MUBI"])
         reused = perform_scan(store, ENTRIES, "src", "DE", "key")
         assert reused.reused and reused.results[0]["provider_changes"]["added"] == ["Arte"]

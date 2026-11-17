@@ -160,19 +160,35 @@ def page(browser):
     assert errors == [], f"JavaScript errors: {errors}"
 
 
+def tick_all_services(page) -> None:
+    """Tick every service in the services menu, group by group, as a person would."""
+    page.locator("#services-button").click()
+    for toggle in page.locator("#services-menu [data-group-toggle]").all():
+        group = toggle.locator("xpath=ancestor::section[1]")
+        if group.locator("input:not(:checked)").count():
+            toggle.click()
+    page.locator("#services-button").click()
+
+
+def clear_services(page) -> None:
+    page.locator("#services-button").click()
+    page.locator("#clear-providers").click()
+    page.keyboard.press("Escape")
+
+
 def visible_titles(page) -> list[str]:
     return sorted(page.locator("article.film:visible .film-title").all_inner_texts())
 
 
 def test_scan_filters_and_favorite(app_server, page):
     expect = playwright_api.expect
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     # The page starts a scan; only the saved subscription (Netflix) is selected.
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
     expect(page.locator("#visible-count")).to_have_text("1")
     assert visible_titles(page) == ["Heat"]
 
-    page.locator("#select-all-providers").click()
+    tick_all_services(page)
     expect(page.locator("#visible-count")).to_have_text("2")
     assert visible_titles(page) == ["Alien", "Heat"]
 
@@ -180,7 +196,8 @@ def test_scan_filters_and_favorite(app_server, page):
     expect(page.locator("#visible-count")).to_have_text("1")
     assert visible_titles(page) == ["Alien"]
 
-    page.locator("#reset-providers").click()  # My subscriptions
+    # The services chip goes back to the saved subscriptions.
+    page.locator(".filter-chip[data-services]").click()
     expect(page.locator("#visible-count")).to_have_text("0")
 
     page.locator("#film-search").fill("")
@@ -198,23 +215,32 @@ def test_scan_filters_and_favorite(app_server, page):
     )
 
 
-def test_tonight_follows_runtime_genre_and_ticked_services(app_server, page):
+def test_tonight_page_rows_chips_and_pick_for_me(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"])
-    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
-    page.locator("#tonight-runtime").select_option("120")
-    page.locator("#tonight-genre").select_option("Action")
-    expect(page.locator("#tonight-picks")).to_contain_text("Heat")
-    expect(page.locator("#tonight-picks")).not_to_contain_text("Alien")
-    # Unticking every service empties Tonight, like the grid.
-    page.locator("#clear-providers").click()
-    expect(page.locator("#tonight-picks")).not_to_contain_text("Heat")
-    expect(page.locator("#tonight-criteria")).to_contain_text("No unwatched film")
+    # Only Netflix is a saved subscription: one row for it, nothing free.
+    expect(page.locator(".film-row h2").first).to_have_text("On Netflix 1", timeout=15000)
+    expect(page.locator("#context-text")).to_contain_text("1 films available on 1 services")
+    expect(page.locator(".film-row .film-title")).to_have_text(["Heat"])
+    # Quick chips narrow every row: Heat runs 120 minutes.
+    page.locator('.quick-chip[data-chip="tonight"]').click()
+    expect(page.locator(".film-row .film-title")).to_have_text(["Heat"])
+    page.locator('.quick-chip[data-chip="short"]').click()
+    expect(page.locator("#tonight-rows")).to_contain_text("No film fits")
+    page.locator('.quick-chip[data-chip="short"]').click()
+    page.locator('.quick-chip[data-chip="tonight"]').click()
+    # "Pick for me" opens the details of a film from the rows.
+    page.locator("#pick-for-me").click()
+    expect(page.locator("#film-details-title")).to_have_text("Heat")
+    expect(page.locator("#pick-for-me")).to_contain_text("Again")
+    # An old watchlist link to "/" with filters goes to the watchlist page.
+    page.goto(app_server["url"] + "/?genre=Action")
+    expect(page).to_have_url(re.compile(r"/watchlist\?genre=Action"))
 
 
 def test_trailer_from_the_details_window_is_in_front(app_server, page):
     expect = playwright_api.expect
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     page.locator('article.film[data-key="949"] .film-open').click()
     # Bootstrap ignores hide() while a dialog is still fading in; a person never clicks that fast.
     page.wait_for_function("document.getElementById('film-details-modal').contains(document.activeElement)")
@@ -233,9 +259,9 @@ def free_tagged(page) -> list[str]:
 
 def test_similar_film_on_own_service_opens_from_the_details(app_server, page):
     expect = playwright_api.expect
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
-    page.locator("#select-all-providers").click()
+    tick_all_services(page)
     page.locator('article.film[data-key="348"] .film-open').click()
     # Heat runs on Netflix (a subscription); Heat 2 is not on the watchlist.
     similar = page.locator("#film-details-content .film-modal-similar")
@@ -246,7 +272,7 @@ def test_similar_film_on_own_service_opens_from_the_details(app_server, page):
 
 def test_coming_soon_and_age_rating(app_server, page):
     expect = playwright_api.expect
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     # Heat comes out at home in 2099 and is rated 16 in Germany.
     page.locator("#coming-panel summary").click()
@@ -264,7 +290,7 @@ def test_coming_soon_and_age_rating(app_server, page):
 
 def test_free_labels_follow_the_country(app_server, page):
     expect = playwright_api.expect
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
     assert "Arte" in free_tagged(page) and "BBC iPlayer" not in free_tagged(page)
     # A country switch scans without reloading the page; the labels must follow the new scan.
@@ -283,34 +309,38 @@ def test_free_labels_follow_the_country(app_server, page):
 
 def test_saved_results_show_the_tools(app_server, page):
     expect = playwright_api.expect
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     # A second visit finds the saved scan and starts none: sorting, compare and the rest must still be there.
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("#status-message")).to_have_text(re.compile(r"^Saved results from "))
     expect(page.locator("#compare-films")).to_be_visible()
     expect(page.locator(".stats-link a")).to_have_attribute("href", "/stats")
     expect(page.locator("#retry-scan")).to_have_text("Scan now")
     # A rare filter set from a link sits behind "More filters"; the summary must still show it.
-    page.goto(app_server["url"] + "/?votes=1000")
+    page.goto(app_server["url"] + "/watchlist?votes=1000")
     expect(page.locator("#min-votes")).to_be_hidden()
-    expect(page.locator("#more-filters summary")).to_have_text("More filters (1 active)")
+    expect(page.locator("#more-filters summary")).to_have_text("Filters (1)")
 
 
 def test_filters_from_a_link_survive_the_scan(app_server, page):
     expect = playwright_api.expect
     # The genre list is filled only when films arrive; the genre from the link must wait for it.
-    page.goto(app_server["url"] + "/?genre=Action&rating=7&providers=Netflix,Arte")
+    page.goto(app_server["url"] + "/watchlist?genre=Action&rating=7&providers=Netflix,Arte")
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
-    expect(page.locator("#genre-filter")).to_have_value("Action")
+    expect(page.locator('#genre-list input[value="Action"]')).to_be_checked()
     expect(page.locator("#visible-count")).to_have_text("1")
     assert visible_titles(page) == ["Heat"]
     # The same link again, now from the saved scan.
     page.reload()
-    expect(page.locator("#genre-filter")).to_have_value("Action")
-    # The rating chip goes back to the first option, not to an empty select.
-    page.locator('.filter-chip[data-filter-id="min-rating"]').click()
-    expect(page.locator("#min-rating")).to_have_value("0")
+    expect(page.locator('#genre-list input[value="Action"]')).to_be_checked()
+    # An old link's rating=7 is the TMDB rating; its chip clears it.
+    expect(page.locator("#rating-filter")).to_have_value("tmdb:7")
+    page.locator('.filter-chip[data-filter-id="rating-filter"]').click()
+    expect(page.locator("#rating-filter")).to_have_value("")
+    # The genre chip clears the genre.
+    page.locator('.filter-chip[data-genre-include="Action"]').click()
+    expect(page.locator('#genre-list input[value="Action"]')).not_to_be_checked()
     # The favorite status only belongs to the favorites view.
     expect(page.locator("#favorite-status-filter")).to_be_hidden()
     page.locator("#favorites-view").click()
@@ -319,7 +349,7 @@ def test_filters_from_a_link_survive_the_scan(app_server, page):
 
 def test_keyboard_keeps_its_place(app_server, page):
     expect = playwright_api.expect
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
     # The star redraws the card; the focus must stay on the same star.
     star = page.locator('article.film[data-key="949"] button.favorite')
@@ -339,32 +369,37 @@ def test_keyboard_keeps_its_place(app_server, page):
     expect(details).to_be_focused()
 
 
-def test_phone_panel_stays_open_while_choosing(app_server, page):
+def test_phone_filter_sheet_stays_open_while_choosing(app_server, page):
     expect = playwright_api.expect
     page.set_viewport_size({"width": 375, "height": 800})
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
-    page.locator("#provider-toggle").click()
-    expect(page.locator("#provider-done")).to_be_focused()
-    # Open on a phone, the panel is a modal dialog and the page behind it cannot be reached.
-    expect(page.locator("#provider-panel")).to_have_attribute("role", "dialog")
-    expect(page.locator("#provider-panel")).to_have_attribute("aria-modal", "true")
-    assert page.evaluate("document.querySelector('.workspace > section').inert")
+    page.locator("#tools-toggle").click()
+    expect(page.locator("#film-search")).to_be_focused()
+    # Open on a phone, the filter sheet is a modal dialog and the page behind it cannot be reached.
+    sheet = page.locator("#film-filters")
+    expect(sheet).to_have_attribute("role", "dialog")
+    expect(sheet).to_have_attribute("aria-modal", "true")
+    # The sheet reaches the bottom edge and has a way out and a Reset.
+    assert page.evaluate("document.getElementById('film-filters').getBoundingClientRect().bottom") == 800
+    expect(page.locator("#filter-sheet-close")).to_be_visible()
+    expect(page.locator("#filter-sheet-reset")).to_be_visible()
+    assert page.evaluate("document.getElementById('app-header').inert")
+    page.locator("#services-button").click()
     for name, checked in (("Arte", True), ("Netflix", False), ("Netflix", True)):
-        box = page.locator(f'#provider-filters input[value="{name}"]')
-        box.set_checked(checked)
-        expect(page.locator("#provider-panel")).to_have_class(re.compile("show"))
-    expect(page.locator("#provider-done")).to_have_text("Done · 2 films")
-    page.locator("#provider-done").click()
-    expect(page.locator("#provider-panel")).not_to_have_class(re.compile("show"))
-    expect(page.locator("#provider-toggle")).to_be_focused()
-    expect(page.locator("#provider-panel")).not_to_have_attribute("role", "dialog")
-    assert not page.evaluate("document.querySelector('.workspace > section').inert")
+        page.locator(f'#services-menu input[value="{name}"]').set_checked(checked)
+        expect(page.locator("body")).to_have_class(re.compile("tools-open"))
+    expect(page.locator("#filter-sheet-done")).to_have_text("Show 2 films")
+    page.locator("#filter-sheet-done").click()
+    expect(page.locator("body")).not_to_have_class(re.compile("tools-open"))
+    expect(page.locator("#tools-toggle")).to_be_focused()
+    expect(sheet).to_have_attribute("role", "search")
+    assert not page.evaluate("document.getElementById('app-header').inert")
 
 
 def test_skip_link_and_two_stops_per_card(app_server, page):
     expect = playwright_api.expect
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
     # The first Tab reaches the skip link; it jumps past header and services to the films.
     page.keyboard.press("Tab")
@@ -387,17 +422,19 @@ def test_skip_link_and_two_stops_per_card(app_server, page):
 
 def test_no_match_offers_a_way_out(app_server, page):
     expect = playwright_api.expect
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
     page.locator("#film-search").fill("nothing like this")
     expect(page.locator("#filters-empty")).to_be_visible()
-    expect(page.locator("#filter-chips")).to_contain_text("Reset filters")
+    expect(page.locator("#filter-chips")).to_contain_text("Reset all")
+    # The way out names the filter that keeps the films away.
+    expect(page.locator("#filters-empty-hint")).to_have_text("Without the search filter there would be 1.")
     page.locator("#empty-reset").click()
     expect(page.locator("#film-search")).to_have_value("")
     expect(page.locator("#filters-empty")).to_be_hidden()
     expect(page.locator("#visible-count")).to_have_text("1")
     # Without any ticked service the empty state offers the saved subscriptions.
-    page.locator("#clear-providers").click()
+    clear_services(page)
     expect(page.locator("#empty-subscriptions")).to_be_visible()
     page.locator("#empty-subscriptions").click()
     expect(page.locator("#visible-count")).to_have_text("1")
@@ -406,7 +443,7 @@ def test_no_match_offers_a_way_out(app_server, page):
 def test_removed_favorite_comes_back_with_undo(app_server, page):
     expect = playwright_api.expect
     store = app_server["store"]
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
     star = page.locator('article.film[data-key="949"] button.favorite')
     star.click()
@@ -425,7 +462,7 @@ def test_removed_favorite_comes_back_with_undo(app_server, page):
 
 def test_a_note_that_could_not_be_saved_is_marked(app_server, page):
     expect = playwright_api.expect
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     # The finished scan redraws the cards; typing before that would land in a card that is replaced.
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     card = page.locator('article.film[data-key="949"]')
@@ -467,7 +504,7 @@ def test_settings_are_saved_and_checked(app_server, page):
 
 def test_subscription_with_price_is_saved_in_one_go(app_server, page):
     expect = playwright_api.expect
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     page.goto(f"{app_server['url']}/subscriptions")
     netflix = page.locator('tr[data-service="Netflix"]')
@@ -486,7 +523,7 @@ def test_subscription_with_price_is_saved_in_one_go(app_server, page):
 
 def test_title_match_is_corrected_and_undone(app_server, page):
     expect = playwright_api.expect
-    page.goto(app_server["url"])  # the scan stores the matches
+    page.goto(app_server["url"] + "/watchlist")  # the scan stores the matches
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
 
     page.goto(f"{app_server['url']}/settings/matches")
@@ -543,7 +580,7 @@ def test_hostile_backup_restored_on_the_settings_page_runs_no_script(app_server,
 
     # Open the page without a new scan replacing the restored one.
     with patch("watchlist_app.scan_service.load_watchlist", side_effect=FileNotFoundError("no list")):
-        page.goto(app_server["url"])
+        page.goto(app_server["url"] + "/watchlist")
         expect(page.locator('article.film[data-key="5"]')).to_have_count(1, timeout=15000)
     assert page.evaluate("() => window.attacked") is None
     assert page.locator("article.film img[src='x']").count() == 0
@@ -576,7 +613,7 @@ def test_another_web_site_cannot_restore_a_backup(app_server, page):
 
 def test_details_window_has_its_own_address(app_server, page):
     expect = playwright_api.expect
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     modal = page.locator("#film-details-modal")
     # A click anywhere on the card opens the details and writes ?film= into the address.
@@ -594,19 +631,64 @@ def test_details_window_has_its_own_address(app_server, page):
     new_tab.value.close()
     expect(modal).to_be_hidden()
     # A shared link opens the film; an unknown one gets a note and is taken out of the address.
-    page.goto(f"{app_server['url']}/?film=949")
+    page.goto(f"{app_server['url']}/watchlist?film=949")
     expect(page.locator("#film-details-title")).to_have_text("Heat", timeout=15000)
-    page.goto(f"{app_server['url']}/?film=nope")
+    page.goto(f"{app_server['url']}/watchlist?film=nope")
     expect(page.locator("#toast-message")).to_contain_text("not on this watchlist", timeout=15000)
     assert "film=" not in page.url
 
 
 def test_stats_page_shows_the_numbers_of_the_last_scan(app_server, page):
     expect = playwright_api.expect
-    page.goto(app_server["url"])
+    page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     page.get_by_role("link", name="Stats").first.click()
     expect(page.locator("#stats-root")).to_have_attribute("aria-busy", "false")
     expect(page.locator(".stat-tile").first).to_contain_text("films on the watchlist")
     expect(page.locator(".stats-card", has_text="Genres").locator(".bars li").first).to_be_visible()
     expect(page.locator(".stats-table").last).to_contain_text("Netflix")
+
+
+def test_filter_bar_cost_genres_runtime_and_the_address(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    tick_all_services(page)
+    expect(page.locator("#visible-count")).to_have_text("2")
+    # Cost: Free leaves Heat (Netflix subscription) out; each segment shows its count.
+    expect(page.locator('[data-cost-count="free"]')).to_have_text("1")
+    page.locator('#cost-options label:has(input[value="free"])').click()
+    assert visible_titles(page) == ["Alien"]
+    expect(page).to_have_url(re.compile(r"[?&]cost=free"))
+    page.locator('#cost-options label:has(input[value="all"])').click()
+    # Genres: "No" excludes Action; the menu counts per genre.
+    page.locator("#genre-pop summary").click()
+    expect(page.locator('[data-genre-count="Action"]')).to_have_text("1")
+    page.locator('#genre-list .genre-exclude[data-genre="Action"]').click()
+    page.keyboard.press("Escape")
+    assert visible_titles(page) == ["Alien"]
+    expect(page.locator('.filter-chip[data-genre-exclude="Action"]')).to_have_text("No Action")
+    expect(page).to_have_url(re.compile(r"[?&]nogenre=Action"))
+    # The whole state survives a reload through the address.
+    page.reload()
+    expect(page.locator("#progress-count")).to_have_text(re.compile("Complete|Saved"), timeout=15000)
+    assert visible_titles(page) == ["Alien"]
+    page.locator('.filter-chip[data-genre-exclude="Action"]').click()
+    # Runtime: Heat runs 120 min, Alien has no runtime, so a limit keeps only Heat.
+    page.locator("#runtime-pop summary").click()
+    page.locator('#runtime-pop label:has(input[value="120"])').click()
+    page.keyboard.press("Escape")
+    assert visible_titles(page) == ["Heat"]
+    runtime_chip = page.locator('.filter-chip[data-filter-id="runtime-filter"]')
+    expect(runtime_chip).to_have_text("Runtime: Up to 120 min")
+
+
+def test_filter_menus_stay_inside_the_window(app_server, page):
+    expect = playwright_api.expect
+    page.set_viewport_size({"width": 820, "height": 800})
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    for name in ("services-pop", "genre-pop", "runtime-pop", "more-filters", "sort-pop"):
+        page.locator(f"#{name} > summary").click()
+        box = page.locator(f"#{name} > .filter-menu").bounding_box()
+        assert box["x"] >= 0 and box["x"] + box["width"] <= 820, name

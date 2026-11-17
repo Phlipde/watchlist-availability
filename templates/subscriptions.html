@@ -6,11 +6,11 @@
   <title>My subscriptions · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261117-19') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261117-31') }}" rel="stylesheet">
 </head>
 <body>
+  {% include "partials/header.html" %}
   <main class="page">
-    {% include "partials/page-nav.html" %}
     <h1 class="page-title">My subscriptions</h1>
     <p class="meta"><label for="subscriptions-country">Country</label>
       <select class="form-select form-select-sm w-auto d-inline-block ms-1" id="subscriptions-country">{% for code in countries %}<option value="{{ code }}" {% if code == country %}selected{% endif %}>{{ code }}</option>{% endfor %}</select>
@@ -80,6 +80,7 @@
     <ul class="meta">{% for film in costs.rent_only %}<li>{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</li>{% endfor %}</ul>
     {% else %}<p class="meta">No film is only available to rent.</p>{% endif %}
   </main>
-  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261117-19') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261117-31') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261117-31') }}" type="module"></script>
 </body>
 </html>

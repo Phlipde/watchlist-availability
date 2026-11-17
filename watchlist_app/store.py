@@ -409,6 +409,15 @@ class Store:
         )
         return self._scan_from_row(rows[0]) if rows else None
 
+    def recent_scans(self, country: str, source_name: str, limit: int = 2) -> list[dict]:
+        """The newest scans of one watchlist in a country, newest first."""
+        rows = self._read(
+            f"SELECT {self._SCAN_COLUMNS} FROM scans WHERE country = ? AND source_name = ? "
+            "ORDER BY created DESC LIMIT ?",
+            (country, source_name, limit),
+        )
+        return [self._scan_from_row(row) for row in rows]
+
     def find_scan(self, country: str, watchlist_key: str, max_age: float) -> dict | None:
         """A recent scan of exactly this watchlist, to skip scanning again."""
         rows = self._read(

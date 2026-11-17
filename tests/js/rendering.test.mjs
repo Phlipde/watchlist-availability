@@ -106,3 +106,9 @@ test('cards show a service logo with its name as alt text, else the name', () =>
   assert.match(html, /<img class="service-logo" src="https:\/\/img\/\/n\.png" alt="Netflix, subscription"/);
   assert.match(html, /data-provider="Arte"><span class="pill pill-service" title="Arte, subscription">Arte<span class="visually-hidden">, subscription<\/span><\/span>/);
 });
+
+test('card for "All" lists every ticked service, the cheapest offer decides the mark', () => {
+  const film = {key: 'x', title: 'Film', providers: {Arte: ['free'], Netflix: ['flatrate'], Rakuten: ['rent']}};
+  const context = {imageBaseUrl: '', selected: new Set(['Arte', 'Netflix', 'Rakuten']), favorites: new Map(), compareKeys: new Set(), greyKeys: new Set()};
+  assert.deepEqual([...filmCard(film, 'All', context).matchAll(/data-provider="([^"]+)"/g)].map(match => match[1]), ['Arte', 'Netflix', 'Rakuten']);
+});

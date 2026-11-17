@@ -117,10 +117,12 @@ Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
 
 #### Web Features
 
+* **Tonight (`/`):** The start page: rows of films on your ticked services (new in the last 14 days, free, one row per subscription), quick filters, "Pick for me" (key `r`) and what recently left your services and where it runs now.
+* **Watchlist (`/watchlist`):** All films with one filter bar (services, cost, genres, runtime, rating, more), eight sorts, and a **Changes** tab with every change of the last 30 days. Old links to `/` with filters redirect here.
 * **Progressive Scans & Caching:** Scans execute in the background with progressive card loading. The app caches results locally and restores previous state on reload.
 * **Filtering & Search:** Dynamic filtering by Provider, Free/Paid offer types, release year, trailer availability, poster availability, and minimum provider counts.
 * **Any / All Provider Modes:** Toggle between showing films available on *any* selected service vs. *all* selected services.
-* **Change History:** Every scan is compared with the previous one. "New on …" / "No longer on …" is stored with its date and shown for 14 days, also after a reload.
+* **Change History:** Every scan is compared with the earlier ones. "New on …" is stored with its date; "gone" needs two scans in a row without the service, so a one-day TMDB hiccup is not reported. Changes are kept for 30 days.
 * **Settings (`/settings`):** Letterboxd username, country, your own subscriptions per country, the automatic scan interval, and backup download / restore (settings, favorites, change history, last scan per country).
 * **My subscriptions / Rental shops:** One click selects the services you pay for, or only the shops where films are rented one by one.
 * **Automatic Scans:** Optionally every 6, 12, 24 or 48 hours or once a week, while the app runs. A scan interrupted by a restart is started again.

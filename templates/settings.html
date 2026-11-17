@@ -6,11 +6,11 @@
   <title>Settings · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261117-19') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261117-31') }}" rel="stylesheet">
 </head>
 <body>
+  {% include "partials/header.html" %}
   <main class="page">
-    {% include "partials/page-nav.html" %}
     <h1 class="page-title">Settings</h1>
     {% include "partials/settings-nav.html" %}
     {% if not settings.tmdb_api_key_set %}<p class="error">The TMDB API key is missing. Set <code>TMDB_API_KEY</code> in the environment (or <code>.env</code>) and restart the app.</p>{% endif %}
@@ -48,6 +48,7 @@
       </div>
     </section>
   </main>
-  <script src="{{ url_for('static', filename='js/settings.js', v='20261117-19') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261117-31') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/settings.js', v='20261117-31') }}" type="module"></script>
 </body>
 </html>

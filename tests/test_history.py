@@ -14,17 +14,34 @@ class TestDiffScans:
         assert history.diff_scans(None, [film("1", "Heat", ["Netflix"])], []) == []
 
     def test_added_and_removed_providers(self):
-        before = previous([film("1", "Heat", ["Netflix", "MUBI"])])
-        changes = history.diff_scans(before, [film("1", "Heat", ["Netflix", "Arte"])], [])
+        older = previous([film("1", "Heat", ["Netflix", "MUBI"])])
+        before = previous([film("1", "Heat", ["Netflix"])])
+        changes = history.diff_scans(before, [film("1", "Heat", ["Netflix", "Arte"])], [], older=older)
         assert [(change["provider"], change["change"]) for change in changes] == [
             ("Arte", "added"),
             ("MUBI", "removed"),
         ]
         assert changes[0]["film_key"] == "1" and changes[0]["title"] == "Heat"
 
+    def test_removed_needs_two_scans_in_a_row(self):
+        # One scan without MUBI is not enough: TMDB sometimes drops a provider for a day.
+        before = previous([film("1", "Heat", ["Netflix", "MUBI"])])
+        assert history.diff_scans(before, [film("1", "Heat", ["Netflix"])], []) == []
+        changes = history.diff_scans(
+            previous([film("1", "Heat", ["Netflix"])]), [film("1", "Heat", ["Netflix"])], [], older=before
+        )
+        assert [(change["provider"], change["change"]) for change in changes] == [("MUBI", "removed")]
+
+    def test_provider_back_after_one_missing_scan_is_not_new(self):
+        older = previous([film("1", "Heat", ["Netflix", "MUBI"])])
+        before = previous([film("1", "Heat", ["Netflix"])])
+        assert history.diff_scans(before, [film("1", "Heat", ["Netflix", "MUBI"])], [], older=older) == []
+
     def test_film_becoming_available_or_unavailable(self):
-        before = previous([film("1", "Heat", ["Netflix"])], [film("2", "Alien", [])])
-        changes = history.diff_scans(before, [film("2", "Alien", ["Arte"])], [film("1", "Heat", [])])
+        older = previous([film("1", "Heat", ["Netflix"])], [film("2", "Alien", [])])
+        before = previous([film("2", "Alien", [])], [film("1", "Heat", [])])
+        now = ([film("2", "Alien", ["Arte"])], [film("1", "Heat", [])])
+        changes = history.diff_scans(before, *now, older=older)
         assert {(change["title"], change["provider"], change["change"]) for change in changes} == {
             ("Alien", "Arte", "added"),
             ("Heat", "Netflix", "removed"),
@@ -38,8 +55,9 @@ class TestDiffScans:
         )
 
     def test_old_scan_without_tmdb_keys_is_matched_by_title_and_year(self):
-        before = previous([{"title": "Heat", "year": 1995, "providers": {"Netflix": ["rent"]}}])
-        changes = history.diff_scans(before, [film("949", "Heat", ["Arte"], year=1995)], [])
+        older = previous([{"title": "Heat", "year": 1995, "providers": {"Netflix": ["rent"]}}])
+        before = previous([{"title": "Heat", "year": 1995, "providers": {}}])
+        changes = history.diff_scans(before, [film("949", "Heat", ["Arte"], year=1995)], [], older=older)
         assert {(change["provider"], change["change"]) for change in changes} == {
             ("Arte", "added"),
             ("Netflix", "removed"),

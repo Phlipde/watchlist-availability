@@ -18,6 +18,19 @@ from watchlist_app.tmdb import _TMDB_IMAGE_BASE_URL, _TMDB_LOGO_BASE_URL
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
 
+# The sorts of the filter bar, default first; static/js/filtering.js sortFilms implements them.
+SORTS = [
+    ("priority", "Priority", "Best rated", "Favorites first, then the Letterboxd rating."),
+    ("letterboxd", "Letterboxd rating", "Best rated", "Highest average rating on Letterboxd first."),
+    ("rating", "TMDB rating", "Best rated", "Highest TMDB score first."),
+    ("runtime", "Shortest first", "By film", "Shortest runtime first."),
+    ("year-desc", "Newest first", "By film", "Latest release year first."),
+    ("recent", "Recently added", "By availability", "Last added to your Letterboxd watchlist first."),
+    ("new", "Newly available", "By availability", "Most recently added by a service first."),
+    ("random", "Random", "Other", "Shuffled; the order stays while you browse."),
+]
+
+
 def status_overview(store: Store, settings: AppSettings, service: ScanService) -> dict:
     """What the status page shows: recent scan runs, the schedule and the size of the data."""
     jobs = []
@@ -111,6 +124,19 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             return jsonify({"error": "Requests from other web sites are not allowed."}), 403
         return None
 
+    @app.context_processor
+    def header_context():
+        """The header is the same on every page: country and the state of the data."""
+        scan = store.latest_scan(settings.country)
+        age = time.time() - scan["created"] if scan else None
+        stale = age is None or age > 24 * 3600
+        return {
+            "header_country": settings.country,
+            "header_countries": list(COUNTRIES),
+            "sync_state": "stale" if stale else "ok",
+            "sync_text": "Out of date" if stale else "Synced",
+        }
+
     def page(template: str, **context):
         response = make_response(render_template(template, **context))
         response.headers["Cache-Control"] = "no-store, max-age=0"
@@ -124,41 +150,72 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             if (path := validation.image_path(item["logo_path"]))
         }
 
+    # Parameters of the watchlist's filter links; a link to "/" with one of them is an old watchlist link.
+    watchlist_params = {
+        "q",
+        "cost",
+        "genre",
+        "nogenre",
+        "max",
+        "rating",
+        "providers",
+        "sort",
+        "match",
+        "unavailable",
+        "votes",
+        "keyword",
+        "age",
+        "lang",
+        "origin",
+        "from",
+        "to",
+        "media",
+        "changes",
+        "minproviders",
+        "only",
+        "favorites",
+        "favoriteStatus",
+        "availability",
+        "kind",
+        "runtime",
+        "lb",
+    }
+
     @app.route("/")
-    def index():
+    def tonight():
+        if watchlist_params & set(request.args):
+            return redirect(f"/watchlist?{request.query_string.decode()}", code=301)
+        return films_page("tonight")
+
+    @app.get("/watchlist")
+    def watchlist():
+        return films_page("watchlist")
+
+    def films_page(view: str):
         latest = store.latest_scan(settings.country)
         free_services = (
             providers.mostly_free_from_scan(latest["results"], latest["unavailable"])
             if latest
             else providers.MOSTLY_FREE
         )
-        initial_filters = {
-            "query": request.args.get("q", ""),
-            "availability": request.args.get("availability", "available"),
-            "kind": request.args.get("kind", "all"),
-            "min_rating": request.args.get("rating", "0"),
-            "sort": request.args.get("sort", "rating"),
-        }
-        logos = provider_logos()
+        initial_filters = {"query": request.args.get("q", ""), "sort": request.args.get("sort", SORTS[0][0])}
         return page(
             "index.html",
-            provider_groups=providers.provider_groups(settings.loaded_providers()),
-            logos=logos,
-            logo_base_url=_TMDB_LOGO_BASE_URL,
-            mostly_free_providers=free_services,
-            selected=settings.subscriptions(),
+            view=view,
             country=settings.country,
             countries=list(COUNTRIES),
             initial_filters=initial_filters,
+            sorts=SORTS,
             client_config={
                 "imageBaseUrl": _TMDB_IMAGE_BASE_URL,
+                "view": view,
                 "initialFilters": initial_filters,
                 "subscriptions": {country: settings.subscriptions(country) for country in COUNTRIES},
                 "rentalShops": sorted(providers.RENTAL_SHOPS),
                 "freeServices": sorted(free_services),
                 "logoBaseUrl": _TMDB_LOGO_BASE_URL,
-                # Logos of the providers loaded from TMDB, for the availability in the details.
-                "providerLogos": logos,
+                # Logos of the providers loaded from TMDB, for the services menu and the details.
+                "providerLogos": provider_logos(),
             },
         )
 

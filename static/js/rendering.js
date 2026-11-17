@@ -2,7 +2,6 @@ import {dateTime, escapeHtml, numberText} from './ui.js';
 import {SECTION_KINDS, filmKey, sectionProviders, selectedChanges} from './filtering.js';
 
 // "Free" alone was read three ways; the section says what it holds.
-const SECTION_TITLES = {Free: 'Free & with ads', Paid: 'Subscription & rent'};
 
 const OFFER_TYPES = {
   free: ['Free', 'ti ti-gift'],
@@ -63,9 +62,10 @@ const SERVICE_MARKS = {free: '<i class="ti ti-gift"></i>', ads: 'Ad', rent: '€
 
 // Every ticked service the film runs on in this section, sorted by name so a service keeps its place across cards.
 function serviceList(film, section, context) {
-  const sectionKinds = SECTION_KINDS[section] || [];
+  const sectionKinds = section === 'All' ? ['free', 'ads', 'flatrate', 'rent'] : SECTION_KINDS[section] || [];
   const logos = context.providerLogos || {};
-  return sectionProviders(film, section).filter(provider => context.selected.has(provider))
+  const offered = section === 'All' ? Object.keys(film.providers || {}) : sectionProviders(film, section);
+  return offered.filter(provider => context.selected.has(provider))
     .sort((a, b) => a.localeCompare(b, undefined, {sensitivity: 'base'}))
     .map(provider => {
       const kinds = film.providers[provider] || [];
@@ -86,20 +86,6 @@ export function changeBadgesFor(film, selected) {
     ...changes.added.map(provider => `<span class="pill pill-ok me-1">New on ${escapeHtml(provider)}</span>`),
     ...changes.removed.map(provider => `<span class="pill pill-neutral me-1">No longer on ${escapeHtml(provider)}</span>`),
   ].join('');
-}
-
-// The "Scan changes" box: stored changes of the last two weeks for the selected providers.
-export function changeSummary(changes, selected, lastScan) {
-  const relevant = (changes || []).filter(change => selected.has(change.provider));
-  const added = relevant.filter(change => change.change === 'added').length;
-  const day = seconds => new Date(seconds * 1000).toLocaleDateString();
-  const rows = relevant.slice(0, 60).map(change =>
-    `<li>${day(change.created)} · ${escapeHtml(change.title)}: ${change.change === 'added' ? 'new on' : 'no longer on'} ${escapeHtml(change.provider)}</li>`
-  ).join('');
-  return (lastScan ? `<p>Last successful scan: ${dateTime(lastScan)}.</p>` : '')
-    + `<p>Last 14 days on your selected services: ${added} new, ${relevant.length - added} no longer available.</p>`
-    + (rows ? `<ul class="change-list">${rows}</ul>` : '')
-    + (relevant.length > 60 ? `<p>… and ${relevant.length - 60} more.</p>` : '');
 }
 
 // Status and note of a favorite; data-key lets the same fields work on the card and in the details.
@@ -135,10 +121,11 @@ export function filmCard(film, section, context) {
   // Status and note only in the favorites view (and in the details), so the cards do not jump.
   const favoriteControls = favorite && context.favoritesOnly ? favoriteFields(key, film.title, savedFavorite) : '';
   // At most one status on the poster, as text: watched beats new.
-  const added = selectedChanges(film, context.selected).added;
+  const {added, removed} = selectedChanges(film, context.selected);
   const badge = savedFavorite.status === 'watched'
     ? '<span class="poster-badge">Watched</span>'
-    : added.length ? `<span class="poster-badge poster-badge-new" title="New on ${escapeHtml(added.join(', '))}">New<span class="visually-hidden"> on ${escapeHtml(added.join(', '))}</span></span>` : '';
+    : added.length ? `<span class="poster-badge poster-badge-new" title="New on ${escapeHtml(added.join(', '))}">New<span class="visually-hidden"> on ${escapeHtml(added.join(', '))}</span></span>`
+      : removed.length ? `<span class="poster-badge poster-badge-gone" title="Gone from ${escapeHtml(removed.join(', '))}">Gone<span class="visually-hidden"> from ${escapeHtml(removed.join(', '))}</span></span>` : '';
   const services = serviceList(film, section, context);
   // The title link covers the whole card (see .film-open::after); the star sits above it. Two tab stops per card.
   return `<article class="film${grey}" data-key="${escapeHtml(key)}" data-section="${section}"><div class="poster"><label class="comparison-toggle"><input class="comparison-check" type="checkbox" aria-label="Compare ${title}" ${compareChecked}><span aria-hidden="true">Compare</span></label>${badge}${poster}</div><div class="film-info"><h3 class="film-title">${filmLink(film, key, pageHref)}</h3><p class="year">${meta}</p><div class="card-foot">${services ? `<ul class="services">${services}</ul>` : '<span></span>'}${favoriteButton}</div>${favoriteControls}</div></article>`;
@@ -150,11 +137,9 @@ export function unavailableCard(film, selected, pageHref = 'http://localhost/') 
   return `<article class="film unavailable-card" data-key="${escapeHtml(key)}" data-section="Unavailable"><div class="film-info"><h3 class="film-title">${filmLink(film, key, pageHref)}</h3><span class="year">${numberText(film.year, 'Year unknown')} · <span class="pill pill-neutral"><i class="ti ti-eye-off" aria-hidden="true"></i> Unavailable</span></span>${changeBadges ? `<p class="provider-changes">${changeBadges}</p>` : ''}</div></article>`;
 }
 
-// Draws the Free/Paid sections and the unavailable list from the result of filterFilms().
+// Draws one grid of films and the unavailable list from the result of filterFilms().
 export function renderResults(view, containers, context) {
-  containers.results.innerHTML = Object.entries(view.sections)
-    .filter(([, films]) => films.length)
-    .map(([section, films]) => `<div class="result-section" data-section="${section}"><h2>${SECTION_TITLES[section] || section}</h2><div class="films">${films.map(film => filmCard(film, section, context)).join('')}</div></div>`)
-    .join('');
+  containers.results.innerHTML = view.films.length
+    ? `<div class="films">${view.films.map(film => filmCard(film, view.sectionOf.get(filmKey(film)), context)).join('')}</div>` : '';
   containers.unavailableResults.innerHTML = view.unavailable.map(film => unavailableCard(film, context.selected, context.pageHref)).join('');
 }
