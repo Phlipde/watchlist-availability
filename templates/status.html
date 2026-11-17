@@ -3,15 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Status · Watchlist Availability</title>
+  <title>Data &amp; status · Settings · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261116-16') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261117-19') }}" rel="stylesheet">
 </head>
 <body>
   <main class="page">
     {% include "partials/page-nav.html" %}
-    <h1 class="page-title">Status</h1>
+    <h1 class="page-title">Settings</h1>
+    {% include "partials/settings-nav.html" %}
     {% if not status.tmdb_api_key_set %}<p class="error">The TMDB API key is missing, so no scan can run.</p>{% endif %}
 
     <div class="analysis-panel status-tiles">
@@ -22,7 +23,7 @@
       <div class="analysis-item">Films known: <strong>{{ status.counts.films }}</strong></div>
       <div class="analysis-item">Favorites: <strong>{{ status.counts.favorites }}</strong></div>
       <div class="analysis-item">Stored changes: <strong>{{ status.counts.changes }}</strong></div>
-      <div class="analysis-item">Matches to check: <strong><a href="/matches">{{ status.uncertain_matches }}</a></strong></div>
+      <div class="analysis-item">Matches to check: <strong><a href="/settings/matches">{{ status.uncertain_matches }}</a></strong></div>
       <div class="analysis-item">Services from TMDB ({{ status.country }}): <strong>{% if status.provider_catalog.count %}{{ status.provider_catalog.count }}, <span class="time" data-time="{{ status.provider_catalog.fetched_at }}"></span>{% else %}not loaded yet{% endif %}</strong></div>
       <div class="analysis-item">Database: <strong>{% if status.database_bytes %}{{ '%.1f'|format(status.database_bytes / 1000000) }} MB{% else %}–{% endif %}</strong></div>
     </div>
@@ -30,7 +31,7 @@
     {% if status.reminders %}
     <h2 class="h4 mt-4">Subscription reminders</h2>
     <ul class="meta">{% for item in status.reminders %}<li><strong>{{ item.date }}</strong>: {{ item.name }} ({{ item.country }}) · {% if item.days < 0 %}{{ -item.days }} days ago{% elif item.days == 0 %}today{% else %}in {{ item.days }} days{% endif %}</li>{% endfor %}</ul>
-    <p class="hint">Set on the <a href="/subscriptions">My subscriptions</a> page.</p>
+    <p class="hint">Set on the <a href="/subscriptions">Subscriptions</a> page.</p>
     {% endif %}
 
     <h2 class="h4 mt-4">Recent scans</h2>

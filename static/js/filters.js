@@ -7,8 +7,9 @@ export const FILTER_CONTROLS = [
   ['film-search', 'Search'], ['availability-filter', 'Availability'], ['genre-filter', 'Genre'],
   ['runtime-filter', 'Runtime'], ['min-rating', 'Rating'], ['kind-filter', 'Offer'],
   ['year-from', 'From'], ['year-to', 'To'], ['min-votes', 'Votes'], ['keyword-filter', 'Keyword'],
-  ['media-filter', 'Media'], ['change-filter', 'Changes'], ['provider-count-filter', 'Services'],
+  ['media-filter', 'Trailer'], ['change-filter', 'Changes'], ['provider-count-filter', 'Services'],
   ['exclusive-filter', 'Only on one of my services'], ['age-filter', 'Age rating'],
+  ['language-filter', 'Language'], ['origin-filter', 'Country'], ['letterboxd-filter', 'Letterboxd'],
 ];
 
 // A control is set when it differs from its first option, its empty value or "unchecked".
@@ -54,6 +55,9 @@ export function readFilters(doc, favoritesOnly) {
     genre: value('genre-filter'),
     keyword: value('keyword-filter'),
     age: doc.getElementById('age-filter')?.value ?? 'all',
+    language: doc.getElementById('language-filter')?.value ?? 'all',
+    origin: doc.getElementById('origin-filter')?.value ?? 'all',
+    minLetterboxd: Number(doc.getElementById('letterboxd-filter')?.value) || 0,
     runtime: value('runtime-filter'),
     mode: value('match-mode'),
     yearFrom: years[0],

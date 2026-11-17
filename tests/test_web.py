@@ -213,7 +213,7 @@ class TestPages:
     def test_status_page_lists_scans(self, client, store):
         store.create_job("abc", "DE", "schedule", 100.0)
         store.update_job("abc", status="complete", finished_at=112.5, tmdb_requests=42, completed=3, total=3)
-        page = client.get("/status").get_data(as_text=True)
+        page = client.get("/settings/data").get_data(as_text=True)
         assert "schedule" in page and "12.5 s" in page and ">42<" in page
         overview = client.get("/api/status").get_json()
         assert overview["jobs"][0]["tmdb_requests"] == 42
@@ -234,7 +234,7 @@ class TestCosts:
         assert answer.status_code == 200
         page = client.get("/subscriptions").get_data(as_text=True)
         assert ">5.00<" in page and "10.00" in page and "Alien" in page
-        status = client.get("/status").get_data(as_text=True)
+        status = client.get("/settings/data").get_data(as_text=True)
         assert "2026-12-01" in status and "Netflix (DE)" in status
 
     def test_costs_only_for_own_services(self, client, settings):
@@ -386,7 +386,11 @@ class TestMatches:
 
     def test_page_and_list(self, client, store):
         self._fill(store)
-        assert b"Title matches" in client.get("/matches").data
+        assert b"Title matches" in client.get("/settings/matches").data
+        assert b"stats-page.js" in client.get("/stats").data
+        # Old addresses from before the move under Settings redirect for good.
+        assert client.get("/matches").headers["Location"].endswith("/settings/matches")
+        assert client.get("/status").status_code == 301
         rows = client.get("/api/matches").get_json()
         assert [(row["film_key"], row["reason"], row["tmdb_title"]) for row in rows] == [
             ("title:heat|1995", "search", "Heat")
@@ -457,3 +461,17 @@ def test_provider_logos_reach_the_page_under_their_display_name(client, store):
     page = client.get("/").get_data(as_text=True)
     config = json.loads(page.split("window.WATCHLIST_CONFIG = ", 1)[1].split(";</script>", 1)[0])
     assert config["providerLogos"] == {"Prime Video": "/prime.png"}
+
+
+def test_other_countries_come_from_stored_offers(client, store):
+    store.save_bundle(
+        949,
+        {
+            "poster_path": None,
+            "details": {},
+            "providers": {"DE": {"Netflix": ["flatrate"]}, "GB": {"Netflix": ["flatrate"], "MUBI": ["rent"]}},
+        },
+    )
+    countries = client.get("/api/films/949/countries").get_json()
+    assert countries == {"DE": {"Netflix": ["flatrate"]}, "GB": {"Netflix": ["flatrate"], "MUBI": ["rent"]}}
+    assert client.get("/api/films/1/countries").get_json() == {}

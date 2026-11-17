@@ -7,6 +7,7 @@ from .store import Store
 
 PROVIDERS_TTL_SECONDS = 24 * 60 * 60
 NOT_FOUND_TTL_SECONDS = 7 * 24 * 60 * 60
+LETTERBOXD_RATING_TTL_SECONDS = 30 * 24 * 60 * 60  # averages move slowly; one page load a month
 
 
 def film_key(title: str, year: int | None, slug: str | None) -> str:
@@ -58,8 +59,19 @@ def lookup_film(
     else:
         tmdb_id = known["tmdb_id"]
 
+    lb_rating = known.get("lb_rating") if known else None
+    if cache and slug and now - ((known or {}).get("lb_checked_at") or 0) >= LETTERBOXD_RATING_TTL_SECONDS:
+        try:
+            lb_rating = letterboxd.fetch_rating(slug)
+        except letterboxd.LetterboxdError:
+            pass  # the rating is a nice-to-have: keep the old one and try again next scan
+        else:
+            cache.set_letterboxd_rating(key, lb_rating, now)
+
     stored = cache.get_film(tmdb_id, country) if cache else None
-    if stored is not None and now - (stored["fetched_at"] or 0) < providers_ttl:
+    # Details stored before the scan fetched release dates and languages lack those fields.
+    current = stored is not None and "origin_countries" in (stored["details"] or {})
+    if stored is not None and current and now - (stored["fetched_at"] or 0) < providers_ttl:
         poster_path, details, providers = stored["poster_path"], stored["details"], stored["providers"]
     else:
         bundle = tmdb.get_movie_bundle(tmdb_id, api_key)
@@ -77,5 +89,6 @@ def lookup_film(
         "poster_path": poster_path,
         "details": details or {},
         "release": ((details or {}).get("release_dates") or {}).get(country) or {},
+        "letterboxd_rating": lb_rating,
         "providers": {provider: set(kinds) for provider, kinds in providers.items()},
     }

@@ -6,7 +6,7 @@
   <title>My subscriptions · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261116-16') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261117-19') }}" rel="stylesheet">
 </head>
 <body>
   <main class="page">
@@ -67,10 +67,10 @@
     </form>
 
     {% if costs.services %}
-    <h2 class="h4 mt-4">Rotation</h2>
+    <h2 class="h4 mt-4">Cancel or switch</h2>
     <div class="analysis-panel">
       <div class="analysis-item">Cancel: <strong>{{ costs.cancel|join(', ') or 'nothing' }}</strong><br><small>{% if costs.cancel_loses_nothing %}you lose no watchlist film{% else %}the fewest films of its own{% endif %}</small></div>
-      <div class="analysis-item">Book for a month: <strong>{% if costs.book %}{{ costs.book[0].name }}{% else %}nothing{% endif %}</strong><br><small>{% if costs.book %}{{ costs.book[0].films }} watchlist films none of your services has{% else %}your services cover every film with a subscription offer{% endif %}</small></div>
+      <div class="analysis-item">Subscribe for a month: <strong>{% if costs.book %}{{ costs.book[0].name }}{% else %}nothing{% endif %}</strong><br><small>{% if costs.book %}{{ costs.book[0].films }} watchlist films none of your services has{% else %}your services cover every film with a subscription offer{% endif %}</small></div>
     </div>
     {% if costs.book|length > 1 %}<p class="hint">Next best: {% for item in costs.book[1:] %}{{ item.name }} ({{ item.films }}){% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
     {% endif %}
@@ -80,6 +80,6 @@
     <ul class="meta">{% for film in costs.rent_only %}<li>{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</li>{% endfor %}</ul>
     {% else %}<p class="meta">No film is only available to rent.</p>{% endif %}
   </main>
-  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261116-16') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261117-19') }}" type="module"></script>
 </body>
 </html>

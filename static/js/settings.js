@@ -34,7 +34,7 @@ form.addEventListener('submit', async event => {
 document.getElementById('backup-file').addEventListener('change', async event => {
   const file = event.target.files[0];
   if (!file) return;
-  if (!window.confirm(`Restore from "${file.name}"? Settings and favorites in the file replace the current ones.`)) {
+  if (!window.confirm(`Restore from “${file.name}”? Settings and favorites in the file replace the current ones.`)) {
     event.target.value = '';
     return;
   }

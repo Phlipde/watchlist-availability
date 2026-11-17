@@ -29,6 +29,9 @@ DB_UPDATE_SECONDS = 1.0
 PROVIDER_CATALOG_TTL_SECONDS = 7 * 24 * 60 * 60
 # Marks scans that keep every provider TMDB reports (stats["providers"]).
 ALL_PROVIDERS = "all"
+# Raise when films get new fields: a saved scan in an older format is not reused, so the new
+# fields arrive with the next scan instead of a day later.
+FILM_FORMAT = 2
 
 
 def refresh_provider_catalog(
@@ -154,6 +157,7 @@ def perform_scan(
     reusable = (
         recent is not None
         and recent["stats"].get("providers") == ALL_PROVIDERS
+        and recent["stats"].get("film_format") == FILM_FORMAT
         and not matches.changed_since(store, recent["created"])
     )
     if recent is not None and reusable:
@@ -212,7 +216,7 @@ def perform_scan(
     if previous is not None and previous["stats"].get("providers") != ALL_PROVIDERS:
         compare_only = set(providers._ALL_PROVIDERS) - providers.MATCHING_CHANGED
     created = time.time()
-    stats = {**result_stats(results), "providers": ALL_PROVIDERS}
+    stats = {**result_stats(results), "providers": ALL_PROVIDERS, "film_format": FILM_FORMAT}
     scan_id = None
     # Nothing could be checked (TMDB down, wrong key): keep the previous scan on the page.
     if results or unavailable or not failed:

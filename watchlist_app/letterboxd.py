@@ -70,6 +70,18 @@ def parse_tmdb_id(html: str) -> int | None:
     return int(match.group(1))
 
 
+_RATING_RE = re.compile(r'"ratingValue":\s*([0-9]+(?:\.[0-9]+)?)')
+
+
+def parse_rating(html: str) -> float | None:
+    """The Letterboxd average (0-5) from a film page, or None when the film has too few ratings."""
+    match = _RATING_RE.search(html)
+    if match is None:
+        return None
+    value = float(match.group(1))
+    return value if 0 <= value <= 5 else None
+
+
 def fetch_tmdb_id(slug: str, session: requests.Session | None = None) -> int | None:
     """Look up the TMDB movie id of a Letterboxd film.
 
@@ -78,6 +90,18 @@ def fetch_tmdb_id(slug: str, session: requests.Session | None = None) -> int | N
     be loaded right now (network, rate limit, server error), so that a guess from
     the title search is not stored for good.
     """
+    html = _film_page(slug, session)
+    return parse_tmdb_id(html) if html is not None else None
+
+
+def fetch_rating(slug: str, session: requests.Session | None = None) -> float | None:
+    """The Letterboxd average rating of a film; raises LetterboxdError like fetch_tmdb_id."""
+    html = _film_page(slug, session)
+    return parse_rating(html) if html is not None else None
+
+
+def _film_page(slug: str, session: requests.Session | None) -> str | None:
+    """HTML of a Letterboxd film page; None for an unknown film or an invalid slug."""
     if not slug or not _SLUG_RE.match(slug):
         return None
     sess = session
@@ -98,7 +122,7 @@ def fetch_tmdb_id(slug: str, session: requests.Session | None = None) -> int | N
         raise LetterboxdError(f"Letterboxd returned {response.status_code}.")
     if not response.ok:
         return None
-    return parse_tmdb_id(response.text)
+    return response.text
 
 
 def extract_num_entries(html: str) -> int | None:
@@ -134,7 +158,7 @@ def fetch_watchlist_from_letterboxd(
                 break
             if response.status_code == 404:
                 raise LetterboxdError(
-                    f'Watchlist not found for "{username}" (wrong username or private watchlist).'
+                    f"Watchlist not found for “{username}” (wrong username or private watchlist)."
                 )
             if not response.ok:
                 raise LetterboxdError(f"Letterboxd returned {response.status_code} for {url}.")

@@ -80,6 +80,8 @@ def _details_from_movie(data: dict, tmdb_id: int) -> dict:
         "collection": (data.get("belongs_to_collection") or {}).get("name") or None,
         "similar_ids": _similar_ids(data, tmdb_id),
         "release_dates": _release_dates(data),
+        "original_language": data.get("original_language") or None,
+        "origin_countries": [code for code in data.get("origin_country") or [] if isinstance(code, str)],
     }
 
 

@@ -2,7 +2,7 @@
 
 Stand: 2026-11-16. Jede Etappe ist ein eigener Commit mit eigenen Tests; die App bleibt nach jedem Schritt lauffähig. Docker für Unraid kommt bewusst zuletzt. Struktur-Umbauten sind mit „(Struktur)“ markiert und stehen jeweils vor den Schritten, die darauf aufbauen.
 
-Als Nächstes offen: Etappe 12. Offene Punkte aus der Design-Runde stehen in Etappe 9k.
+Als Nächstes offen: Rest von Etappe 12 (Aufnahmedatum, eigene Bewertung), dann Etappe 13. Offene Punkte aus der Design-Runde stehen in Etappe 9k.
 
 ## Teil A: Fehler und Struktur
 
@@ -323,17 +323,174 @@ Kritik der Hauptseite mit `/impeccable critique` (2026-11-16): 24 von 40 Punkten
 - [x] Layout: Filter, Chips und Raster stehen zusammen; die fünf sichtbaren Filter in einer Reihe; 48 px zwischen „Free“ und „Paid“ statt 1 px; 44 px Tippflächen auf Touch-Geräten; TMDB- und Trailer-Links auf den Karten nur noch auf dem Desktop.
 - [x] Dienste-Leiste: Suche und Sortierung in einer Reihe, „My subscriptions“ als erster Knopf über die volle Breite, Hilfetext ans Ende; Zähler als lesbare Pille statt grauem Abzeichen (Kontrast 2,5:1).
 - Ergebnis (2026-11-16): Handy (375 px) erstes Poster bei 573 px statt 923 px, „Tonight“ ganz auf dem ersten Bildschirm; Desktop: Liste der Dienste beginnt bei 296 px statt 421 px. Layout-Prüfung des Detektors ohne Befund. Der Notiz-Test wartet jetzt auf das Ende des Scans (er tippte, während der fertige Scan die Karte neu zeichnete).
-- [ ] „Paid“ umbenennen, etwa „On your subscriptions“; für Abo-Kunden sagt „Paid“ nichts (`/impeccable clarify`).
-- [ ] „Shuffle“ für „Tonight“: heute immer die drei am besten bewerteten Filme.
-- [ ] Filmkarten sind hoch (Desktop rund 570 px, Handy rund 480 px). „Details“ bleibt als Weg für Tastatur und Screenreader; kürzer machen ohne ihn zu verlieren.
-- [ ] Notiz geht verloren, wenn ein Scan fertig wird, während man tippt (die Karten werden neu gezeichnet).
-- [ ] Ein Film aus „Tonight“ steht im Raster noch einmal; vermutlich in Ordnung, nach einer Woche Nutzung entscheiden.
-- [ ] Danach `/impeccable critique` erneut und mit 24/40 vergleichen.
+- [x] „Paid“ heißt jetzt „Subscription & rent“ (Abo und Leihe, wie der Bereich rechnet); dazu weitere Texte geklärt (`/impeccable clarify`, 2026-11-17).
+- [x] „Shuffle“ für „Tonight“. Nach `/impeccable critique` (25/40, 2026-11-17) umgesetzt: Laufzeit, Genre und „Shuffle“ direkt in „Tonight“; „Pick for tonight“ (Abend-Fenster mit Textliste) und „Random film“ entfallen; „Tonight“ nimmt die angehakten Dienste statt der gespeicherten Abos und bleibt sichtbar, wenn nichts passt; „Scan now“ ist nur nach einem Fehler hervorgehoben; Statistik und „Scan changes“ stehen unter den Filmen, „Last updated“ doppelt sich nicht mehr; im Detailfenster stehen Dienste und Aktionen direkt unter dem Titel, Inhalt und Links darunter; „New on …“ mit genug Kontrast; Kartentitel ausgeglichen umbrochen.
+Offen aus der Kritik vom 2026-11-17 (25/40, Bericht in `.impeccable/critique/`):
+- [ ] Detailfenster: „Your service“ und „Similar on your services“ nehmen noch die gespeicherten Abos, „Tonight“ und das Raster die angehakten Dienste. Eine Quelle wählen. → K2
+- [ ] Eine Leiste statt Werkzeugleiste plus Filterreihe: Suche, „Filters (n)“ und Sortierung; der Rest dahinter (`/impeccable distill`). → K2
+- [ ] Sortierung: 11 Einträge, die gewichteten („rating per hour“, „on most of my services“) sind ohne Erklärung kaum zu verstehen. → K2
+- [ ] Letzter Klick „Watch on Netflix“ statt TMDB: direkter Link zum Dienst, wo TMDB/JustWatch ihn liefert (heute vier Schritte vom Vorschlag bis zum Abspielen). → K4 (Hauptknopf; echte Direkt-Links nicht möglich)
+- [x] Barrierefreiheit (`/ui-ux-pro-max`, 2026-11-17): Link „Skip to films“ als erster Tab-Stopp; Dienste-Leiste am Handy ist geöffnet ein Dialog (`role="dialog"`, `aria-modal`, Seite dahinter `inert`); je Karte zwei Tab-Stopps („Details“ und Stern), TMDB und Trailer nur per Maus (beide im Detailfenster).
+- [x] Favoriten-Stern sitzt neben „Details“ statt auf der Poster-Ecke.
+- [ ] Handy: „Wide view“ ausblenden; alle Bedienelemente oben statt im Daumenbereich; „Tonight“ beginnt erst rund 380 px weiter unten. → K1 und K3
+- [ ] Eigenes Gesicht: Schrift für Überschriften und Filmtitel, Poster als Fläche (z. B. unscharfer Hintergrund vom ersten Vorschlag), weniger umrandete Knöpfe (`/impeccable bolder` oder `/impeccable typeset`).
+- [ ] `graphify update .` lief in Git Bash nicht (`graphify` nicht im PATH); mit dem absoluten Pfad wie in den Hooks aufrufen.
+- [ ] Filmkarten sind hoch (Desktop rund 570 px, Handy rund 480 px). → Etappe 9l (der Titel übernimmt die Rolle von „Details“).
+- [ ] Notiz geht verloren, wenn ein Scan fertig wird, während man tippt (die Karten werden neu gezeichnet). → K1
+- [ ] Ein Film aus „Tonight“ steht im Raster noch einmal; vermutlich in Ordnung, nach einer Woche Nutzung entscheiden. → erledigt sich mit K3 (eigene Startseite)
+- [ ] Danach `/impeccable critique` erneut und mit 25/40 vergleichen (Verlauf: 24 → 25).
+
+### Etappe 9l: Filmkarte neu (nächste Etappe, Phase 1 des Gesamtkonzepts)
+Vorlagen: `movie-card-plan.md` und das Gesamtkonzept (beide in Downloads). Am 2026-11-17 gegeneinander abgewogen nach UI/UX-Regeln: nichts nur per Hover, Text statt Farbe allein, 44-px-Tippflächen, wenige Tab-Stopps, nichts Bedienbares auf dem Poster. Nur Frontend; Backend, API und Daten bleiben unverändert. Ersetzt den 9k-Punkt „Filmkarten sind hoch“.
+Probleme heute: fünf Klickziele je Karte ohne Hauptaktion, Angebots-Pillen gelten für die ganze Karte statt je Dienst, Amber für fünf verschiedene Dinge, „Details“ in einer Reihe auf verschiedenen Höhen, Laufzeit bricht um („161“ / „min“), nur 5 Karten je Reihe.
+Ziel:
+```
+┌──────────────────┐
+│ [New]            │  Poster 2:3; höchstens ein Status-Badge mit Text (oben links)
+│      POSTER      │
+├──────────────────┤
+│ The King's Speech│  Titel, max. 2 Zeilen = Link ?film=, über die ganze Karte gezogen
+│ 2010 · 1h 58m · ★ 3.9   eine Zeile; Letterboxd, ohne Wert „TMDB 7.7“
+│ [N] [P]€ [Y]ᴬᵈ   │  alle angehakten Dienste als Logos, Abzeichen für die Angebotsart
+│                ♥ │  Favorit unten rechts
+└──────────────────┘
+```
+- [x] Die ganze Karte ist das Klickziel: Der Titel wird ein echter Link (`<a href="?film=<key>">`, siehe unten) und per `::after { inset: 0 }` über die Karte gezogen; der Knopf „Details“ entfällt. Kein `<a>` um die Karte, kein Klick-Handler nur auf dem `<div>`. Was eigenständig klickbar bleibt (♥, „Compare“-Kästchen im Vergleichsmodus, Status und Notiz in der Favoriten-Ansicht), liegt mit `position: relative; z-index: 1` darüber.
+- [x] Alle Dienste statt Angebots-Pillen (entschieden 2026-11-17): jeder angehakte Dienst, auf dem der Film im Bereich der Karte läuft, als Logo (Name, wo kein Logo da ist), nach Namen sortiert, damit derselbe Dienst immer an derselben Stelle steht; die Reihe darf umbrechen. Kleines Abzeichen unten rechts am Logo für die Angebotsart in diesem Bereich: Abo ohne Abzeichen, Free mit Geschenk-Symbol (Ton `pill-ok`), „Ad“ und Rent („€“) neutral grau; Ring in `--panel`, `aria-hidden`. Hat ein Dienst im Bereich mehrere Arten, zählt free vor ads bzw. flatrate vor rent; der Tooltip nennt alle. Jedes Logo hat `alt` und `title` mit Dienst und Art („Netflix, subscription“). Kein eigenes Klickziel (kein Direkt-Link zum Anbieter möglich). Angebotsarten je Dienst sind vorhanden (`film.providers`), „Buy“ speichert die App nie.
+- [x] Meta-Zeile `2010 · 1h 58m · ★ 3.9` (Letterboxd /5; ohne Wert `TMDB 7.7`), kein „/10“, `white-space: nowrap` mit Ellipse, `tabular-nums`. Neue reine Hilfsfunktion für „2h 34m“ / „58m“ / „2h“ mit JS-Test, nur auf der Karte (Tonight und Filter behalten „min“).
+- [x] Favorit wird ♥ statt ☆, weil ★ jetzt die Bewertung ist. Unten rechts, überall gleich. Zustände: Ring ohne Füllung, Hover mit leichter Füllung, nur der Favorit gefüllt. 36 px sichtbar, mindestens 44 px Trefferfläche. `aria-pressed` bleibt, `aria-label` „Add … to favorites“ / „Remove … from favorites“. Sichtbarkeit: Touch immer; mit Maus bei Hover, bei Fokus in der Karte (`:focus-within`) und als Favorit immer; ausblenden mit `opacity: 0; pointer-events: none` (bleibt in der Tab-Reihenfolge), ohne Überblendung bei `prefers-reduced-motion`. Hover beschleunigt nur: Favorit gibt es auch im Detailfenster.
+- [x] Status-Badge auf dem Poster, höchstens eins, deckender Grund und Text: vorerst „New“ (aus den gespeicherten Änderungen, ersetzt die „New on …“-Pillen unter dem Text) und „Watched“; „Gone“ kommt mit Etappe K3. „No longer on …“ steht in den Details.
+- [x] TMDB- und Trailer-Link von der Karte entfernen. Geprüft: Das Detailfenster hat beide (`film-modal-links`).
+- [x] Titel höchstens 2 Zeilen mit „…“ (`-webkit-line-clamp`), voller Titel im Text und als `title`; `text-wrap: balance` bleibt.
+- [x] Karte als Flex-Spalte, Fußzeile mit `margin-top: auto` (Fußzeilen einer Reihe auf einer Höhe); graues Band unter dem Poster weg; Abstände in der Karte nur 4/8/12/16 px; Radius 8 px für Karte und Poster.
+- [x] Hover der Karte neutral (Rand `--line-strong`, Fläche etwas heller) statt Amber; Tastaturfokus als Amber-Umriss der ganzen Karte (`:has(:focus-visible)`, sonst `:focus-within`). Amber danach nur für ♥ und Fokus.
+- [x] Raster dichter: `minmax(180px, 1fr)`, Abstand 16 px (Handy 12 px, 2 Spalten). Ziel mit Seitenleiste rund 7 Karten bei 1760 px; nach K2 (ohne Seitenleiste) 6 bei 1440 px. Messen, nicht unter 160 px.
+Detailfenster mit eigener Adresse:
+- Es gibt keine Detailseite, nur das Detailfenster. Statt `/movie/:id` bekommt das Fenster eine eigene Adresse `?film=<key>` (entschieden 2026-11-17), nur im Frontend:
+  - `href` = aktuelle Adresse plus `film=<filmKey>` (URL-kodiert; der Schlüssel ist meist die TMDB-ID, sonst „Titel|Jahr“). Land, Filter und Sortierung bleiben in der Adresse, ein neuer Tab zeigt also dieselbe Ansicht.
+  - Normaler Klick: `preventDefault`, Fenster öffnen wie heute (`showFilmDetails`) und `history.pushState` mit `film`. Mittelklick, Strg-/Cmd-Klick und Umschalt-Klick lässt der Handler in Ruhe (Browser öffnet einen neuen Tab).
+  - Schließen (X, Escape, Klick daneben): `film` aus der Adresse nehmen; war der Eintrag per `pushState` angelegt, mit `history.back()`, sonst `replaceState`. Zurück-Knopf des Browsers bei offenem Fenster schließt es (`popstate`), Vor-Knopf öffnet es wieder.
+  - Beim Laden mit `?film=`: Fenster öffnen, sobald der Film in den Daten ist (gespeicherter Scan oder laufender Scan liefert ihn). Ist er nach dem Laden bzw. Scan-Ende nicht da (nicht mehr auf der Liste, anderes Land): kurzer Hinweis „Film not found on this watchlist“, `film` aus der Adresse nehmen. Ein Film, den nur die Filter ausblenden, öffnet trotzdem.
+  - Die übrigen Adress-Schreiber (Filter-Link, `scan=`, Länderwechsel) nutzen `replaceState` auf der aktuellen Adresse und lassen `film` stehen; prüfen, dass keiner es löscht oder doppelt einträgt. „Share“ teilt bei offenem Fenster den Film mit.
+  - Fokus: Beim Schließen zurück auf den Titel-Link der Karte (`openModal` sucht ihn per `data-key`); beim Öffnen per Adresse gibt es keinen Auslöser, dann Fokus auf `#results`.
+  - Auch „Tonight“-Poster und Zeilen in „Coming soon“ bekommen denselben Link, damit jeder Film eine Adresse hat.
+  - Tests: Browser (Klick öffnet und schreibt `?film=`, Zurück schließt, Seite mit `?film=` öffnet direkt, unbekannter Film zeigt den Hinweis, Strg-Klick öffnet nicht das Fenster), JS (Link-Adresse aus aktueller Adresse plus Schlüssel, falls als reine Funktion herausgelöst).
+- Farben nur als OKLCH-Tokens, keine Hex-Werte aus den Vorlagen.
+- Mitziehen: Fokus-Rückgabe in `openModal` (`app.js`, sucht heute `.film-details-button` per `data-key`), Klick-Handler für Details, Browser-Tests (Details öffnen, Tab-Stopps: jetzt Titel und ♥), `offerBadges` entfernen, wenn nichts anderes sie nutzt.
+- Karte „Not currently available“ (`unavailableCard`) bekommt dasselbe Muster (Titel öffnet die Details).
+Fertig, wenn:
+- Klick irgendwo auf die Karte außer ♥ öffnet die Details; ♥ schaltet nur den Favoriten. Je Karte genau zwei Tab-Stopps (Titel, ♥); Enter auf dem Titel öffnet, Enter/Leertaste auf ♥ schaltet.
+- Mittelklick oder Strg-Klick auf die Karte öffnet den Film in einem neuen Tab mit offenem Detailfenster; Zurück schließt das Fenster; ein geteilter `?film=`-Link öffnet den Film.
+- Keine Angebots-Pille mehr; alle angehakten Dienste stehen als Logo auf der Karte, Abo ohne Abzeichen, Free/Ad/Rent mit, jedes Logo mit Alt-Text; derselbe Dienst steht auf allen Karten an derselben Stelle der Reihenfolge.
+- Fußzeilen einer Reihe auf einer Höhe, keine Meta-Zeile bricht um, rund 7 Karten bei 1760 px und 2 am Handy (390 px).
+- Mit der Datenkopie (`web-copy`) prüfen: langer Titel mit 3+ Diensten, Dienst mit mehreren Arten, Gratis-Dienst, ein Favorit, ein Film mit nur einem Dienst, einer ohne Letterboxd-Wert.
+- Ergebnis (2026-11-17): gebaut wie geplant. Karte mit der Datenkopie: 387 px hoch statt rund 570 px, 7 Spalten bei 1760 px (dafür ist die Hauptseite jetzt bis 1800 px breit, `main:has(.workspace)`), 2 am Handy; Fußzeilen einer Reihe auf einer Höhe, keine Meta-Zeile abgeschnitten, lange Titel enden nach 2 Zeilen. Abweichungen: Logos 28 px statt 24 px, damit das Abzeichen nicht die halbe Marke verdeckt; das Herz bleibt mit der Maus anklickbar, auch wenn es unsichtbar ist (wer klickt, fährt vorher über die Karte; `pointer-events: none` hätte nichts gebracht); `aria-label` bleibt „Favorite: Titel“ mit `aria-pressed` (ein wechselnder Name zusammen mit `aria-pressed` wird doppelt angesagt). „No longer on …“ steht jetzt im Detailfenster unter den Diensten. „Tonight“, „Coming soon“ und „Recently gone“ sind ebenfalls Links mit `?film=`. Tests: JS (Laufzeit, Adresse, Titel-Link, Letterboxd zuerst, alle Dienste mit Abzeichen, Poster-Badge), Browser (Adresse: Klick, Zurück, Strg-Klick, geteilter und unbekannter Link; Tab-Stopps Titel und Herz).
+- Prüfung mit dem Barrierefreiheits-Baum (2026-11-17, kein echter Screenreader installiert): Tab-Reihenfolge Skip-Link → Films → Titel → Herz stimmt, Herz meldet „pressed“, Dialog hat Namen und fängt den Fokus. Behoben: Fokus sprang nach dem Schließen auf „Films“, wenn vorher der Skip-Link `#results` in die Adresse geschrieben hatte (Skip-Link setzt jetzt nur den Fokus); Dienste wurden doppelt gelesen (Name der Liste und Alt-Text, Tooltip jetzt am Logo); „1h 47m“ hört sich wie Meter an, Screenreader bekommen „1 hour 47 minutes“; Poster auf der Karte ohne Alt-Text (der Titel-Link direkt darunter nennt den Film); Film-Links werden auch beim Fokus aktualisiert, damit „in neuem Tab öffnen“ per Tastatur die Filter mitnimmt.
+
+## Teil B2: Gesamtkonzept „Das perfekte Gesamterlebnis“ (ab 2026-11-17)
+Vorlage: `Film-App Das perfekte Gesamterlebnis.md` (Downloads). Die App beantwortet in unter 10 Sekunden: Was aus meiner Watchlist kann ich heute ohne Zusatzkosten schauen? Reihenfolge nach Wirkung: erst entfernen und umsortieren (9l, K1, K2), dann Veränderung zeigen (K3), dann neue Funktionen (K4 bis K6).
+Leitregeln, jede Etappe wird daran geprüft:
+1. Inhalt vor Bedienung: erster Film auf jedem Bildschirm ohne Scrollen, am Desktop zwei volle Poster-Reihen.
+2. Jede Funktion genau einmal.
+3. Einstellen ist nicht Filtern: Abos in den Settings, Genre und Laufzeit in der Filterleiste.
+4. Kosten zuerst: Free → Subscription → With ads → Rent, in Sortierung, Abschnitten und Farben.
+5. Veränderung (neu, gerade weg) steht oben, nicht eingeklappt. Gezeigt wird nur, was die Daten belegen; nichts wird geschätzt.
+6. Alles ohne Hover erreichbar; Hover beschleunigt nur.
+7. Möglichst wenige Schritte zum Film (echte Direkt-Links gibt es nicht, siehe „Nicht im Plan“).
+8. Systemzustand ist leise: Scan-Status nur bei Fehlern oder auf Abruf.
+Entscheidungen 2026-11-17:
+- Oberfläche bleibt Englisch (PRODUCT.md); deutsche Filmtitel nur als Option (K6).
+- Aussehen bleibt: heutige OKLCH-Farben, nur dunkel, eigener Schrift-Plan aus 9k. Aus dem Konzept kommen nur Maße (36 px Bedienhöhe, gleiche Grundlinie, Radien 6/8/12 px, 4er-Abstände, `tabular-nums`) und Ereignisfarben als neue Tokens (`--free`, `--soon`, `--gone`, in OKLCH).
+- Neue Datenquellen: nur PWA (K6). Nicht: Direkt-Links über JustWatch, IMDb über OMDb, Suche im ganzen TMDB-Katalog.
+- Abweichungen vom Konzept (abgewogen):
+  - Karte: siehe 9l (kein Bedienelement und keine Bewertung auf dem Poster, ♥ statt Herz-und-Stern-Mix, Schnellaktionen als „⋯“-Menü in K4).
+  - Kein Wischen auf Karten: kollidiert mit den waagerechten Reihen auf „Tonight“ und dem Zurück-Wischen des Systems; dafür „⋯“ und langes Drücken.
+  - Keine Leihpreise, Qualität (HD/4K), Ton und Untertitel: TMDB liefert sie nicht. Reihe „Rent under 4 €“, Preis-Ereignis und Wunschpreis entfallen.
+  - Kein „Leaving soon“ (entschieden 2026-11-17): TMDB liefert kein Ablaufdatum, und geschätzt wird nichts. Reihe, Badge, Sortierung, Push und Home-Assistant-Sensor dafür entfallen; kommt erst, wenn eine Quelle echte Daten liefert.
+  - Karte: alle angehakten Dienste als Logos statt nur des günstigsten (siehe 9l).
+  - Bewertungen: Letterboxd und TMDB (zwei statt drei).
+  - Matches (manuelle Zuordnung) wandert in Settings → Data, nicht in Subscriptions.
+  - Kalender-Zeitfenster und „Auf Fernseher öffnen“ entfallen (kein Kalender, keine Direkt-Links).
+  - Favoriten-Status Plan/Watching/Watched wird zu Favorit (♥), „Watched“ und „Not now“; die Notiz bleibt (K4).
+  - Tastenkürzel nach Konzept (`r` Zufall, `s` gesehen); `s` für Shuffle aus Etappe 14 entfällt.
+Seiten (Ziel): Tonight (Start) · Watchlist · Subscriptions · Settings (mit „Data & status“ und Matches).
+
+### Etappe K1: Aufräumen (nach 9l)
+- [x] Überschrift „Find your next film.“ weg; Kopfzeile 56 px, beim Scrollen klebend und 48 px.
+- [x] Navigation mit vier Seiten: aktive Seite weiß mit 2-px-Unterstrich in Amber, inaktive gedämpft grau. Status-Seite wird Settings → „Data & status“ (letzter Sync je Quelle, Filmzahl, Fehler der letzten 7 Tage; nimmt „Letzte Fehlermeldungen“ aus Etappe 17 auf), Matches dort als „Unmatched films“. Alte Adressen leiten weiter (301). Handy: Navigation unten mit 4 Symbolen und Beschriftung.
+- [x] Sync-Punkt in der Kopfzeile: aktuell nichts, läuft (Ring + „214/456“), veraltet über 24 h (gelb), Fehler (rot, Klartext und Lösung). Klick zeigt Details und „Scan now“. „All films loaded.“ und „Scan now“ verschwinden aus der Hauptansicht; Kürzel `Shift+R` (K4).
+- [x] „My subscriptions“ nur noch einmal.
+- [x] Alle Bedienelemente einer Zeile 36 px hoch auf einer Grundlinie (heute steht die Sortierung versetzt); ein Schalter sieht aus wie ein Schalter („Available only“).
+- [x] Notiz geht verloren, wenn ein Scan fertig wird, während man tippt (aus 9k).
+- [x] Handy: „Wide view“ ausblenden (aus 9k).
+- Fertig, wenn: Desktop 1440 × 900 zeigt zwei volle Poster-Reihen, Handy 390 × 844 den ersten Film ohne Scrollen.
+- Ergebnis (2026-11-17):
+  - Kopfzeile 56 px (beim Scrollen 48 px), klebt am Desktop oben; am Handy scrollt sie mit, die Seiten stehen unten als Leiste mit Symbolen. Die Überschrift ist nur noch für Screenreader da.
+  - Drei Seiten statt fünf: Watchlist · Subscriptions · Settings („Tonight“ als vierte kommt mit K3). Settings hat Unterseiten General · Data & status (`/settings/data`) · Unmatched films (`/settings/matches`); `/status` und `/matches` leiten mit 301 weiter. „My subscriptions“ heißt in der Navigation „Subscriptions“, der Hinweis in den Settings ist weg.
+  - Sync-Punkt: grau und ohne Text, solange die Daten frisch sind; Ring mit Prozent während eines Scans; gelb „Out of date“ nach 24 Stunden; rot „Scan failed“. Ein Klick öffnet das bisherige Scan-Feld (Meldung, Fortschritt, „Scan now“, „Cancel scan“, Fehlschläge). Abweichung: Prozent statt „214/456“.
+  - „Wide view“ entfernt (Knopf, Code und CSS; eine gespeicherte Wahl wird gelöscht).
+  - Werkzeugleiste, Filter und „Tonight“-Auswahl einheitlich 36 px hoch.
+  - Notiz: Ein Neuzeichnen beim Tippen übernimmt Text und Cursor ins neue Feld (Browser-Test).
+  - Nicht erledigt: „Available only“ als Schalter; das Feld wird in K2 durch den Kosten-Umschalter ersetzt, Umbau vorher wäre doppelte Arbeit. Ziel „zwei volle Poster-Reihen bei 1440 × 900“ noch nicht erreicht: „Tonight“, Werkzeugleiste und Filter stehen über dem Raster (erste Karte bei 873 px); das lösen K2 (eine Leiste) und K3 (Tonight als eigene Seite). Am Handy sind die ersten Filme (Tonight) bei 137 px sichtbar.
+
+### Etappe K1b: Nachbesserung und Statistik-Seite (2026-11-17, auf Rückmeldung)
+- [x] Sync-Punkt öffnete nicht: `tabler.min.js` bringt ein zweites Bootstrap mit, ein Klick öffnete und schloss das Menü sofort. Jetzt ein `<details>`-Menü wie „More“ (schließt bei Klick daneben und mit Escape). Bei „Animationen aus“ in Windows (`prefers-reduced-motion`) dreht sich der Ring nicht, er pulsiert stattdessen langsam.
+- [x] Filterfelder wurden bei mittlerer Breite (um 1000 px) abgeschnitten („Available on…“); die Reihe bricht jetzt um (`auto-fit`, mindestens 150 px je Feld). Geprüft bei 390, 1024 und 1440 px.
+- [x] Statistik als eigene Seite `/stats` (Navigation „Stats“), statt des Kastens unten auf der Hauptseite (dort nur noch ein Link). Rechnung in `statistics.js` (getestet), Darstellung in `stats-page.js`: 16 Kennzahlen (Filme, verfügbar, auf eigenen Abos mit Stunden, gratis, im Abo, nur Leihen, nicht verfügbar, demnächst, Stunden gesamt, Ø Laufzeit, Ø Letterboxd, Ø TMDB, Jahre, Favoriten, neu und weg in 30 Tagen); eigene Abos mit „nur in diesem“ (was eine Kündigung kostet); Angebotsarten, Genres, Jahrzehnte, Laufzeit, Bewertungen (Letterboxd und TMDB), Sprache, Herkunftsland, Altersfreigabe, Regie, Schauspieler, Filmreihen, Stichworte; Änderungen je Dienst (30 Tage) und je Woche (8 Wochen); „Waiting longest“ und „Best rated on your subscriptions“; Tabelle aller Dienste mit Filmen, „Only here“, Stunden und Angebotsarten. Balkenlisten einfarbig mit Zahl daneben, Anteil im Tooltip, lange Listen hinter „Show n more“. Deckt die Punkte aus Etappe 13 (Laufzeit-Summe je Dienst, „Staubfänger“) zum Teil ab; Statistik über die Zeit (gespeicherte Scan-Stände) fehlt noch.
+
+### Etappe K2: Eine Filterleiste (Watchlist-Seite)
+- [ ] Seitenleiste fällt weg. Eine klebende Leiste, eine Zeile: Suche (`/`), Dienste-Chip (bis 4 Logos + „+8“, Popover mit Gruppen My subscriptions · Free · Rent, Häkchen und Filmzahl je Dienst), Kosten als Umschalter All · Free · Subscription · Rent (ersetzt „Available only“), Genre (Mehrfachauswahl, Alt-Klick schließt aus), Laufzeit, Bewertung (Quelle Letterboxd oder TMDB), „Filters (n)“ für den Rest, Sortierung rechts.
+- [ ] Eine Quelle für „meine Dienste“: Settings → My services legt sie fest, der Chip filtert nur. Details („Your service“, „Similar on your services“) und Tonight nutzen dieselbe Quelle (offener 9k-Punkt).
+- [ ] Aktive Filter als Chips in einer zweiten Zeile, nur wenn welche aktiv sind, davor „47 of 456 films“, dahinter „Reset all“; eine Live-Region sagt die Anzahl an.
+- [ ] Trefferzahl je Option unter Berücksichtigung der anderen Filter; Optionen mit 0 Treffern grau, nicht versteckt. Filter wirken sofort, ohne Animation.
+- [ ] Leerer Zustand: „No film fits. Without the runtime filter there would be 12.“ mit Knopf, der genau diesen Filter entfernt.
+- [ ] Sortierung auf acht: Priority · Letterboxd · TMDB · Runtime · Year · Recently added · Newly available · Random. „Priority“ = Favoriten zuerst, dann Letterboxd. Ersetzt den 9k-Punkt (11 Einträge ohne Erklärung).
+- [ ] Ganzer Zustand in der Adresse (Filter und `film=` aus 9l); Vor und Zurück funktionieren.
+- [ ] Die Liste aller Dienste nur noch in Settings → My services (Gruppen My subscriptions · Free · Rental shops · Others; Voreinstellungen „Free only“ und „All rental shops“ nur dort).
+- [ ] Handy: ein Knopf „Filters“ öffnet ein Blatt von unten mit aufklappbaren Abschnitten und festem Knopf „Show 47 films“.
+- Beim Bauen messen: Trefferzahlen je Option bei 456 Filmen unter 100 ms.
+
+### Etappe K3: Veränderung sichtbar machen (Startseite „Tonight“)
+- [ ] Ereignisse aus dem gespeicherten Verlauf (Etappe 6), überall gleich: New (grün, „New · since 12 Nov“) und Gone (gedämpftes Rot, „Gone since 10 Nov“), beide mit echtem Datum aus dem Scan. Wechselt ein Film nur zwischen zwei eigenen Diensten, gibt es kein Ereignis.
+- [ ] „Gone“ zeigt den Ausweg: „Gone from Netflix · now on Prime (subscription)“ oder „Rent only“.
+- [ ] Startseite „Tonight“ als Feed aus waagerechten Reihen: New on your services → Free (free und ads) → eine Reihe je Abo nach Filmzahl („On Netflix (73)“) → Recently gone (eingeklappt, ganz unten). Leere Reihen fehlen. Je Reihe Titel und Zahl, rechts „See all →“ (Watchlist mit passendem Filter). Einrasten an Kartenkanten, Kanten ausgeblendet (Designregel), Pfeilknöpfe bei Hover und Fokus, am Handy 2,5 Karten sichtbar.
+- [ ] Kontextzeile: „285 films available on 12 services · synced 2 h ago“, Klick auf die Dienste öffnet die Auswahl; Knopf „Pick for me“ (Zufall aus den Treffern, öffnet die Details; „Again“ ohne Wiederholung in der Sitzung). Ersetzt „Shuffle“.
+- [ ] Schnellfilter-Chips über den Reihen, Mehrfachauswahl: Under 2 h · Under 100 min · Highly rated · Free only (· With partner, erst mit Etappe 15). Ersetzt Laufzeit und Genre im heutigen „Tonight“-Kasten.
+- [ ] Badge „Gone“ auf den Karten (Badge aus 9l).
+- [ ] Änderungsprotokoll als Tab „Changes“ auf der Watchlist-Seite (Datum · Film · Dienst · Ereignis, neueste zuerst, filterbar); ersetzt „Scan changes“ und den Kasten „Recently gone“. Damit erledigt sich der 9k-Punkt „Film aus Tonight steht doppelt im Raster“.
+- Fertig, wenn: 1440 × 900 zeigt Kontextzeile, Chips, die erste Reihe ganz und den Titel der zweiten.
+
+### Etappe K4: Details und Aktionen
+- [ ] Detailfenster als Schublade von rechts (Desktop 480 px), am Handy Blatt von unten (60 % hoch, hochziehen = ganzer Bildschirm, nach unten wischen schließt). Raster bleibt dahinter sichtbar; Fokus bleibt drin und kehrt zurück (wie heute `openModal`).
+- [ ] Aufbau: Backdrop 16:9 mit Titel und Jahr; Hauptknopf über die volle Breite für den günstigsten Weg („Where to watch on Netflix“, führt zur TMDB-Seite); Meta (Laufzeit · Genres · Altersfreigabe · Land · Regie, Regie filtert die Watchlist); Bewertungen Letterboxd · TMDB (Stimmen bei Hover/Tippen); Beschreibung 3 Zeilen mit „more“; „Where to watch“ nach Kosten (gibt es, 9d); Verlauf je Dienst der letzten 12 Monate als Zeitleiste; Trailer als Vorschaubild, startet nur auf Klick; Aktionen; „Similar on your services“ (höchstens 8).
+- [ ] ← und → blättern zum vorigen und nächsten Film der aktuellen Liste; die Adresse wechselt mit.
+- [ ] Schnellaktionen im Menü „⋯“ an der Karte (am Handy auch langes Drücken): Watched, Not now (30 Tage aus Tonight, unter „Filters“ wieder sichtbar; ersetzt „Nicht interessiert“ aus Etappe 14), Add to compare. Drei Tab-Stopps je Karte (Titel, ♥, ⋯).
+- [ ] Vergleichen über eine Leiste unten („3 to compare · Compare“, höchstens 4) statt Knopf und Vergleichsmodus; im Vergleich ist der beste Wert je Zeile hervorgehoben.
+- [ ] Watched: Karte ausgegraut mit ✓, optional Letterboxd zum Eintragen öffnen; Abgleich mit dem Letterboxd-Tagebuch (aus Etappe 14).
+- [ ] Rückgängig statt Nachfragen: „Marked as watched · Undo“, 5 s. Nachfrage nur bei Unumkehrbarem, mit Liste dessen, was gelöscht wird.
+- [ ] Tastatur: `/` Suche, `g t` / `g w` / `g s` Seiten, Pfeiltasten im Raster, Enter Details, `f` Favorit, `s` Watched, `n` Not now, `c` Compare, `r` Zufall, `Shift+R` Sync, `?` zeigt alle Kürzel; nur außerhalb von Eingabefeldern. Ersetzt den Tastatur-Punkt aus Etappe 14.
+
+### Etappe K5: Abos und Benachrichtigungen
+- [ ] Subscriptions als Tabelle: Dienst · Films now · Exclusive (nur hier) · Trend 30 days · Price/month · € per exclusive film · Recommendation (Keep / Can cancel / Worth it again).
+- [ ] Rotations-Ratgeber: „With only one subscription this month: Disney+ (41 exclusive films)“ und eine Reihenfolge für 3 Monate, nur aus der heutigen Verfügbarkeit.
+- [ ] „Worth a trial month?“: nicht abonnierte Dienste nach exklusiven Watchlist-Filmen.
+- [ ] Benachrichtigungen über ntfy, Gotify oder Webhook, dazu ein Home-Assistant-Sensor „New on your services“. Standard: Favorit ist nicht mehr verfügbar (an), Wochen-Zusammenfassung freitags 17 Uhr (an), neu verfügbar (aus), Abo-Empfehlung ändert sich (aus). Höchstens eine Nachricht pro Tag, Ruhezeit 22–8 Uhr, jede Nachricht öffnet `?film=`, abschaltbar je Film und je Art. Fasst die Zusammenfassung aus Etappe 16 und die offene Meldung aus Etappe 11 zusammen.
+- [ ] Zeitplan: Watchlist alle 6 Stunden und beim Öffnen, wenn älter als 1 Stunde; Verfügbarkeit nachts komplett. Neue Filme erscheinen sofort mit „checking…“, entfernte erst nach zwei Syncs (Schutz bei Letterboxd-Ausfall).
+
+### Etappe K6: Feinschliff
+- [ ] PWA: Manifest, Icons, Service Worker (`/api/latest` und Poster mit stale-while-revalidate), offline mit Hinweis „Data from yesterday 23:10“. Installieren braucht HTTPS im Heimnetz (oder localhost); mit Etappe 17 klären.
+- [ ] Ansichten Grid · Compact · Table (Table ersetzt die Listenansicht aus Etappe 14; Compact nur Poster, Badge und Bewertung, Titel beim Fokus/langem Drücken).
+- [ ] Gespeicherte Ansichten („Movie night with Lea“) als Chips auf Tonight und als Auswahl in der Leiste (ersetzt „Gespeicherte Filter“ aus Etappe 14).
+- [ ] Einrichtung unter 60 Sekunden: Benutzername mit Vorschau (Anzahl und 6 Poster), Land, die 12 häufigsten Dienste zum Antippen, Gratis-Dienste vorausgewählt, Fortschritt „312 of 456 films checked“ (ersetzt „Erster Start“ aus Etappe 14).
+- [ ] Zustände: Skelett, teilweise geladen (gibt es), Fehler mit Klartext und Aktion („Letterboxd is not responding. Showing data from 08:00. [Try again]“).
+- [ ] Leistung: erste Poster unter 1,5 s, Filter unter 100 ms, flüssiges Scrollen bei 456 Karten. Erst messen, dann `content-visibility: auto` vor einer virtuellen Liste. Poster mit `srcset` (w185/w342), Platzhalter in der Posterfarbe.
+- [ ] Deutsche Filmtitel als Option in Settings, Originaltitel im Tooltip und in den Details.
+- [ ] Optional: TV-Ansicht (große Karten, Pfeiltasten, nur die Tonight-Reihen).
 
 ### Etappe 11: Startdatum (eigene Etappe)
 - [x] Für noch nicht erschienene Watchlist-Filme Kino- und Heimkino-Start anzeigen (TMDB „release_dates“ je Land).
 - [x] Eigene Ansicht „Demnächst“ mit Sortierung nach Datum.
-- [ ] Meldung, sobald ein solcher Film streambar wird (nutzt die Historie; Zustellung kommt mit Etappe 16).
+- [ ] Meldung, sobald ein solcher Film streambar wird (nutzt die Historie; Zustellung kommt mit Etappe K5).
 - [x] Altersfreigabe (FSK je Land) anzeigen und als Filter unter „More filters“, etwa für Filmabende mit Kindern. Kommt aus derselben Abfrage „release_dates“.
 - Baut auf Zeitplan (Etappe 7) und Historie (Etappe 6) auf.
 - Ergebnis (2026-11-16): Keine zusätzliche TMDB-Abfrage; „release_dates“ kommt mit der Abfrage des Scans (`append_to_response`). Gespeichert wird je Land die Freigabe (die des breiten Kinostarts zuerst) und der jeweils erste Kino- (Typ 2/3) und Heimkino-Start (digital/physisch, Typ 4/5); der Film bekommt die Werte des gescannten Landes (`certification`, `cinema_date`, `home_date`, geprüft beim Import).
@@ -343,13 +500,21 @@ Kritik der Hauptseite mit `/impeccable critique` (2026-11-16): 24 von 40 Punkten
   - Erscheint erst, wenn der Scan die TMDB-Daten neu holt (nach 24 Stunden). Tests: Python (Daten aus der TMDB-Antwort, Land beim Nachschlagen, Felder am Film, Prüfung beim Import), JS (Freigabe-Filter, Sortierung der Werte, „Coming soon“), Browser (Kasten, Details, Filter).
 
 ### Etappe 12: Mehr Daten pro Film
-- [ ] Letterboxd-Durchschnittsbewertung: steht auf der Filmseite, die der Scan für die TMDB-ID ohnehin lädt; keine zusätzliche Abfrage. Als Sortierung und als Filter unter „More filters“; ersetzt die TMDB-Bewertung in der sichtbaren Reihe, falls sie sich als nützlicher erweist.
+- [x] Letterboxd-Durchschnittsbewertung: steht auf der Filmseite, die der Scan für die TMDB-ID ohnehin lädt; keine zusätzliche Abfrage. Als Sortierung und als Filter unter „More filters“; ersetzt die TMDB-Bewertung in der sichtbaren Reihe, falls sie sich als nützlicher erweist.
 - [x] (In Etappe 10 erledigt: `watchlist_position`.) Reihenfolge der Watchlist speichern: die Letterboxd-Seite ist nach „zuletzt hinzugefügt“ sortiert, die Position ersetzt das Aufnahmedatum auch ohne CSV-Export.
 - [ ] Letterboxd-Daten: Datum der Aufnahme in die Watchlist (nur im CSV-Export), eigene Bewertung.
-- [ ] Originalsprache und Herkunftsland als Filter unter „More filters“ (steckt schon in der TMDB-Antwort).
-- [ ] Verfügbarkeit in anderen Ländern („in DE nicht, aber in GB auf Netflix“); der TMDB-Aufruf liefert alle Länder ohne zusätzliche Abfragen.
-- [ ] Anbieter-Logos statt Textnamen (TMDB liefert die Bilder).
+- [x] Originalsprache und Herkunftsland als Filter unter „More filters“ (steckt schon in der TMDB-Antwort).
+- [x] Verfügbarkeit in anderen Ländern („in DE nicht, aber in GB auf Netflix“); der TMDB-Aufruf liefert alle Länder ohne zusätzliche Abfragen.
+- [x] Anbieter-Logos statt Textnamen (TMDB liefert die Bilder).
 - [ ] Qualität und Sprache: nur mit zusätzlicher Datenquelle möglich; aufwendig, zuletzt in dieser Etappe und optional.
+- Ergebnis (2026-11-16), vier Punkte nacheinander gebaut:
+  - Sprache und Land: `original_language` und `origin_country` aus der TMDB-Antwort des Scans; zwei Filter „Original language“ und „Country of origin“ unter „More filters“ mit englischen Namen („Japanese“, „Japan“), im Link als `lang=` und `origin=`.
+  - Andere Länder: neuer Endpunkt `/api/films/<id>/countries` liest die gespeicherten Angebote aller Länder (keine TMDB-Abfrage). Das Detailfenster zeigt „Also on your services in Belgium (Prime Video), …“: Länder, in denen der Film auf einem der eigenen Dienste ohne Zusatzkosten läuft, nach Namen sortiert, höchstens sechs. Mit der Datenkopie geprüft.
+  - Logos: auf den Karten Logo statt Name (Name als Alternativtext und Tooltip, ohne Logo bleibt der Name); in der Seitenleiste Logo vor dem Namen, „Mostly free“ jetzt unter dem Namen, damit Namen nicht mitten im Wort umbrechen. Mit der Datenkopie: 186 Logos auf den Karten, 197 in der Seitenleiste.
+  - Letterboxd-Bewertung: Abweichung vom Plan. Die Filmseite wird nur beim ersten Nachschlagen geladen, danach steht die TMDB-ID im Speicher; damit alle Filme eine Bewertung bekommen, lädt der Scan die Seite höchstens alle 30 Tage je Film neu (`LETTERBOXD_RATING_TTL_SECONDS`). Der erste Scan nach dem Update lädt sie also einmal für alle Filme mit Letterboxd-Link; Fehler dabei überspringen nur die Bewertung. Gespeichert in `film_ids` (`lb_rating`, `lb_checked_at`). Sortierung „Letterboxd rating“, Filter „Letterboxd 3.0+/3.5+/4.0+“ unter „More filters“ (`lb=`), im Detailfenster „Letterboxd 4.33/5“. Die sichtbare Filterreihe bleibt bei TMDB.
+  - Tests: Python (Felder aus der TMDB-Antwort, Prüfung beim Import, Endpunkt, Bewertung aus der Seite, Nachladen einmal im Monat, Fehler ohne Folgen), JS (Filter, Sortierung, andere Länder, Karten-Logos). Tests laden nie eine Letterboxd-Seite (`conftest.py`).
+  - Nachbesserung nach Rückmeldung: Der Letterboxd-Filter leerte die Liste, weil noch kein Film eine Bewertung hatte; ein Scan derselben Watchlist innerhalb von 24 Stunden wurde ohne neues Nachschlagen wiederverwendet. Jetzt wird ein gespeicherter Scan in einem älteren Film-Format (`FILM_FORMAT` in `scan_service.py`) nicht wiederverwendet, und TMDB-Daten ohne die neuen Felder werden neu geholt; der nächste Scan bringt also alle neuen Felder. Bis dahin sind Filter und Sortierung nach Letterboxd ausgegraut („after the next scan“). Die Zeile zu anderen Ländern sagt jetzt dazu, dass man dort ein VPN braucht oder im Land sein muss.
+  - Offen: Datum der Aufnahme und eigene Bewertung (nächster Punkt), Qualität und Sprache (optional).
 
 ### Etappe 13: Übersicht und Auswertung
 - [ ] Watchlist-Statistik über Zeit: Zugänge, weggeschaute Filme, Abdeckung je Dienst (braucht gespeicherte Scan-Stände aus Etappe 6).
@@ -358,14 +523,14 @@ Kritik der Hauptseite mit `/impeccable critique` (2026-11-16): 24 von 40 Punkten
 - [ ] Eigene Schlagworte pro Film und Filter danach (unter „More filters“).
 
 ### Etappe 14: Bedienung
-- [ ] Listenansicht (kompakte, sortierbare Tabelle) neben der Kartenansicht.
-- [ ] Gespeicherte Filter als Knöpfe.
+- [ ] Listenansicht (kompakte, sortierbare Tabelle) neben der Kartenansicht. → K6
+- [ ] Gespeicherte Filter als Knöpfe. → K6
 - [x] (In Etappe 9k erledigt: „Sort & filter“.) Filter auf dem Handy einklappbar: mit „More filters“ (Etappe 9h) ist der Bereich nur noch 243 px hoch; erst nach einer Woche Nutzung entscheiden, ob noch nötig.
-- [ ] Favoriten-Status mit dem Letterboxd-Tagebuch abgleichen; gesehene Filme ausblenden.
-- [ ] Helles Design und Farbwahl. Erst nach den Farb-Variablen aus Etappe 9h (DG #5); die App ist heute bewusst nur dunkel und bleibt es auch bei hellem System.
-- [ ] Tastatur-Bedienung: `/` Suche, `r` Random, Pfeiltasten durch die Karten, `f` Favorit; nur wenn der Fokus nicht in einem Eingabefeld ist, Kürzel im `title` des Knopfs (ID #17).
-- [ ] „Nicht interessiert“: Film in der App ausblenden, ohne die Letterboxd-Watchlist zu ändern; eigener Filter unter „More filters“, um ihn wieder zu zeigen.
-- [ ] Erster Start: ohne Benutzernamen und ohne Watchlist-Datei öffnet die App die Einstellungsseite statt eines leeren Rasters.
+- [ ] Favoriten-Status mit dem Letterboxd-Tagebuch abgleichen; gesehene Filme ausblenden. → K4
+- Helles Design und Farbwahl: entfällt (2026-11-17 entschieden: die App bleibt nur dunkel).
+- [ ] Tastatur-Bedienung: `/` Suche, `s` Shuffle, Pfeiltasten durch die Karten, `f` Favorit; nur wenn der Fokus nicht in einem Eingabefeld ist, Kürzel im `title` des Knopfs (ID #17). → K4 (mit den Kürzeln aus dem Gesamtkonzept)
+- [ ] „Nicht interessiert“: Film in der App ausblenden, ohne die Letterboxd-Watchlist zu ändern; eigener Filter unter „More filters“, um ihn wieder zu zeigen. → K4 („Not now“)
+- [ ] Erster Start: ohne Benutzernamen und ohne Watchlist-Datei öffnet die App die Einstellungsseite statt eines leeren Rasters. → K6 (Einrichtung)
 - Rückgängig nach dem Entfernen eines Favoriten steht jetzt in Etappe 9i.
 
 ### Etappe 15: Gemeinsam schauen
@@ -375,7 +540,7 @@ Kritik der Hauptseite mit `/impeccable critique` (2026-11-16): 24 von 40 Punkten
 
 ### Etappe 16: Ausgabe und Benachrichtigung
 - [ ] Kalender-Feed (ICS) oder RSS mit „neu verfügbar“.
-- [ ] Wöchentliche Zusammenfassung per Mail oder ntfy.
+- [ ] Wöchentliche Zusammenfassung per Mail oder ntfy. → K5
 - [ ] Kleine API mit Dokumentation für Home Assistant oder Dashboards.
 - [ ] Startseiten-Kachel („heute neu / Tipp des Tages“) zum Einbetten in Homepage oder Homarr.
 - Baut auf Zeitplan und Historie auf.
@@ -388,7 +553,7 @@ Betrieb auf dem Server (vor dem Image):
 - [ ] Gesundheits-Endpunkt `/healthz` (Datenbank erreichbar, Zeitplan läuft) für den Docker-Healthcheck und die Unraid-Anzeige.
 - [ ] Knopf „TMDB-Schlüssel testen“ auf der Einstellungsseite.
 - [ ] Datenbank aufräumen: Filmdaten von Filmen, die seit Monaten nicht mehr auf der Watchlist stehen, löschen und die Datei verkleinern (`VACUUM`).
-- [ ] Letzte Fehlermeldungen auf der Status-Seite, ohne in die Logs schauen zu müssen.
+- [ ] Letzte Fehlermeldungen auf der Status-Seite, ohne in die Logs schauen zu müssen. → K1 (Settings → Data & status)
 
 Docker:
 - [x] `.env` in `.dockerignore` aufnehmen (API-Key nicht ins Image; mit Etappe 9c erledigt).
@@ -400,4 +565,4 @@ Docker:
 
 ## Nicht im Plan (frühere Ideen)
 
-Direkt-Link in die App des Anbieters (TMDB liefert nur den Link zur JustWatch-Seite, siehe Etappe 9i), mehrere Letterboxd-Profile, weitere Letterboxd-Listen, Serien, Abgleich mit Plex/Jellyfin, deutsche Oberfläche (offene Frage aus der Design-Kritik: die Oberfläche ist englisch), Push-Nachrichten über Discord/Telegram, installierbare App im LAN (HTTPS, Icons), Zugriffsschutz, umgekehrte Suche (Vorschläge außerhalb der Watchlist), Filmsuche ohne Watchlist.
+Direkt-Link in die App des Anbieters (TMDB liefert nur den Link zur JustWatch-Seite, siehe Etappe 9i), mehrere Letterboxd-Profile, weitere Letterboxd-Listen, Serien, Abgleich mit Plex/Jellyfin, deutsche Oberfläche (offene Frage aus der Design-Kritik: die Oberfläche ist englisch), Push-Nachrichten über Discord/Telegram (ntfy/Gotify/Webhook stehen in K5; installierbare App jetzt in K6), Zugriffsschutz, umgekehrte Suche (Vorschläge außerhalb der Watchlist), Filmsuche ohne Watchlist (auch die TMDB-Gesamtsuche aus dem Gesamtkonzept), IMDb-Bewertung über OMDb, Leihpreise und Qualität (HD/4K, Ton, Untertitel; TMDB liefert sie nicht), Kalender-Zeitfenster, „Auf Fernseher öffnen“, Wischgesten auf Karten.

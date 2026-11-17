@@ -25,6 +25,8 @@ MOVIE = {
     "backdrop_path": "/b.jpg",
     "poster_path": "/p.jpg",
     "runtime": 148,
+    "original_language": "en",
+    "origin_country": ["US", "GB"],
     "release_date": "2010-07-15",
     "genres": [{"name": "Action"}],
     "videos": {"results": [{"site": "YouTube", "type": "Trailer", "key": "abc"}]},
@@ -49,6 +51,13 @@ MOVIE = {
 
 BUNDLE: dict = {
     "poster_path": "/p.jpg",
-    "details": {"runtime": 148, "genres": ["Action"], "overview": "A thief.", "rating": 8.4},
+    # origin_countries marks details in the current format (see lookup_film).
+    "details": {
+        "runtime": 148,
+        "genres": ["Action"],
+        "overview": "A thief.",
+        "rating": 8.4,
+        "origin_countries": [],
+    },
     "providers": {"DE": {"Netflix": ["flatrate"]}, "US": {"Hulu": ["ads"]}},
 }

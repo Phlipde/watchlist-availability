@@ -139,9 +139,12 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             "min_rating": request.args.get("rating", "0"),
             "sort": request.args.get("sort", "rating"),
         }
+        logos = provider_logos()
         return page(
             "index.html",
             provider_groups=providers.provider_groups(settings.loaded_providers()),
+            logos=logos,
+            logo_base_url=_TMDB_LOGO_BASE_URL,
             mostly_free_providers=free_services,
             selected=settings.subscriptions(),
             country=settings.country,
@@ -155,7 +158,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
                 "freeServices": sorted(free_services),
                 "logoBaseUrl": _TMDB_LOGO_BASE_URL,
                 # Logos of the providers loaded from TMDB, for the availability in the details.
-                "providerLogos": provider_logos(),
+                "providerLogos": logos,
             },
         )
 
@@ -168,9 +171,25 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             intervals=SCAN_INTERVALS_HOURS,
         )
 
-    @app.get("/status")
+    @app.get("/stats")
+    def stats_page():
+        return page(
+            "stats.html",
+            client_config={"country": settings.country, "subscriptions": settings.subscriptions()},
+        )
+
+    @app.get("/settings/data")
     def status_page():
         return page("status.html", status=status_overview(store, settings, service))
+
+    # Status and matches moved under Settings; old bookmarks still work.
+    @app.get("/status")
+    def old_status_page():
+        return redirect("/settings/data", code=301)
+
+    @app.get("/matches")
+    def old_matches_page():
+        return redirect("/settings/matches", code=301)
 
     @app.get("/costs")
     def costs_page():
@@ -200,7 +219,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             logo_base_url=_TMDB_LOGO_BASE_URL,
         )
 
-    @app.get("/matches")
+    @app.get("/settings/matches")
     def matches_page():
         return page(
             "matches.html",
@@ -313,6 +332,12 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             return jsonify({"error": "This watchlist entry is unknown."}), 404
         matches.reset_match(store, film_key)
         return jsonify({"ok": True})
+
+    @app.get("/api/films/<int:tmdb_id>/countries")
+    def film_countries(tmdb_id: int):
+        # From the stored scan data only, never a TMDB request: {country: {service: kinds}}.
+        stored = store.offers_by_country(tmdb_id)
+        return jsonify({country: providers.display_providers(offers) for country, offers in stored.items()})
 
     # ----- favorites -----
 

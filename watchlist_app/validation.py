@@ -25,6 +25,8 @@ FUTURE_TOLERANCE_SECONDS = 24 * 60 * 60
 
 _IMAGE_PATH_RE = re.compile(r"^/[A-Za-z0-9._-]{1,200}$")
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_LANGUAGE_RE = re.compile(r"^[a-z]{2,3}$")
+_COUNTRY_RE = re.compile(r"^[A-Z]{2}$")
 _TMDB_URL_RE = re.compile(r"^https://www\.themoviedb\.org/movie/\d+$")
 _TRAILER_URL_RE = re.compile(r"^https://www\.youtube\.com/watch\?v=[A-Za-z0-9_-]{1,40}$")
 
@@ -93,6 +95,7 @@ def clean_film(data) -> dict | None:
     cast = data.get("cast")
     keywords = data.get("keywords")
     similar = data.get("similar_ids")
+    origins = data.get("origin_countries")
     film = Film(
         title=title,
         year=year(data.get("year")),
@@ -122,7 +125,12 @@ def clean_film(data) -> dict | None:
         similar_ids=[n for n in similar[:40] if type(n) is int and 0 < n < 10**9]
         if isinstance(similar, list)
         else [],
+        letterboxd_rating=number(data.get("letterboxd_rating"), 0, 5),
         certification=text(data.get("certification"), 20),
+        original_language=_matching(data.get("original_language"), _LANGUAGE_RE),
+        origin_countries=[code for code in origins[:10] if isinstance(code, str) and _COUNTRY_RE.match(code)]
+        if isinstance(origins, list)
+        else [],
         cinema_date=_matching(data.get("cinema_date"), _DATE_RE),
         home_date=_matching(data.get("home_date"), _DATE_RE),
     )

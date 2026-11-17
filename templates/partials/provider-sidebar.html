@@ -12,7 +12,7 @@
                 <summary>Amazon Channels <span>({{ subgroups[0][1]|length }})</span></summary>
                 <div class="provider-list">
                   {% for provider in subgroups[0][1] %}
-                    <label data-provider-label="{{ provider }}"><input type="checkbox" value="{{ provider }}" {% if provider in selected %}checked{% endif %}> <span class="provider-name">{{ provider }}</span>{% if provider in mostly_free_providers %}<span class="free-tag pill pill-ok">Mostly free</span>{% endif %}<span class="provider-film-count" data-provider-count="{{ provider }}">0</span><span class="visually-hidden"> films</span></label>
+                    <label data-provider-label="{{ provider }}"><input type="checkbox" value="{{ provider }}" {% if provider in selected %}checked{% endif %}> {% if logos.get(provider) %}<img class="provider-logo-sm" src="{{ logo_base_url ~ logos[provider] }}" alt="" loading="lazy">{% endif %}<span class="provider-name">{{ provider }}{% if provider in mostly_free_providers %}<span class="free-tag pill pill-ok">Mostly free</span>{% endif %}</span><span class="provider-film-count" data-provider-count="{{ provider }}">0</span><span class="visually-hidden"> films</span></label>
                   {% endfor %}
                 </div>
               </details>
@@ -20,7 +20,7 @@
               <div class="provider-list">
                 {% for subgroup, providers in subgroups %}
                   {% for provider in providers %}
-                    <label data-provider-label="{{ provider }}"><input type="checkbox" value="{{ provider }}" {% if provider in selected %}checked{% endif %}> <span class="provider-name">{{ provider }}</span>{% if provider in mostly_free_providers %}<span class="free-tag pill pill-ok">Mostly free</span>{% endif %}<span class="provider-film-count" data-provider-count="{{ provider }}">0</span><span class="visually-hidden"> films</span></label>
+                    <label data-provider-label="{{ provider }}"><input type="checkbox" value="{{ provider }}" {% if provider in selected %}checked{% endif %}> {% if logos.get(provider) %}<img class="provider-logo-sm" src="{{ logo_base_url ~ logos[provider] }}" alt="" loading="lazy">{% endif %}<span class="provider-name">{{ provider }}{% if provider in mostly_free_providers %}<span class="free-tag pill pill-ok">Mostly free</span>{% endif %}</span><span class="provider-film-count" data-provider-count="{{ provider }}">0</span><span class="visually-hidden"> films</span></label>
                   {% endfor %}
                 {% endfor %}
               </div>
@@ -28,7 +28,7 @@
             </section>
           {% endfor %}
           <p class="filter-help">Films on the ticked services are shown. <strong>My subscriptions</strong> ticks your saved services (<a href="/subscriptions">edit</a>); <strong>Rental shops</strong> shows what you could rent instead.</p>
-          <label class="upload-label">Use CSV watchlist <input class="form-control form-control-sm mt-2" id="csv-upload" type="file" accept=".csv,text/csv"></label>
-          <p class="selection-note">Changing services only changes the visible films.</p>
+          <label class="upload-label">Scan a Letterboxd CSV export instead <input class="form-control form-control-sm mt-2" id="csv-upload" type="file" accept=".csv,text/csv"></label>
+          <p class="selection-note">Changing services filters the list; it does not start a scan.</p>
         </div>
       </aside>

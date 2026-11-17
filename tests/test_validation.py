@@ -7,6 +7,14 @@ def test_similar_ids_keep_only_plain_tmdb_ids():
     assert validation.clean_film({"title": "Heat", "similar_ids": "11"})["similar_ids"] == []
 
 
+def test_language_and_countries_are_codes():
+    film = validation.clean_film(
+        {"title": "Heat", "original_language": "<i>", "origin_countries": ["JP", "jp", "<b>", 3]}
+    )
+    assert (film["original_language"], film["origin_countries"]) == (None, ["JP"])
+    assert validation.clean_film({"title": "Heat", "original_language": "ja"})["original_language"] == "ja"
+
+
 def test_release_fields_are_checked():
     film = validation.clean_film(
         {"title": "Heat", "certification": "12", "cinema_date": "2026-03-05", "home_date": "<b>soon</b>"}

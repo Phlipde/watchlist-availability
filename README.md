@@ -124,8 +124,9 @@ Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
 * **Settings (`/settings`):** Letterboxd username, country, your own subscriptions per country, the automatic scan interval, and backup download / restore (settings, favorites, change history, last scan per country).
 * **My subscriptions / Rental shops:** One click selects the services you pay for, or only the shops where films are rented one by one.
 * **Automatic Scans:** Optionally every 6, 12, 24 or 48 hours or once a week, while the app runs. A scan interrupted by a restart is started again.
-* **Status (`/status`):** Last and next scan, and the recent scan runs with duration, failed lookups and the number of TMDB requests.
-* **Title matches (`/matches`):** Films matched by a TMDB title search, not found, or with a release year more than a year apart are listed for checking. Search TMDB or paste a TMDB link to correct a match; corrections are kept for good and are part of the backup.
+* **Stats (`/stats`):** Numbers for the last scan: films per service and offer type, what each subscription adds, genres, decades, runtime, ratings, languages, countries, people, series, keywords, changes per week and the films waiting longest.
+* **Settings → Data & status (`/settings/data`, formerly `/status`):** Last and next scan, and the recent scan runs with duration, failed lookups and the number of TMDB requests.
+* **Settings → Unmatched films (`/settings/matches`, formerly `/matches`):** Films matched by a TMDB title search, not found, or with a release year more than a year apart are listed for checking. Search TMDB or paste a TMDB link to correct a match; corrections are kept for good and are part of the backup.
 * **Provider list from TMDB:** Once a week, a scan loads every streaming service TMDB knows in your country. New services appear in the filters and in the settings without a code change.
 * **Favorites & Deep Links:** Persistent SQLite favorites, detailed modal popouts (trailers, TMDB links, Letterboxd search), and URL-synced search filter states.
 * **Bundled Assets:** Native Tabler Core UI components hosted under `static/` with zero CDN dependencies.

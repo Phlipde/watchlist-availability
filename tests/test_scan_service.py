@@ -342,6 +342,14 @@ class TestProviderList:
             assert not perform_scan(store, ENTRIES, "src", "DE", "key").reused
         assert bundle.call_count == 1  # the film data itself is still cached
 
+    def test_a_scan_in_an_older_film_format_is_not_reused(self, store):
+        search, fetched = tmdb_answers()
+        with search, fetched:
+            perform_scan(store, ENTRIES, "src", "DE", "key")
+            assert perform_scan(store, ENTRIES, "src", "DE", "key").reused
+            store._write("""UPDATE scans SET stats = '{"providers": "all", "film_format": 1}'""")
+            assert not perform_scan(store, ENTRIES, "src", "DE", "key").reused
+
     @pytest.mark.provider_catalog
     def test_catalog_is_loaded_once_a_week(self, store, monkeypatch):
         calls = []

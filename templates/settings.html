@@ -6,12 +6,13 @@
   <title>Settings · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261116-16') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261117-19') }}" rel="stylesheet">
 </head>
 <body>
   <main class="page">
     {% include "partials/page-nav.html" %}
     <h1 class="page-title">Settings</h1>
+    {% include "partials/settings-nav.html" %}
     {% if not settings.tmdb_api_key_set %}<p class="error">The TMDB API key is missing. Set <code>TMDB_API_KEY</code> in the environment (or <code>.env</code>) and restart the app.</p>{% endif %}
 
     <form id="settings-form" class="settings-form">
@@ -34,11 +35,6 @@
         <p class="hint">Runs in the background while the app is running, also when nobody has the page open.</p>
       </section>
 
-      <section class="settings-section">
-        <h2 class="h4">My subscriptions</h2>
-        <p class="hint">Services, prices and reminders per country are on the <a href="/subscriptions">My subscriptions</a> page.</p>
-      </section>
-
       <div class="toolbar"><button class="btn btn-accent" id="settings-save" type="submit"><i class="ti ti-device-floppy" aria-hidden="true"></i> Save settings</button><span class="feedback" id="settings-message" role="status"></span></div>
     </form>
 
@@ -52,6 +48,6 @@
       </div>
     </section>
   </main>
-  <script src="{{ url_for('static', filename='js/settings.js', v='20261116-16') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/settings.js', v='20261117-19') }}" type="module"></script>
 </body>
 </html>

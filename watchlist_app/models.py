@@ -50,7 +50,10 @@ class Film:
     watchlist_position: int | None = None  # 0 = most recently added to the watchlist
     similar_ids: list[int] = field(default_factory=list)  # TMDB ids TMDB recommends for this film
     # For the scanned country: age rating ("12", "PG-13") and first cinema and home release dates.
+    letterboxd_rating: float | None = None  # Letterboxd average, 0-5
     certification: str | None = None
+    original_language: str | None = None  # ISO 639-1, e.g. "ja"
+    origin_countries: list[str] = field(default_factory=list)  # ISO 3166-1, e.g. ["JP"]
     cinema_date: str | None = None
     home_date: str | None = None
     providers: dict[str, list[str]] = field(default_factory=dict)

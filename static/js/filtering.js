@@ -64,6 +64,8 @@ function commonMatches(film, filters, context) {
     && (filters.genre === 'all' || (film.genres || []).includes(filters.genre))
     && (filters.keyword === 'all' || (film.keywords || []).includes(filters.keyword))
     && ageMatches(filters.age, film.certification)
+    && (!filters.language || filters.language === 'all' || film.original_language === filters.language)
+    && (!filters.origin || filters.origin === 'all' || (film.origin_countries || []).includes(filters.origin))
     // The server decides this with the rule of the costs page (watchlist_app/costs.py).
     && (!filters.exclusive || film.only_on_my_services === true)
     && runtimeMatches(filters.runtime, Number(film.runtime) || 0)
@@ -72,6 +74,7 @@ function commonMatches(film, filters, context) {
     && Object.keys(film.providers || {}).filter(provider => context.selected.has(provider)).length >= filters.minimumProviders
     && (Number(film.rating) || 0) >= filters.minRating
     && (Number(film.vote_count) || 0) >= filters.minVotes
+    && (!filters.minLetterboxd || (Number(film.letterboxd_rating) || 0) >= filters.minLetterboxd)
     && year >= filters.yearFrom
     && year <= filters.yearTo;
 }
@@ -148,6 +151,7 @@ export function sortFilms(films, order, context = {}) {
     rating: (a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0),
     popularity: (a, b) => (Number(b.popularity) || 0) - (Number(a.popularity) || 0),
     votes: (a, b) => (Number(b.vote_count) || 0) - (Number(a.vote_count) || 0),
+    letterboxd: (a, b) => last(b.letterboxd_rating) - last(a.letterboxd_rating),
   }[order];
   return [...films].sort((a, b) => (compare ? compare(a, b) : 0) || byTitle(a, b));
 }
@@ -191,9 +195,21 @@ export function similarOnServices(film, films, subscriptions, skip = new Set(), 
     .slice(0, limit);
 }
 
-// Evening mode: the three best-rated films that fit the time and genre and run on an own service.
+// Other countries where the film runs on one of the user's services without extra cost:
+// [[country, [services]]], the current country left out, sorted by country code.
+export function elsewhereOnServices(byCountry, subscriptions, current) {
+  return Object.entries(byCountry || {})
+    .filter(([country]) => country !== current)
+    .map(([country, offers]) => [country, Object.entries(offers)
+      .filter(([provider, kinds]) => subscriptions.has(provider) && kinds.some(kind => ['free', 'ads', 'flatrate'].includes(kind)))
+      .map(([provider]) => provider).sort()])
+    .filter(([, services]) => services.length)
+    .sort(([a], [b]) => a.localeCompare(b));
+}
+
+// Tonight: the best-rated films (three by default) that fit the time and genre and run on one of the services.
 // Films in `skip` (watched ones) are left out.
-export function eveningSuggestions(films, {maximum, genre, subscriptions, skip = new Set()}) {
+export function eveningSuggestions(films, {maximum, genre, subscriptions, skip = new Set(), limit = 3}) {
   return films
     .filter(film => !skip.has(filmKey(film))
       && (!maximum || (film.runtime > 0 && film.runtime <= maximum))
@@ -201,5 +217,5 @@ export function eveningSuggestions(films, {maximum, genre, subscriptions, skip =
       && Object.entries(film.providers || {}).some(([provider, kinds]) =>
         subscriptions.has(provider) && kinds.some(kind => ['free', 'ads', 'flatrate'].includes(kind))))
     .sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0) || String(a.title).localeCompare(String(b.title)))
-    .slice(0, 3);
+    .slice(0, limit);
 }

@@ -128,7 +128,13 @@ CREATE TABLE IF NOT EXISTS provider_catalog (
 
 # Columns added after the first release; created on older databases at start.
 _ADDED_COLUMNS = {
-    "film_ids": (("title", "TEXT"), ("year", "INTEGER"), ("last_seen", "REAL")),
+    "film_ids": (
+        ("title", "TEXT"),
+        ("year", "INTEGER"),
+        ("last_seen", "REAL"),
+        ("lb_rating", "REAL"),
+        ("lb_checked_at", "REAL"),
+    ),
 }
 
 MATCH_FIELDS = ("film_key", "title", "year", "tmdb_id", "source", "checked_at", "last_seen")
@@ -183,13 +189,26 @@ class Store:
 
     def get_id(self, film_key: str) -> dict | None:
         rows = self._read(
-            "SELECT tmdb_id, source, checked_at FROM film_ids WHERE film_key = ?",
+            "SELECT tmdb_id, source, checked_at, lb_rating, lb_checked_at FROM film_ids WHERE film_key = ?",
             (film_key,),
         )
         if not rows:
             return None
-        tmdb_id, source, checked_at = rows[0]
-        return {"tmdb_id": tmdb_id, "source": source, "checked_at": checked_at}
+        tmdb_id, source, checked_at, lb_rating, lb_checked_at = rows[0]
+        return {
+            "tmdb_id": tmdb_id,
+            "source": source,
+            "checked_at": checked_at,
+            "lb_rating": lb_rating,
+            "lb_checked_at": lb_checked_at,
+        }
+
+    def set_letterboxd_rating(self, film_key: str, rating: float | None, checked_at=None) -> None:
+        """Remember the Letterboxd average of a watchlist entry (None: too few ratings)."""
+        self._write(
+            "UPDATE film_ids SET lb_rating = ?, lb_checked_at = ? WHERE film_key = ?",
+            (rating, checked_at if checked_at is not None else time.time(), film_key),
+        )
 
     def set_id(
         self,
@@ -264,6 +283,11 @@ class Store:
             "providers": json.loads(providers) if providers else {},
             "fetched_at": fetched_at,
         }
+
+    def offers_by_country(self, tmdb_id: int) -> dict[str, dict[str, list[str]]]:
+        """The stored offers of every country: {country: {TMDB provider name: kinds}}."""
+        rows = self._read("SELECT country, providers FROM offers WHERE tmdb_id = ?", (tmdb_id,))
+        return {country: json.loads(providers) for country, providers in rows}
 
     def save_bundle(self, tmdb_id: int, bundle: dict, fetched_at=None) -> None:
         """Store details and the offers of every country from one TMDB response."""

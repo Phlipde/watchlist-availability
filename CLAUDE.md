@@ -243,6 +243,7 @@ Flask app (`app.py`, `web/routes.py`, `watchlist_app/`) with SQLite, Tabler/Boot
 - `Bootstrap modal and Escape` -- Escape only works after the modal has faded in; tests wait until focus is inside the dialog
 - `Bootstrap modal focus` -- Bootstrap does not return focus; use `openModal(id, opener)` in `app.js`, which also finds a redrawn card's button by `data-key`
 - `ruff and ruflo` -- `pyproject.toml` excludes `.claude`, `.agents`, `.claude-flow`, else ruff formats code samples in the ruflo agent docs
+- `Stretched card link` -- the title link (`.film-open::after`) covers the whole card; Playwright refuses clicks on a child under it, click the `article` (with `position`) or the link instead
 - `Old saved scans` -- new film fields (`collection`, `watchlist_position`) are empty until the next scan refetches TMDB data
 
 ### Patterns
@@ -251,10 +252,12 @@ Flask app (`app.py`, `web/routes.py`, `watchlist_app/`) with SQLite, Tabler/Boot
 - Visible filter row stays at five (search, availability, genre, runtime, rating); every new filter goes under "More filters"
 - New film field -- add it in `models.Film`, `tmdb._details_from_movie`, `results.make_film` and `validation.clean_film` (backups and the client go through validation)
 - Wording -- "service", not "provider", in the UI; one `.pill` class with tones ok/warn/danger/neutral; amber only for controls
+- Colours -- all in OKLCH in `static/css/app.css`; surfaces `--bg` < `--surface`/`--panel` < `--surface-raised` (dialogs, menus, toasts); borders `--line`, `--line-card`, `--line-field`, `--line-strong` are white with alpha. No new hex values; error and status colours stay solid on purpose
 - Font sizes -- `--fs-small/.75rem`, `--fs-body/.875rem`, `--fs-text/1rem`, `--fs-heading/2rem`; nothing under 12px
 
 ### Decisions
 
+- Settings sub-pages: `/settings`, `/settings/data` (was `/status`), `/settings/matches` (was `/matches`); old paths 301. The scan panel lives in the header sync dropdown (`#sync-toggle`), its element ids are unchanged
 - "Where to watch" uses `tmdb_url + /watch?locale=XX` instead of storing TMDB's `link` field (same page, no DB/backup change)
 - Subscriptions and prices live on `/subscriptions`; `PUT /api/settings` takes `subscriptions_country` so another country is edited without switching the app's country; `/costs` redirects (301)
 - Letterboxd CSV is sorted by its `Date` column newest first, to match the website order (assumed newest first, not verified)

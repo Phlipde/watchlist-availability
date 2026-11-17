@@ -26,6 +26,8 @@ class TestMovieBundle:
         assert bundle["details"]["keywords"] == ["heist", "dream"]
         assert bundle["details"]["trailer_url"].endswith("v=abc")
         assert bundle["details"]["collection"] is None
+        assert bundle["details"]["original_language"] == "en"
+        assert bundle["details"]["origin_countries"] == ["US", "GB"]
         assert bundle["providers"]["DE"] == {
             "Netflix": ["flatrate", "rent"],
             "Apple TV Store": ["rent"],

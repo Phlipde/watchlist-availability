@@ -1,8 +1,8 @@
 import {dateTime, escapeHtml, numberText} from './ui.js';
-import {filmKey, sectionProviders, selectedChanges, selectedKinds} from './filtering.js';
+import {SECTION_KINDS, filmKey, sectionProviders, selectedChanges} from './filtering.js';
 
 // "Free" alone was read three ways; the section says what it holds.
-const SECTION_TITLES = {Free: 'Free & with ads', Paid: 'Paid'};
+const SECTION_TITLES = {Free: 'Free & with ads', Paid: 'Subscription & rent'};
 
 const OFFER_TYPES = {
   free: ['Free', 'ti ti-gift'],
@@ -10,13 +10,6 @@ const OFFER_TYPES = {
   flatrate: ['Subscription', 'ti ti-repeat'],
   rent: ['Rent', 'ti ti-ticket'],
 };
-
-export function offerBadges(kinds) {
-  return [...new Set(kinds)].map(kind => {
-    const [label, icon] = OFFER_TYPES[kind] || [kind, 'ti ti-circle'];
-    return `<span class="pill offer-badge offer-${escapeHtml(kind)}"><i class="${icon}" aria-hidden="true"></i> ${escapeHtml(label)}</span>`;
-  }).join('');
-}
 
 // Availability in the details window: one group per offer type (Free, With ads, Subscription,
 // Rent). The user's own services come first and are marked, the rest in alphabetical order,
@@ -36,11 +29,62 @@ export function availabilityByOffer(providers, logos = {}, logoBaseUrl = '', own
   }).join('');
 }
 
-function changeBadgesFor(film, selected) {
+// Runtime on the card as hours and minutes: 154 → "2h 34m", 58 → "58m", 120 → "2h".
+export function runtimeText(minutes) {
+  const total = Math.round(Number(minutes));
+  if (!Number.isFinite(total) || total <= 0) return '';
+  const hours = Math.floor(total / 60);
+  const rest = total % 60;
+  return [hours ? `${hours}h` : '', rest ? `${rest}m` : ''].filter(Boolean).join(' ');
+}
+
+// Address of a film's details: the current page plus film=<key>, so a new tab keeps country and filters.
+export function filmHref(pageHref, key) {
+  const url = new URL(pageHref);
+  url.searchParams.delete('scan');  // a finished scan job in a new tab would start a new scan
+  url.searchParams.set('film', key);
+  return url.pathname + url.search;
+}
+
+// What a screen reader says for the runtime: "1 hour 47 minutes".
+function runtimeSpoken(minutes) {
+  const total = Math.round(Number(minutes));
+  const hours = Math.floor(total / 60);
+  const rest = total % 60;
+  return [hours ? `${hours} hour${hours === 1 ? '' : 's'}` : '', rest ? `${rest} minute${rest === 1 ? '' : 's'}` : ''].filter(Boolean).join(' ');
+}
+
+function filmLink(film, key, pageHref, className = 'film-open') {
+  return `<a class="${className}" href="${escapeHtml(filmHref(pageHref, key))}" data-key="${escapeHtml(key)}" title="${escapeHtml(film.title)}">${escapeHtml(film.title)}</a>`;
+}
+
+// Mark on a service logo for the offer type in the card's section; a subscription is the usual case and has none.
+const SERVICE_MARKS = {free: '<i class="ti ti-gift"></i>', ads: 'Ad', rent: '€'};
+
+// Every ticked service the film runs on in this section, sorted by name so a service keeps its place across cards.
+function serviceList(film, section, context) {
+  const sectionKinds = SECTION_KINDS[section] || [];
+  const logos = context.providerLogos || {};
+  return sectionProviders(film, section).filter(provider => context.selected.has(provider))
+    .sort((a, b) => a.localeCompare(b, undefined, {sensitivity: 'base'}))
+    .map(provider => {
+      const kinds = film.providers[provider] || [];
+      const kind = sectionKinds.find(item => kinds.includes(item));
+      const offers = kinds.map(item => (OFFER_TYPES[item]?.[0] || item).toLowerCase()).join(', ');
+      const name = escapeHtml(provider);
+      const mark = SERVICE_MARKS[kind] ? `<span class="service-mark service-mark-${kind}" aria-hidden="true">${SERVICE_MARKS[kind]}</span>` : '';
+      const label = logos[provider]
+        ? `<img class="service-logo" src="${escapeHtml((context.logoBaseUrl || '') + logos[provider])}" alt="${name}, ${escapeHtml(offers)}" title="${name}, ${escapeHtml(offers)}" loading="lazy">`
+        : `<span class="pill pill-service" title="${name}, ${escapeHtml(offers)}">${name}<span class="visually-hidden">, ${escapeHtml(offers)}</span></span>`;
+      return `<li class="service" data-provider="${name}">${label}${mark}</li>`;
+    }).join('');
+}
+
+export function changeBadgesFor(film, selected) {
   const changes = selectedChanges(film, selected);
   return [
-    ...changes.added.map(provider => `<span class="badge text-bg-success me-1">New on ${escapeHtml(provider)}</span>`),
-    ...changes.removed.map(provider => `<span class="badge text-bg-secondary me-1">No longer on ${escapeHtml(provider)}</span>`),
+    ...changes.added.map(provider => `<span class="pill pill-ok me-1">New on ${escapeHtml(provider)}</span>`),
+    ...changes.removed.map(provider => `<span class="pill pill-neutral me-1">No longer on ${escapeHtml(provider)}</span>`),
   ].join('');
 }
 
@@ -70,34 +114,40 @@ export function compareButtonState(count) {
   return {text: count ? `Compare (${count})` : 'Compare'};
 }
 
-// context: {imageBaseUrl, selected: Set, favorites: Map, compareKeys: Set, greyKeys: Set, favoritesOnly}
+// context: {imageBaseUrl, selected: Set, favorites: Map, compareKeys: Set, greyKeys: Set, favoritesOnly, pageHref}
 export function filmCard(film, section, context) {
   const key = filmKey(film);
-  const providers = sectionProviders(film, section).filter(provider => context.selected.has(provider));
-  const kinds = selectedKinds(film, context.selected);
-  const poster = film.poster_path ? `<img src="${context.imageBaseUrl}${escapeHtml(film.poster_path)}" alt="Poster for ${escapeHtml(film.title)}" loading="lazy">` : '<div class="no-poster">No poster available</div>';
-  const rating = numberText(film.rating) ? `TMDB ${Number(film.rating).toFixed(1)}/10` : 'No rating';
-  const trailerId = film.trailer_url ? new URL(film.trailer_url).searchParams.get('v') : null;
-  const links = `${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer">TMDB</a>` : ''}${trailerId ? ` · <button class="film-link trailer-link" data-trailer="${escapeHtml(trailerId)}" type="button">Trailer</button>` : ''}`;
+  const pageHref = context.pageHref || 'http://localhost/';
+  // The title link below names the film, so the poster is decoration here (the details window keeps its alt text).
+  const poster = film.poster_path ? `<img src="${context.imageBaseUrl}${escapeHtml(film.poster_path)}" alt="" loading="lazy">` : '<div class="no-poster" aria-hidden="true">No poster available</div>';
+  // Letterboxd first (the community the watchlist comes from), TMDB when Letterboxd has no value yet.
+  const rating = numberText(film.letterboxd_rating)
+    ? `<span aria-hidden="true">★</span><span class="visually-hidden">Letterboxd</span> ${Number(film.letterboxd_rating).toFixed(1)}`
+    : numberText(film.rating) ? `TMDB ${Number(film.rating).toFixed(1)}` : '';
+  const runtime = runtimeText(film.runtime) && `<span aria-hidden="true">${runtimeText(film.runtime)}</span><span class="visually-hidden">${runtimeSpoken(film.runtime)}</span>`;
+  const meta = [numberText(film.year, 'Year unknown'), runtime, rating].filter(Boolean).join(' · ');
   const favorite = context.favorites.has(key);
   const savedFavorite = context.favorites.get(key) || {};
-  const providerBadges = providers.map(provider => `<span class="pill pill-service me-1 mb-1" data-provider="${escapeHtml(provider)}">${escapeHtml(provider)}</span>`).join('');
-  const changeBadges = changeBadgesFor(film, context.selected);
   const title = escapeHtml(film.title);
-  const favoriteButton = `<button class="favorite" type="button" aria-label="Favorite: ${title}" aria-pressed="${favorite}" data-favorite="${favorite ? 'true' : 'false'}"><span aria-hidden="true">${favorite ? '★' : '☆'}</span></button>`;
+  const favoriteButton = `<button class="favorite" type="button" aria-label="Favorite: ${title}" aria-pressed="${favorite}" data-favorite="${favorite ? 'true' : 'false'}"><i class="ti ${favorite ? 'ti-heart-filled' : 'ti-heart'}" aria-hidden="true"></i></button>`;
   const compareChecked = context.compareKeys.has(key) ? 'checked' : '';
   const grey = context.greyKeys.has(key) ? ' rescan-unavailable' : '';
   // Status and note only in the favorites view (and in the details), so the cards do not jump.
   const favoriteControls = favorite && context.favoritesOnly ? favoriteFields(key, film.title, savedFavorite) : '';
-  const watched = savedFavorite.status === 'watched' ? ' <span class="pill pill-neutral">Watched</span>' : '';
-  // The card is clickable with the mouse; keyboard users reach the details through the "Details" button.
-  return `<article class="film${grey}" data-key="${escapeHtml(key)}" data-section="${section}"><div class="poster"><label class="comparison-toggle"><input class="comparison-check" type="checkbox" aria-label="Compare ${title}" ${compareChecked}><span aria-hidden="true">Compare</span></label>${poster}${favoriteButton}</div><div class="film-info"><h3 class="film-title">${title}${watched}</h3><span class="year">${numberText(film.year, 'Year unknown')} · ${rating}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}</span><p class="providers">${providerBadges}</p><div class="offer-badges">${offerBadges(kinds)}</div>${links ? `<p class="film-links">${links}</p>` : ''}${changeBadges ? `<p class="provider-changes">${changeBadges}</p>` : ''}<button class="btn btn-sm btn-outline-secondary film-details-button" type="button" data-key="${escapeHtml(key)}" aria-label="Details: ${title}"><i class="ti ti-info-circle" aria-hidden="true"></i> Details</button>${favoriteControls}</div></article>`;
+  // At most one status on the poster, as text: watched beats new.
+  const added = selectedChanges(film, context.selected).added;
+  const badge = savedFavorite.status === 'watched'
+    ? '<span class="poster-badge">Watched</span>'
+    : added.length ? `<span class="poster-badge poster-badge-new" title="New on ${escapeHtml(added.join(', '))}">New<span class="visually-hidden"> on ${escapeHtml(added.join(', '))}</span></span>` : '';
+  const services = serviceList(film, section, context);
+  // The title link covers the whole card (see .film-open::after); the star sits above it. Two tab stops per card.
+  return `<article class="film${grey}" data-key="${escapeHtml(key)}" data-section="${section}"><div class="poster"><label class="comparison-toggle"><input class="comparison-check" type="checkbox" aria-label="Compare ${title}" ${compareChecked}><span aria-hidden="true">Compare</span></label>${badge}${poster}</div><div class="film-info"><h3 class="film-title">${filmLink(film, key, pageHref)}</h3><p class="year">${meta}</p><div class="card-foot">${services ? `<ul class="services">${services}</ul>` : '<span></span>'}${favoriteButton}</div>${favoriteControls}</div></article>`;
 }
 
-export function unavailableCard(film, selected) {
+export function unavailableCard(film, selected, pageHref = 'http://localhost/') {
   const key = filmKey(film);
   const changeBadges = changeBadgesFor(film, selected);
-  return `<article class="film unavailable-card" data-key="${escapeHtml(key)}" data-section="Unavailable"><div class="film-info"><h3 class="film-title">${escapeHtml(film.title)}</h3><span class="year">${numberText(film.year, 'Year unknown')} · <span class="pill pill-neutral"><i class="ti ti-eye-off" aria-hidden="true"></i> Unavailable</span></span>${changeBadges ? `<p class="provider-changes">${changeBadges}</p>` : ''}<button class="btn btn-sm btn-outline-secondary film-details-button" type="button" data-key="${escapeHtml(key)}" aria-label="Details: ${escapeHtml(film.title)}"><i class="ti ti-info-circle" aria-hidden="true"></i> Details</button></div></article>`;
+  return `<article class="film unavailable-card" data-key="${escapeHtml(key)}" data-section="Unavailable"><div class="film-info"><h3 class="film-title">${filmLink(film, key, pageHref)}</h3><span class="year">${numberText(film.year, 'Year unknown')} · <span class="pill pill-neutral"><i class="ti ti-eye-off" aria-hidden="true"></i> Unavailable</span></span>${changeBadges ? `<p class="provider-changes">${changeBadges}</p>` : ''}</div></article>`;
 }
 
 // Draws the Free/Paid sections and the unavailable list from the result of filterFilms().
@@ -106,5 +156,5 @@ export function renderResults(view, containers, context) {
     .filter(([, films]) => films.length)
     .map(([section, films]) => `<div class="result-section" data-section="${section}"><h2>${SECTION_TITLES[section] || section}</h2><div class="films">${films.map(film => filmCard(film, section, context)).join('')}</div></div>`)
     .join('');
-  containers.unavailableResults.innerHTML = view.unavailable.map(film => unavailableCard(film, context.selected)).join('');
+  containers.unavailableResults.innerHTML = view.unavailable.map(film => unavailableCard(film, context.selected, context.pageHref)).join('');
 }

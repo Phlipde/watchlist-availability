@@ -132,6 +132,12 @@ class TestTmdbIdFromFilmPage:
     def test_missing_id(self):
         assert letterboxd.parse_tmdb_id("<body>") is None
 
+    def test_average_rating_parsed(self):
+        page = '<script>{"aggregateRating":{"ratingValue":4.33,"ratingCount":1354960}}</script>'
+        assert letterboxd.parse_rating(page) == 4.33
+        assert letterboxd.parse_rating('"ratingValue": 9') is None
+        assert letterboxd.parse_rating("<body>") is None
+
     def test_fetch_uses_film_url_and_user_agent(self):
         session = MagicMock()
         session.get.return_value = response(text='<body data-tmdb-type="movie" data-tmdb-id="42">')

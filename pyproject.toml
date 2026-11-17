@@ -19,6 +19,7 @@ addopts = "-m 'not browser'"
 markers = [
     "browser: end-to-end tests in a real browser (Playwright)",
     "provider_catalog: uses the real TMDB provider list function (mocked HTTP)",
+    "letterboxd_rating: uses the real Letterboxd rating function (mocked HTTP)",
 ]
 
 [tool.mypy]

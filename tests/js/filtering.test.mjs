@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
-import {eveningSuggestions, filterFilms, matchesSection, selectedChanges, selectedKinds, similarOnServices, sortFilms, ageMatches, sortRatings, comingSoon} from '../../static/js/filtering.js';
+import {eveningSuggestions, filterFilms, matchesSection, selectedChanges, selectedKinds, similarOnServices, sortFilms, ageMatches, sortRatings, comingSoon, elsewhereOnServices} from '../../static/js/filtering.js';
 
 const baseFilters = {
   query: '', availability: 'all', kind: 'all', minRating: 0, minVotes: 0, genre: 'all', keyword: 'all', runtime: 'all', mode: 'any',
@@ -163,8 +163,8 @@ test('every set filter gets a chip and reset clears them all', async () => {
     'exclusive-filter': {type: 'checkbox', checked: true, dataset: {}},
   };
   const doc = {getElementById: id => controls[id] ?? null};
-  assert.equal(FILTER_CONTROLS.length, 15);
-  assert.deepEqual(activeFilters(doc).map(chip => chip.label), ['Search', 'Rating', 'Media', 'Services', 'Only on one of my services']);
+  assert.equal(FILTER_CONTROLS.length, 18);
+  assert.deepEqual(activeFilters(doc).map(chip => chip.label), ['Search', 'Rating', 'Trailer', 'Services', 'Only on one of my services']);
   assert.equal(activeFilters(doc).find(chip => chip.id === 'min-rating').text, 'Label 7');
   resetFilters(doc);
   assert.deepEqual(activeFilters(doc), []);
@@ -246,4 +246,37 @@ test('coming soon: only future dates, soonest first', () => {
     {title: 'No dates'},
   ];
   assert.deepEqual(comingSoon(films, '2026-11-16').map(film => film.title), ['Cinema soon', 'Home later']);
+});
+
+test('language and country of origin filters', () => {
+  const films = [
+    {key: '1', title: 'Shoplifters', original_language: 'ja', origin_countries: ['JP'], providers: {Netflix: ['flatrate']}},
+    {key: '2', title: 'Heat', original_language: 'en', origin_countries: ['US'], providers: {Netflix: ['flatrate']}},
+  ];
+  const titles = extra => filterFilms(films, [], {...baseFilters, ...extra}, {selected: new Set(['Netflix']), favorites: new Map()}).sections.Paid.map(film => film.title);
+  assert.deepEqual(titles({language: 'ja'}), ['Shoplifters']);
+  assert.deepEqual(titles({origin: 'US'}), ['Heat']);
+  assert.deepEqual(titles({language: 'all', origin: 'all'}), ['Heat', 'Shoplifters']);
+});
+
+test('other countries: only own services without extra cost, current country left out', () => {
+  const byCountry = {
+    DE: {Netflix: ['flatrate']},
+    US: {Netflix: ['flatrate'], Hulu: ['flatrate']},
+    GB: {Netflix: ['rent'], MUBI: ['flatrate']},
+    FR: {Arte: ['free'], Netflix: ['ads']},
+  };
+  assert.deepEqual(elsewhereOnServices(byCountry, new Set(['Netflix', 'Arte']), 'DE'), [['FR', ['Arte', 'Netflix']], ['US', ['Netflix']]]);
+  assert.deepEqual(elsewhereOnServices(null, new Set(['Netflix']), 'DE'), []);
+});
+
+test('Letterboxd rating: minimum filter and sort, unrated films last', () => {
+  const films = [
+    {key: '1', title: 'Low', letterboxd_rating: 3.1, providers: {Netflix: ['flatrate']}},
+    {key: '2', title: 'High', letterboxd_rating: 4.4, providers: {Netflix: ['flatrate']}},
+    {key: '3', title: 'Unrated', providers: {Netflix: ['flatrate']}},
+  ];
+  const titles = extra => filterFilms(films, [], {...baseFilters, ...extra}, {selected: new Set(['Netflix']), favorites: new Map()}).sections.Paid.map(film => film.title);
+  assert.deepEqual(titles({minLetterboxd: 4}), ['High']);
+  assert.deepEqual(titles({sort: 'letterboxd'}), ['High', 'Low', 'Unrated']);
 });
