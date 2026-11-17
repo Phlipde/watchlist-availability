@@ -1,8 +1,8 @@
 # Plan: Fehler beheben, Struktur verbessern, Funktionen ergänzen, dann Docker
 
-Stand: 2026-11-16. Jede Etappe ist ein eigener Commit mit eigenen Tests; die App bleibt nach jedem Schritt lauffähig. Docker für Unraid kommt bewusst zuletzt. Struktur-Umbauten sind mit „(Struktur)“ markiert und stehen jeweils vor den Schritten, die darauf aufbauen.
+Stand: 2026-11-16. Jede Etappe ist ein eigener Commit mit eigenen Tests; die App bleibt nach jedem Schritt lauffähig. Docker für Unraid kommt seit 2026-11-18 früh (Etappe 17a, siehe Reihenfolge), der Rest von Etappe 17 zuletzt. Struktur-Umbauten sind mit „(Struktur)“ markiert und stehen jeweils vor den Schritten, die darauf aufbauen.
 
-Als Nächstes offen: Rest von Etappe 12 (Aufnahmedatum, eigene Bewertung), dann Etappe 13. Offene Punkte aus der Design-Runde stehen in Etappe 9k.
+Reihenfolge ab 2026-11-18: 17a Docker-Grundlage → K3c Filterleiste → A1 Abos-Mindestversion → K4 Details und Aktionen → A2 bis A4 → K5 Benachrichtigungen → A5, A6 → K6 Feinschliff (PWA) → 17b Betrieb. Rest von Etappe 12 und Etappe 13 bis 16 laufen, soweit sie nicht in K4 bis K6 aufgegangen sind, danach. Offene Punkte aus der Design-Runde stehen in Etappe 9k.
 
 ## Teil A: Fehler und Struktur
 
@@ -519,6 +519,17 @@ Plan:
   - Filter durchgeprüft (Datenkopie, 168 sichtbar): Alter, Sprache, Land, Stimmen, Trailer, Änderungen, Mindestzahl Dienste (0 Treffer stimmt: kein Film läuft auf 3 angehakten Diensten), „Only on one of my services“ (131 = Daten), Jahr von/bis, „Also show films not available“ (26 weitere), Bewertung, Laufzeit, Kosten, Suche; jeder setzt Chip und Adresse und lässt sich zurücksetzen. Keine Fehler gefunden, die das Blatt-Problem überstiegen.
   - Offen: Bei 1024 px steht die Leiste in zwei Zeilen (Bewertung und Sortierung rutschen nach unten); das löst K3c (Filter rutschen in „Filters“). Bewertung ist noch ein Auswahlfeld statt Panel (K3c).
 
+### Etappe 17a: Docker-Grundlage (vorgezogen 2026-11-18, vor K3c)
+Warum jetzt: Die App ist Alltagswerkzeug auf dem Unraid-Server. Zeitplan (K5), Benachrichtigungen, PWA (braucht dauerhaft erreichbare Adresse mit HTTPS) und echte Daten über Wochen setzen einen Dauerbetrieb voraus; die Datei-Sicherung und die Härtung aus 8a sind schon da. Der Aufwand ist klein, weil `Dockerfile` und `docker-compose.yml` bestehen. Docker ist auf diesem PC nicht installiert, deshalb wird das Image bei GitHub gebaut und dort getestet.
+- [ ] Gesundheit: `/health` (gibt es) prüft zusätzlich die Datenbank und ob der Zeitplan läuft; der Docker-Healthcheck und die Unraid-Anzeige nutzen ihn.
+- [ ] `docker-compose.yml`: `TMDB_API_KEY`, `LETTERBOXD_USERNAME`, `COUNTRY`, `TZ` als Umgebungsvariablen (die Werte kommen aus einer `.env` neben der Datei oder aus Unraid; nie ins Image), Datenordner `./data:/data`, Neustart-Richtlinie.
+- [ ] Nicht-root: ein Start-Skript legt den Benutzer aus `PUID`/`PGID` an (Unraid-Standard 99/100), setzt die Rechte auf `/data` und startet `gunicorn` mit diesem Benutzer.
+- [ ] Automatische tägliche Sicherung in `/data/backups/` (die letzten 7 bleiben), mit Test für das Aufräumen alter Dateien.
+- [ ] GitHub Actions: Image bauen, als Container starten, auf „healthy“ warten, `/health`, `/` und `/api/latest` abfragen (ohne TMDB-Schlüssel muss die Seite trotzdem starten und die Einrichtung zeigen). Veröffentlichen nach `ghcr.io` nur, wenn du es willst (Push und Zugangsdaten sind deine Sache).
+- [ ] Unraid: Vorlage `unraid-template.xml` (Port 5000, `/data` auf `/mnt/user/appdata/watchlist-availability`, die Variablen oben) und ein Abschnitt in der README: Installation, Update, Sicherung wiederherstellen.
+- [ ] Hinweis in der README: Die App hat keine Anmeldung. Nur im Heimnetz betreiben oder hinter einem Reverse-Proxy mit Anmeldung (dort auch HTTPS für die PWA); Zugriffsschutz in der App selbst bleibt „nicht im Plan“.
+- Abnahme: `docker compose up` startet auf einem frischen Ordner, die Einrichtung erscheint, nach den Variablen läuft der erste Scan; der Container läuft nicht als root; ein Neustart behält die Daten; die GitHub-Prüfung ist grün. Was ich hier nicht prüfen kann (Docker fehlt), sage ich ausdrücklich.
+
 ### Etappe K3c: Filterleiste nach Abschnitt 5 (2026-11-18, aus `abschnitt-5-filter.md`; geplant, nichts gebaut)
 Abgleich: Das meiste steht seit K2 (eine Leiste, Kosten mit Zahlen, Logo-Stapel mit Menü, Genre mit Ausschluss, Chips, Trefferzahl je Option, Leer-Hinweis, Zustand in der Adresse, Sortierung mit Text). K3c baut nur den Unterschied. K3b (Fehler und Aufräumen) kommt zuerst, K3c danach, weil beide dieselben Dateien berühren (`film-filters.html`, `filterbar.js`, `app.css`).
 Übernommen:
@@ -540,6 +551,27 @@ Nicht übernommen (abgewogen):
 - Suche erst ab 2 Zeichen: bleibt ab dem ersten Zeichen (bei 430 Filmen 4 ms).
 Verschoben auf K6 (stand dort schon): Ansicht Grid · Compact · Table (Knöpfe in der Leiste ganz rechts) und gespeicherte Ansichten („Save view“ in der Chip-Zeile, Auswahl links in der Leiste, Chips auf Tonight).
 - Abnahme: Filter auf 430 Filmen unter 100 ms; jeder Zustand per Adresse reproduzierbar und mit Zurück herstellbar; alle Bedienelemente mit Tastatur; Tests (JS für Regler- und Chip-Kopplung, Jahr-Chips, Altersgruppen je Land; Browser für Dienste-Suche, Chip-Klick öffnet Panel) grün.
+
+### Teil C: Abos-Seite (2026-11-18, aus `abschnitt-9-abos.md`; geplant, nichts gebaut)
+Die Seite beantwortet eine Frage: Welche Abos lohnen sich für meine Watchlist, welche kann ich kündigen, und was tue ich vorher? Sie ersetzt „My subscriptions“ (Matches liegt seit K1 in Settings). Der Abschnitt deckt sich teilweise mit K5 (Tabelle, Rotation, „Worth a trial month“); diese drei Punkte in K5 werden durch die Etappen A1 bis A5 ersetzt, Benachrichtigungen und Zeitplan bleiben in K5.
+Abweichungen vom Abschnitt (abgewogen, weil die Daten fehlen oder der Plan etwas anderes entschieden hat):
+- Ablaufdaten von Filmen („Leaving“-Spalte, „8 films leave this month“, „Watch these first“, `leaving_boost`, Rotation nach „bald weg“, „leaves on“ im Kalender, Sensor „films leaving soon“) entfallen: TMDB liefert kein Ablaufdatum, geschätzt wird nichts (entschieden 2026-11-17). Das Fristen-Banner bleibt, nutzt aber nur das vom Nutzer eingetragene Datum („Netflix renews on 21.11.“). Die Wertformel läuft ohne `leaving_boost`.
+- „Used“ und „€ pro gesehenem Film“ entfallen: das Letterboxd-Tagebuch wäre eine neue Datenquelle (entschieden: keine außer der PWA). Die Spalte wird nicht gebaut; „€ / film“ bleibt Preis geteilt durch „Only here“.
+- Vorgeschlagene Standardpreise („approx.“) entfallen: Preise ändern sich, es zählt nur die Eingabe des Nutzers. Ebenso Leihpreise, „Rent instead“-Karte und Preisalarm (entschieden 2026-11-17) und der Hinweis „Filme nur in höherer Stufe“ (keine Daten über Stufen). Das Feld „Plan“ (With ads · Standard · Premium) bleibt als reine Notiz des Nutzers.
+- Darstellung: Zahlen und Daten nach der Sprache des Browsers (`Intl`, € je Land), Datum als Text `21.11.2026` in Deutschland; ein Kalenderfeld öffnet sich erst beim Anklicken (das heutige `dd/mm/yyyy` kommt vom Datumsfeld des Browsers). Oberfläche bleibt Englisch.
+- Andere Länder: nur Länder mit gespeichertem Scan (kein neuer Abruf), mit dem Hinweis „needs a VPN or being in that country“.
+- Gewichte (Favorit 3 · gut bewertet 2 · sonst 1) und Schwelle Letterboxd 3.8 fest, erklärt im ⓘ-Tooltip; ein einstellbarer Expertenbereich erst, wenn jemand ihn braucht.
+- Auswahl der Dienste wandert aus der Abo-Seite nach Settings → My services (Gruppen My subscriptions · Free and ad-supported · Rental shops · Amazon Channels · All others eingeklappt, Suche, Liste statt Raster, speichert sofort mit „Saved · Undo“, kein Save-Knopf, kein Erklärsatz). Das ist die ursprüngliche Planung aus K2; die Abweichung dort (Liste bleibt auf der Abo-Seite) wird zurückgenommen. Die Abo-Seite verlinkt dorthin.
+- Gleiche Kataloge: keine Handtabelle, sondern eine Regel: „X Amazon Channel“, „X Apple TV Channel“ usw. werden dem Hauptdienst „X“ zugeordnet, wenn er im Katalog des Landes existiert; Pakete („Netflix in MagentaTV“) als Einstellung des Nutzers (Abo A enthält Abo B, Preis 0 für die Rechnung). Tippfehler in Anzeigenamen („Amzon“) über eine kleine Korrekturliste.
+Etappen (Reihenfolge nach Wirkung; A1 ist die Mindestversion):
+- [ ] A1 Mindestversion: Titel 24 px, Tabelle nach Wert sortiert (Spaltenköpfe klickbar), Gratis-Dienste als Chip-Block („ARD 1 · ZDF 2 · …“, Dienste ohne Filme nur als „+1 with no films“, keine „Only here“-Spalte für sie), Preisfeld mit €-Platzhalter und Speichern beim Verlassen des Feldes („Saved“), Datum als Text mit Kalender erst beim Klick, „Total € … / month · € … / year“, Erklärungen als ⓘ-Tooltip statt Fußnote, Zeilenhöhe 56 px und mittig, Zahlen rechtsbündig mit `tabular-nums`, doppelte Kataloge zusammengefasst, Dienste-Auswahl nach Settings → My services mit Sofort-Speichern und Undo, Länderauswahl vom Seitenkopf weg (Land steht in der gemeinsamen Kopfzeile).
+- [ ] A2 Empfehlungen und Fristen: zwei bis drei Karten (Cancel · Subscribe for a month, Rand 3 px in Ereignisfarbe) immer mit Aktion und Begründung inkl. Filmen, Stunden und Geld, wenn der Preis bekannt ist, sonst „Based on film count only“; „Next best“ je Katalog einmal, klickbar; „Not interested“ blendet 30 Tage aus. Fristen-Banner nur bei Frist ≤ 7 Tage (Netflix renews on …, Buttons „Remind me tomorrow“ · „Dismiss“), gleiches Banner oben auf Tonight; Push 3 Tage und 1 Tag vorher mit K5.
+- [ ] A3 Abdeckung und Zeit: Balken in vier Segmenten (Subscriptions · Free · Rent only · Not available, Klick öffnet die Watchlist mit Filter), Kostenzeile, Spalten Hours und „Your pace“ (Hours ÷ Filmzeit pro Woche, Einstellung, Standard 5 h), „Only to rent“ als Poster-Reihe mit Summe der Filme und Filter-Chips statt Textliste, „See all →“ mit `cost=rent`.
+- [ ] A4 Wert und Detail: Wert je Dienst (Σ Gewicht der exklusiven Filme), „€ per value“ nur bei bekanntem Preis, Favoriten-Zahl „★ 9“ neben „Only here“, Detail-Schublade je Dienst (nach K4, gleiche Schublade wie die Film-Details): Kopf, Kennzahlen, „Only here“-Poster, „Also elsewhere“ (was beim Kündigen nicht verloren geht), Verwaltung (monatlich/jährlich, Kündigungsfrist in Tagen, Probe-Abo, geteilt mit n Personen, Notiz, Link zur Kündigungsseite, alles vom Nutzer).
+- [ ] A5 Planung: Budget-Planer (Regler € 0–50, beste Kombination nach Wert, Alternativen, +x % gegenüber heute; Unit-Tests für Grenzen und Kataloge), Rotationsplan aus der heutigen Verfügbarkeit (ein Abo je Monat, Monatsleiste, „Add reminders“), „Worth a month?“ (nicht abonnierte Dienste, bis 5 Zeilen, „Show all“, Preis nur wenn eingetragen), Was-wäre-wenn-Modus mit deutlichem Rahmen („nothing saved“, „Apply to my services“).
+- [ ] A6 Extras: Überschneidungs-Heatmap (eingeklappt, Zelle öffnet die gemeinsamen Filme), andere Länder („With your services in Austria you would see +12 films“), Verlauf „Only here“ über Zeit sobald gespeicherte Scans 30 Tage zurückreichen, iCal-Feed `/calendar.ics` aus den eingetragenen Fristen, Home-Assistant-Sensoren `next_subscription_deadline` und `watchlist_coverage`.
+Zustände: keine Abos gewählt (Auswahl direkt auf der Seite statt leerer Tabelle), keine Preise (alles läuft mit Filmanzahl, Hinweis „Add prices for costs and better advice“), Sync läuft (Skelett und „Updating availability …“).
+Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; jede Empfehlung hat eine Aktion; kein Katalog doppelt; keine Spalte nur mit „–“ (ausblenden oder zum Eintragen auffordern); Zahlen- und Datumsformat passt zum Browser; Änderungen speichern sofort mit Undo; Unit-Tests für Wert, Budget, Katalog-Zusammenfassung und Fristen.
 
 ### Etappe K4: Details und Aktionen
 - [ ] Detailfenster als Schublade von rechts (Desktop 480 px), am Handy Blatt von unten (60 % hoch, hochziehen = ganzer Bildschirm, nach unten wischen schließt). Raster bleibt dahinter sichtbar; Fokus bleibt drin und kehrt zurück (wie heute `openModal`).
@@ -564,9 +596,9 @@ Verschoben auf K6 (stand dort schon): Ansicht Grid · Compact · Table (Knöpfe 
 - [ ] Tastatur: `/` Suche, `g t` / `g w` / `g s` Seiten, Pfeiltasten im Raster, Enter Details, `f` Favorit, `s` Watched, `n` Not now, `c` Compare, `r` Zufall, `Shift+R` Sync, `?` zeigt alle Kürzel; nur außerhalb von Eingabefeldern. Ersetzt den Tastatur-Punkt aus Etappe 14.
 
 ### Etappe K5: Abos und Benachrichtigungen
-- [ ] Subscriptions als Tabelle: Dienst · Films now · Exclusive (nur hier) · Trend 30 days · Price/month · € per exclusive film · Recommendation (Keep / Can cancel / Worth it again).
-- [ ] Rotations-Ratgeber: „With only one subscription this month: Disney+ (41 exclusive films)“ und eine Reihenfolge für 3 Monate, nur aus der heutigen Verfügbarkeit.
-- [ ] „Worth a trial month?“: nicht abonnierte Dienste nach exklusiven Watchlist-Filmen.
+- [ ] (ersetzt durch Teil C, A1 bis A5) Subscriptions als Tabelle: Dienst · Films now · Exclusive (nur hier) · Trend 30 days · Price/month · € per exclusive film · Recommendation (Keep / Can cancel / Worth it again).
+- [ ] (ersetzt durch Teil C, A5) Rotations-Ratgeber: „With only one subscription this month: Disney+ (41 exclusive films)“ und eine Reihenfolge für 3 Monate, nur aus der heutigen Verfügbarkeit.
+- [ ] (ersetzt durch Teil C, A5) „Worth a trial month?“: nicht abonnierte Dienste nach exklusiven Watchlist-Filmen.
 - [ ] Benachrichtigungen über ntfy, Gotify oder Webhook, dazu ein Home-Assistant-Sensor „New on your services“. Standard: Favorit ist nicht mehr verfügbar (an), Wochen-Zusammenfassung freitags 17 Uhr (an), neu verfügbar (aus), Abo-Empfehlung ändert sich (aus). Höchstens eine Nachricht pro Tag, Ruhezeit 22–8 Uhr, jede Nachricht öffnet `?film=`, abschaltbar je Film und je Art. Fasst die Zusammenfassung aus Etappe 16 und die offene Meldung aus Etappe 11 zusammen.
 - [ ] Zeitplan: Watchlist alle 6 Stunden und beim Öffnen, wenn älter als 1 Stunde; Verfügbarkeit nachts komplett. Neue Filme erscheinen sofort mit „checking…“, entfernte erst nach zwei Syncs (Schutz bei Letterboxd-Ausfall).
 
@@ -639,23 +671,15 @@ Verschoben auf K6 (stand dort schon): Ansicht Grid · Compact · Table (Knöpfe 
 - [ ] Startseiten-Kachel („heute neu / Tipp des Tages“) zum Einbetten in Homepage oder Homarr.
 - Baut auf Zeitplan und Historie auf.
 
-## Teil C: Docker für Unraid (zuletzt)
+## Teil D: Docker für Unraid
 
-### Etappe 17
-Betrieb auf dem Server (vor dem Image):
-- [ ] Automatische tägliche Sicherung in den Datenordner (`backups/`), die letzten 7 bleiben erhalten.
-- [ ] Gesundheits-Endpunkt `/healthz` (Datenbank erreichbar, Zeitplan läuft) für den Docker-Healthcheck und die Unraid-Anzeige.
+### Etappe 17b: Betrieb (zuletzt, nach K6)
+Der Rest von Etappe 17; die Grundlage steht in 17a (vor K3c).
 - [ ] Knopf „TMDB-Schlüssel testen“ auf der Einstellungsseite.
-- [ ] Datenbank aufräumen: Filmdaten von Filmen, die seit Monaten nicht mehr auf der Watchlist stehen, löschen und die Datei verkleinern (`VACUUM`).
-- [ ] Letzte Fehlermeldungen auf der Status-Seite, ohne in die Logs schauen zu müssen. → K1 (Settings → Data & status)
-
-Docker:
-- [x] `.env` in `.dockerignore` aufnehmen (API-Key nicht ins Image; mit Etappe 9c erledigt).
-- [ ] `TMDB_API_KEY`, `LETTERBOXD_USERNAME`, `COUNTRY` als Umgebungsvariablen in `docker-compose.yml`.
-- [ ] `platforms.toml` aus `/data` lesen (entfällt, falls Etappe 7 die Datei ersetzt hat).
-- [ ] Container als Nicht-root-Benutzer mit PUID/PGID.
-- [x] `pytest` in `requirements-dev.txt` auslagern (mit Etappe 8 erledigt).
-- Prüfung: Image bauen und starten (auf diesem PC nicht möglich, Docker fehlt).
+- [ ] Datenbank aufräumen: Filmdaten von Filmen, die seit Monaten nicht mehr auf der Watchlist stehen, löschen und die Datei verkleinern (`VACUUM`); erst sinnvoll, wenn der Server Monate gelaufen ist.
+- [x] Letzte Fehlermeldungen auf der Status-Seite (K1, Settings → Data & status).
+- [x] `.env` in `.dockerignore` (mit Etappe 9c), `pytest` in `requirements-dev.txt` (mit Etappe 8).
+- [ ] `platforms.toml` aus `/data` lesen: entfällt, die Einstellungen liegen seit Etappe 7 in der Datenbank.
 
 ## Nicht im Plan (frühere Ideen)
 
