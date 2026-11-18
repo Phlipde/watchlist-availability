@@ -160,3 +160,12 @@ Noch offen (zur Auswahl): 11 Meldung, wenn ein „Demnächst“-Film streambar w
 - **[ENTSCHIEDEN]** Verlauf in eigener kleiner Tabelle (ein Eintrag je Dienst und Tag) statt aus alten Scans: Scans werden auf 30 je Land gekürzt, die Tabelle hält ein Jahr billig.
 - **[OFFEN]** Der Verlauf ist leer, bis zwei verschiedene Tage gescannt wurden.
 - **[ERLEDIGT]** Python 343, JS 52, Browser 38.
+
+### Rest der alten Etappen: selbst entschieden (2026-11-18, auf "versuche zu entscheiden")
+- **[ERLEDIGT]** 16: Startseiten-Kachel `/tile`, RSS `/feed.xml`, API-Übersicht in der README. Kachel zeigt "neu diese Woche" (höchstens 5) und einen Tipp des Tages: gut bewerteter Film auf den eigenen Diensten, nicht gesehen und nicht zurückgestellt, über den Tag stabil (Auswahl nach Datum aus der besser bewerteten Hälfte). Zeitraum und Auswahl sind bewusst fest.
+- **[ENTSCHIEDEN]** 11 (Meldung, wenn ein "Demnächst"-Film streambar wird): nichts Neues gebaut. Wird ein Film streambar, ist es für die App eine Änderung "added"; die Benachrichtigung "jeder neue Film" (K5), der RSS-Feed und "Newly available" melden das schon.
+- **[ENTSCHIEDEN]** 13 "Staubfänger": steht schon auf der Statistik-Seite als "Waiting longest" (Watchlist-Position, nur eigene Dienste). Ein eigener Bildschirm brächte nichts dazu.
+- **[ENTSCHIEDEN]** 13 eigene Schlagworte: nicht bauen. Bräuchte eine neue Tabelle, Eingabe, Filter und Backup-Pfad für etwas, das Letterboxd mit eigenen Tags und Listen besser kann.
+- **[ENTSCHIEDEN]** 12 Aufnahmedatum und eigene Bewertung aus dem Letterboxd-CSV: nicht bauen. Die Position in der Watchlist ersetzt das Datum (K1), die eigene Bewertung hat keinen Zweck in einer App, die nur Verfügbarkeit zeigt.
+- **[ENTSCHIEDEN]** 15 Abstimmung und Gäste-Abos: nicht bauen. Größter Umbau (neues Datenmodell, Zugriff ohne Anmeldung, Zweitprofile in Kosten und Planer) für einen Nutzer; die Empfehlung war schon im Plan "nur Heimnetz". Bleibt als Idee im Plan stehen.
+- **[ERLEDIGT]** Gesehene Filme im Raster: Poster blasser (`is-watched`), Abzeichen "Watched" bleibt. JS 52 grün.

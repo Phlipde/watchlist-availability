@@ -635,7 +635,7 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
   - Daten beim Überfahren oder Sichtbarwerden der Karte vorladen, Öffnen unter 100 ms.
 - [x] Schnellaktionen im Menü „⋯“ an der Karte (am Handy auch langes Drücken): Watched, Not now (30 Tage aus Tonight, unter „Filters“ wieder sichtbar; ersetzt „Nicht interessiert“ aus Etappe 14), Add to compare. Drei Tab-Stopps je Karte (Titel, ♥, ⋯).
 - [x] Vergleichen über eine Leiste unten („3 to compare · Compare“, höchstens 4) statt Knopf und Vergleichsmodus; im Vergleich ist der beste Wert je Zeile hervorgehoben.
-- [ ] Watched: Karte ausgegraut mit ✓, optional Letterboxd zum Eintragen öffnen; Abgleich mit dem Letterboxd-Tagebuch (aus Etappe 14).
+- [x] Watched: Karte ausgegraut mit ✓, optional Letterboxd zum Eintragen öffnen; Abgleich mit dem Letterboxd-Tagebuch (aus Etappe 14).
 - [x] Rückgängig statt Nachfragen: „Marked as watched · Undo“, 5 s. Nachfrage nur bei Unumkehrbarem, mit Liste dessen, was gelöscht wird.
 - [x] Tastatur: `/` Suche, `g t` / `g w` / `g s` Seiten, Pfeiltasten im Raster, Enter Details, `f` Favorit, `s` Watched, `n` Not now, `c` Compare, `r` Zufall, `Shift+R` Sync, `?` zeigt alle Kürzel; nur außerhalb von Eingabefeldern. Ersetzt den Tastatur-Punkt aus Etappe 14.
 - Ergebnis (2026-11-18, selbstständig; Teil 1):
@@ -705,7 +705,7 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
 ### Etappe 12: Mehr Daten pro Film
 - [x] Letterboxd-Durchschnittsbewertung: steht auf der Filmseite, die der Scan für die TMDB-ID ohnehin lädt; keine zusätzliche Abfrage. Als Sortierung und als Filter unter „More filters“; ersetzt die TMDB-Bewertung in der sichtbaren Reihe, falls sie sich als nützlicher erweist.
 - [x] (In Etappe 10 erledigt: `watchlist_position`.) Reihenfolge der Watchlist speichern: die Letterboxd-Seite ist nach „zuletzt hinzugefügt“ sortiert, die Position ersetzt das Aufnahmedatum auch ohne CSV-Export.
-- [ ] Letterboxd-Daten: Datum der Aufnahme in die Watchlist (nur im CSV-Export), eigene Bewertung.
+- [-] Letterboxd-Daten: Datum der Aufnahme in die Watchlist, eigene Bewertung. (entschieden: nicht bauen; die Position ersetzt das Datum)
 - [x] Originalsprache und Herkunftsland als Filter unter „More filters“ (steckt schon in der TMDB-Antwort).
 - [x] Verfügbarkeit in anderen Ländern („in DE nicht, aber in GB auf Netflix“); der TMDB-Aufruf liefert alle Länder ohne zusätzliche Abfragen.
 - [x] Anbieter-Logos statt Textnamen (TMDB liefert die Bilder).
@@ -721,9 +721,9 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
 
 ### Etappe 13: Übersicht und Auswertung
 - [ ] Watchlist-Statistik über Zeit: Zugänge, weggeschaute Filme, Abdeckung je Dienst (braucht gespeicherte Scan-Stände aus Etappe 6).
-- [ ] „Staubfänger“: Filme, die lange auf der Liste stehen und seit Monaten verfügbar sind (die Reihenfolge gibt es seit Etappe 10).
+- [x] „Staubfänger“: Filme, die lange auf der Liste stehen und seit Monaten verfügbar sind. (erledigt mit der Statistik-Seite: „Waiting longest“, Abgleich 2026-11-18)
 - [x] Laufzeit-Summe der verfügbaren Filme je Dienst. (erledigt mit A1 und Stats-Seite: Spalte „Hours“, Abgleich 2026-11-18)
-- [ ] Eigene Schlagworte pro Film und Filter danach (unter „More filters“).
+- [-] Eigene Schlagworte pro Film und Filter danach. (entschieden: nicht bauen, siehe ENTSCHEIDUNGEN.md)
 
 ### Etappe 14: Bedienung
 - [x] Listenansicht (kompakte, sortierbare Tabelle) neben der Kartenansicht. → K6 (erledigt mit K6: Ansicht „Table“; Spalten nicht sortierbar, die Sortierung bleibt in der Leiste, Abgleich 2026-11-18)
@@ -737,15 +737,15 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
 - Rückgängig nach dem Entfernen eines Favoriten steht jetzt in Etappe 9i.
 
 ### Etappe 15: Gemeinsam schauen
-- [ ] Abstimmung: Filme auswählen, Link im Heimnetz teilen, jeder stimmt am Handy ab.
-- [ ] Gäste-Abos: Abos von Freunden oder Familie als zweites Profil („bei Lisa läuft der auf Disney+“).
+- [-] Abstimmung: Filme auswählen, Link im Heimnetz teilen, jeder stimmt am Handy ab. (entschieden: nicht bauen, siehe ENTSCHEIDUNGEN.md)
+- [-] Gäste-Abos: Abos von Freunden oder Familie als zweites Profil. (entschieden: nicht bauen)
 - Baut auf „Meine Abos“ aus Etappe 7 auf. Die Abstimmung ist ohne Anmeldung gedacht, also nur fürs Heimnetz.
 
 ### Etappe 16: Ausgabe und Benachrichtigung
 - [x] Kalender-Feed (ICS) oder RSS mit „neu verfügbar“. (erledigt mit A6: `/calendar.ics` aus den Fristen; „neu verfügbar“ steht nicht darin, Abgleich 2026-11-18)
 - [x] Wöchentliche Zusammenfassung per Mail oder ntfy. → K5 (erledigt mit K5, Abgleich 2026-11-18)
-- [ ] Kleine API mit Dokumentation für Home Assistant oder Dashboards.
-- [ ] Startseiten-Kachel („heute neu / Tipp des Tages“) zum Einbetten in Homepage oder Homarr.
+- [x] Kleine API mit Dokumentation für Home Assistant oder Dashboards. (README, 2026-11-18)
+- [x] Startseiten-Kachel („heute neu / Tipp des Tages“): `/tile`; dazu RSS `/feed.xml` (2026-11-18).
 - Baut auf Zeitplan und Historie auf.
 
 ## Teil D: Docker für Unraid
