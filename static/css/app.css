@@ -761,3 +761,14 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 
 /* A watched film stays in the grid but steps back; the "Watched" badge says why. */
 .film.is-watched .poster img { opacity: .45; filter: grayscale(.6); }
+
+/* The details, finished: the main button with the service logo, one row of icon buttons, a 3-line description. */
+.film-modal-primary { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.film-modal-primary .provider-logo { width: 24px; height: 24px; border-radius: .25rem; }
+.film-modal-primary .own-badge { padding: 1px 8px; border-radius: 999px; background: rgb(0 0 0 / .18); font-size: var(--fs-small); font-weight: 600; }
+.film-modal-toolbar { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: nowrap; }
+.film-modal-toolbar .btn { flex: 1 1 0; min-width: 0; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; font-size: 1rem; }
+.film-modal-toolbar .btn-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.film-modal-toolbar .modal-favorite[aria-pressed=true] { color: var(--accent); }
+.film-modal-overview.clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.overview-more { margin: -6px 0 10px; }

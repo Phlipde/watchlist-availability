@@ -169,3 +169,11 @@ Noch offen (zur Auswahl): 11 Meldung, wenn ein „Demnächst“-Film streambar w
 - **[ENTSCHIEDEN]** 12 Aufnahmedatum und eigene Bewertung aus dem Letterboxd-CSV: nicht bauen. Die Position in der Watchlist ersetzt das Datum (K1), die eigene Bewertung hat keinen Zweck in einer App, die nur Verfügbarkeit zeigt.
 - **[ENTSCHIEDEN]** 15 Abstimmung und Gäste-Abos: nicht bauen. Größter Umbau (neues Datenmodell, Zugriff ohne Anmeldung, Zweitprofile in Kosten und Planer) für einen Nutzer; die Empfehlung war schon im Plan "nur Heimnetz". Bleibt als Idee im Plan stehen.
 - **[ERLEDIGT]** Gesehene Filme im Raster: Poster blasser (`is-watched`), Abzeichen "Watched" bleibt. JS 52 grün.
+
+### Detailfenster fertiggestellt (2026-11-18)
+- **[ENTSCHIEDEN]** Aktionen als Symbole in einer Zeile (Namen als `title` und im Screenreader-Text), weil sechs beschriftete Knöpfe in 480 px umbrechen; Favorit ist nur noch über `aria-pressed` und Farbe markiert, nicht mehr amber (nur der Hauptknopf ist amber).
+- **[ENTSCHIEDEN]** Letterboxd-Link wandert aus den Chips unten in die Symbolleiste; "Share" kopiert die Adresse mit `?film=`.
+- **[FEHLER]** Das Icon `ti-columns-gap` fehlt in der Schrift: Vergleichsknopf war leer. Ersetzt.
+- **[OFFEN]** Mini-Poster bei "Similar", Zeitleiste je Dienst, Report-Link, Flaggen-Chips, Originaltitel: nicht gebaut, bleiben im Plan.
+- **[OFFEN]** Ein Browser-Test (Dienst-Schublade) schlug einmal im Gesamtlauf fehl und lief danach allein 3-mal sowie im Gesamtlauf ohne meine Änderung durch: vermutlich ein Zeitproblem, nicht beobachtet wiederholt.
+- **[ERLEDIGT]** Python 346, JS 52, Browser 39, ruff und mypy sauber.
