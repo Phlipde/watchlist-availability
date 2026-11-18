@@ -53,7 +53,8 @@ class TestOverview:
             film("A", **{"HBO Max": ["flatrate"]}),
             film("B", **{"HBO Max Amazon Channel": ["flatrate"], "HBO Max": ["flatrate"]}),
         ]
-        assert costs.overview(films, [], {})["book"] == [{"name": "HBO Max", "films": 2, "hours": 0}]
+        book = costs.overview(films, [], {})["book"]
+        assert book == [{"name": "HBO Max", "films": 2, "hours": 0, "favorites": 0}]
 
     def test_two_recommendation_cards_with_the_numbers_behind_them(self):
         films = [{**FILMS[1], "runtime": 90}, {**FILMS[3], "runtime": 120}, FILMS[0]]
@@ -142,6 +143,22 @@ class TestOverview:
             with pytest.raises(ValueError):
                 costs.clean_costs({"Netflix": {"price": 1, **bad}}, {"Netflix"})
 
+    def test_plan_data_has_weights_free_films_and_the_services_that_add_most(self):
+        films = [
+            film("A", Netflix=["flatrate"]),
+            film("B", Arte=["free"]),
+            film("C", **{"Disney+": ["flatrate"]}),
+            film("D", **{"Disney+": ["flatrate"], "Disney+ Amazon Channel": ["flatrate"]}),
+        ]
+        plan = costs.overview(
+            films, ["Netflix", "Arte"], {"Netflix": {"price": 9.0}}, favorites=frozenset({"C"})
+        )["plan"]
+        assert plan["weights"] == {"A": 1, "B": 1, "C": 3, "D": 1}
+        assert plan["base"] == ["B"] and plan["owned"] == ["Netflix"] and plan["prices"] == {"Netflix": 9.0}
+        assert plan["services"]["Netflix"] == ["A"]
+        assert plan["services"]["Disney+"] == ["C", "D"]  # the Amazon Channel counts as Disney+
+        assert costs.overview(films, ["Netflix"], {}, favorites=frozenset({"C"}))["book"][0]["favorites"] == 1
+
     def test_only_on_my_services(self):
         assert costs.only_on_my_services(FILMS[1], ["Netflix", "MUBI"])
         assert not costs.only_on_my_services(FILMS[0], ["Netflix", "MUBI"])
@@ -150,7 +167,7 @@ class TestOverview:
     def test_rotation(self):
         result = costs.overview(FILMS, ["Netflix", "MUBI"], {})
         assert (result["cancel"], result["cancel_loses_nothing"]) == (["MUBI"], True)
-        assert result["book"] == [{"name": "Disney+", "films": 1, "hours": 0}]
+        assert result["book"] == [{"name": "Disney+", "films": 1, "hours": 0, "favorites": 0}]
 
     def test_free_services_are_never_cancelled(self):
         result = costs.overview(FILMS, ["Netflix", "Arte", "MUBI"], {"MUBI": {"price": 0}})

@@ -86,3 +86,10 @@ Auftrag: Plan von oben nach unten abarbeiten, nach jedem Schritt prüfen, nach j
 - **[ENTSCHIEDEN]** Zeitplan alle 6 Stunden entfällt (Plan 8b hat ihn bewusst entfernt, TMDB-Angebote werden 24 h wiederverwendet).
 - **[OFFEN]** Kein echter Sendeversuch gegen ntfy/Gotify/einen Webhook (nur mit Atrappe getestet).
 - **[ERLEDIGT]** K5: Python 331 (davon 7 Benachrichtigungen, 3 Web), ruff, mypy.
+
+### A5 Planung
+- **[ENTSCHIEDEN]** Preise für Dienste, die der Nutzer nicht hat, nur im Browser (`localStorage`), nicht in der Datenbank: Es gibt keine verlässlichen Preise (nichts schätzen), und `clean_costs` lässt Preise nur für eigene Dienste zu.
+- **[ENTSCHIEDEN]** Rechnung im Browser (`planner.js`, getestet), nicht auf dem Server: der Regler soll sofort reagieren.
+- **[ENTSCHIEDEN]** Die Mengensuche probiert alle Teilmengen von höchstens 14 Diensten (16 384 Fälle); mehr Dienste gibt es nicht auf der Seite (eigene plus die 12 mit dem größten Zuwachs).
+- **[ENTSCHIEDEN]** Kein „Apply to my services“ im Was-wäre-wenn (Auswahl bleibt unter Settings → My services; sonst zwei Orte für dieselbe Sache).
+- **[ERLEDIGT]** A5: Python 332, JS 50, Browser-Test; Abschnitt im Browser angesehen.

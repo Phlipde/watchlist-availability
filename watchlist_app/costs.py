@@ -114,15 +114,16 @@ def overview(
         for film in films
         if not _free_anywhere(film) and not any(_watchable(film, name) for name in subscriptions)
     ]
-    gains: dict[str, list[int]] = {}  # per service: [films, minutes]
+    gains: dict[str, list[int]] = {}  # per service: [films, minutes, favorites]
     for film in uncovered:
         # "X" and "X Amazon Channel" are one catalogue: count the film once for it.
         for name in {
             catalog_name(name) for name, kinds in film.get("providers", {}).items() if "flatrate" in kinds
         }:
-            gain = gains.setdefault(name, [0, 0])
+            gain = gains.setdefault(name, [0, 0, 0])
             gain[0] += 1
             gain[1] += film.get("runtime") or 0
+            gain[2] += 1 if (film.get("key") or film.get("title")) in favorites else 0
     book = sorted(gains.items(), key=lambda item: (-item[1][0], item[0]))[:5]
 
     # Cancel what loses nothing first, then the service with the fewest films of its own.
@@ -159,13 +160,67 @@ def overview(
         ),
         "free_empty": sum(1 for item in free_block if not item["films"]),
         "free_films": len(free_films),
-        "book": [{"name": name, "films": gain[0], "hours": round(gain[1] / 60)} for name, gain in book],
+        "book": [
+            {"name": name, "films": gain[0], "hours": round(gain[1] / 60), "favorites": gain[2]}
+            for name, gain in book
+        ],
+        "plan": plan_data(films, subscriptions, favorites, free, services),
         "cancel": cancel,
         "cancel_loses_nothing": bool(loses_nothing),
         "rent_only": sorted(
             rent_only, key=lambda item: (-(item["letterboxd_rating"] or 0), item["title"] or "")
         ),
     }
+
+
+def plan_data(
+    films: list[dict],
+    subscriptions: list[str],
+    favorites: frozenset[str],
+    free: frozenset[str],
+    services: list[dict],
+    candidates: int = 12,
+) -> dict:
+    """What the planner on the page needs: film weights, the films free for you, and per service its films.
+
+    Services: your paid ones plus the `candidates` that would add the most films none of yours has.
+    """
+
+    def key_of(film: dict) -> Any:
+        return film.get("key") or film.get("title")
+
+    weights = {key_of(film): film_weight(film, favorites) for film in films}
+    free_own = [name for name in subscriptions if name in free]
+    base = [key_of(film) for film in films if any(_watchable(film, name) for name in free_own)]
+    owned = [item["name"] for item in services]
+    candidate_names: dict[str, int] = {}
+    for film in films:
+        if any(_watchable(film, name) for name in subscriptions):
+            continue
+        for name in {
+            catalog_name(name) for name, kinds in film.get("providers", {}).items() if "flatrate" in kinds
+        }:
+            candidate_names[name] = candidate_names.get(name, 0) + 1
+    top = sorted(candidate_names, key=lambda name: (-candidate_names[name], name))[:candidates]
+    by_service: dict[str, list[Any]] = {}
+    for name in [*owned, *top]:
+        by_service[name] = [
+            key_of(film)
+            for film in films
+            if any(_watchable(film, other) for other in films_services(film, name))
+        ]
+    return {
+        "weights": weights,
+        "base": base,
+        "services": by_service,
+        "owned": owned,
+        "prices": {item["name"]: item["own_share"] for item in services if item["own_share"]},
+    }
+
+
+def films_services(film: dict, name: str) -> list[str]:
+    """The provider names of the film that belong to the catalogue `name` (channels included)."""
+    return [other for other in film.get("providers", {}) if catalog_name(other) == name]
 
 
 def _coverage(films: list[dict], subscriptions: list[str], free: frozenset[str], unavailable: int) -> dict:

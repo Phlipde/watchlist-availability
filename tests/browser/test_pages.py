@@ -854,3 +854,17 @@ def test_service_drawer_saves_notes_and_splits_the_price(app_server, page):
     expect(netflix.locator(".service-open")).to_be_focused()
     page.reload()
     expect(page.locator("#total-month")).to_contain_text(re.compile(r"4[.,]00"))  # 12 split between 3
+
+
+def test_planner_what_if_changes_nothing_that_is_saved(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    page.goto(f"{app_server['url']}/subscriptions")
+    expect(page.locator("#planner")).to_be_visible()
+    expect(page.locator("#whatif-result")).to_contain_text("As it is")
+    page.locator('#whatif input[value="Netflix"]').uncheck()
+    expect(page.locator("#whatif-result")).to_contain_text("What-if, nothing saved")
+    assert app_server["settings"].subscriptions("DE") == ["Netflix"]
+    page.locator('#whatif input[value="Netflix"]').check()
+    expect(page.locator("#whatif-result")).to_contain_text("As it is")
