@@ -78,6 +78,8 @@ test('a new film gets one badge on the poster, a watched favorite says so instea
   assert.match(fresh, /class="poster-badge poster-badge-new"/);
   const watched = filmCard(film, 'Paid', {...base, favorites: new Map([['x', {status: 'watched'}]])});
   assert.match(watched, /<span class="poster-badge">Watched<\/span>/);
+  assert.match(watched, /<article class="film is-watched"/);  // dimmed in the grid
+  assert.ok(!fresh.includes('is-watched'));
   assert.ok(!watched.includes('poster-badge-new'));
   assert.match(watched, /aria-pressed="true"[^>]*><i class="ti ti-heart-filled"/);
 });
