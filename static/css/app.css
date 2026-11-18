@@ -690,3 +690,14 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 .overlap > summary { cursor: pointer; color: var(--muted); }
 .overlap-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 .overlap-table th[scope=row] { text-align: left; font-weight: 600; white-space: nowrap; }
+
+/* Cards far outside the window are not laid out or painted until they get near (measured: redraw of 168 cards). */
+#results .films > .film { content-visibility: auto; contain-intrinsic-size: auto 400px; }
+
+/* Saved views: chips that open the watchlist with their filters. */
+.saved-views { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; font: var(--fs-small) system-ui, sans-serif; }
+.saved-views[hidden] { display: none; }
+.views-label { color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.saved-view .chip-open { text-decoration: none; }
+.view-form { display: inline-flex; align-items: center; gap: 6px; }
+.view-form input { width: 160px; }

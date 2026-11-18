@@ -891,3 +891,18 @@ def test_service_worker_saves_the_page_and_the_data_for_offline_use(app_server, 
     assert "/watchlist" in saved["pages"] and "/api/latest" in saved["pages"]
     assert "/static/js/app.js" in saved["files"] and "/static/css/app.css" in saved["files"]
     context.close()
+
+
+def test_a_saved_view_comes_back_as_a_chip_on_tonight(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist?max=150")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    page.locator("#view-name").fill("Short before bed")
+    page.get_by_role("button", name="Save view").click()
+    expect(page.locator("#saved-views .saved-view")).to_have_count(1)
+    page.goto(app_server["url"])
+    link = page.locator("#tonight-views .saved-view a")
+    expect(link).to_have_text("Short before bed")
+    assert "max=150" in link.get_attribute("href") and "film=" not in link.get_attribute("href")
+    page.get_by_role("button", name="Delete the view Short before bed").click()
+    expect(page.locator("#tonight-views")).to_be_hidden()

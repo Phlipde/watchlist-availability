@@ -670,6 +670,11 @@ class TestInstallable:
         assert worker.headers["Cache-Control"] == "no-cache"
         assert b"addEventListener('fetch'" in worker.data
 
+    def test_no_script_removes_the_service_worker_again(self, client):
+        # An old clean-up line in app.js once unregistered the worker on every visit.
+        for name in ("app.js", "header.js", "register-sw.js"):
+            assert "unregister" not in client.get(f"/static/js/{name}").get_data(as_text=True), name
+
     def test_every_page_links_the_manifest_and_an_icon(self, client):
         for path in ("/", "/watchlist", "/subscriptions", "/stats", "/settings"):
             page = client.get(path).get_data(as_text=True)

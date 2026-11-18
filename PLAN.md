@@ -659,10 +659,10 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
   - Nicht gebaut: jede Nachricht öffnet `?film=` (bei einem Film ja nur über „Watchlist mit Änderungen“, mehrere Filme haben keinen gemeinsamen Film), abschaltbar je Film, Nachricht „Abo-Empfehlung ändert sich“, Zeitplan alle 6 Stunden und „checking…“ (TMDB-Angebote werden ohnehin 24 Stunden wiederverwendet, siehe 8b), Ruhezeit einstellbar (fest 22 bis 8). Webhook und Gotify nur gegen die Atrappe geprüft, ntfy ebenso; kein echter Sendeversuch.
   - Tests: Python (drei Ziele, Ruhezeit und Tageslimit, Favorit/neu, Wochenzusammenfassung, Fristen je Stufe, Fehlschlag mit Wiederholung, Prüfung der Einstellungen und Token nicht in der Sicherung, Test-Endpunkt, Sensoren).
 
-### Etappe K6: Feinschliff (PWA gebaut 2026-11-18, Rest offen)
+### Etappe K6: Feinschliff (PWA, gespeicherte Ansichten und Leistung gebaut 2026-11-18, Rest offen)
 - [x] PWA: Manifest, Icons, Service Worker (`/api/latest` und Poster mit stale-while-revalidate), offline mit Hinweis „Data from yesterday 23:10“. Installieren braucht HTTPS im Heimnetz (oder localhost); mit Etappe 17 klären.
 - [ ] Ansichten Grid · Compact · Table (Table ersetzt die Listenansicht aus Etappe 14; Compact nur Poster, Badge und Bewertung, Titel beim Fokus/langem Drücken).
-- [ ] Gespeicherte Ansichten („Movie night with Lea“) als Chips auf Tonight und als Auswahl in der Leiste (ersetzt „Gespeicherte Filter“ aus Etappe 14).
+- [x] Gespeicherte Ansichten („Movie night with Lea“) als Chips auf Tonight und als Auswahl in der Leiste (ersetzt „Gespeicherte Filter“ aus Etappe 14).
 - [ ] Einrichtung unter 60 Sekunden: Benutzername mit Vorschau (Anzahl und 6 Poster), Land, die 12 häufigsten Dienste zum Antippen, Gratis-Dienste vorausgewählt, Fortschritt „312 of 456 films checked“ (ersetzt „Erster Start“ aus Etappe 14).
 - [ ] Zustände: Skelett, teilweise geladen (gibt es), Fehler mit Klartext und Aktion („Letterboxd is not responding. Showing data from 08:00. [Try again]“).
 - [ ] Leistung: erste Poster unter 1,5 s, Filter unter 100 ms, flüssiges Scrollen bei 456 Karten. Erst messen, dann `content-visibility: auto` vor einer virtuellen Liste. Poster mit `srcset` (w185/w342), Platzhalter in der Posterfarbe.
@@ -674,6 +674,10 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
   - Service Worker `/sw.js` (vom Wurzelpfad, `no-cache`): Skripte und Stile zuerst aus dem Netz, offline die gespeicherte Fassung (sie laden als Satz, sonst passen Module nicht zusammen); Schriften, Symbole und Poster sofort aus dem Speicher und im Hintergrund erneuert (Poster höchstens 300); Seiten und `/api/latest` zuerst aus dem Netz, offline die gespeicherte Kopie mit Kopfzeile `X-From-Cache`, dann zeigt die Seite „Offline: showing the data from …“. Er meldet sich nur über https oder localhost an (Installieren braucht HTTPS, siehe README: Reverse-Proxy).
   - Tests: Python (Manifest, Symbole sind PNG, Worker vom Wurzelpfad, jede Seite verlinkt Manifest und Symbol), Browser (Worker speichert Seite, Daten und Skripte).
   - Nicht geprüft: der Aufruf ohne Netz selbst (Playwright schaltet auch Antworten des Service Workers ab, `ERR_INTERNET_DISCONNECTED`), Installieren auf einem Handy, Verhalten unter https.
+- Ergebnis gespeicherte Ansichten und Leistung (2026-11-18, selbstständig):
+  - Gespeicherte Ansichten: „Save view“ über dem Raster (Name bis 40 Zeichen, höchstens 12), die Ansicht ist ein Chip mit den Filtern der Adresse (ohne geöffneten Film und Scan-Kennung); dieselben Chips stehen oben auf Tonight; × löscht. Gespeichert nur in diesem Browser (`localStorage`, `static/js/saved-views.js`, JS-Tests und ein Browser-Test). Die Auswahl „links in der Leiste“ entfällt (die Chips über dem Raster leisten dasselbe).
+  - Leistung: `content-visibility: auto` auf den Karten des Rasters. Gemessen mit der Datenkopie (168 Karten, Neusortieren inklusive Layout, 6 Läufe): vorher 160 bis 230 ms, nachher 100 bis 130 ms (Ausreißer 200 ms beim ersten Lauf). Gemessen nur im eingebauten Browser, nicht auf einem Handy; „erste Poster unter 1,5 s“ und `srcset` sind nicht angefasst.
+  - Noch offen in K6: Ansichten Grid · Compact · Table, Einrichtung unter 60 Sekunden, schönere Zustände (Skelett gibt es), deutsche Filmtitel als Option, TV-Ansicht, 200-%-Zoom und JavaScript-Größe messen.
 
 ### Etappe 11: Startdatum (eigene Etappe)
 - [x] Für noch nicht erschienene Watchlist-Filme Kino- und Heimkino-Start anzeigen (TMDB „release_dates“ je Land).

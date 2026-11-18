@@ -8,6 +8,20 @@ Auftrag: Plan von oben nach unten abarbeiten, nach jedem Schritt prüfen, nach j
 - **[FEHLER]** Fehler gefunden, der nicht im Plan stand (steht auch im Plan)
 - **[ERLEDIGT]** fertig und geprüft (mit welchen Tests)
 
+## Stand (2026-11-18, Ende der selbstständigen Arbeit)
+
+Erledigt und committet (Reihenfolge der Commits): 17a Docker-Grundlage · K3c Filterleiste · A1 Abos-Mindestversion und Settings → My services · K4 Teil 1 (Schublade, Karten-Menü, Watched und Not now, Tastaturkürzel) · A2 Empfehlungen und Fristen · A3 Abdeckung, Tempo, Leih-Poster · A4 Wert und Dienst-Schublade · Barrierefreiheits-Durchgang (Kontrast, 44-px-Ziele, Detektor) · K5 Benachrichtigungen und Sensoren · A5 Budget-Planer, Rotation, Was-wäre-wenn · A6 Kalender-Feed und Überschneidung, PWA · 17b Schlüsselprüfung · K6 gespeicherte Ansichten und `content-visibility`.
+
+Nicht gebaut oder offen (Gründe stehen in den Abschnitten und in PLAN.md):
+- K4: Neuaufbau des Detailfensters nach Vorlage, Vergleichsleiste, Ausgrauen gesehener Filme, Vorladen beim Überfahren, Langdruck am Handy.
+- K5: Zeitplan alle 6 Stunden und „checking…“ (bewusst entfallen), Nachricht pro Film mit `?film=`.
+- A4/A6: Verlauf über 12 Monate, „andere Länder“, „Watch these first“ (keine Ablaufdaten), Channel-Preisvergleich.
+- K6: Ansichten Grid/Compact/Table, Einrichtung unter 60 Sekunden, deutsche Titel, TV-Ansicht, Zoom- und Größenmessung.
+- 17b: Datenbank aufräumen; Etappen 11 bis 16 der alten Liste, soweit nicht in K4 bis K6 aufgegangen.
+- Nicht prüfbar hier: Lauf auf Unraid und GitHub-Prüfungen (kein Push von mir), Offline-Aufruf, Installation als App, echte Benachrichtigungen, Verhalten unter https.
+
+Immer geprüft vor jedem Commit: `ruff check`, `ruff format --check`, `mypy`, Python-, JS- und Browser-Tests. Letzter Stand: Python 339, JS 50, Browser 33.
+
 ## Protokoll
 
 ### 17a Docker-Grundlage
@@ -107,3 +121,10 @@ Auftrag: Plan von oben nach unten abarbeiten, nach jedem Schritt prüfen, nach j
 - **[ENTSCHIEDEN]** Der Knopf fragt TMDBs `/configuration` (billigste Anfrage mit Schlüssel); der Schlüssel erscheint nie in der Antwort oder im Fehlertext.
 - **[OFFEN]** Datenbank aufräumen (`VACUUM`, alte Filmdaten) bleibt offen: sinnvoll erst nach Monaten Betrieb.
 - **[ERLEDIGT]** Python 338.
+
+### K6 gespeicherte Ansichten und Leistung
+- **[ENTSCHIEDEN]** Ansichten nur im Browser (`localStorage`), nicht in der Datenbank: kein neues Datenmodell, nichts in der Sicherung nötig; ein Gerätewechsel zeigt sie nicht (Preis, bewusst).
+- **[ENTSCHIEDEN]** Keine Auswahl „links in der Leiste“: die Chips über dem Raster und auf Tonight reichen und kosten keinen Platz in der Leiste.
+- **[ENTSCHIEDEN]** `content-visibility: auto` mit geschätzter Höhe 400 px je Karte; Messung siehe PLAN (Verbesserung etwa ein Drittel bis die Hälfte beim Neuzeichnen).
+- **[ERLEDIGT]** JS 50, Browser 33.
+- **[FEHLER]** (nicht im Plan, beim letzten Lauf gefunden) `app.js` enthielt eine alte Zeile, die beim Laden jeder Seite alle Service Worker abmeldete („The offline worker was removed“). Dadurch war die PWA-Anmeldung wirkungslos; der Browser-Test bestand nur zufällig einmal. Zeile entfernt, Test für das Wiederauftreten (`test_no_script_removes_the_service_worker_again`), Worker-Test 3 von 3 grün.

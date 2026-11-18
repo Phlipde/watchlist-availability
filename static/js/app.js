@@ -2,6 +2,7 @@ import {dateTime, escapeHtml, numberText} from './ui.js';
 import {createAppState, createScanState} from './state.js';
 import {availabilityByOffer, changeBadgesFor, compareButtonState, favoriteFields, filmCard, filmHref, renderResults} from './rendering.js';
 import './register-sw.js';
+import {renderViews, wireViews} from './saved-views.js';
 import {showDeadlines} from './deadlines.js';
 import {TONIGHT_CHIPS, nowOnText, pickFilm, recentlyGone, tonightRows} from './events.js';
 import {readFilters} from './filters.js';
@@ -177,6 +178,7 @@ const state = createAppState();
       filterBar.updateCounts(state.films, filters, filterContext);
       results.setAttribute('aria-busy', 'false');
       renderChanges();
+      drawViews();
       renderComingSoon();
       document.getElementById('favorite-status-filter').hidden = !state.favoritesOnly;
       document.getElementById('favorites-empty')?.toggleAttribute('hidden', !(state.favoritesOnly && view.visibleCount === 0 && view.unavailable.length === 0));
@@ -274,7 +276,14 @@ const state = createAppState();
       const hours = Math.floor((Date.now() / 1000 - seconds) / 3600);
       return hours < 1 ? 'just now' : hours < 48 ? `${hours} h ago` : `${Math.floor(hours / 24)} days ago`;
     }
+    // Saved views: chips on Tonight and above the grid; "Save view" appears while filters are set.
+    function drawViews() {
+      renderViews(document.getElementById('saved-views'), {canSave: true, search: location.search});
+      renderViews(document.getElementById('tonight-views'));
+    }
+    ['saved-views', 'tonight-views'].forEach(id => wireViews(document.getElementById(id), () => location.search, drawViews));
     function renderTonightPage() {
+      drawViews();
       showDeadlines(document.getElementById('deadline-banner'), window.WATCHLIST_CONFIG.deadlines, {link: true});
       const {rows, available} = tonightRows(state.films, {services: state.selected, favorites: state.favorites, skip: new Set([...watchedKeys(), ...hiddenKeys()]), chips: tonightChips, now: Date.now() / 1000});
       tonightAvailable = available;
@@ -1077,8 +1086,6 @@ const state = createAppState();
     }
     document.getElementById('export-csv').addEventListener('click', () => download('watchlist.csv', ['Title,Year,Services', ...state.films.map(film => [film.title, film.year, Object.keys(film.providers).join('; ')].map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))].join('\n'), 'text/csv'));
     function download(name, data, type) { const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([data], {type})); link.download = name; link.click(); URL.revokeObjectURL(link.href); }
-    // The offline worker was removed; drop the one older versions installed.
-    navigator.serviceWorker?.getRegistrations().then(found => found.forEach(worker => worker.unregister()));
     loadFavorites().then(async () => {
       const snapshot = await loadLatestResult();
       const savedJob = new URL(location.href).searchParams.get('scan');
