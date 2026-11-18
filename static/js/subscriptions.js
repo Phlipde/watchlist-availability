@@ -1,4 +1,5 @@
 // Subscriptions page: prices and dates save when you leave the field; totals follow at once.
+import {showDeadlines} from './deadlines.js';
 const page = document.getElementById('subscriptions-page');
 const country = page.dataset.country;
 const table = document.getElementById('subscriptions-table');
@@ -7,6 +8,22 @@ const money = value => value.toLocaleString(undefined, {minimumFractionDigits: 2
 const dayText = iso => (iso ? new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, {day: '2-digit', month: '2-digit', year: 'numeric'}) : 'Set date');
 const number = text => Number(String(text).replace(',', '.'));
 let timer;
+
+// The banner for dates within a week; "Not interested" hides a recommendation for 30 days (this browser only).
+const banner = document.getElementById('deadline-banner');
+showDeadlines(banner, banner ? JSON.parse(banner.dataset.deadlines || '[]') : []);
+const HIDE_KEY = 'hiddenRecommendations';
+const hidden = () => { try { return JSON.parse(localStorage.getItem(HIDE_KEY) || '{}'); } catch { return {}; } };
+document.querySelectorAll('.rec').forEach(card => { if (hidden()[card.dataset.rec] > Date.now()) card.hidden = true; });
+document.querySelectorAll('.rec-hide').forEach(button => button.addEventListener('click', () => {
+  const card = button.closest('.rec');
+  localStorage.setItem(HIDE_KEY, JSON.stringify({...hidden(), [card.dataset.rec]: Date.now() + 30 * 86400000}));
+  card.hidden = true;
+}));
+document.querySelectorAll('.set-reminder').forEach(button => button.addEventListener('click', () => {
+  const row = [...document.querySelectorAll('tr[data-service]')].find(item => item.dataset.service === button.dataset.service);
+  row?.querySelector('.date-button')?.click();
+}));
 
 function rows() { return table ? [...table.querySelectorAll('tbody tr[data-service]')] : []; }
 const priceOf = row => {

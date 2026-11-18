@@ -1,5 +1,6 @@
 """Tests for the Flask routes."""
 
+import datetime
 import io
 import json
 import time
@@ -541,3 +542,47 @@ class TestFlags:
         upload = {"backup": (io.BytesIO(json.dumps(hostile).encode()), "backup.json")}
         answer = client.post("/api/backup", data=upload, content_type="multipart/form-data").get_json()
         assert answer["imported"]["skipped"] == 1 and store.list_flags() == []
+
+
+class TestRecommendationsAndDeadlines:
+    def _scan(self, store, settings):
+        settings.update({"subscriptions": ["Netflix", "MUBI"]})
+        films = [
+            {
+                "key": "1",
+                "title": "Heat",
+                "runtime": 120,
+                "providers": {"Netflix": ["flatrate"], "MUBI": ["flatrate"]},
+            },
+            {"key": "2", "title": "Alien", "runtime": 90, "providers": {"Netflix": ["flatrate"]}},
+            {"key": "3", "title": "Ran", "runtime": 150, "providers": {"Disney+": ["flatrate"]}},
+        ]
+        store.save_scan("DE", "letterboxd", None, films, [], {})
+
+    def test_cards_name_the_service_the_numbers_and_the_actions(self, client, store, settings):
+        self._scan(store, settings)
+        page = client.get("/subscriptions").get_data(as_text=True)
+        assert "Cancel MUBI" in page and "You lose no watchlist film" in page
+        assert "Subscribe to Disney+ for a month" in page and "Based on the film count only" in page
+        assert 'href="/watchlist?providers=Disney%2B&cost=subscription"' in page
+        assert "Not interested" in page
+
+    def test_a_date_within_a_week_makes_the_banner_data(self, client, store, settings):
+        self._scan(store, settings)
+        soon = (datetime.date.today() + datetime.timedelta(days=3)).isoformat()
+        later = (datetime.date.today() + datetime.timedelta(days=40)).isoformat()
+        settings.update(
+            {"costs": {"Netflix": {"price": 10, "remind_on": soon}, "MUBI": {"price": 8, "remind_on": later}}}
+        )
+        page = client.get("/subscriptions").get_data(as_text=True)
+        assert (
+            "Netflix" in page.split('id="deadline-banner"')[1].split(">")[0]
+            and "MUBI" not in page.split('id="deadline-banner"')[1].split(">")[0]
+        )
+        config = json.loads(
+            client.get("/")
+            .get_data(as_text=True)
+            .split("window.WATCHLIST_CONFIG = ")[1]
+            .split(";</script>")[0]
+        )
+        assert [item["name"] for item in config["deadlines"]] == ["Netflix"]

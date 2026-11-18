@@ -49,3 +49,10 @@ Auftrag: Plan von oben nach unten abarbeiten, nach jedem Schritt prüfen, nach j
 - **[FEHLER]** (nicht im Plan) Ein Klick auf `summary` in einer Karte (neues ⋯) öffnete zusätzlich das Detailfenster, weil die Klickregel der Karte `summary` nicht ausnahm; behoben.
 - **[OFFEN]** `test_skip_link_and_three_stops_per_card` schlug in einem von drei vollen Läufen einmal fehl (einzeln und in den beiden anderen Läufen grün); vermutlich Zeitverhalten, nicht untersucht.
 - **[ERLEDIGT]** K4 Teil 1: Python 311, JS 46, Browser 28, ruff, mypy; Schublade, Karten-Menü und Detailfenster am Handy im Browser angesehen.
+
+### A2 Empfehlungen und Fristen
+- **[ENTSCHIEDEN]** Empfehlungen stehen vor der Tabelle (laut Seitenskizze), damit die Kündigungsfrage ohne Scrollen beantwortet ist.
+- **[ENTSCHIEDEN]** „Not interested“, „Dismiss“ und „Remind me tomorrow“ gelten nur im jeweiligen Browser (localStorage), nicht serverseitig; ein Gerätewechsel zeigt sie wieder. Serverseitig lohnt sich erst mit den Push-Nachrichten (K5).
+- **[ENTSCHIEDEN]** „Open Y ↗“, „Plan it“, „Rent instead“, „Watch first“ entfallen (keine Daten dafür).
+- **[ENTSCHIEDEN]** Fristen nur ab heute (vergangene Daten erscheinen nicht im Banner); die Status-Seite listet sie weiter.
+- **[ERLEDIGT]** A2: Python 315, Browser-Test Banner; Seite im Browser angesehen.

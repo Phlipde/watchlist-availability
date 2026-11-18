@@ -1,6 +1,7 @@
 import {dateTime, escapeHtml, numberText} from './ui.js';
 import {createAppState, createScanState} from './state.js';
 import {availabilityByOffer, changeBadgesFor, compareButtonState, favoriteFields, filmCard, filmHref, renderResults} from './rendering.js';
+import {showDeadlines} from './deadlines.js';
 import {TONIGHT_CHIPS, nowOnText, pickFilm, recentlyGone, tonightRows} from './events.js';
 import {readFilters} from './filters.js';
 import {createFilterBar, initPopovers} from './filterbar.js';
@@ -273,6 +274,7 @@ const state = createAppState();
       return hours < 1 ? 'just now' : hours < 48 ? `${hours} h ago` : `${Math.floor(hours / 24)} days ago`;
     }
     function renderTonightPage() {
+      showDeadlines(document.getElementById('deadline-banner'), window.WATCHLIST_CONFIG.deadlines, {link: true});
       const {rows, available} = tonightRows(state.films, {services: state.selected, favorites: state.favorites, skip: new Set([...watchedKeys(), ...hiddenKeys()]), chips: tonightChips, now: Date.now() / 1000});
       tonightAvailable = available;
       document.getElementById('context-text').innerHTML = `${available.length} films available on <a href="/subscriptions">${state.selected.size} services</a>${state.lastScan ? ` · synced ${ago(state.lastScan)}` : ''}`;

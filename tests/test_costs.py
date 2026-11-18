@@ -53,7 +53,28 @@ class TestOverview:
             film("A", **{"HBO Max": ["flatrate"]}),
             film("B", **{"HBO Max Amazon Channel": ["flatrate"], "HBO Max": ["flatrate"]}),
         ]
-        assert costs.overview(films, [], {})["book"] == [{"name": "HBO Max", "films": 2}]
+        assert costs.overview(films, [], {})["book"] == [{"name": "HBO Max", "films": 2, "hours": 0}]
+
+    def test_two_recommendation_cards_with_the_numbers_behind_them(self):
+        films = [{**FILMS[1], "runtime": 90}, {**FILMS[3], "runtime": 120}, FILMS[0]]
+        result = costs.overview(films, ["Netflix"], {"Netflix": {"price": 12.0}})
+        cancel, subscribe = result["recommendations"]
+        assert (cancel["type"], cancel["name"], cancel["films"], cancel["per_film"]) == (
+            "cancel",
+            "Netflix",
+            2,
+            6.0,
+        )
+        assert cancel["based_on"] == "price" and cancel["hours"] == 1.5
+        assert (subscribe["type"], subscribe["name"], subscribe["films"], subscribe["hours"]) == (
+            "subscribe",
+            "Disney+",
+            1,
+            2,
+        )
+        # Without a price the card says it rests on the film count only.
+        assert costs.overview(films, ["Netflix"], {})["recommendations"][0]["based_on"] == "count"
+        assert costs.overview(FILMS, [], {})["recommendations"][0]["type"] == "subscribe"
 
     def test_only_on_my_services(self):
         assert costs.only_on_my_services(FILMS[1], ["Netflix", "MUBI"])
@@ -63,7 +84,7 @@ class TestOverview:
     def test_rotation(self):
         result = costs.overview(FILMS, ["Netflix", "MUBI"], {})
         assert (result["cancel"], result["cancel_loses_nothing"]) == (["MUBI"], True)
-        assert result["book"] == [{"name": "Disney+", "films": 1}]
+        assert result["book"] == [{"name": "Disney+", "films": 1, "hours": 0}]
 
     def test_free_services_are_never_cancelled(self):
         result = costs.overview(FILMS, ["Netflix", "Arte", "MUBI"], {"MUBI": {"price": 0}})
@@ -111,6 +132,18 @@ class TestCleanCosts:
     def test_invalid_values(self, raw):
         with pytest.raises(ValueError):
             costs.clean_costs(raw, {"Netflix"})
+
+
+def test_deadlines_within_a_week_only():
+    today = datetime.date(2026, 11, 18)
+    entries = {
+        "Netflix": {"price": 10, "remind_on": "2026-11-21"},
+        "MUBI": {"price": 8, "remind_on": "2026-11-18"},
+        "Disney+": {"price": 9, "remind_on": "2026-12-30"},
+        "Arte": {"price": None, "remind_on": "2026-11-10"},  # already past
+    }
+    found = costs.upcoming_deadlines(entries, today)
+    assert [(item["name"], item["days"]) for item in found] == [("MUBI", 0), ("Netflix", 3)]
 
 
 def test_reminders_soonest_first():

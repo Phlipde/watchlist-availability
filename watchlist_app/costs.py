@@ -75,14 +75,16 @@ def overview(films: list[dict], subscriptions: list[str], costs: dict[str, dict]
         for film in films
         if not _free_anywhere(film) and not any(_watchable(film, name) for name in subscriptions)
     ]
-    gains: dict[str, int] = {}
+    gains: dict[str, list[int]] = {}  # per service: [films, minutes]
     for film in uncovered:
         # "X" and "X Amazon Channel" are one catalogue: count the film once for it.
         for name in {
             catalog_name(name) for name, kinds in film.get("providers", {}).items() if "flatrate" in kinds
         }:
-            gains[name] = gains.get(name, 0) + 1
-    book = sorted(gains.items(), key=lambda item: (-item[1], item[0]))[:5]
+            gain = gains.setdefault(name, [0, 0])
+            gain[0] += 1
+            gain[1] += film.get("runtime") or 0
+    book = sorted(gains.items(), key=lambda item: (-item[1][0], item[0]))[:5]
 
     # Cancel what loses nothing first, then the service with the fewest films of its own.
     # Free services (and ones saved with price 0) cost nothing to keep.
@@ -95,7 +97,10 @@ def overview(films: list[dict], subscriptions: list[str], costs: dict[str, dict]
         if not any(WATCH_KINDS & set(kinds) for kinds in film.get("providers", {}).values())
         and any("rent" in kinds for kinds in film.get("providers", {}).values())
     ]
+    cancel = loses_nothing or [item["name"] for item in ranked[:1]]
+    recommendations = _recommendations(services, cancel, bool(loses_nothing), book)
     return {
+        "recommendations": recommendations,
         "services": services,
         "monthly_total": round(sum(item["price"] or 0 for item in services), 2),
         "yearly_total": round(sum(item["price"] or 0 for item in services) * 12, 2),
@@ -104,11 +109,57 @@ def overview(films: list[dict], subscriptions: list[str], costs: dict[str, dict]
         ),
         "free_empty": sum(1 for item in free_block if not item["films"]),
         "free_films": len(free_films),
-        "book": [{"name": name, "films": count} for name, count in book],
-        "cancel": loses_nothing or [item["name"] for item in ranked[:1]],
+        "book": [{"name": name, "films": gain[0], "hours": round(gain[1] / 60)} for name, gain in book],
+        "cancel": cancel,
         "cancel_loses_nothing": bool(loses_nothing),
         "rent_only": sorted(rent_only, key=lambda item: item["title"] or ""),
     }
+
+
+def _recommendations(services: list[dict], cancel: list[str], loses_nothing: bool, book: list) -> list[dict]:
+    """At most two cards, each with the numbers behind it: what to cancel and what to book for a month.
+
+    Without a price a card says so (it is based on the film count only).
+    """
+    cards: list[dict[str, Any]] = []
+    by_name = {item["name"]: item for item in services}
+    if cancel and cancel[0] in by_name:
+        item = by_name[cancel[0]]
+        cards.append(
+            {
+                "type": "cancel",
+                "name": item["name"],
+                "films": len(item["only_here"]),
+                "hours": item["hours"],
+                "price": item["price"],
+                "per_film": item["per_film"],
+                "loses_nothing": loses_nothing,
+                "based_on": "price" if item["price"] else "count",
+            }
+        )
+    if book:
+        name, gain = book[0]
+        cards.append(
+            {
+                "type": "subscribe",
+                "name": name,
+                "films": gain[0],
+                "hours": round(gain[1] / 60),
+                "based_on": "count",
+            }
+        )
+    return cards
+
+
+def upcoming_deadlines(
+    costs: dict[str, dict], today: datetime.date | None = None, days: int = 7
+) -> list[dict]:
+    """Renewal or cancellation dates of one country at most `days` away (today counts), soonest first."""
+    return [
+        {"name": item["name"], "date": item["date"], "days": item["days"]}
+        for item in reminders({"": costs}, today)
+        if 0 <= item["days"] <= days
+    ]
 
 
 def clean_costs(raw: object, allowed: set[str]) -> dict[str, dict]:

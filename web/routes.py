@@ -209,6 +209,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             client_config={
                 "imageBaseUrl": _TMDB_IMAGE_BASE_URL,
                 "view": view,
+                "deadlines": costs.upcoming_deadlines(settings.costs(settings.country)),
                 "initialFilters": initial_filters,
                 "subscriptions": {country: settings.subscriptions(country) for country in COUNTRIES},
                 "rentalShops": sorted(providers.RENTAL_SHOPS),
@@ -262,6 +263,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             "subscriptions.html",
             country=country,
             last_scan_at=scan["created"] if scan else None,
+            deadlines=costs.upcoming_deadlines(settings.costs(country)),
             costs=costs.overview(scan["results"] if scan else [], own, settings.costs(country)),
             logos=provider_logos(),
             logo_base_url=_TMDB_LOGO_BASE_URL,

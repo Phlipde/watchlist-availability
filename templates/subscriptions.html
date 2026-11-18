@@ -6,7 +6,7 @@
   <title>Subscriptions · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261118-12') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261118-15') }}" rel="stylesheet">
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -14,7 +14,31 @@
     <h1 class="page-title">Subscriptions</h1>
     {% macro info(text) %}<span class="info" tabindex="0" role="note" aria-label="{{ text }}" title="{{ text }}"><i class="ti ti-info-circle" aria-hidden="true"></i></span>{% endmacro %}
     <p class="meta">Which subscriptions are worth it for your watchlist in {{ country }}. <a href="/settings/services">Choose your services</a></p>
+    <div class="deadline-banner" id="deadline-banner" role="status" hidden data-deadlines="{{ deadlines|tojson|forceescape }}"></div>
     {% if not last_scan_at %}<p class="meta">No scan for {{ country }} yet; the film counts appear after the first scan.</p>{% endif %}
+
+    {% if costs.recommendations %}
+    <h2 class="h4" id="recs-heading">Recommendations</h2>
+    <div class="recs" aria-labelledby="recs-heading">
+      {% for card in costs.recommendations %}
+      <article class="rec rec-{{ card.type }}" data-rec="{{ card.type }}:{{ card.name }}">
+        {% if card.type == 'cancel' %}
+        <h3>Cancel {{ card.name }}</h3>
+        <p>{% if card.loses_nothing %}You lose no watchlist film.{% else %}<strong>{{ card.films }}</strong> film{{ '' if card.films == 1 else 's' }} only there{% if card.hours %} (≈ {{ card.hours|round(0)|int }} h){% endif %}.{% endif %}{% if card.price %} € <span data-money>{{ '%.2f'|format(card.price) }}</span> a month{% if card.per_film %} = € <span data-money>{{ '%.2f'|format(card.per_film) }}</span> per film you would lose{% endif %}.{% endif %}</p>
+        {% else %}
+        <h3>Subscribe to {{ card.name }} for a month</h3>
+        <p><strong>{{ card.films }}</strong> watchlist films none of your services has{% if card.hours %} (≈ {{ card.hours }} h){% endif %}.</p>
+        {% endif %}
+        {% if card.based_on == 'count' %}<p class="hint">Based on the film count only{% if card.type == 'cancel' %}: <button class="film-link add-price" type="button">add a price</button> for a better recommendation{% endif %}.</p>{% endif %}
+        <div class="rec-actions">
+          {% if card.type == 'cancel' %}<button class="film-link set-reminder" type="button" data-service="{{ card.name }}">Set reminder</button><a class="film-link" href="/watchlist?providers={{ card.name|urlencode }}&only=1&cost=subscription">Show the {{ card.films }} film{{ '' if card.films == 1 else 's' }}</a>{% else %}<a class="film-link" href="/watchlist?providers={{ card.name|urlencode }}&cost=subscription">Show the films on {{ card.name }}</a>{% endif %}
+          <button class="film-link rec-hide" type="button">Not interested</button>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% if costs.book|length > 1 %}<p class="hint">Next best: {% for item in costs.book[1:] %}<a class="film-link" href="/watchlist?providers={{ item.name|urlencode }}&cost=subscription">{{ item.name }}</a> ({{ item.films }}){% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+    {% endif %}
 
     {% if costs.services or costs.free_block or costs.free_empty %}
     {% if costs.services %}
@@ -60,21 +84,12 @@
     <p class="meta">No services chosen for {{ country }} yet. <a href="/settings/services">Choose your services</a>.</p>
     {% endif %}
 
-    {% if costs.services %}
-    <h2 class="h4 mt-4">Cancel or switch</h2>
-    <div class="analysis-panel">
-      <div class="analysis-item">Cancel: <strong>{{ costs.cancel|join(', ') or 'nothing' }}</strong><br><small>{% if costs.cancel_loses_nothing %}you lose no watchlist film{% else %}the fewest films only on it{% endif %}</small></div>
-      <div class="analysis-item">Subscribe for a month: <strong>{% if costs.book %}{{ costs.book[0].name }}{% else %}nothing{% endif %}</strong><br><small>{% if costs.book %}{{ costs.book[0].films }} watchlist films none of your services has{% else %}every film is already covered{% endif %}</small></div>
-    </div>
-    {% if costs.book|length > 1 %}<p class="hint">Next best: {% for item in costs.book[1:] %}{{ item.name }} ({{ item.films }}){% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
-    {% endif %}
-
     <h2 class="h4 mt-4">Only to rent ({{ costs.rent_only|length }})</h2>
     {% if costs.rent_only %}
     <ul class="meta">{% for film in costs.rent_only %}<li>{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</li>{% endfor %}</ul>
     {% else %}<p class="meta">No film is only available to rent.</p>{% endif %}
   </main>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261118-12') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261118-12') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261118-15') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261118-15') }}" type="module"></script>
 </body>
 </html>

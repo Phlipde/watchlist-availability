@@ -805,3 +805,27 @@ def test_keyboard_shortcuts(app_server, page):
     page.keyboard.press("g")
     page.keyboard.press("s")
     expect(page).to_have_url(re.compile(r"/subscriptions$"))
+
+
+def test_deadline_banner_and_hidden_recommendation(app_server, page):
+    expect = playwright_api.expect
+    import datetime
+
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    soon = (datetime.date.today() + datetime.timedelta(days=2)).isoformat()
+    app_server["settings"].update({"costs": {"Netflix": {"price": 10, "remind_on": soon}}})
+    page.goto(app_server["url"] + "/subscriptions")
+    expect(page.locator("#deadline-banner")).to_contain_text(
+        "Netflix: renewal or cancellation date in 2 days"
+    )
+    page.get_by_role("button", name="Dismiss").click()
+    expect(page.locator("#deadline-banner")).to_be_hidden()
+    page.reload()
+    expect(page.locator("#deadline-banner")).to_be_hidden()  # dismissed in this browser
+    page.goto(app_server["url"])  # Tonight shows the same banner unless dismissed
+    expect(page.locator("#deadline-banner")).to_be_hidden()
+    page.evaluate("localStorage.clear()")
+    page.reload()
+    expect(page.locator("#deadline-banner")).to_be_visible()
+    expect(page.locator("#deadline-banner a")).to_have_attribute("href", "/subscriptions")

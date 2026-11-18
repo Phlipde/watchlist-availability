@@ -584,3 +584,17 @@ body:has(#film-details-modal.show) .modal-backdrop.show { opacity: .4; }
 .shortcuts dt { white-space: nowrap; }
 .shortcuts dd { margin: 0; color: var(--muted); }
 kbd { padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--panel); color: var(--ink); font: var(--fs-small) ui-monospace, monospace; }
+
+/* A renewal date within a week; recommendation cards with their numbers and actions. */
+.deadline-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 0 0 16px; padding: 10px 14px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: .5rem; background: color-mix(in oklch, var(--accent) 10%, var(--surface)); font: var(--fs-body) system-ui, sans-serif; }
+.deadline-banner[hidden] { display: none; }
+.deadline-banner p { margin: 0; }
+.banner-actions, .rec-actions { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.recs { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin: 8px 0 10px; }
+.rec { padding: 14px 16px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: .5rem; background: var(--surface); font: var(--fs-body) system-ui, sans-serif; }
+.rec[hidden] { display: none; }
+.rec-subscribe { border-left-color: oklch(70% 0.12 160); }
+.rec h3 { margin: 0 0 6px; font-size: 1rem; text-transform: none; letter-spacing: 0; }
+.rec p { margin: 0 0 6px; }
+.rec .hint { margin: 0 0 8px; }
+.recs + .hint { margin-bottom: 18px; }
