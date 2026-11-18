@@ -165,6 +165,7 @@ const state = createAppState();
         compareKeys: state.compareKeys,
         greyKeys: greyKeys(),
         favoritesOnly: state.favoritesOnly,
+        viewMode: viewMode(),
         pageHref: location.href,
       });
       const note = typed && results.querySelector(`.favorite-note[data-key="${CSS.escape(typed.key)}"]`);
@@ -276,6 +277,19 @@ const state = createAppState();
       const hours = Math.floor((Date.now() / 1000 - seconds) / 3600);
       return hours < 1 ? 'just now' : hours < 48 ? `${hours} h ago` : `${Math.floor(hours / 24)} days ago`;
     }
+    // Grid, Compact (posters only) or Table; the choice stays in this browser.
+    const viewMode = () => localStorage.getItem('viewMode') || 'grid';
+    function syncViewMode() {
+      const mode = viewMode();
+      document.querySelectorAll('#view-switch input').forEach(input => { input.checked = input.value === mode; });
+      results.classList.toggle('view-compact', mode === 'compact');
+    }
+    document.getElementById('view-switch')?.addEventListener('change', event => {
+      localStorage.setItem('viewMode', event.target.value);
+      syncViewMode();
+      renderFilms();
+    });
+    syncViewMode();
     // Saved views: chips on Tonight and above the grid; "Save view" appears while filters are set.
     function drawViews() {
       renderViews(document.getElementById('saved-views'), {canSave: true, search: location.search});
@@ -987,6 +1001,15 @@ const state = createAppState();
     favoritesButton.classList.toggle('active', state.favoritesOnly);
     favoritesButton.setAttribute('aria-pressed', String(state.favoritesOnly));
     favoritesButton.addEventListener('click', () => setFavoritesOnly(!state.favoritesOnly));
+    // Compact: posters only (the title stays for screen readers and as a tooltip); the choice is kept in this browser.
+    const viewButton = document.getElementById('view-mode');
+    const setCompact = on => {
+      results.classList.toggle('compact', on);
+      viewButton.setAttribute('aria-pressed', String(on));
+      localStorage.setItem('compactView', on ? '1' : '0');
+    };
+    setCompact(localStorage.getItem('compactView') === '1');
+    viewButton.addEventListener('click', () => setCompact(!results.classList.contains('compact')));
     document.getElementById('compare-films').addEventListener('click', compareFilms);
     updateCompareButton();
     document.getElementById('cancel-scan').addEventListener('click', async event => {

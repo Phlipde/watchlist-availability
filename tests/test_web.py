@@ -692,3 +692,11 @@ class TestTmdbKeyCheck:
         monkeypatch.setattr(routes.tmdb, "check_key", refused)
         answer = client.post("/api/tmdb/test")
         assert answer.status_code == 400 and "does not accept" in answer.get_json()["error"]
+
+
+class TestFirstStart:
+    def test_tonight_says_what_to_do_until_there_is_a_user_name_or_a_scan(self, client, store, settings):
+        page = client.get("/").get_data(as_text=True)
+        assert "Set up in a minute" in page and "Letterboxd user name" in page
+        settings.update({"letterboxd_username": "someone"})
+        assert "Set up in a minute" not in client.get("/").get_data(as_text=True)

@@ -141,9 +141,25 @@ export function unavailableCard(film, selected, pageHref = 'http://localhost/') 
   return `<article class="film unavailable-card" data-key="${escapeHtml(key)}" data-section="Unavailable"><div class="film-info"><h3 class="film-title">${filmLink(film, key, pageHref)}</h3><span class="year">${numberText(film.year, 'Year unknown')} · <span class="pill pill-neutral"><i class="ti ti-eye-off" aria-hidden="true"></i> Unavailable</span></span>${changeBadges ? `<p class="provider-changes">${changeBadges}</p>` : ''}</div></article>`;
 }
 
-// Draws one grid of films and the unavailable list from the result of filterFilms().
+// The table view: one row per film, the title is the link to the details.
+export function filmTable(films, context) {
+  const pageHref = context.pageHref || 'http://localhost/';
+  const rows = films.map(film => {
+    const key = filmKey(film);
+    const rating = numberText(film.letterboxd_rating) ? `★ ${Number(film.letterboxd_rating).toFixed(1)}` : numberText(film.rating) ? `TMDB ${Number(film.rating).toFixed(1)}` : '';
+    const services = Object.entries(film.providers || {}).filter(([name]) => context.selected.has(name)).map(([name]) => name).sort((a, b) => a.localeCompare(b)).join(', ');
+    const runtime = runtimeText(film.runtime);
+    return `<tr data-key="${escapeHtml(key)}"><th scope="row">${filmLink(film, key, pageHref)}</th><td>${numberText(film.year, '')}</td><td>${runtime ? `<span aria-hidden="true">${runtime}</span><span class="visually-hidden">${runtimeSpoken(film.runtime)}</span>` : ''}</td><td>${rating}</td><td>${escapeHtml(services)}</td></tr>`;
+  }).join('');
+  return `<div class="table-scroll"><table class="status-table film-table"><thead><tr><th scope="col">Title</th><th scope="col">Year</th><th scope="col">Runtime</th><th scope="col">Rating</th><th scope="col">On your services</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+// Draws the films (as cards, compact cards or a table) and the unavailable list from the result of filterFilms().
 export function renderResults(view, containers, context) {
-  containers.results.innerHTML = view.films.length
-    ? `<div class="films">${view.films.map(film => filmCard(film, view.sectionOf.get(filmKey(film)), context)).join('')}</div>` : '';
+  const mode = context.viewMode || 'grid';
+  containers.results.dataset.mode = mode;
+  containers.results.innerHTML = !view.films.length ? ''
+    : mode === 'table' ? filmTable(view.films, context)
+      : `<div class="films">${view.films.map(film => filmCard(film, view.sectionOf.get(filmKey(film)), context)).join('')}</div>`;
   containers.unavailableResults.innerHTML = view.unavailable.map(film => unavailableCard(film, context.selected, context.pageHref)).join('');
 }

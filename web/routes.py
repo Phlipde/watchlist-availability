@@ -213,6 +213,8 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         return page(
             "index.html",
             view=view,
+            needs_username=not settings.letterboxd_username and not latest,
+            needs_tmdb=not settings.tmdb_api_key,
             country=settings.country,
             countries=list(COUNTRIES),
             initial_filters=initial_filters,

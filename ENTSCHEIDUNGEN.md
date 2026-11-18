@@ -128,3 +128,11 @@ Immer geprüft vor jedem Commit: `ruff check`, `ruff format --check`, `mypy`, Py
 - **[ENTSCHIEDEN]** `content-visibility: auto` mit geschätzter Höhe 400 px je Karte; Messung siehe PLAN (Verbesserung etwa ein Drittel bis die Hälfte beim Neuzeichnen).
 - **[ERLEDIGT]** JS 50, Browser 33.
 - **[FEHLER]** (nicht im Plan, beim letzten Lauf gefunden) `app.js` enthielt eine alte Zeile, die beim Laden jeder Seite alle Service Worker abmeldete („The offline worker was removed“). Dadurch war die PWA-Anmeldung wirkungslos; der Browser-Test bestand nur zufällig einmal. Zeile entfernt, Test für das Wiederauftreten (`test_no_script_removes_the_service_worker_again`), Worker-Test 3 von 3 grün.
+
+### K6-Rest (Ansichten, erster Start, Größe)
+- **[ENTSCHIEDEN]** Compact und Table ohne Herz und „⋯“: dort steht die Schublade zur Verfügung; sonst würde die kleine Karte wieder voll.
+- **[ENTSCHIEDEN]** Table-Spalten nicht sortierbar (die Sortierung gehört zur Leiste, eine zweite Sortierung wäre doppelt).
+- **[ENTSCHIEDEN]** Erster Start als Hinweiskasten auf Tonight statt eines Assistenten: kleinster Weg, der „was jetzt?“ beantwortet.
+- **[ENTSCHIEDEN]** Deutsche Titel nicht gebaut: die Scan-Daten tragen nur den englischen/Originaltitel, ein Umbau der Daten wäre ein eigener Schritt.
+- **[OFFEN]** TV-Ansicht, Zustands-Texte, 200-%-Zoom-Prüfung.
+- **[ERLEDIGT]** Python 340, JS 51, Browser 35; Compact im Browser angesehen.

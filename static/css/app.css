@@ -701,3 +701,29 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 .saved-view .chip-open { text-decoration: none; }
 .view-form { display: inline-flex; align-items: center; gap: 6px; }
 .view-form input { width: 160px; }
+
+/* Compact view: posters only, the rating stays on the poster's foot; the title is clipped but still the link. */
+#results.compact .films { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+#results.compact .film-info > :not(.film-title):not(.card-foot) { display: none; }
+#results.compact .film-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+#results.compact .services { display: none; }
+#results.compact .film-info { padding: 4px 6px; min-height: 0; }
+#view-mode[aria-pressed="true"] { border-color: var(--accent); color: var(--ink); }
+
+/* First start: what to do next, until a user name or a scan exists. */
+.setup { margin: 0 0 18px; padding: 14px 18px; border: 1px solid var(--line-strong); border-radius: .5rem; background: var(--surface); font: var(--fs-body) system-ui, sans-serif; }
+.setup h2 { margin: 0 0 6px; padding: 0; border: 0; font-size: 1.125rem; }
+.setup ol { margin: 0; padding-left: 1.2em; }
+
+/* View switch and the two other views: compact cards show the poster, badge and rating; the title shows on focus or hover. */
+.view-switch { min-height: 36px; }
+.view-switch label { padding: 0 10px; }
+.view-compact .films { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+.view-compact .film .film-info { position: absolute; inset: auto 0 0 0; z-index: 3; min-height: 0; padding: 8px; background: linear-gradient(to top, rgb(0 0 0 / .85), transparent); opacity: 0; transition: opacity .12s; pointer-events: none; }
+.view-compact .film:hover .film-info, .view-compact .film:focus-within .film-info { opacity: 1; }
+.view-compact .film .card-foot, .view-compact .film .year { display: none; }
+.view-compact .film .film-title a { color: #fff; font-size: var(--fs-small); }
+.view-compact .film .card-actions { position: absolute; right: 6px; top: 6px; }
+.film-table th[scope=row] { font-weight: 600; text-align: left; }
+.film-table td { color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .view-compact .film .film-info { transition: none; } }

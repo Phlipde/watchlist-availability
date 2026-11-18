@@ -112,3 +112,17 @@ test('card for "All" lists every ticked service, the cheapest offer decides the 
   const context = {imageBaseUrl: '', selected: new Set(['Arte', 'Netflix', 'Rakuten']), favorites: new Map(), compareKeys: new Set(), greyKeys: new Set()};
   assert.deepEqual([...filmCard(film, 'All', context).matchAll(/data-provider="([^"]+)"/g)].map(match => match[1]), ['Arte', 'Netflix', 'Rakuten']);
 });
+
+test('the table view lists title link, year, runtime, rating and only the services you ticked', async () => {
+  const {filmTable, renderResults} = await import('../../static/js/rendering.js');
+  const films = [{key: '1', title: 'Heat', year: 1995, runtime: 170, letterboxd_rating: 4.1, providers: {Netflix: ['flatrate'], MUBI: ['flatrate']}}];
+  const html = filmTable(films, {selected: new Set(['Netflix'])});
+  assert.match(html, /<th scope="row"><a class="[^"]*film-open" href="[^"]*film=1"[^>]*>Heat<\/a>/);
+  assert.match(html, /<td>1995<\/td>/);
+  assert.match(html, /★ 4\.1/);
+  assert.match(html, /<td>Netflix<\/td>/);  // MUBI is not ticked
+  const containers = {results: {dataset: {}}, unavailableResults: {}};
+  renderResults({films, sectionOf: new Map(), unavailable: []}, containers, {viewMode: 'table', selected: new Set(['Netflix'])});
+  assert.equal(containers.results.dataset.mode, 'table');
+  assert.match(containers.results.innerHTML, /film-table/);
+});

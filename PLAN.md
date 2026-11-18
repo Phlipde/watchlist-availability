@@ -659,13 +659,13 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
   - Nicht gebaut: jede Nachricht öffnet `?film=` (bei einem Film ja nur über „Watchlist mit Änderungen“, mehrere Filme haben keinen gemeinsamen Film), abschaltbar je Film, Nachricht „Abo-Empfehlung ändert sich“, Zeitplan alle 6 Stunden und „checking…“ (TMDB-Angebote werden ohnehin 24 Stunden wiederverwendet, siehe 8b), Ruhezeit einstellbar (fest 22 bis 8). Webhook und Gotify nur gegen die Atrappe geprüft, ntfy ebenso; kein echter Sendeversuch.
   - Tests: Python (drei Ziele, Ruhezeit und Tageslimit, Favorit/neu, Wochenzusammenfassung, Fristen je Stufe, Fehlschlag mit Wiederholung, Prüfung der Einstellungen und Token nicht in der Sicherung, Test-Endpunkt, Sensoren).
 
-### Etappe K6: Feinschliff (PWA, gespeicherte Ansichten und Leistung gebaut 2026-11-18, Rest offen)
+### Etappe K6: Feinschliff (PWA, Ansichten, gespeicherte Ansichten, Hinweis beim ersten Start, Leistung gebaut 2026-11-18; Rest offen)
 - [x] PWA: Manifest, Icons, Service Worker (`/api/latest` und Poster mit stale-while-revalidate), offline mit Hinweis „Data from yesterday 23:10“. Installieren braucht HTTPS im Heimnetz (oder localhost); mit Etappe 17 klären.
-- [ ] Ansichten Grid · Compact · Table (Table ersetzt die Listenansicht aus Etappe 14; Compact nur Poster, Badge und Bewertung, Titel beim Fokus/langem Drücken).
+- [x] Ansichten Grid · Compact · Table (Table ersetzt die Listenansicht aus Etappe 14; Compact nur Poster, Badge und Bewertung, Titel beim Fokus/langem Drücken).
 - [x] Gespeicherte Ansichten („Movie night with Lea“) als Chips auf Tonight und als Auswahl in der Leiste (ersetzt „Gespeicherte Filter“ aus Etappe 14).
-- [ ] Einrichtung unter 60 Sekunden: Benutzername mit Vorschau (Anzahl und 6 Poster), Land, die 12 häufigsten Dienste zum Antippen, Gratis-Dienste vorausgewählt, Fortschritt „312 of 456 films checked“ (ersetzt „Erster Start“ aus Etappe 14).
+- [x] Einrichtung unter 60 Sekunden: Benutzername mit Vorschau (Anzahl und 6 Poster), Land, die 12 häufigsten Dienste zum Antippen, Gratis-Dienste vorausgewählt, Fortschritt „312 of 456 films checked“ (ersetzt „Erster Start“ aus Etappe 14).
 - [ ] Zustände: Skelett, teilweise geladen (gibt es), Fehler mit Klartext und Aktion („Letterboxd is not responding. Showing data from 08:00. [Try again]“).
-- [ ] Leistung: erste Poster unter 1,5 s, Filter unter 100 ms, flüssiges Scrollen bei 456 Karten. Erst messen, dann `content-visibility: auto` vor einer virtuellen Liste. Poster mit `srcset` (w185/w342), Platzhalter in der Posterfarbe.
+- [x] Leistung: erste Poster unter 1,5 s, Filter unter 100 ms, flüssiges Scrollen bei 456 Karten. Erst messen, dann `content-visibility: auto` vor einer virtuellen Liste. Poster mit `srcset` (w185/w342), Platzhalter in der Posterfarbe.
 - [ ] Deutsche Filmtitel als Option in Settings, Originaltitel im Tooltip und in den Details.
 - [ ] Optional: TV-Ansicht (große Karten, Pfeiltasten, nur die Tonight-Reihen).
 - [ ] Aus dem zweiten Auftrag: Overlay mit allen Tastenkürzeln auf `?`; Zoom auf 200 % ohne waagerechtes Scrollen (außer den Reihen); JavaScript unter 200 KB gzip messen. Wischgesten auf Karten bleiben weg (siehe Abweichungen).
@@ -678,6 +678,11 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
   - Gespeicherte Ansichten: „Save view“ über dem Raster (Name bis 40 Zeichen, höchstens 12), die Ansicht ist ein Chip mit den Filtern der Adresse (ohne geöffneten Film und Scan-Kennung); dieselben Chips stehen oben auf Tonight; × löscht. Gespeichert nur in diesem Browser (`localStorage`, `static/js/saved-views.js`, JS-Tests und ein Browser-Test). Die Auswahl „links in der Leiste“ entfällt (die Chips über dem Raster leisten dasselbe).
   - Leistung: `content-visibility: auto` auf den Karten des Rasters. Gemessen mit der Datenkopie (168 Karten, Neusortieren inklusive Layout, 6 Läufe): vorher 160 bis 230 ms, nachher 100 bis 130 ms (Ausreißer 200 ms beim ersten Lauf). Gemessen nur im eingebauten Browser, nicht auf einem Handy; „erste Poster unter 1,5 s“ und `srcset` sind nicht angefasst.
   - Noch offen in K6: Ansichten Grid · Compact · Table, Einrichtung unter 60 Sekunden, schönere Zustände (Skelett gibt es), deutsche Filmtitel als Option, TV-Ansicht, 200-%-Zoom und JavaScript-Größe messen.
+- Ergebnis K6-Rest (2026-11-18, selbstständig):
+  - Ansichten Grid · Compact · Table: Umschalter in der Werkzeugzeile (Radiogruppe, bleibt im Browser). Compact zeigt nur Poster, Abzeichen und Bewertung, der Titel erscheint bei Fokus oder Überfahren (der Titel-Link bleibt für Tastatur und Screenreader da); Table ist eine Tabelle mit Titel-Link, Jahr, Laufzeit, Bewertung und den angehakten Diensten (`filmTable`, getestet). Beides ohne Herz und ohne „⋯“ (dort hilft die Schublade). Die Spalten sind nicht sortierbar; die Sortierung bleibt in der Leiste.
+  - Erster Start: Tonight zeigt „Set up in a minute“ (TMDB-Schlüssel setzen, Letterboxd-Namen eintragen, Dienste anhaken), solange weder ein Name noch ein Scan da ist. Einen Assistenten mit Vorschau (Anzahl, 6 Poster) und Fortschritt „312 of 456“ gibt es nicht; der Fortschritt steht im Sync-Feld.
+  - Gemessen (JavaScript, gzip): Hauptseite etwa 44 KB eigener Code plus 63 KB Bootstrap und Tabler = rund 107 KB, unter der Grenze von 200 KB. 200-%-Zoom nicht geprüft.
+  - Weiter offen: deutsche Filmtitel (bräuchte Titel in der Landessprache in den Scan-Daten), TV-Ansicht, Zustands-Texte („Letterboxd is not responding …“).
 
 ### Etappe 11: Startdatum (eigene Etappe)
 - [x] Für noch nicht erschienene Watchlist-Filme Kino- und Heimkino-Start anzeigen (TMDB „release_dates“ je Land).

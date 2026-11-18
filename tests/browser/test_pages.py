@@ -906,3 +906,33 @@ def test_a_saved_view_comes_back_as_a_chip_on_tonight(app_server, page):
     assert "max=150" in link.get_attribute("href") and "film=" not in link.get_attribute("href")
     page.get_by_role("button", name="Delete the view Short before bed").click()
     expect(page.locator("#tonight-views")).to_be_hidden()
+
+
+def test_compact_view_shows_posters_only_and_is_remembered(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    expect(page.locator("article.film .year").first).to_be_visible()
+    page.locator("#view-mode").click()
+    expect(page.locator("#view-mode")).to_have_attribute("aria-pressed", "true")
+    expect(page.locator("article.film .year").first).to_be_hidden()
+    expect(page.locator("article.film .film-open").first).to_have_text(
+        "Heat"
+    )  # still the link, for screen readers
+    page.reload()
+    expect(page.locator("#view-mode")).to_have_attribute("aria-pressed", "true")
+
+
+def test_views_switch_between_grid_compact_and_table(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    page.locator("#view-switch label[title=Table]").click()
+    expect(page.locator("#results table.film-table")).to_be_visible()
+    expect(page.locator("#results table .film-open").first).to_have_text("Heat")
+    page.reload()  # the choice stays
+    expect(page.locator("#results table.film-table")).to_be_visible(timeout=15000)
+    page.locator("#view-switch label[title=Compact]").click()
+    expect(page.locator("#results.view-compact article.film").first).to_be_visible()
+    page.locator("#view-switch label[title=Grid]").click()
+    expect(page.locator("#results.view-compact")).to_have_count(0)
