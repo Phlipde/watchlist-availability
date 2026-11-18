@@ -136,3 +136,8 @@ Immer geprüft vor jedem Commit: `ruff check`, `ruff format --check`, `mypy`, Py
 - **[ENTSCHIEDEN]** Deutsche Titel nicht gebaut: die Scan-Daten tragen nur den englischen/Originaltitel, ein Umbau der Daten wäre ein eigener Schritt.
 - **[OFFEN]** TV-Ansicht, Zustands-Texte, 200-%-Zoom-Prüfung.
 - **[ERLEDIGT]** Python 340, JS 51, Browser 35; Compact im Browser angesehen.
+
+### K4 Teil 2 (Hauptknopf)
+- **[ENTSCHIEDEN]** Hauptknopf nennt den günstigsten eigenen Weg (gratis vor Werbung vor Abo); führt zur TMDB-Seite (keine Direkt-Links, entschieden).
+- **[FEHLER]** (nicht im Plan) `.btn-accent` war mit Tabler wirkungslos (nur `--bs-btn-*` gesetzt). Behoben; betrifft alle Knöpfe dieser Klasse (z. B. „Pick for me“, Speichern).
+- **[OFFEN]** Hero-Bild, Zeitleiste, Trailer-Vorschau, Vergleichsleiste.

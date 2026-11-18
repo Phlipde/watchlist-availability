@@ -127,7 +127,7 @@
     .provider-logo-sm { width: 22px; height: 22px; flex: none; border-radius: 5px; object-fit: cover; }
     .offer-flatrate { color: oklch(87.1% 0.064 259); background: rgba(83,135,220,.2); }
     .offer-rent { color: oklch(83.9% 0.090 319); background: rgba(166,91,190,.2); }
-    .film-modal-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 18px; }
+    .film-modal-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 18px; }
     .film-modal-actions .btn { flex: 0 0 auto; }
     /* Only the picture fades; the text keeps a readable contrast. */
     .unavailable-card { background: oklch(21.2% 0.008 169) !important; }
@@ -315,7 +315,7 @@
     .providers { margin: 9px 0 0; color: var(--accent); }
     .empty { color: var(--muted); font-family: system-ui, sans-serif; }
     #favorites-empty { margin: 18px 0; padding: 20px; border: 1px dashed var(--line); border-radius: .5rem; text-align: center; }
-    .btn-accent { --bs-btn-color: var(--on-accent); --bs-btn-bg: var(--accent); --bs-btn-border-color: var(--accent); --bs-btn-hover-color: var(--on-accent); --bs-btn-hover-bg: var(--accent-hover); --bs-btn-hover-border-color: var(--accent-hover); }
+    .btn-accent { --tblr-btn-color: var(--on-accent); --tblr-btn-bg: var(--accent); --tblr-btn-border-color: var(--accent); --tblr-btn-hover-color: var(--on-accent); --tblr-btn-hover-bg: var(--accent-hover); --tblr-btn-hover-border-color: var(--accent-hover); --bs-btn-color: var(--on-accent); --bs-btn-bg: var(--accent); --bs-btn-border-color: var(--accent); --bs-btn-hover-color: var(--on-accent); --bs-btn-hover-bg: var(--accent-hover); --bs-btn-hover-border-color: var(--accent-hover); }
     .form-control, .form-select { background-color: var(--surface) !important; border-color: var(--line-field) !important; color: var(--ink) !important; }
     .form-control::placeholder, .favorite-note::placeholder { color: oklch(67.7% 0.019 153) !important; }
     .form-select option { background: var(--surface); color: var(--ink); }
@@ -727,3 +727,7 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 .film-table th[scope=row] { font-weight: 600; text-align: left; }
 .film-table td { color: var(--muted); font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .view-compact .film .film-info { transition: none; } }
+
+/* The details: one main button over the full width, the rest as a grid of small buttons. */
+.film-modal-primary { grid-column: 1 / -1; min-height: 44px; white-space: normal; text-align: center; }
+.film-modal-ratings { margin: -4px 0 8px; color: var(--ink); font: 600 var(--fs-body) system-ui, sans-serif; font-variant-numeric: tabular-nums; }

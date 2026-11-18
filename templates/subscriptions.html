@@ -10,7 +10,7 @@
   <title>Subscriptions · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261118-35') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261118-38') }}" rel="stylesheet">
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -139,10 +139,10 @@
     </section>
   </main>
   <dialog class="side-drawer" id="service-drawer" aria-labelledby="service-drawer-title"><div class="drawer-head"><h2 id="service-drawer-title"></h2><button class="sheet-close" id="service-drawer-close" type="button" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button></div><div class="drawer-body" id="service-drawer-body"></div></dialog>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261118-35') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261118-38') }}" type="module"></script>
   <script>window.PLAN_DATA = {{ costs.plan|tojson }};</script>
   <script>window.IMAGE_BASE_URL = {{ image_base_url|tojson }}; window.WEEKLY_HOURS = {{ weekly_hours|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/plan-page.js', v='20261118-35') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261118-35') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/plan-page.js', v='20261118-38') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261118-38') }}" type="module"></script>
 </body>
 </html>
