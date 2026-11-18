@@ -18,6 +18,7 @@ import pytest
 from flask import Flask
 from werkzeug.serving import make_server
 
+from watchlist_app import letterboxd
 from watchlist_app.config import Settings
 from watchlist_app.models import WatchlistEntry
 from watchlist_app.scan_service import ScanService
@@ -835,6 +836,8 @@ def test_service_drawer_saves_notes_and_splits_the_price(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    # A finished scan saved one history row for the own paid service.
+    assert "Netflix" in app_server["store"].service_history("DE")
     page.goto(f"{app_server['url']}/subscriptions")
     netflix = page.locator('tr[data-service="Netflix"]')
     netflix.locator('[name="price"]').fill("12")
@@ -967,3 +970,24 @@ def test_compare_bar_appears_with_the_first_film_and_marks_the_best_value(app_se
     page.keyboard.press("Escape")
     page.locator("#compare-bar-clear").click()
     expect(page.locator("#compare-bar")).to_be_hidden()
+
+
+def test_a_failed_scan_says_what_is_wrong_and_offers_to_try_again(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    with patch(
+        "watchlist_app.scan_service.load_watchlist",
+        side_effect=letterboxd.LetterboxdError("Could not load the Letterboxd watchlist."),
+    ):
+        page.locator("#sync-toggle").click()
+        page.locator("#retry-scan").click()
+        banner = page.locator("#state-banner")
+        expect(banner).to_be_visible(timeout=15000)
+        expect(banner).to_contain_text("Letterboxd is not responding")
+        expect(banner).to_contain_text("Showing the data from")
+    # Try again with the stub working again: the banner goes away.
+    expect(banner).to_be_visible()
+    page.locator("#sync-toggle").click()  # close the sync panel: it covers the banner
+    page.locator("#state-retry").click()
+    expect(page.locator("#state-banner")).to_be_hidden(timeout=15000)

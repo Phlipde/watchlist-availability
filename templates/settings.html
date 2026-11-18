@@ -10,7 +10,7 @@
   <title>Settings · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261118-40') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261118-43') }}" rel="stylesheet">
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -31,7 +31,7 @@
       </section>
 
       <section class="settings-section">
-        <h2 class="h4">TMDB</h2>
+        <h2 class="h4" id="tmdb">TMDB</h2>
         <p class="hint">Film data and where to watch come from TMDB. The key is read from <code>TMDB_API_KEY</code> and never stored here.</p>
         <div class="toolbar"><button class="btn btn-sm btn-outline-secondary" id="tmdb-test" type="button">Check the TMDB key</button><span class="feedback" id="tmdb-message" role="status"></span></div>
       </section>
@@ -80,7 +80,7 @@
       </div>
     </section>
   </main>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261118-40') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/settings.js', v='20261118-40') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261118-43') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/settings.js', v='20261118-43') }}" type="module"></script>
 </body>
 </html>

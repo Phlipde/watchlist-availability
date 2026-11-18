@@ -10,7 +10,7 @@
   <title>Subscriptions · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261118-40') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261118-43') }}" rel="stylesheet">
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -74,7 +74,7 @@
         </thead>
         <tbody>
           {% for service in costs.services %}
-          <tr data-service="{{ service.name }}" data-only="{{ service.only_here|length }}" data-films="{{ service.films }}" data-hours="{{ service.hours }}" data-value="{{ service.value }}" data-detail="{{ service|tojson|forceescape }}">
+          <tr data-service="{{ service.name }}" data-only="{{ service.only_here|length }}" data-films="{{ service.films }}" data-hours="{{ service.hours }}" data-value="{{ service.value }}" data-detail="{{ service|tojson|forceescape }}" data-history="{{ (history.get(service.name) or [])|tojson|forceescape }}">
             <td class="service-name" data-label="Service"><button class="service-open" type="button" data-service="{{ service.name }}" aria-haspopup="dialog">{% if logos.get(service.name) %}<img class="provider-logo" src="{{ logo_base_url }}{{ logos[service.name] }}" alt="" loading="lazy">{% endif %}<span>{{ service.name }}</span></button></td>
             <td class="num" data-label="Price / month"><input class="form-control form-control-sm price-input" name="price" inputmode="decimal" autocomplete="off" placeholder="€ / month" value="{{ service.price if service.price is not none else '' }}" aria-label="Price per month for {{ service.name }}"></td>
             <td data-label="Renews / cancel by"><button class="date-button" type="button" data-for="{{ service.name }}">{% if service.remind_on %}{{ service.remind_on }}{% else %}Set date{% endif %}</button><input class="visually-hidden date-input" type="date" name="remind_on" value="{{ service.remind_on or '' }}" tabindex="-1" aria-label="Renewal or cancellation date for {{ service.name }}"></td>
@@ -128,6 +128,7 @@
       <p class="hint">Pretend you have or do not have a service. Nothing is saved.</p>
       <div id="whatif" class="whatif" role="group" aria-labelledby="whatif-heading"></div>
       <p id="whatif-result" class="whatif-result" role="status" aria-live="polite"></p>
+      {% if other_countries %}<details class="overlap"><summary>Other countries</summary><ul class="meta other-countries">{% for item in other_countries[:6] %}<li>With your services in <strong>{{ item.country }}</strong> you would see <strong>+{{ item.gain }}</strong> films ({{ item.films }} in all). Needs a VPN or being in that country.</li>{% endfor %}</ul></details>{% endif %}
       <details class="overlap" id="overlap"><summary>Overlap of your services</summary><p class="hint" id="overlap-text"></p><div class="table-scroll"><table class="status-table overlap-table" id="overlap-table"></table></div></details>
     </section>
 
@@ -139,10 +140,10 @@
     </section>
   </main>
   <dialog class="side-drawer" id="service-drawer" aria-labelledby="service-drawer-title"><div class="drawer-head"><h2 id="service-drawer-title"></h2><button class="sheet-close" id="service-drawer-close" type="button" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button></div><div class="drawer-body" id="service-drawer-body"></div></dialog>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261118-40') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261118-43') }}" type="module"></script>
   <script>window.PLAN_DATA = {{ costs.plan|tojson }};</script>
   <script>window.IMAGE_BASE_URL = {{ image_base_url|tojson }}; window.WEEKLY_HOURS = {{ weekly_hours|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/plan-page.js', v='20261118-40') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261118-40') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/plan-page.js', v='20261118-43') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261118-43') }}" type="module"></script>
 </body>
 </html>

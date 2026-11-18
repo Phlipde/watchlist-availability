@@ -241,3 +241,24 @@ def test_reminders_soonest_first():
         today=datetime.date(2026, 11, 15),
     )
     assert [(item["name"], item["days"]) for item in found] == [("Canal+", -5), ("Netflix", 16)]
+
+
+def test_other_countries_where_your_services_show_more():
+    offers = {
+        "DE": {1: {"Netflix": ["flatrate"]}, 2: {"Disney+": ["flatrate"]}, 3: {}},
+        "AT": {1: {"Netflix": ["flatrate"]}, 2: {"Netflix": ["flatrate"]}, 3: {"Netflix": ["ads"]}},
+        "US": {1: {"Netflix": ["flatrate"]}},  # offers for under half of the films: not comparable
+        "FR": {1: {"Netflix": ["rent"]}, 2: {}, 3: {}},  # rent does not count
+    }
+    found = costs.other_countries(offers, ["Netflix"], "DE", total=3)
+    assert found == [{"country": "AT", "films": 3, "gain": 2}]
+    assert costs.other_countries({}, ["Netflix"], "DE", total=0) == []
+
+
+def test_service_counts_leave_free_services_out():
+    films = [
+        film("A", Netflix=["flatrate"]),
+        film("B", Netflix=["flatrate"], MUBI=["flatrate"]),
+        film("C", Arte=["free"]),
+    ]
+    assert costs.service_counts(films, ["Netflix", "MUBI", "Arte"]) == {"Netflix": (2, 1), "MUBI": (1, 0)}

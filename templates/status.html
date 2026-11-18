@@ -10,7 +10,7 @@
   <title>Data &amp; status · Settings · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261118-40') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261118-43') }}" rel="stylesheet">
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -64,7 +64,7 @@
     <p class="meta">No scan has run yet.</p>
     {% endif %}
   </main>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261118-40') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261118-43') }}" type="module"></script>
   <script>
     document.querySelectorAll('.time').forEach(element => {
       const seconds = Number(element.dataset.time);

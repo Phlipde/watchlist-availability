@@ -92,6 +92,14 @@ CREATE TABLE IF NOT EXISTS favorites (
     notes TEXT NOT NULL DEFAULT '',
     added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS service_history (
+    country TEXT NOT NULL,
+    day TEXT NOT NULL,
+    service TEXT NOT NULL,
+    films INTEGER NOT NULL,
+    only_here INTEGER NOT NULL,
+    PRIMARY KEY (country, day, service)
+);
 CREATE TABLE IF NOT EXISTS flags (
     movie_key TEXT PRIMARY KEY,
     flag TEXT NOT NULL,
@@ -293,6 +301,18 @@ class Store:
         """The stored offers of every country: {country: {TMDB provider name: kinds}}."""
         rows = self._read("SELECT country, providers FROM offers WHERE tmdb_id = ?", (tmdb_id,))
         return {country: json.loads(providers) for country, providers in rows}
+
+    def offers_for(self, tmdb_ids: list[int]) -> dict[str, dict[int, dict[str, list[str]]]]:
+        """The stored offers of the given films in every country: {country: {tmdb_id: {provider: kinds}}}."""
+        found: dict[str, dict[int, dict[str, list[str]]]] = {}
+        for start in range(0, len(tmdb_ids), 500):  # SQLite limits the number of parameters
+            chunk = tmdb_ids[start : start + 500]
+            marks = ", ".join("?" for _ in chunk)
+            for tmdb_id, country, providers in self._read(
+                f"SELECT tmdb_id, country, providers FROM offers WHERE tmdb_id IN ({marks})", tuple(chunk)
+            ):
+                found.setdefault(country, {})[tmdb_id] = json.loads(providers)
+        return found
 
     def save_bundle(self, tmdb_id: int, bundle: dict, fetched_at=None) -> None:
         """Store details and the offers of every country from one TMDB response."""
@@ -556,6 +576,33 @@ class Store:
 
     def remove_favorite(self, movie_key: str) -> None:
         self._write("DELETE FROM favorites WHERE movie_key = ?", (movie_key,))
+
+    # ----- service history: how many films each own service had, one row a day, kept for a year -----
+
+    def record_service_counts(self, country: str, day: str, counts: dict[str, tuple[int, int]]) -> None:
+        """Save {service: (films, only_here)} for a day (a second scan the same day replaces it)."""
+        with self._lock:
+            for service, (films, only_here) in counts.items():
+                self._db.execute(
+                    "INSERT OR REPLACE INTO service_history (country, day, service, films, only_here) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (country, day, service, films, only_here),
+                )
+            self._db.execute(
+                "DELETE FROM service_history WHERE country = ? AND day < date(?, '-365 days')", (country, day)
+            )
+            self._db.commit()
+
+    def service_history(self, country: str) -> dict[str, list[dict]]:
+        """{service: [{day, films, only_here}]} oldest first."""
+        rows = self._read(
+            "SELECT service, day, films, only_here FROM service_history WHERE country = ? ORDER BY day",
+            (country,),
+        )
+        history: dict[str, list[dict]] = {}
+        for service, day, films, only_here in rows:
+            history.setdefault(service, []).append({"day": day, "films": films, "only_here": only_here})
+        return history
 
     # ----- flags: "watched" and "not now" (hidden until a date), kept apart from favorites -----
 

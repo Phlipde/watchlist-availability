@@ -149,3 +149,14 @@ Immer geprüft vor jedem Commit: `ruff check`, `ruff format --check`, `mypy`, Py
 - **[ENTSCHIEDEN]** „Best“ nur bei mindestens zwei Werten und ohne Gleichstand aller (sonst nichts hervorheben); für Screenreader „(best)“ im Text.
 - **[OFFEN]** Zeitleiste je Dienst (braucht gespeicherte Scans über 12 Monate).
 - **[ERLEDIGT]** Python 340, JS 51, Browser 37.
+
+### Abgleich der alten Etappen 11 bis 16 (2026-11-18)
+Erledigt durch K1 bis K6 und A1 bis A6 (im Plan abgehakt): Listenansicht, gespeicherte Filter, Tastatur, „Nicht interessiert“, erster Start, Kalender-Feed, Wochenzusammenfassung, Laufzeit je Dienst.
+Noch offen (zur Auswahl): 11 Meldung, wenn ein „Demnächst“-Film streambar wird · 12 Aufnahmedatum und eigene Bewertung aus dem Letterboxd-CSV, Qualität und Sprache (braucht andere Quelle) · 13 Statistik über Zeit (Anfang gemacht: Verlauf „Only here“), „Staubfänger“, eigene Schlagworte · 14 Abgleich mit dem Letterboxd-Tagebuch (neue Quelle, entschieden: nein) · 15 Abstimmung und Gäste-Abos · 16 Startseiten-Kachel, RSS, Dokumentation der kleinen API.
+
+### Übersprungenes, auf Wunsch gebaut: Zustände, andere Länder, Verlauf
+- **[ENTSCHIEDEN]** Zustands-Banner statt weiterer Toasts: bleibt stehen, bis ein Scan gelingt; die alten Daten bleiben sichtbar.
+- **[ENTSCHIEDEN]** Andere Länder nur aus gespeicherten Angeboten und nur, wenn für mindestens die Hälfte der Filme Angebote da sind (sonst wäre der Vergleich unfair).
+- **[ENTSCHIEDEN]** Verlauf in eigener kleiner Tabelle (ein Eintrag je Dienst und Tag) statt aus alten Scans: Scans werden auf 30 je Land gekürzt, die Tabelle hält ein Jahr billig.
+- **[OFFEN]** Der Verlauf ist leer, bis zwei verschiedene Tage gescannt wurden.
+- **[ERLEDIGT]** Python 343, JS 52, Browser 38.

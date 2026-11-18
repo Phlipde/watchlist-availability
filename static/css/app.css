@@ -752,3 +752,9 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 .compare-bar[hidden] { display: none; }
 @media (max-width: 800px) { .compare-bar { bottom: calc(76px + env(safe-area-inset-bottom)); max-width: calc(100% - 24px); } }
 .compare-modal td.best, #compare-table td.best { color: var(--accent); font-weight: 600; }
+
+/* A failed scan, in plain words above the page. */
+.state-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 0 0 16px; padding: 10px 14px; border: 1px solid oklch(65% 0.17 28); border-radius: .5rem; background: color-mix(in oklch, oklch(65% 0.17 28) 12%, var(--surface)); font: var(--fs-body) system-ui, sans-serif; }
+.state-banner[hidden] { display: none; }
+.state-banner p { margin: 0; }
+.sparkline { display: block; width: 100%; height: 60px; color: var(--accent); }

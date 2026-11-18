@@ -505,6 +505,14 @@ class ScanService:
                 last_updated=outcome.created,
             )
             store.update_job(job_id, scan_id=outcome.scan_id, reused=outcome.reused)
+            try:  # the history is a bonus; a problem there must not fail a good scan
+                store.record_service_counts(
+                    job["country"],
+                    time.strftime("%Y-%m-%d", time.localtime(outcome.created)),
+                    costs.service_counts(outcome.results, self._settings.subscriptions(job["country"])),
+                )
+            except Exception:
+                logging.exception("Could not save the service history")
             finish("complete", "Complete", "Loaded from cache." if outcome.reused else "All films loaded.")
         except (FileNotFoundError, ValueError, letterboxd.LetterboxdError) as exc:
             finish("error", "Error", str(exc))
