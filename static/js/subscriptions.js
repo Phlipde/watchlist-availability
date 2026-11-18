@@ -45,11 +45,15 @@ function markSoon() {
   });
 }
 
+const details = new Map(rows().map(row => [row.dataset.service, JSON.parse(row.dataset.detail || '{}')]));
+
 // Totals and the price per film follow the prices without a reload.
 function recalc() {
   let total = 0;
   rows().forEach(row => {
-    const price = priceOf(row);
+    // A shared account (set in the drawer) splits the price.
+    const full = priceOf(row);
+    const price = full === null ? null : full / (details.get(row.dataset.service)?.shared || 1);
     total += price || 0;
     const cell = row.querySelector('.per-film');
     const only = Number(row.dataset.only);
@@ -63,10 +67,16 @@ function recalc() {
   }
 }
 
+// What the drawer edits per service (shared with n people, notice days, trial date, note, cancellation link).
+const extraOf = name => {
+  const detail = details.get(name) || {};
+  return {shared: detail.shared > 1 ? detail.shared : '', notice_days: detail.notice_days ?? '', trial_on: detail.trial_on || '', note: detail.note || '', cancel_url: detail.cancel_url || ''};
+};
+
 async function save() {
   const costs = {};
   rows().forEach(row => {
-    costs[row.dataset.service] = {price: priceOf(row) ?? '', remind_on: row.querySelector('[name=remind_on]').value};
+    costs[row.dataset.service] = {price: priceOf(row) ?? '', remind_on: row.querySelector('[name=remind_on]').value, ...extraOf(row.dataset.service)};
   });
   state.textContent = 'Saving…';
   try {
@@ -134,3 +144,55 @@ if (table) {
   recalc();
   markSoon();
 }
+
+// ---- the drawer of one service: the numbers, the films only here, what you keep elsewhere, and your own notes ----
+const drawer = document.getElementById('service-drawer');
+const escape = text => String(text ?? '').replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
+const filmLinks = films => films.map(film => `<li><a href="/watchlist?film=${encodeURIComponent(film.key || '')}">${film.poster_path ? `<img src="${window.IMAGE_BASE_URL || ''}${escape(film.poster_path)}" alt="" loading="lazy">` : '<span class="no-poster" aria-hidden="true">No poster</span>'}<span>${escape(film.title)}${film.year ? ` (${escape(film.year)})` : ''}</span></a></li>`).join('');
+function openDrawer(name, opener) {
+  const detail = details.get(name);
+  if (!detail || !drawer) return;
+  document.getElementById('service-drawer-title').textContent = name;
+  const only = detail.only_here || [];
+  const elsewhere = detail.elsewhere || [];
+  const weeks = detail.hours && window.WEEKLY_HOURS ? detail.hours / window.WEEKLY_HOURS : 0;
+  const pace = !weeks ? '–' : weeks >= 4.345 ? `≈ ${Math.round(weeks / 4.345)} mo` : `≈ ${Math.max(1, Math.round(weeks))} wk`;
+  const field = (id, label, type, value, extra = '') => `<label class="menu-field"><span>${label}</span><input class="form-control form-control-sm" id="drawer-${id}" name="${id}" type="${type}" value="${escape(value)}" ${extra}></label>`;
+  document.getElementById('service-drawer-body').innerHTML = `
+    <dl class="figures"><div><dt>Watchlist</dt><dd>${detail.films}</dd></div><div><dt>Only here</dt><dd>${only.length}${detail.favorites ? ` <span class="fav-count"><i class="ti ti-heart-filled" aria-hidden="true"></i> ${detail.favorites}</span>` : ''}</dd></div><div><dt>Value</dt><dd>${detail.value}</dd></div><div><dt>Hours</dt><dd>${detail.hours} h</dd></div><div><dt>Your pace</dt><dd>${pace}</dd></div><div><dt>€ / film</dt><dd>${detail.per_film != null ? money(detail.per_film) : '–'}</dd></div></dl>
+    <h3>Only here <span class="row-count">${only.length}</span></h3>
+    ${only.length ? `<ul class="poster-grid">${filmLinks(only.slice(0, 36))}</ul>${only.length > 36 ? `<p class="hint">and ${only.length - 36} more: <a href="/watchlist?providers=${encodeURIComponent(name)}&only=1&cost=subscription">see them all</a></p>` : ''}` : '<p class="hint">Nothing: cancelling loses no film you cannot watch elsewhere.</p>'}
+    <h3>Also elsewhere <span class="row-count">${elsewhere.length}</span></h3>
+    <p class="hint">${elsewhere.length ? `These stay available on another service of yours or for free when you cancel: ${elsewhere.slice(0, 8).map(film => escape(film.title)).join(', ')}${elsewhere.length > 8 ? ' …' : ''}.` : 'Every film here is only on this service.'}</p>
+    <h3>Your notes</h3>
+    <div class="drawer-fields">
+      ${field('shared', 'Shared with (people, splits the price)', 'number', detail.shared > 1 ? detail.shared : '', 'min="1" max="20" step="1" placeholder="1"')}
+      ${field('notice_days', 'Notice period (days)', 'number', detail.notice_days ?? '', 'min="0" max="365" step="1"')}
+      ${field('trial_on', 'Trial used on', 'date', detail.trial_on || '')}
+      ${field('cancel_url', 'Cancellation page', 'url', detail.cancel_url || '', 'placeholder="https://…"')}
+      <label class="menu-field"><span>Note</span><textarea class="form-control form-control-sm" id="drawer-note" name="note" rows="2" maxlength="300">${escape(detail.note || '')}</textarea></label>
+    </div>
+    ${detail.cancel_url ? `<p><a class="film-link" href="${escape(detail.cancel_url)}" target="_blank" rel="noreferrer noopener">Open the cancellation page ↗</a></p>` : ''}`;
+  drawer.dataset.service = name;
+  drawer.opener = opener;
+  drawer.showModal();
+}
+const openFrom = event => {
+  const button = event.target.closest('.service-open');
+  if (button) openDrawer(button.dataset.service, button);
+};
+table?.addEventListener('click', openFrom);
+document.getElementById('service-drawer-close')?.addEventListener('click', () => drawer.close());
+drawer?.addEventListener('click', event => { if (event.target === drawer) drawer.close(); });  // a click on the dimmed page closes it
+drawer?.addEventListener('close', () => drawer.opener?.focus());
+drawer?.addEventListener('change', event => {
+  const name = drawer.dataset.service;
+  const detail = details.get(name);
+  if (!detail || !event.target.name) return;
+  const value = event.target.value.trim();
+  if (event.target.name === 'shared') detail.shared = value ? Number(value) : 1;
+  else if (event.target.name === 'notice_days') detail.notice_days = value === '' ? null : Number(value);
+  else detail[event.target.name] = value;
+  recalc();
+  save();
+});

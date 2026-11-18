@@ -69,3 +69,11 @@ Auftrag: Plan von oben nach unten abarbeiten, nach jedem Schritt prüfen, nach j
 - **[OFFEN]** Der Detektor kann die Seiten nicht im Browser prüfen (`Failed to launch the browser process`, kein Chromium für Puppeteer); „flat-type-hierarchy“ in den Vorlagen ist ein Messartefakt (CSS wurde nicht gelesen, die Überschrift ist 1,5 rem gegen 0,875 rem Text).
 - **[ERLEDIGT]** Eigene Kontrastprüfung im Browser (alle Textknoten, Seiten `/`, `/watchlist`, `/subscriptions`, `/settings`, `/settings/services`, `/settings/data`, `/stats`): Fund nur bei Optionen ohne Treffer (abgeblendet durch `opacity`, Verhältnis 2,2 bis 4,1); behoben (Farbe `--muted`, Logos halb durchsichtig). Danach keine Fehler. Nicht gemessen: Bild-Texte, Hover- und Fokus-Zustände.
 - **[ERLEDIGT]** Touch-Ziele am Handy (375 px, `pointer: coarse`): Schaltflächen, Chips, Tabs, Sync-Punkt, Preis- und Datumsfelder, Zeilen der Dienste-Liste und Links in Karten jetzt mindestens 44 px; Titel auf Karten gelten über die ganze Karte, Fließtext-Links ausgenommen.
+
+### A4 Wert und Detail
+- **[ENTSCHIEDEN]** Wertformel ohne `leaving_boost` und mit fester Schwelle 3,8; keine Einstellung dafür (Plan-Entscheidung A-Teil).
+- **[ENTSCHIEDEN]** Schublade als natives `<dialog>` (nicht Bootstrap), weil die Abo-Seite kein Bootstrap-JS braucht und `dialog` Fokusfalle und Escape mitbringt.
+- **[ENTSCHIEDEN]** Preis bleibt monatlich; „geteilt mit n“ teilt den Preis (Summe und € / film rechnen mit dem Anteil).
+- **[ENTSCHIEDEN]** Kündigungsseite nur http(s), keine Leerzeichen, höchstens 300 Zeichen (Server prüft, Link mit `rel=noreferrer noopener`).
+- **[OFFEN]** Verlauf „Only here über Zeit“ (braucht 30 Tage gespeicherte Scans), „Watch these first“, „Add all to Today“, Laufzeit monatlich/jährlich, Channel-Preisvergleich: nicht gebaut (siehe PLAN, Ergebnis A4).
+- **[ERLEDIGT]** A4: Python 321, Browser-Test Schublade; im Browser angesehen.

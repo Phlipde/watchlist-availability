@@ -269,6 +269,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
                 own,
                 settings.costs(country),
                 len(scan["unavailable"]) if scan else 0,
+                frozenset(favorite["key"] for favorite in store.list_favorites()),
             ),
             weekly_hours=settings.weekly_hours,
             image_base_url=_TMDB_IMAGE_BASE_URL,

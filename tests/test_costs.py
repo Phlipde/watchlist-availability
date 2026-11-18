@@ -96,6 +96,52 @@ class TestOverview:
         ]
         assert [item["title"] for item in costs.overview(films, [], {})["rent_only"]] == ["High", "Low"]
 
+    def test_value_weights_favorites_and_good_ratings_and_ranks_by_value_for_money(self):
+        films = [
+            {**FILMS[1], "letterboxd_rating": 4.2},  # Alien: only on Netflix, well rated -> 2
+            film("Solo", MUBI=["flatrate"]),  # only on MUBI, a favorite -> 3
+            film("Plain", MUBI=["flatrate"]),  # only on MUBI -> 1
+        ]
+        result = costs.overview(
+            films,
+            ["Netflix", "MUBI"],
+            {"Netflix": {"price": 10.0}, "MUBI": {"price": 4.0}},
+            favorites=frozenset({"Solo"}),
+        )
+        mubi, netflix = result["services"]  # value 4 against 2: MUBI first
+        assert (mubi["value"], mubi["favorites"], netflix["value"]) == (4, 1, 2)
+        assert (mubi["value_per_euro"], netflix["value_per_euro"]) == (1.0, 0.2)
+        # Netflix gives the least for the money, so it is the one to cancel.
+        assert result["cancel"] == ["Netflix"]
+
+    def test_a_shared_account_splits_the_price(self):
+        films = [FILMS[1]]
+        result = costs.overview(films, ["Netflix"], {"Netflix": {"price": 12.0, "shared": 3}})
+        assert (result["services"][0]["own_share"], result["monthly_total"]) == (4.0, 4.0)
+
+    def test_management_fields_are_checked(self):
+        clean = costs.clean_costs(
+            {
+                "Netflix": {
+                    "price": 10,
+                    "shared": "2",
+                    "notice_days": 14,
+                    "note": " hi ",
+                    "cancel_url": "https://x.example/cancel",
+                }
+            },
+            {"Netflix"},
+        )
+        assert clean["Netflix"]["shared"] == 2 and clean["Netflix"]["note"] == "hi"
+        for bad in (
+            {"shared": 0},
+            {"notice_days": -1},
+            {"cancel_url": "javascript:alert(1)"},
+            {"trial_on": "soon"},
+        ):
+            with pytest.raises(ValueError):
+                costs.clean_costs({"Netflix": {"price": 1, **bad}}, {"Netflix"})
+
     def test_only_on_my_services(self):
         assert costs.only_on_my_services(FILMS[1], ["Netflix", "MUBI"])
         assert not costs.only_on_my_services(FILMS[0], ["Netflix", "MUBI"])

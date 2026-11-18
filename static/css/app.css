@@ -642,3 +642,32 @@ kbd { padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 4px
   .price-input, .date-button { min-height: 44px; }
   .view-tab { min-width: 44px; }
 }
+
+/* One service's drawer (a native dialog): right on desktop, a sheet from the bottom on a phone. */
+.service-open { display: inline-flex; align-items: center; gap: 8px; padding: 4px 6px; border: 0; border-radius: .375rem; background: transparent; color: var(--ink); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.service-open:hover { background: rgb(255 255 255 / .06); }
+.service-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fav-count { color: var(--accent); font-size: var(--fs-small); white-space: nowrap; }
+dialog.side-drawer { position: fixed; inset: 0 0 0 auto; width: 480px; max-width: 100%; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; border-left: 1px solid var(--line-strong); background: var(--surface-raised); color: var(--ink); overflow-y: auto; }
+dialog.side-drawer::backdrop { background: rgb(0 0 0 / .4); }
+dialog.side-drawer[open] { animation: drawer-in .22s ease; }
+@keyframes drawer-in { from { transform: translateX(100%); } }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1; padding: 8px 8px 8px 20px; background: var(--surface-raised); border-bottom: 1px solid var(--line); }
+.drawer-head h2 { margin: 0; padding: 0; border: 0; font-size: 1.125rem; }
+.drawer-body { padding: 16px 20px 28px; font: var(--fs-body) system-ui, sans-serif; }
+.drawer-body h3 { margin: 22px 0 8px; color: var(--muted); font: 600 var(--fs-small) system-ui, sans-serif; text-transform: uppercase; letter-spacing: .06em; }
+.figures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0; }
+.figures div { padding: 10px 12px; border: 1px solid var(--line); border-radius: .5rem; }
+.figures dt { color: var(--muted); font-size: var(--fs-small); font-weight: 400; }
+.figures dd { margin: 2px 0 0; font-size: 1.125rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.poster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.poster-grid a { display: grid; gap: 4px; color: var(--ink); text-decoration: none; font-size: var(--fs-small); }
+.poster-grid img, .poster-grid .no-poster { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .375rem; background: var(--panel); }
+.poster-grid span:not(.no-poster) { color: var(--muted); overflow-wrap: anywhere; }
+.drawer-fields { display: grid; gap: 10px; }
+@media (max-width: 800px) {
+  dialog.side-drawer { inset: auto 0 0 0; width: 100%; height: 88dvh; border: 0; border-top: 1px solid var(--line-strong); border-radius: 12px 12px 0 0; }
+  dialog.side-drawer[open] { animation-name: sheet-in; }
+  @keyframes sheet-in { from { transform: translateY(100%); } }
+}
+@media (prefers-reduced-motion: reduce) { dialog.side-drawer[open] { animation: none; } }

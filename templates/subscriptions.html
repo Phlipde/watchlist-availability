@@ -6,7 +6,7 @@
   <title>Subscriptions · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261118-21') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261118-23') }}" rel="stylesheet">
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -61,7 +61,8 @@
             <th scope="col" class="num"><button class="sort-head" type="button" data-sort="price">Price / month</button></th>
             <th scope="col"><button class="sort-head" type="button" data-sort="remind">Renews / cancel by</button></th>
             <th scope="col" class="num"><button class="sort-head" type="button" data-sort="films">Watchlist</button> {{ info('Watchlist films you can watch on this service without paying per film.') }}</th>
-            <th scope="col" class="num"><button class="sort-head" type="button" data-sort="only" aria-sort="descending">Only here</button> {{ info('Films none of your other services has and no service shows for free: you lose them when you cancel.') }}</th>
+            <th scope="col" class="num"><button class="sort-head" type="button" data-sort="only">Only here</button> {{ info('Films none of your other services has and no service shows for free: you lose them when you cancel.') }}</th>
+            <th scope="col" class="num"><button class="sort-head" type="button" data-sort="value" aria-sort="descending">Value</button> {{ info('Films only here, weighted: 3 for a favorite, 2 for one rated 3.8 or more on Letterboxd, otherwise 1. The table starts with the service that gives you the most.') }}</th>
             <th scope="col" class="num"><button class="sort-head" type="button" data-sort="hours">Hours</button> {{ info('Running time of the films only here.') }}</th>
             <th scope="col" class="num">Your pace {{ info('Hours only here divided by the film time you set per week (Settings): how long these films keep you busy.') }}</th>
             <th scope="col" class="num"><button class="sort-head" type="button" data-sort="perfilm">€ / film</button> {{ info('Price divided by the films only here: what one film you would lose costs you each month.') }}</th>
@@ -69,19 +70,20 @@
         </thead>
         <tbody>
           {% for service in costs.services %}
-          <tr data-service="{{ service.name }}" data-only="{{ service.only_here|length }}" data-films="{{ service.films }}" data-hours="{{ service.hours }}">
-            <td class="service-name" data-label="Service">{% if logos.get(service.name) %}<img class="provider-logo" src="{{ logo_base_url }}{{ logos[service.name] }}" alt="" loading="lazy">{% endif %}{{ service.name }}</td>
+          <tr data-service="{{ service.name }}" data-only="{{ service.only_here|length }}" data-films="{{ service.films }}" data-hours="{{ service.hours }}" data-value="{{ service.value }}" data-detail="{{ service|tojson|forceescape }}">
+            <td class="service-name" data-label="Service"><button class="service-open" type="button" data-service="{{ service.name }}" aria-haspopup="dialog">{% if logos.get(service.name) %}<img class="provider-logo" src="{{ logo_base_url }}{{ logos[service.name] }}" alt="" loading="lazy">{% endif %}<span>{{ service.name }}</span></button></td>
             <td class="num" data-label="Price / month"><input class="form-control form-control-sm price-input" name="price" inputmode="decimal" autocomplete="off" placeholder="€ / month" value="{{ service.price if service.price is not none else '' }}" aria-label="Price per month for {{ service.name }}"></td>
             <td data-label="Renews / cancel by"><button class="date-button" type="button" data-for="{{ service.name }}">{% if service.remind_on %}{{ service.remind_on }}{% else %}Set date{% endif %}</button><input class="visually-hidden date-input" type="date" name="remind_on" value="{{ service.remind_on or '' }}" tabindex="-1" aria-label="Renewal or cancellation date for {{ service.name }}"></td>
             <td class="num" data-label="Watchlist">{{ service.films }}</td>
-            <td class="num" data-label="Only here">{% if service.only_here %}<details class="only-here"><summary>{{ service.only_here|length }}</summary><ul>{% for film in service.only_here %}<li>{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</li>{% endfor %}</ul></details>{% else %}0{% endif %}</td>
+            <td class="num" data-label="Only here">{% if service.only_here %}{% if service.favorites %}<span class="fav-count" title="{{ service.favorites }} of them are favorites"><i class="ti ti-heart-filled" aria-hidden="true"></i> {{ service.favorites }}</span> {% endif %}<details class="only-here"><summary>{{ service.only_here|length }}</summary><ul>{% for film in service.only_here %}<li>{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</li>{% endfor %}</ul></details>{% else %}0{% endif %}</td>
+            <td class="num" data-label="Value">{{ service.value }}</td>
             <td class="num" data-label="Hours">{% if service.only_here %}{{ service.hours|round(0)|int }} h{% else %}–{% endif %}</td>
             <td class="num" data-label="Your pace">{% if service.only_here %}{% set weeks = service.hours / weekly_hours %}{% if weeks >= 4.345 %}≈ {{ (weeks / 4.345)|round(0)|int }} mo{% else %}≈ {{ [weeks|round(0)|int, 1]|max }} wk{% endif %}{% else %}–{% endif %}</td>
             <td class="num per-film" data-label="€ / film">{% if service.per_film is not none %}<span data-money>{{ '%.2f'|format(service.per_film) }}</span>{% elif service.only_here %}<button class="film-link add-price" type="button">add price</button>{% else %}–{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>
-        <tfoot><tr><th scope="row" colspan="2">Total <span class="totals">€ <span data-money id="total-month">{{ '%.2f'|format(costs.monthly_total) }}</span> / month · € <span data-money id="total-year">{{ '%.2f'|format(costs.yearly_total) }}</span> / year</span></th><td colspan="6"><span class="feedback" id="save-state" role="status"></span></td></tr></tfoot>
+        <tfoot><tr><th scope="row" colspan="2">Total <span class="totals">€ <span data-money id="total-month">{{ '%.2f'|format(costs.monthly_total) }}</span> / month · € <span data-money id="total-year">{{ '%.2f'|format(costs.yearly_total) }}</span> / year</span></th><td colspan="7"><span class="feedback" id="save-state" role="status"></span></td></tr></tfoot>
       </table>
     </div>
     <p class="hint" id="price-hint" hidden>Add the prices to see what the services cost and what a lost film costs you. <button class="film-link add-price" type="button">Add a price</button></p>
@@ -104,7 +106,9 @@
       {% else %}<p class="meta">No film is only available to rent.</p>{% endif %}
     </section>
   </main>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261118-21') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261118-21') }}" type="module"></script>
+  <dialog class="side-drawer" id="service-drawer" aria-labelledby="service-drawer-title"><div class="drawer-head"><h2 id="service-drawer-title"></h2><button class="sheet-close" id="service-drawer-close" type="button" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button></div><div class="drawer-body" id="service-drawer-body"></div></dialog>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261118-23') }}" type="module"></script>
+  <script>window.IMAGE_BASE_URL = {{ image_base_url|tojson }}; window.WEEKLY_HOURS = {{ weekly_hours|tojson }};</script>
+  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261118-23') }}" type="module"></script>
 </body>
 </html>

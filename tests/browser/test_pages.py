@@ -829,3 +829,28 @@ def test_deadline_banner_and_hidden_recommendation(app_server, page):
     page.reload()
     expect(page.locator("#deadline-banner")).to_be_visible()
     expect(page.locator("#deadline-banner a")).to_have_attribute("href", "/subscriptions")
+
+
+def test_service_drawer_saves_notes_and_splits_the_price(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    page.goto(f"{app_server['url']}/subscriptions")
+    netflix = page.locator('tr[data-service="Netflix"]')
+    netflix.locator('[name="price"]').fill("12")
+    netflix.locator('[name="price"]').blur()
+    expect(page.locator("#save-state")).to_have_text("Saved")
+    netflix.locator(".service-open").click()
+    expect(page.locator("#service-drawer")).to_be_visible()
+    expect(page.locator("#service-drawer-title")).to_have_text("Netflix")
+    page.locator("#drawer-shared").fill("3")
+    page.locator("#drawer-note").fill("family account")
+    page.locator("#drawer-note").blur()
+    expect(page.locator("#save-state")).to_have_text("Saved")
+    saved = app_server["settings"].costs("DE")["Netflix"]
+    assert (saved["price"], saved["shared"], saved["note"]) == (12.0, 3, "family account")
+    page.keyboard.press("Escape")
+    expect(page.locator("#service-drawer")).to_be_hidden()
+    expect(netflix.locator(".service-open")).to_be_focused()
+    page.reload()
+    expect(page.locator("#total-month")).to_contain_text(re.compile(r"4[.,]00"))  # 12 split between 3

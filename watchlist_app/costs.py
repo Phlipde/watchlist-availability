@@ -43,8 +43,22 @@ def _label(film: dict) -> dict:
     }
 
 
+GOOD_RATING = 3.8  # a Letterboxd average from which a film counts as well rated
+
+
+def film_weight(film: dict, favorites: frozenset[str] = frozenset()) -> int:
+    """What losing a film costs: 3 for a favorite, 2 for a well rated one, otherwise 1."""
+    if (film.get("key") or film.get("title")) in favorites:
+        return 3
+    return 2 if (film.get("letterboxd_rating") or 0) >= GOOD_RATING else 1
+
+
 def overview(
-    films: list[dict], subscriptions: list[str], costs: dict[str, dict], unavailable: int = 0
+    films: list[dict],
+    subscriptions: list[str],
+    costs: dict[str, dict],
+    unavailable: int = 0,
+    favorites: frozenset[str] = frozenset(),
 ) -> dict:
     """What the costs page shows for the films of one scan.
 
@@ -63,20 +77,37 @@ def overview(
             free_block.append({"name": name, "films": len(on)})
             free_films.update(film.get("key") or film.get("title") for film in on)
             continue
-        price = (costs.get(name) or {}).get("price")
+        entry = costs.get(name) or {}
+        price = entry.get("price")
+        shared = entry.get("shared") or 1
+        own_share = price / shared if price else price  # a shared account splits the price
+        value = sum(film_weight(film, favorites) for film in only)
+        elsewhere = [film for film in on if film not in only]
         services.append(
             {
                 "name": name,
                 "price": price,
-                "remind_on": (costs.get(name) or {}).get("remind_on"),
+                "own_share": round(own_share, 2) if own_share else own_share,
+                "shared": shared,
+                "notice_days": entry.get("notice_days"),
+                "trial_on": entry.get("trial_on"),
+                "note": entry.get("note") or "",
+                "cancel_url": entry.get("cancel_url") or "",
+                "remind_on": entry.get("remind_on"),
                 "films": len(on),
-                "per_film": round(price / len(only), 2) if price and only else None,
+                "value": value,
+                "value_per_euro": round(value / own_share, 1) if own_share and value else None,
+                "favorites": sum(1 for film in only if (film.get("key") or film.get("title")) in favorites),
+                "elsewhere": sorted(
+                    (_label(film) for film in elsewhere), key=lambda item: item["title"] or ""
+                ),
+                "per_film": round(own_share / len(only), 2) if own_share and only else None,
                 "hours": round(sum(film.get("runtime") or 0 for film in only) / 60, 1),
                 "only_here": sorted((_label(film) for film in only), key=lambda item: item["title"] or ""),
             }
         )
-    # The service whose loss costs the most films comes first.
-    services.sort(key=lambda item: (-len(item["only_here"]), -item["films"], item["name"].casefold()))
+    # The service whose loss costs the most comes first: weighted films only there.
+    services.sort(key=lambda item: (-item["value"], -item["films"], item["name"].casefold()))
 
     uncovered = [
         film
@@ -97,7 +128,16 @@ def overview(
     # Cancel what loses nothing first, then the service with the fewest films of its own.
     # Free services (and ones saved with price 0) cost nothing to keep.
     paid = [item for item in services if item["price"] != 0]
-    ranked = sorted(paid, key=lambda item: (len(item["only_here"]), -(item["price"] or 0)))
+    # Least value for the money first (value per euro), without prices the least weighted films first.
+    ranked = sorted(
+        paid,
+        key=lambda item: (
+            item["value"] > 0,
+            item["value_per_euro"] if item["value_per_euro"] is not None else float("inf"),
+            item["value"],
+            -(item["price"] or 0),
+        ),
+    )
     loses_nothing = [item["name"] for item in ranked if not item["only_here"]]
     rent_only = [
         _label(film)
@@ -112,8 +152,8 @@ def overview(
         "coverage": coverage,
         "recommendations": recommendations,
         "services": services,
-        "monthly_total": round(sum(item["price"] or 0 for item in services), 2),
-        "yearly_total": round(sum(item["price"] or 0 for item in services) * 12, 2),
+        "monthly_total": round(sum(item["own_share"] or 0 for item in services), 2),
+        "yearly_total": round(sum(item["own_share"] or 0 for item in services) * 12, 2),
         "free_block": sorted(
             (item for item in free_block if item["films"]), key=lambda item: (-item["films"], item["name"])
         ),
@@ -227,9 +267,48 @@ def clean_costs(raw: object, allowed: set[str]) -> dict[str, dict]:
                 remind_on = datetime.date.fromisoformat(str(remind_on)).isoformat()
             except ValueError:
                 raise ValueError(f"The reminder date for {name} must be a date.") from None
-        if price is not None or remind_on is not None:
-            clean[name] = {"price": price, "remind_on": remind_on}
+        extra = _clean_management(name, entry)
+        if price is not None or remind_on is not None or extra:
+            clean[name] = {"price": price, "remind_on": remind_on, **extra}
     return clean
+
+
+def _clean_management(name: str, entry: dict) -> dict:
+    """The optional fields of a service: shared with n people, notice days, trial date, note, link."""
+    extra: dict[str, Any] = {}
+    shared = entry.get("shared")
+    if shared not in (None, "", 1, "1"):
+        try:
+            shared = int(shared)
+        except (TypeError, ValueError):
+            raise ValueError(f"The number of people sharing {name} must be a whole number.") from None
+        if not 1 <= shared <= 20:
+            raise ValueError(f"The number of people sharing {name} must be between 1 and 20.")
+        extra["shared"] = shared
+    notice = entry.get("notice_days")
+    if notice not in (None, ""):
+        try:
+            notice = int(notice)
+        except (TypeError, ValueError):
+            raise ValueError(f"The notice period for {name} must be a number of days.") from None
+        if not 0 <= notice <= 365:
+            raise ValueError(f"The notice period for {name} must be between 0 and 365 days.")
+        extra["notice_days"] = notice
+    trial = entry.get("trial_on")
+    if trial not in (None, ""):
+        try:
+            extra["trial_on"] = datetime.date.fromisoformat(str(trial)).isoformat()
+        except ValueError:
+            raise ValueError(f"The trial date for {name} must be a date.") from None
+    note = str(entry.get("note") or "").strip()
+    if note:
+        extra["note"] = note[:300]
+    url = str(entry.get("cancel_url") or "").strip()
+    if url:
+        if not (url.startswith(("https://", "http://")) and len(url) <= 300 and " " not in url):
+            raise ValueError(f"The cancellation link for {name} must be a web address.")
+        extra["cancel_url"] = url
+    return extra
 
 
 def reminders(costs_by_country: dict[str, dict[str, dict]], today: datetime.date | None = None) -> list[dict]:
