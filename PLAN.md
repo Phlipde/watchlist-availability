@@ -675,8 +675,8 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
 - [ ] Zustände: Skelett, teilweise geladen (gibt es), Fehler mit Klartext und Aktion („Letterboxd is not responding. Showing data from 08:00. [Try again]“).
 - [x] Leistung: erste Poster unter 1,5 s, Filter unter 100 ms, flüssiges Scrollen bei 456 Karten. Erst messen, dann `content-visibility: auto` vor einer virtuellen Liste. Poster mit `srcset` (w185/w342), Platzhalter in der Posterfarbe.
 - [ ] Deutsche Filmtitel als Option in Settings, Originaltitel im Tooltip und in den Details.
-- [ ] Optional: TV-Ansicht (große Karten, Pfeiltasten, nur die Tonight-Reihen).
-- [ ] Aus dem zweiten Auftrag: Overlay mit allen Tastenkürzeln auf `?`; Zoom auf 200 % ohne waagerechtes Scrollen (außer den Reihen); JavaScript unter 200 KB gzip messen. Wischgesten auf Karten bleiben weg (siehe Abweichungen).
+- [-] Optional: TV-Ansicht (große Karten, Pfeiltasten, nur die Tonight-Reihen). (entschieden: nicht bauen, siehe ENTSCHEIDUNGEN.md)
+- [x] Aus dem zweiten Auftrag: Overlay mit allen Tastenkürzeln auf `?`; Zoom auf 200 % ohne waagerechtes Scrollen (gemessen bei 640 px Breite auf allen acht Seiten: nur Tabellen scrollen in ihrem Kasten); JavaScript unter 200 KB gzip (gemessen: 121 KB für alle Dateien zusammen, eine Seite lädt weniger). Wischgesten auf Karten bleiben weg (siehe Abweichungen).
 - Ergebnis PWA (2026-11-18, selbstständig):
   - Manifest mit Symbolen (192, 512 und „maskable“, gezeichnet mit `scripts/make_icons.py` ohne Bildbibliothek: Filmstreifen mit Wiedergabedreieck in den Farben der App), Seitenkopf mit `theme-color`, Symbol und Apple-Symbol auf allen Seiten.
   - Service Worker `/sw.js` (vom Wurzelpfad, `no-cache`): Skripte und Stile zuerst aus dem Netz, offline die gespeicherte Fassung (sie laden als Satz, sonst passen Module nicht zusammen); Schriften, Symbole und Poster sofort aus dem Speicher und im Hintergrund erneuert (Poster höchstens 300); Seiten und `/api/latest` zuerst aus dem Netz, offline die gespeicherte Kopie mit Kopfzeile `X-From-Cache`, dann zeigt die Seite „Offline: showing the data from …“. Er meldet sich nur über https oder localhost an (Installieren braucht HTTPS, siehe README: Reverse-Proxy).
@@ -755,7 +755,7 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
 ### Etappe 17b: Betrieb (zuletzt, nach K6)
 Der Rest von Etappe 17; die Grundlage steht in 17a (vor K3c).
 - [x] Knopf „TMDB-Schlüssel testen“ auf der Einstellungsseite (2026-11-18: „Check the TMDB key“ unter Settings → General, fragt TMDB `/configuration`; 401 heißt „does not accept this key“; Tests mit Atrappe).
-- [ ] Datenbank aufräumen: Filmdaten von Filmen, die seit Monaten nicht mehr auf der Watchlist stehen, löschen und die Datei verkleinern (`VACUUM`); erst sinnvoll, wenn der Server Monate gelaufen ist.
+- [-] Datenbank aufräumen (entschieden: später, erst nach Monaten Betrieb; Löschen nur nach Rückfrage mit Liste): Filmdaten von Filmen, die seit Monaten nicht mehr auf der Watchlist stehen, löschen und die Datei verkleinern (`VACUUM`); erst sinnvoll, wenn der Server Monate gelaufen ist.
 - [x] Letzte Fehlermeldungen auf der Status-Seite (K1, Settings → Data & status).
 - [x] `.env` in `.dockerignore` (mit Etappe 9c), `pytest` in `requirements-dev.txt` (mit Etappe 8).
 - [ ] `platforms.toml` aus `/data` lesen: entfällt, die Einstellungen liegen seit Etappe 7 in der Datenbank.
