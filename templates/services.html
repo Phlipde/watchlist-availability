@@ -3,10 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101412">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
   <title>My services · Settings · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261118-26') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261118-29') }}" rel="stylesheet">
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -27,7 +31,7 @@
     </div>
     <div class="toast-bar" id="toast" role="status" hidden><span id="toast-text"></span><button class="film-link" id="toast-undo" type="button" hidden>Undo</button></div>
   </main>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261118-26') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/services.js', v='20261118-26') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261118-29') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/services.js', v='20261118-29') }}" type="module"></script>
 </body>
 </html>

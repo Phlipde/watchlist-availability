@@ -9,7 +9,17 @@ from urllib.parse import urlsplit
 import requests
 from flask import Flask, Response, jsonify, make_response, redirect, render_template, request, send_file
 
-from watchlist_app import costs, letterboxd, matches, notifications, providers, scheduler, tmdb, validation
+from watchlist_app import (
+    calendar,
+    costs,
+    letterboxd,
+    matches,
+    notifications,
+    providers,
+    scheduler,
+    tmdb,
+    validation,
+)
 from watchlist_app.config import COUNTRIES
 from watchlist_app.scan_service import ScanService, with_changes
 from watchlist_app.settings import SCAN_INTERVALS_HOURS, AppSettings
@@ -318,6 +328,13 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             tmdb_api_key_set=bool(settings.tmdb_api_key),
         )
 
+    @app.get("/sw.js")
+    def service_worker():
+        # At the root, so the worker controls every page; never cached by the browser itself.
+        response = send_file(Path(__file__).parent.parent / "static" / "sw.js", mimetype="text/javascript")
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
     @app.get("/manifest.webmanifest")
     def manifest():
         return send_file(
@@ -506,6 +523,12 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
                 {"error": f"The target did not accept the message: {exc.__class__.__name__}."}
             ), 502
         return jsonify({"ok": True})
+
+    @app.get("/calendar.ics")
+    def calendar_feed():
+        """The dates entered on the subscriptions page, for a calendar app to subscribe to."""
+        body = calendar.build_ics({country: settings.costs(country) for country in COUNTRIES})
+        return Response(body, mimetype="text/calendar", headers={"Cache-Control": "no-store"})
 
     @app.get("/api/sensors")
     def sensors():

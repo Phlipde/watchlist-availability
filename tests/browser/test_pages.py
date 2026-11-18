@@ -868,3 +868,26 @@ def test_planner_what_if_changes_nothing_that_is_saved(app_server, page):
     assert app_server["settings"].subscriptions("DE") == ["Netflix"]
     page.locator('#whatif input[value="Netflix"]').check()
     expect(page.locator("#whatif-result")).to_contain_text("As it is")
+
+
+def test_service_worker_saves_the_page_and_the_data_for_offline_use(app_server, browser):
+    expect = playwright_api.expect
+    context = browser.new_context()  # the shared page fixture blocks service workers on purpose
+    page = context.new_page()
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    page.wait_for_function("navigator.serviceWorker.controller !== null", timeout=15000)
+    page.reload()  # now the worker sees the requests
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    saved = page.evaluate(
+        """async () => {
+            const urls = async name => {
+                const keys = await (await caches.open(name)).keys();
+                return keys.map(request => new URL(request.url).pathname);
+            };
+            return {pages: await urls('pages-v1'), files: await urls('static-v1')};
+        }"""
+    )
+    assert "/watchlist" in saved["pages"] and "/api/latest" in saved["pages"]
+    assert "/static/js/app.js" in saved["files"] and "/static/css/app.css" in saved["files"]
+    context.close()

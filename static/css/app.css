@@ -686,3 +686,7 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 .candidate-details { margin-top: 10px; }
 .candidate-details > summary { cursor: pointer; color: var(--muted); }
 .price-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px 12px; margin-top: 10px; }
+.overlap { margin-top: 18px; }
+.overlap > summary { cursor: pointer; color: var(--muted); }
+.overlap-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.overlap-table th[scope=row] { text-align: left; font-weight: 600; white-space: nowrap; }

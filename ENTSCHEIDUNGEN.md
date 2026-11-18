@@ -93,3 +93,12 @@ Auftrag: Plan von oben nach unten abarbeiten, nach jedem Schritt prüfen, nach j
 - **[ENTSCHIEDEN]** Die Mengensuche probiert alle Teilmengen von höchstens 14 Diensten (16 384 Fälle); mehr Dienste gibt es nicht auf der Seite (eigene plus die 12 mit dem größten Zuwachs).
 - **[ENTSCHIEDEN]** Kein „Apply to my services“ im Was-wäre-wenn (Auswahl bleibt unter Settings → My services; sonst zwei Orte für dieselbe Sache).
 - **[ERLEDIGT]** A5: Python 332, JS 50, Browser-Test; Abschnitt im Browser angesehen.
+
+### A6 und K6 (PWA)
+- **[ENTSCHIEDEN]** Kalender-Feed nur aus vom Nutzer eingetragenen Daten; zwei Termine, wenn eine Kündigungsfrist eingetragen ist.
+- **[ENTSCHIEDEN]** Skripte und Stile im Service Worker „Netz zuerst“ statt „Speicher zuerst“: Module importieren einander ohne Versionsnummer, ein Mischstand aus alten und neuen Dateien würde die Seite zerbrechen. Preis: offline erst nach einem Besuch, online immer aktuell.
+- **[ENTSCHIEDEN]** Symbole selbst gezeichnet (Filmstreifen mit Dreieck), ohne Bildbibliothek; das Skript liegt in `scripts/make_icons.py` und wird nur bei einer Designänderung gebraucht.
+- **[ENTSCHIEDEN]** Ein Hinweis „Offline: showing the data from …“ als Toast, kein eigenes Banner.
+- **[OFFEN]** Offline-Aufruf selbst nicht automatisch getestet (Playwright-Grenze), Installation auf einem Gerät und https nicht geprüft.
+- **[OFFEN]** A6: „andere Länder“ und Verlauf über 12 Monate nicht gebaut (siehe PLAN).
+- **[ERLEDIGT]** A6/K6-PWA: Python 336, Browser-Test Service Worker, ruff, mypy.

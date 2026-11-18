@@ -3,10 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101412">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
   <title>Subscriptions · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261118-26') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261118-29') }}" rel="stylesheet">
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -86,6 +90,7 @@
         <tfoot><tr><th scope="row" colspan="2">Total <span class="totals">€ <span data-money id="total-month">{{ '%.2f'|format(costs.monthly_total) }}</span> / month · € <span data-money id="total-year">{{ '%.2f'|format(costs.yearly_total) }}</span> / year</span></th><td colspan="7"><span class="feedback" id="save-state" role="status"></span></td></tr></tfoot>
       </table>
     </div>
+    <p class="hint">Put the dates in your calendar: subscribe to <a href="/calendar.ics">/calendar.ics</a> in your calendar app.</p>
     <p class="hint" id="price-hint" hidden>Add the prices to see what the services cost and what a lost film costs you. <button class="film-link add-price" type="button">Add a price</button></p>
     {% endif %}
 
@@ -123,6 +128,7 @@
       <p class="hint">Pretend you have or do not have a service. Nothing is saved.</p>
       <div id="whatif" class="whatif" role="group" aria-labelledby="whatif-heading"></div>
       <p id="whatif-result" class="whatif-result" role="status" aria-live="polite"></p>
+      <details class="overlap" id="overlap"><summary>Overlap of your services</summary><p class="hint" id="overlap-text"></p><div class="table-scroll"><table class="status-table overlap-table" id="overlap-table"></table></div></details>
     </section>
 
     <section class="rent-row" aria-labelledby="rent-heading">
@@ -133,10 +139,10 @@
     </section>
   </main>
   <dialog class="side-drawer" id="service-drawer" aria-labelledby="service-drawer-title"><div class="drawer-head"><h2 id="service-drawer-title"></h2><button class="sheet-close" id="service-drawer-close" type="button" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button></div><div class="drawer-body" id="service-drawer-body"></div></dialog>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261118-26') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261118-29') }}" type="module"></script>
   <script>window.PLAN_DATA = {{ costs.plan|tojson }};</script>
   <script>window.IMAGE_BASE_URL = {{ image_base_url|tojson }}; window.WEEKLY_HOURS = {{ weekly_hours|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/plan-page.js', v='20261118-26') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261118-26') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/plan-page.js', v='20261118-29') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261118-29') }}" type="module"></script>
 </body>
 </html>

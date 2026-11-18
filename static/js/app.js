@@ -1,6 +1,7 @@
 import {dateTime, escapeHtml, numberText} from './ui.js';
 import {createAppState, createScanState} from './state.js';
 import {availabilityByOffer, changeBadgesFor, compareButtonState, favoriteFields, filmCard, filmHref, renderResults} from './rendering.js';
+import './register-sw.js';
 import {showDeadlines} from './deadlines.js';
 import {TONIGHT_CHIPS, nowOnText, pickFilm, recentlyGone, tonightRows} from './events.js';
 import {readFilters} from './filters.js';
@@ -546,6 +547,8 @@ const state = createAppState();
       const response = await fetch(`/api/latest?country=${encodeURIComponent(country)}`);
       if (!response.ok) return null;
       const snapshot = await response.json();
+      // The service worker answers from its copy when the app cannot be reached: say how old the data is.
+      if (response.headers.get('X-From-Cache') && snapshot.created) showToast(`Offline: showing the data from ${new Date(snapshot.created * 1000).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'})}.`);
       if (!snapshot.available) return snapshot;
       replaceWithScanResults(snapshot.results, snapshot.unavailable, snapshot.changes, snapshot.created, snapshot.free_services);
       document.getElementById('source-name').textContent = snapshot.source_name || '';

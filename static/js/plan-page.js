@@ -65,6 +65,19 @@ if (data && section && Object.keys(data.services).length) {
     section.scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
     box?.focus();
   }));
+  // Overlap: how many watchlist films two of your paid services share (a cell opens exactly those films).
+  const mine = data.owned.filter(name => data.services[name]);
+  if (mine.length > 1) {
+    const shared = (a, b) => { const other = new Set(data.services[b]); return data.services[a].filter(key => other.has(key)).length; };
+    const pairs = [];
+    mine.forEach((a, i) => mine.slice(i + 1).forEach(b => pairs.push({a, b, count: shared(a, b)})));
+    pairs.sort((x, y) => y.count - x.count);
+    document.getElementById('overlap-text').textContent = pairs[0].count ? `${pairs[0].a} and ${pairs[0].b} share ${pairs[0].count} films.` : 'Your services share no film.';
+    const link = (a, b) => `/watchlist?providers=${encodeURIComponent(a)}%2C${encodeURIComponent(b)}&match=all`;
+    document.getElementById('overlap-table').innerHTML = `<thead><tr><th scope="col"></th>${mine.map(name => `<th scope="col">${escape(name)}</th>`).join('')}</tr></thead><tbody>${mine.map(a => `<tr><th scope="row">${escape(a)}</th>${mine.map(b => (a === b ? `<td class="num">${data.services[a].length}</td>` : `<td class="num"><a class="film-link" href="${link(a, b)}">${shared(a, b)}</a></td>`)).join('')}</tr>`).join('')}</tbody>`;
+  } else {
+    document.getElementById('overlap').hidden = true;
+  }
   draw();
   drawWhatIf();
 }

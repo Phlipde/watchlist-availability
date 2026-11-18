@@ -625,3 +625,52 @@ class TestNotificationsAndSensors:
         data = client.get("/api/sensors").get_json()
         assert data["watchlist_coverage"] == 100 and data["films_available"] == 1
         assert data["new_on_my_services"] == 0 and data["next_subscription_deadline"] is None
+
+
+class TestCalendar:
+    def test_feed_has_one_event_per_date_and_one_for_the_last_day_to_cancel(self, client, settings):
+        settings.update({"subscriptions": ["Netflix", "MUBI"]})
+        settings.update(
+            {
+                "costs": {
+                    "Netflix": {"price": 10, "remind_on": "2026-12-01", "notice_days": 14},
+                    "MUBI": {"price": 8},
+                }
+            }
+        )
+        answer = client.get("/calendar.ics")
+        assert answer.mimetype == "text/calendar"
+        body = answer.get_data(as_text=True)
+        assert body.startswith("BEGIN:VCALENDAR\r\n") and body.endswith("END:VCALENDAR\r\n")
+        assert body.count("BEGIN:VEVENT") == 2  # MUBI has no date
+        assert "DTSTART;VALUE=DATE:20261201" in body and "DTSTART;VALUE=DATE:20261117" in body
+        assert "SUMMARY:Netflix: last day to cancel" in body
+
+    def test_long_lines_are_folded_without_cutting_a_character(self):
+        from watchlist_app.calendar import _fold
+
+        folded = _fold("SUMMARY:" + "ä" * 60)
+        assert all(len(part.encode("utf-8")) <= 76 for part in folded)
+        assert (
+            "".join(part.lstrip(" ") if index else part for index, part in enumerate(folded))
+            == "SUMMARY:" + "ä" * 60
+        )
+
+
+class TestInstallable:
+    def test_manifest_icons_exist_and_the_worker_is_served_from_the_root(self, client):
+        manifest = client.get("/manifest.webmanifest").get_json()
+        assert {"192x192", "512x512"} <= {icon["sizes"] for icon in manifest["icons"]}
+        assert any(icon.get("purpose") == "maskable" for icon in manifest["icons"])
+        for icon in manifest["icons"]:
+            answer = client.get(icon["src"])
+            assert answer.status_code == 200 and answer.data[1:4] == b"PNG"
+        worker = client.get("/sw.js")
+        assert worker.status_code == 200 and "javascript" in worker.mimetype
+        assert worker.headers["Cache-Control"] == "no-cache"
+        assert b"addEventListener('fetch'" in worker.data
+
+    def test_every_page_links_the_manifest_and_an_icon(self, client):
+        for path in ("/", "/watchlist", "/subscriptions", "/stats", "/settings"):
+            page = client.get(path).get_data(as_text=True)
+            assert 'rel="manifest"' in page and 'rel="icon"' in page, path

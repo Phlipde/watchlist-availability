@@ -3,11 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101412">
+  <link rel="icon" href="/static/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
   <title>Watchlist Availability</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261118-26') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261118-29') }}" rel="stylesheet">
 </head>
 <body class="view-{{ view }}">
   <a class="skip-link" href="#results">Skip to films</a>
@@ -33,6 +36,6 @@
   <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/tabler.min.js') }}"></script>
   <script>window.WATCHLIST_CONFIG = {{ client_config|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/app.js', v='20261118-26') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/app.js', v='20261118-29') }}" type="module"></script>
 </body>
 </html>
