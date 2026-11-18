@@ -505,6 +505,14 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
 
     # ----- notifications and sensors -----
 
+    @app.post("/api/tmdb/test")
+    def tmdb_test():
+        try:
+            tmdb.check_key(settings.tmdb_api_key)
+        except tmdb.TmdbError as exc:
+            return jsonify({"error": str(exc)}), 400 if "key" in str(exc).lower() else 502
+        return jsonify({"ok": True})
+
     @app.post("/api/notify/test")
     def notify_test():
         if not settings.notify_kind or not settings.notify_url:

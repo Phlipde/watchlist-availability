@@ -36,6 +36,17 @@ form.addEventListener('submit', async event => {
   }
 });
 
+document.getElementById('tmdb-test').addEventListener('click', async () => {
+  show('tmdb-message', 'Asking TMDB…');
+  try {
+    const response = await fetch('/api/tmdb/test', {method: 'POST'});
+    const data = await response.json().catch(() => ({}));
+    show('tmdb-message', response.ok ? 'The key works.' : data.error || 'TMDB did not answer.', !response.ok);
+  } catch {
+    show('tmdb-message', 'Could not reach the app.', true);
+  }
+});
+
 // "Send a test message" uses what is saved, so it saves the form first.
 document.getElementById('notify-test').addEventListener('click', async () => {
   show('notify-message', 'Saving and sending…');

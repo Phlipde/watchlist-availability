@@ -220,3 +220,14 @@ class TestSessionReuse:
 )
 def test_clean_year(value, expected):
     assert tmdb.clean_year(value) == expected
+
+
+class TestCheckKey:
+    def test_a_working_key_passes_and_a_refused_one_says_so(self):
+        with patch("watchlist_app.tmdb._http_get", return_value=response({"images": {}})):
+            tmdb.check_key(API_KEY)
+        with patch("watchlist_app.tmdb._http_get", return_value=response(status_code=401)):
+            with pytest.raises(tmdb.TmdbError, match="does not accept this key"):
+                tmdb.check_key("wrong")
+        with pytest.raises(tmdb.TmdbError, match="No TMDB key"):
+            tmdb.check_key(None)

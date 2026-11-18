@@ -102,3 +102,8 @@ Auftrag: Plan von oben nach unten abarbeiten, nach jedem Schritt prüfen, nach j
 - **[OFFEN]** Offline-Aufruf selbst nicht automatisch getestet (Playwright-Grenze), Installation auf einem Gerät und https nicht geprüft.
 - **[OFFEN]** A6: „andere Länder“ und Verlauf über 12 Monate nicht gebaut (siehe PLAN).
 - **[ERLEDIGT]** A6/K6-PWA: Python 336, Browser-Test Service Worker, ruff, mypy.
+
+### 17b TMDB-Schlüssel prüfen
+- **[ENTSCHIEDEN]** Der Knopf fragt TMDBs `/configuration` (billigste Anfrage mit Schlüssel); der Schlüssel erscheint nie in der Antwort oder im Fehlertext.
+- **[OFFEN]** Datenbank aufräumen (`VACUUM`, alte Filmdaten) bleibt offen: sinnvoll erst nach Monaten Betrieb.
+- **[ERLEDIGT]** Python 338.

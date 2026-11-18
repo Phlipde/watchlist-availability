@@ -10,7 +10,7 @@
   <title>Stats · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261118-29') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261118-30') }}" rel="stylesheet">
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -19,8 +19,8 @@
     <p class="hint" id="stats-meta"></p>
     <div id="stats-root" aria-busy="true" aria-live="polite"><p class="empty">Loading the statistics…</p></div>
   </main>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261118-29') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261118-30') }}" type="module"></script>
   <script>window.STATS_PAGE = {{ client_config|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/stats-page.js', v='20261118-29') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/stats-page.js', v='20261118-30') }}" type="module"></script>
 </body>
 </html>

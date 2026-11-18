@@ -674,3 +674,16 @@ class TestInstallable:
         for path in ("/", "/watchlist", "/subscriptions", "/stats", "/settings"):
             page = client.get(path).get_data(as_text=True)
             assert 'rel="manifest"' in page and 'rel="icon"' in page, path
+
+
+class TestTmdbKeyCheck:
+    def test_the_button_reports_the_result(self, client, monkeypatch):
+        monkeypatch.setattr(routes.tmdb, "check_key", lambda key: None)
+        assert client.post("/api/tmdb/test").get_json() == {"ok": True}
+
+        def refused(key):
+            raise routes.tmdb.TmdbError("TMDB does not accept this key.")
+
+        monkeypatch.setattr(routes.tmdb, "check_key", refused)
+        answer = client.post("/api/tmdb/test")
+        assert answer.status_code == 400 and "does not accept" in answer.get_json()["error"]

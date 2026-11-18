@@ -737,7 +737,7 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
 
 ### Etappe 17b: Betrieb (zuletzt, nach K6)
 Der Rest von Etappe 17; die Grundlage steht in 17a (vor K3c).
-- [ ] Knopf „TMDB-Schlüssel testen“ auf der Einstellungsseite.
+- [x] Knopf „TMDB-Schlüssel testen“ auf der Einstellungsseite (2026-11-18: „Check the TMDB key“ unter Settings → General, fragt TMDB `/configuration`; 401 heißt „does not accept this key“; Tests mit Atrappe).
 - [ ] Datenbank aufräumen: Filmdaten von Filmen, die seit Monaten nicht mehr auf der Watchlist stehen, löschen und die Datei verkleinern (`VACUUM`); erst sinnvoll, wenn der Server Monate gelaufen ist.
 - [x] Letzte Fehlermeldungen auf der Status-Seite (K1, Settings → Data & status).
 - [x] `.env` in `.dockerignore` (mit Etappe 9c), `pytest` in `requirements-dev.txt` (mit Etappe 8).

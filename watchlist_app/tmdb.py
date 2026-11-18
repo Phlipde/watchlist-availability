@@ -210,6 +210,18 @@ def search_movie_id(
     return candidates[0]["tmdb_id"]
 
 
+def check_key(api_key: str | None) -> None:
+    """Ask TMDB for its configuration (the cheapest request that needs a key); TmdbError says why not."""
+    if not api_key:
+        raise TmdbError("No TMDB key is set.")
+    try:
+        _request_json("/configuration", {"api_key": api_key})
+    except TmdbError as exc:
+        if "401" in str(exc):
+            raise TmdbError("TMDB does not accept this key.") from None
+        raise
+
+
 def get_region_providers(country: str, api_key: str | None = None) -> list[dict]:
     """Every film provider TMDB knows in a country: [{"name", "logo_path", "priority"}]."""
     data = _request_json("/watch/providers/movie", {"api_key": api_key, "watch_region": country}) or {}
