@@ -95,11 +95,6 @@ export function favoriteFields(key, title, saved = {}) {
   return `<div class="film-actions"><select class="favorite-status" data-key="${escapeHtml(key)}" aria-label="Favorite status for ${name}">${option('plan', 'Plan')}${option('watching', 'Watching')}${option('watched', 'Watched')}</select><input class="favorite-note" data-key="${escapeHtml(key)}" aria-label="Note for ${name}" placeholder="Note" value="${escapeHtml(saved.notes || '')}"></div>`;
 }
 
-// The compare button says how many films are chosen.
-export function compareButtonState(count) {
-  return {text: count ? `Compare (${count})` : 'Compare'};
-}
-
 // context: {imageBaseUrl, selected: Set, favorites: Map, compareKeys: Set, greyKeys: Set, favoritesOnly, pageHref}
 export function filmCard(film, section, context) {
   const key = filmKey(film);
@@ -162,4 +157,14 @@ export function renderResults(view, containers, context) {
     : mode === 'table' ? filmTable(view.films, context)
       : `<div class="films">${view.films.map(film => filmCard(film, view.sectionOf.get(filmKey(film)), context)).join('')}</div>`;
   containers.unavailableResults.innerHTML = view.unavailable.map(film => unavailableCard(film, context.selected, context.pageHref)).join('');
+}
+
+// Which of the values is best ("high" or "low" wins); a tie of all marks nobody, and fewer than two values prove nothing.
+export function bestIndexes(values, prefer = 'high') {
+  const numbers = values.map(value => (value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? null : Number(value)));
+  const known = numbers.filter(value => value !== null);
+  if (known.length < 2) return [];
+  const best = prefer === 'low' ? Math.min(...known) : Math.max(...known);
+  if (known.every(value => value === best)) return [];
+  return numbers.map((value, index) => (value === best ? index : -1)).filter(index => index >= 0);
 }

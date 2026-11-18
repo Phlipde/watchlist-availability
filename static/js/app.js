@@ -1,6 +1,6 @@
 import {dateTime, escapeHtml, numberText} from './ui.js';
 import {createAppState, createScanState} from './state.js';
-import {availabilityByOffer, changeBadgesFor, compareButtonState, favoriteFields, filmCard, filmHref, renderResults, runtimeText} from './rendering.js';
+import {availabilityByOffer, bestIndexes, changeBadgesFor, favoriteFields, filmCard, filmHref, renderResults, runtimeText} from './rendering.js';
 import './register-sw.js';
 import {renderViews, wireViews} from './saved-views.js';
 import {showDeadlines} from './deadlines.js';
@@ -387,27 +387,32 @@ const state = createAppState();
       showTab(next.id.replace('tab-', ''));
     });
     // The tick boxes on the posters only show while choosing films to compare.
+    // The bar at the bottom appears with the first chosen film; the boxes on the posters show while it is there.
     function setCompareMode(on) {
       document.body.classList.toggle('compare-mode', on);
-      document.getElementById('compare-films').setAttribute('aria-pressed', String(on));
     }
     function compareFilms() {
       const films = state.films.filter(film => state.compareKeys.has(filmKey(film)));
-      if (!document.body.classList.contains('compare-mode') && films.length < 2) {
-        setCompareMode(true);
-        return showToast('Tick 2 to 4 films, then press Compare again.');
-      }
-      if (films.length < 2 || films.length > 4) return showToast('Select 2 to 4 films to compare.');
+      if (films.length < 2 || films.length > 4) return showToast('Choose 2 to 4 films to compare.');
       const providers = [...new Set(films.flatMap(film => Object.keys(film.providers || {})))].sort();
       const offerCell = film => Object.entries(film.providers || {}).map(([provider, kinds]) => `${escapeHtml(provider)}: ${escapeHtml(kinds.join(', '))}`).join('<br>') || '-';
       const providerRows = providers.map(provider => `<tr><th>${escapeHtml(provider)}</th>${films.map(film => `<td>${escapeHtml((film.providers?.[provider] || []).join(', ') || '—')}</td>`).join('')}</tr>`).join('');
-      document.getElementById('compare-table').innerHTML = `<thead><tr><th>Metric</th>${films.map(film => `<th>${escapeHtml(film.title)}</th>`).join('')}</tr></thead><tbody><tr><th>Year</th>${films.map(film => `<td>${numberText(film.year, '-')}</td>`).join('')}</tr><tr><th>Rating</th>${films.map(film => `<td>${numberText(film.rating, '-')}</td>`).join('')}</tr><tr><th>Runtime</th>${films.map(film => `<td>${numberText(film.runtime) ? `${numberText(film.runtime)} min` : '-'}</td>`).join('')}</tr><tr><th>Genres</th>${films.map(film => `<td>${escapeHtml((film.genres || []).join(', ') || '-')}</td>`).join('')}</tr><tr><th>Offers</th>${films.map(film => `<td>${offerCell(film)}</td>`).join('')}</tr>${providerRows}</tbody>`;
+      // The best value of a row is marked (rating: highest, runtime: shortest, own services: most).
+      const row = (label, values, show, prefer) => {
+        const best = prefer ? bestIndexes(values, prefer) : [];
+        return `<tr><th>${label}</th>${values.map((value, index) => `<td${best.includes(index) ? ' class="best"' : ''}>${show(value)}${best.includes(index) ? '<span class="visually-hidden"> (best)</span>' : ''}</td>`).join('')}</tr>`;
+      };
+      const ownCount = film => Object.keys(film.providers || {}).filter(name => state.selected.has(name)).length;
+      document.getElementById('compare-table').innerHTML = `<thead><tr><th>Metric</th>${films.map(film => `<th>${escapeHtml(film.title)}</th>`).join('')}</tr></thead><tbody>${row('Year', films.map(film => film.year), value => numberText(value, '-'))}${row('Letterboxd', films.map(film => film.letterboxd_rating), value => (numberText(value) ? Number(value).toFixed(1) : '-'), 'high')}${row('TMDB', films.map(film => film.rating), value => (numberText(value) ? Number(value).toFixed(1) : '-'), 'high')}${row('Runtime', films.map(film => film.runtime), value => (numberText(value) ? `${numberText(value)} min` : '-'), 'low')}${row('On your services', films.map(ownCount), value => String(value), 'high')}<tr><th>Genres</th>${films.map(film => `<td>${escapeHtml((film.genres || []).join(', ') || '-')}</td>`).join('')}</tr><tr><th>Offers</th>${films.map(film => `<td>${offerCell(film)}</td>`).join('')}</tr>${providerRows}</tbody>`;
       openModal('compare-modal');
     }
     function updateCompareButton() {
-      const {text} = compareButtonState(state.compareKeys.size);
-      document.getElementById('compare-films').innerHTML = `<i class="ti ti-columns-gap" aria-hidden="true"></i> ${text}`;
-      if (state.compareKeys.size) setCompareMode(true);
+      const count = state.compareKeys.size;
+      setCompareMode(count > 0);
+      const bar = document.getElementById('compare-bar');
+      bar.hidden = count === 0;
+      document.getElementById('compare-count').textContent = count === 1 ? '1 film chosen: pick one more' : count > 4 ? `${count} films chosen: at most 4` : `${count} to compare`;
+      document.getElementById('compare-go').disabled = count < 2 || count > 4;
     }
     function setCompared(key, checked) {
       if (checked) state.compareKeys.add(key);
@@ -1022,7 +1027,8 @@ const state = createAppState();
     };
     setCompact(localStorage.getItem('compactView') === '1');
     viewButton.addEventListener('click', () => setCompact(!results.classList.contains('compact')));
-    document.getElementById('compare-films').addEventListener('click', compareFilms);
+    document.getElementById('compare-go').addEventListener('click', compareFilms);
+    document.getElementById('compare-bar-clear').addEventListener('click', () => { [...state.compareKeys].forEach(key => setCompared(key, false)); renderFilms(); });
     updateCompareButton();
     document.getElementById('cancel-scan').addEventListener('click', async event => {
       if (!scanState.currentJob || event.currentTarget.disabled) return;

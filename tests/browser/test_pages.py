@@ -316,7 +316,7 @@ def test_saved_results_show_the_tools(app_server, page):
     # A second visit finds the saved scan and starts none: sorting, compare and the rest must still be there.
     page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("#status-message")).to_have_text(re.compile(r"^Saved results from "))
-    expect(page.locator("#compare-films")).to_be_visible()
+    expect(page.locator("#favorites-view")).to_be_visible()
     expect(page.locator(".stats-link a")).to_have_attribute("href", "/stats")
     expect(page.locator("#retry-scan")).to_have_text("Scan now")
     # A filter set from a link must show as a chip, also when its control sits in a closed panel.
@@ -947,3 +947,23 @@ def test_details_have_one_main_button_and_people_are_search_links(app_server, pa
     assert page.locator("#film-details-content .btn-accent").count() <= 1  # only the main button is amber
     for link in page.locator("#film-details-content .film-modal-credits a").all():
         assert "/watchlist?q=" in link.get_attribute("href")
+
+
+def test_compare_bar_appears_with_the_first_film_and_marks_the_best_value(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    tick_all_services(page)
+    expect(page.locator("article.film")).to_have_count(2)
+    expect(page.locator("#compare-bar")).to_be_hidden()
+    for index in (0, 1):
+        card = page.locator("article.film").nth(index)
+        card.locator(".card-more").click()
+        card.get_by_role("button", name=re.compile("comparison")).click()
+    expect(page.locator("#compare-count")).to_have_text("2 to compare")
+    page.locator("#compare-go").click()
+    expect(page.locator("#compare-table")).to_be_visible()
+    expect(page.locator("#compare-table th", has_text="Runtime")).to_be_visible()
+    page.keyboard.press("Escape")
+    page.locator("#compare-bar-clear").click()
+    expect(page.locator("#compare-bar")).to_be_hidden()

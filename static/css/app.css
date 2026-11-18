@@ -746,3 +746,9 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 .chip-link { padding: 3px 10px; border: 1px solid var(--line-field); border-radius: 999px; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; text-decoration: none; }
 .chip-link:hover, .chip-link:focus-visible { color: var(--ink); border-color: var(--line-strong); }
 @media (pointer: coarse) { .chip-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; } }
+
+/* The bar for the comparison: fixed at the bottom while films are chosen (above the phone's page bar). */
+.compare-bar { position: fixed; left: 50%; bottom: 20px; z-index: 1060; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 16px; transform: translateX(-50%); background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: 999px; box-shadow: 0 12px 32px rgb(0 0 0 / .45); font: var(--fs-body) system-ui, sans-serif; }
+.compare-bar[hidden] { display: none; }
+@media (max-width: 800px) { .compare-bar { bottom: calc(76px + env(safe-area-inset-bottom)); max-width: calc(100% - 24px); } }
+.compare-modal td.best, #compare-table td.best { color: var(--accent); font-weight: 600; }

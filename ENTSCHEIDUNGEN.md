@@ -141,3 +141,11 @@ Immer geprüft vor jedem Commit: `ruff check`, `ruff format --check`, `mypy`, Py
 - **[ENTSCHIEDEN]** Hauptknopf nennt den günstigsten eigenen Weg (gratis vor Werbung vor Abo); führt zur TMDB-Seite (keine Direkt-Links, entschieden).
 - **[FEHLER]** (nicht im Plan) `.btn-accent` war mit Tabler wirkungslos (nur `--bs-btn-*` gesetzt). Behoben; betrifft alle Knöpfe dieser Klasse (z. B. „Pick for me“, Speichern).
 - **[OFFEN]** Hero-Bild, Zeitleiste, Trailer-Vorschau, Vergleichsleiste.
+
+### Übersprungenes, auf Wunsch gebaut: Detailfenster und Vergleichsleiste
+- **[ENTSCHIEDEN]** Kein Trailer-Vorschaubild von YouTube (`img.youtube.com`): das wäre beim bloßen Öffnen eine Anfrage an Google. Statt dessen Wiedergabe-Knopf auf dem TMDB-Backdrop.
+- **[ENTSCHIEDEN]** Das Backdrop-Feld gab es schon im Datenweg (`backdrop_path`), es war nichts umzubauen.
+- **[ENTSCHIEDEN]** Vergleichsleiste statt Knopf und Modus; die Boxen auf den Postern erscheinen, solange die Leiste da ist.
+- **[ENTSCHIEDEN]** „Best“ nur bei mindestens zwei Werten und ohne Gleichstand aller (sonst nichts hervorheben); für Screenreader „(best)“ im Text.
+- **[OFFEN]** Zeitleiste je Dienst (braucht gespeicherte Scans über 12 Monate).
+- **[ERLEDIGT]** Python 340, JS 51, Browser 37.

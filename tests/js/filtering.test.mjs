@@ -186,10 +186,12 @@ test('every set filter gets a chip and reset clears them all', async () => {
   assert.equal(controls['exclusive-filter'].checked, false);
 });
 
-test('the compare button counts the chosen films', async () => {
-  const {compareButtonState} = await import('../../static/js/rendering.js');
-  assert.deepEqual(compareButtonState(0), {text: 'Compare'});
-  assert.deepEqual(compareButtonState(3), {text: 'Compare (3)'});
+test('the best value of a comparison row is marked, ties and lone values are not', async () => {
+  const {bestIndexes} = await import('../../static/js/rendering.js');
+  assert.deepEqual(bestIndexes([3.8, 4.1, null]), [1]);
+  assert.deepEqual(bestIndexes([120, 95, 95], 'low'), [1, 2]);
+  assert.deepEqual(bestIndexes([2, 2]), []);  // a tie of all: no winner
+  assert.deepEqual(bestIndexes([4.1, null]), []);  // one value alone proves nothing
 });
 
 test('similar films: only watchlist films on own services, in TMDB order, not watched', () => {
