@@ -180,3 +180,9 @@ Noch offen (zur Auswahl): 11 Meldung, wenn ein „Demnächst“-Film streambar w
 - **[ERLEDIGT]** Detailfenster Rest: Originaltitel, Mini-Poster bei "Similar", JustWatch-Chip. Python 347, JS 52, Browser 39.
 - **[ENTSCHIEDEN]** Nicht gebaut: Zeitleiste je Film (Daten gibt es nur je Dienst), "Report" (kein Ziel für Meldungen, ein toter Link wäre schlechter als keiner), Flaggen-Chips (Flaggen-Emoji erscheinen unter Windows als zwei Buchstaben).
 - **[OFFEN]** Der Originaltitel erscheint erst nach dem nächsten Scan (`FILM_FORMAT` 3 erzwingt ihn).
+
+### Kleine Restpunkte (2026-11-18)
+- **[ERLEDIGT]** 200-%-Zoom: bei 640 px Breite (entspricht 200 % auf 1280 px) hat keine der acht Seiten waagerechtes Scrollen; breite Tabellen scrollen in ihrem eigenen Kasten (`.table-scroll`). JavaScript: 121 KB gzip für alle Dateien zusammen, unter 200 KB.
+- **[ENTSCHIEDEN]** Deutsche Filmtitel: nicht gebaut. Die TMDB-Details werden einmal je Film gespeichert und von allen Ländern geteilt; ein Titel in Landessprache bräuchte Details je Sprache (mehr Abfragen, größere Datenbank). Der Originaltitel im Detailfenster deckt den Bedarf teilweise.
+- **[ENTSCHIEDEN]** TV-Ansicht: nicht gebaut (im Plan "optional"; Tastatur-Bedienung und große Poster gibt es).
+- **[ENTSCHIEDEN]** Datenbank aufräumen: nicht jetzt. Es lohnt erst nach Monaten Betrieb, und Löschen von Daten geht nur nach Rückfrage mit einer Liste, was entfällt.
