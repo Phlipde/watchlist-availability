@@ -421,3 +421,15 @@ class TestBackup:
         self._fill(store)
         counts = store.counts()
         assert (counts["favorites"], counts["scans"], counts["offers"]) == (1, 3, 2)
+
+
+def test_service_history_keeps_one_row_a_day_and_drops_a_year_old_one(store):
+    store.record_service_counts("DE", "2025-01-01", {"Netflix": (50, 10)})
+    store.record_service_counts("DE", "2026-11-17", {"Netflix": (60, 12)})
+    store.record_service_counts("DE", "2026-11-17", {"Netflix": (61, 13)})  # the same day: replaced
+    store.record_service_counts("GB", "2026-11-17", {"Netflix": (5, 1)})
+    history = store.service_history("DE")
+    assert history == {
+        "Netflix": [{"day": "2026-11-17", "films": 61, "only_here": 13}]
+    }  # the first day is over a year old
+    assert store.service_history("GB")["Netflix"][0]["films"] == 5

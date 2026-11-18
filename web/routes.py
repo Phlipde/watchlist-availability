@@ -266,6 +266,18 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
     def costs_page():
         return redirect("/subscriptions", code=301)
 
+    def _other_countries(scan: dict | None, own: list[str], country: str) -> list[dict]:
+        """Countries where your services show more of the watchlist (stored offers, no TMDB request)."""
+        if not scan:
+            return []
+        ids = [film["tmdb_id"] for film in scan["results"] if isinstance(film.get("tmdb_id"), int)]
+        raw = store.offers_for(ids)
+        by_country = {
+            code: {tmdb_id: providers.display_providers(offers) for tmdb_id, offers in films.items()}
+            for code, films in raw.items()
+        }
+        return costs.other_countries(by_country, own, country, len(ids))
+
     @app.get("/subscriptions")
     def subscriptions_page():
         # The country is the app's own (header); the services are chosen under Settings -> My services.
@@ -285,6 +297,8 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
                 frozenset(favorite["key"] for favorite in store.list_favorites()),
             ),
             weekly_hours=settings.weekly_hours,
+            history=store.service_history(country),
+            other_countries=_other_countries(scan, own, country),
             image_base_url=_TMDB_IMAGE_BASE_URL,
             logos=provider_logos(),
             logo_base_url=_TMDB_LOGO_BASE_URL,

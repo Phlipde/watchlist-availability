@@ -148,12 +148,22 @@ if (table) {
 // ---- the drawer of one service: the numbers, the films only here, what you keep elsewhere, and your own notes ----
 const drawer = document.getElementById('service-drawer');
 const escape = text => String(text ?? '').replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
+// A small line of how many films were only here on each day a scan was saved.
+function sparkline(points) {
+  const width = 400, height = 60;
+  const max = Math.max(...points.map(point => point.only_here), 1);
+  const step = width / (points.length - 1);
+  const path = points.map((point, index) => `${index ? 'L' : 'M'}${(index * step).toFixed(1)} ${(height - 6 - (point.only_here / max) * (height - 12)).toFixed(1)}`).join(' ');
+  const first = points[0], last = points[points.length - 1];
+  return `<svg class="sparkline" viewBox="0 0 ${width} ${height}" role="img" aria-label="Films only here: ${first.only_here} on ${escape(first.day)}, ${last.only_here} on ${escape(last.day)}"><path d="${path}" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/></svg><p class="hint">${first.only_here} on ${escape(first.day)} → ${last.only_here} on ${escape(last.day)}</p>`;
+}
 const filmLinks = films => films.map(film => `<li><a href="/watchlist?film=${encodeURIComponent(film.key || '')}">${film.poster_path ? `<img src="${window.IMAGE_BASE_URL || ''}${escape(film.poster_path)}" alt="" loading="lazy">` : '<span class="no-poster" aria-hidden="true">No poster</span>'}<span>${escape(film.title)}${film.year ? ` (${escape(film.year)})` : ''}</span></a></li>`).join('');
 function openDrawer(name, opener) {
   const detail = details.get(name);
   if (!detail || !drawer) return;
   document.getElementById('service-drawer-title').textContent = name;
   const only = detail.only_here || [];
+  const history = JSON.parse(document.querySelector(`tr[data-service="${CSS.escape(name)}"]`)?.dataset.history || '[]');
   const elsewhere = detail.elsewhere || [];
   const weeks = detail.hours && window.WEEKLY_HOURS ? detail.hours / window.WEEKLY_HOURS : 0;
   const pace = !weeks ? '–' : weeks >= 4.345 ? `≈ ${Math.round(weeks / 4.345)} mo` : `≈ ${Math.max(1, Math.round(weeks))} wk`;
@@ -162,6 +172,7 @@ function openDrawer(name, opener) {
     <dl class="figures"><div><dt>Watchlist</dt><dd>${detail.films}</dd></div><div><dt>Only here</dt><dd>${only.length}${detail.favorites ? ` <span class="fav-count"><i class="ti ti-heart-filled" aria-hidden="true"></i> ${detail.favorites}</span>` : ''}</dd></div><div><dt>Value</dt><dd>${detail.value}</dd></div><div><dt>Hours</dt><dd>${detail.hours} h</dd></div><div><dt>Your pace</dt><dd>${pace}</dd></div><div><dt>€ / film</dt><dd>${detail.per_film != null ? money(detail.per_film) : '–'}</dd></div></dl>
     <h3>Only here <span class="row-count">${only.length}</span></h3>
     ${only.length ? `<ul class="poster-grid">${filmLinks(only.slice(0, 36))}</ul>${only.length > 36 ? `<p class="hint">and ${only.length - 36} more: <a href="/watchlist?providers=${encodeURIComponent(name)}&only=1&cost=subscription">see them all</a></p>` : ''}` : '<p class="hint">Nothing: cancelling loses no film you cannot watch elsewhere.</p>'}
+    ${history.length > 1 ? `<h3>Only here over time</h3>${sparkline(history)}` : ''}
     <h3>Also elsewhere <span class="row-count">${elsewhere.length}</span></h3>
     <p class="hint">${elsewhere.length ? `These stay available on another service of yours or for free when you cancel: ${elsewhere.slice(0, 8).map(film => escape(film.title)).join(', ')}${elsewhere.length > 8 ? ' …' : ''}.` : 'Every film here is only on this service.'}</p>
     <h3>Your notes</h3>

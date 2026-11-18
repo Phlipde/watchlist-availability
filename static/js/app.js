@@ -2,6 +2,7 @@ import {dateTime, escapeHtml, numberText} from './ui.js';
 import {createAppState, createScanState} from './state.js';
 import {availabilityByOffer, bestIndexes, changeBadgesFor, favoriteFields, filmCard, filmHref, renderResults, runtimeText} from './rendering.js';
 import './register-sw.js';
+import {scanProblem} from './problems.js';
 import {renderViews, wireViews} from './saved-views.js';
 import {showDeadlines} from './deadlines.js';
 import {TONIGHT_CHIPS, nowOnText, pickFilm, recentlyGone, tonightRows} from './events.js';
@@ -62,6 +63,7 @@ const state = createAppState();
     }
     // After a scan the button starts another one; "Retry" is only right after an error.
     function showScanButton(failed = false) {
+      if (!failed) document.getElementById('state-banner').hidden = true;
       const age = state.lastScan ? Date.now() / 1000 - state.lastScan : Infinity;
       if (failed) setSync('error', 'Scan failed');
       else if (age > 24 * 3600) setSync('stale', 'Out of date');
@@ -86,7 +88,22 @@ const state = createAppState();
       // Greying out only means something while a new scan checks the old films.
       document.getElementById('grey-unavailable-label').hidden = !scanState.rescanInProgress;
     }
+    // A failed scan: a banner in plain words with the way out, and the old data stays on the page.
+    function showStateBanner(message) {
+      const problem = scanProblem(message);
+      const old = state.lastScan ? ` Showing the data from ${dateTime(state.lastScan)}.` : '';
+      document.getElementById('state-text').textContent = `${problem.text}${old} ${problem.action}`;
+      const link = document.getElementById('state-link');
+      link.hidden = !problem.link;
+      if (problem.link) { link.href = problem.link; link.textContent = problem.link.includes('settings#') ? 'Open settings' : 'Details'; }
+      document.getElementById('state-banner').hidden = false;
+    }
+    document.getElementById('state-retry').addEventListener('click', () => {
+      document.getElementById('state-banner').hidden = true;
+      startScan();
+    });
     function showScanError(message, toastText) {
+      showStateBanner(message);
       document.getElementById('error-message').textContent = message;
       document.getElementById('error-message').hidden = false;
       showScanButton(true);

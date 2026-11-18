@@ -648,7 +648,8 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
 - Ergebnis K4 Teil 3 (2026-11-18, auf Wunsch aus der Liste der Übersprungenen):
   - Detailfenster: Backdrop 16:9 (TMDB-Bild, `w780`) mit kleinem Poster über der Unterkante, Wiedergabe-Knopf auf dem Bild öffnet den Trailer erst beim Klick (kein YouTube-Vorschaubild, damit beim Öffnen nichts an Google geht); Regie und die ersten fünf Darsteller sind Links, die die Watchlist danach durchsuchen; Herkunftsländer und Stichworte als Chips, die nach Land und Stichwort filtern.
   - Vergleichsleiste: erscheint unten mit dem ersten gewählten Film („2 to compare“, „Compare“, „Clear“, höchstens vier); der Knopf und der Vergleichsmodus in der Werkzeugzeile entfallen. Film wählen über „⋯“ und über das Detailfenster. Im Vergleich ist der beste Wert je Zeile hervorgehoben (Letterboxd und TMDB höchster, Laufzeit kürzeste, „On your services“ meiste; bei Gleichstand keiner).
-  - Noch offen in K4: Zeitleiste je Dienst, Ausgrauen gesehener Filme im Raster
+- Ergebnis Übersprungenes, Teil 2 (2026-11-18): Zustands-Banner bei einem fehlgeschlagenen Scan („Letterboxd is not responding, or the watchlist is not public. Showing the data from … Try again in a few minutes.“, mit „Try again“ und einem Link zu den Einstellungen oder zur Datenseite; `static/js/problems.js`, getestet); „Other countries“ auf der Abo-Seite („With your services in AT you would see +12 films“, nur aus gespeicherten Angeboten, kein neuer Abruf); Verlauf „Only here over time“ als Linie in der Dienst-Schublade (neue Tabelle `service_history`, ein Eintrag je Tag und Dienst, ein Jahr lang, geschrieben nach jedem Scan; erst ab dem zweiten Tag sichtbar).
+  - Noch offen in K4: Ausgrauen gesehener Filme im Raster
   - (alt) Noch offen in K4: Aufbau des Fensters nach Vorlage (Backdrop 16:9 mit Titel, ein Hauptknopf „Where to watch on …“ voller Breite, Bewertungszeile mit Stimmen, Zeitleiste je Dienst, Trailer als Vorschaubild, Personen als Filter-Links, Chips für Länder und Stichworte), Vergleichsleiste unten statt Knopf und Modus (der Vergleich arbeitet weiter wie bisher; neu ist nur „Add to comparison“ im Menü), Ausgrauen gesehener Filme im Raster, Abgleich mit dem Letterboxd-Tagebuch (neue Datenquelle, entfällt), Vorladen der Daten beim Überfahren, Langdruck am Handy.
 
 ### Etappe K5: Abos und Benachrichtigungen (Benachrichtigungen gebaut 2026-11-18)
@@ -721,18 +722,18 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
 ### Etappe 13: Übersicht und Auswertung
 - [ ] Watchlist-Statistik über Zeit: Zugänge, weggeschaute Filme, Abdeckung je Dienst (braucht gespeicherte Scan-Stände aus Etappe 6).
 - [ ] „Staubfänger“: Filme, die lange auf der Liste stehen und seit Monaten verfügbar sind (die Reihenfolge gibt es seit Etappe 10).
-- [ ] Laufzeit-Summe der verfügbaren Filme je Dienst.
+- [x] Laufzeit-Summe der verfügbaren Filme je Dienst. (erledigt mit A1 und Stats-Seite: Spalte „Hours“, Abgleich 2026-11-18)
 - [ ] Eigene Schlagworte pro Film und Filter danach (unter „More filters“).
 
 ### Etappe 14: Bedienung
-- [ ] Listenansicht (kompakte, sortierbare Tabelle) neben der Kartenansicht. → K6
-- [ ] Gespeicherte Filter als Knöpfe. → K6
+- [x] Listenansicht (kompakte, sortierbare Tabelle) neben der Kartenansicht. → K6 (erledigt mit K6: Ansicht „Table“; Spalten nicht sortierbar, die Sortierung bleibt in der Leiste, Abgleich 2026-11-18)
+- [x] Gespeicherte Filter als Knöpfe. → K6 (erledigt mit K6: gespeicherte Ansichten als Chips, Abgleich 2026-11-18)
 - [x] (In Etappe 9k erledigt: „Sort & filter“.) Filter auf dem Handy einklappbar: mit „More filters“ (Etappe 9h) ist der Bereich nur noch 243 px hoch; erst nach einer Woche Nutzung entscheiden, ob noch nötig.
 - [ ] Favoriten-Status mit dem Letterboxd-Tagebuch abgleichen; gesehene Filme ausblenden. → K4
 - Helles Design und Farbwahl: entfällt (2026-11-17 entschieden: die App bleibt nur dunkel).
-- [ ] Tastatur-Bedienung: `/` Suche, `s` Shuffle, Pfeiltasten durch die Karten, `f` Favorit; nur wenn der Fokus nicht in einem Eingabefeld ist, Kürzel im `title` des Knopfs (ID #17). → K4 (mit den Kürzeln aus dem Gesamtkonzept)
-- [ ] „Nicht interessiert“: Film in der App ausblenden, ohne die Letterboxd-Watchlist zu ändern; eigener Filter unter „More filters“, um ihn wieder zu zeigen. → K4 („Not now“)
-- [ ] Erster Start: ohne Benutzernamen und ohne Watchlist-Datei öffnet die App die Einstellungsseite statt eines leeren Rasters. → K6 (Einrichtung)
+- [x] Tastatur-Bedienung: `/` Suche, `s` Shuffle, Pfeiltasten durch die Karten, `f` Favorit; nur wenn der Fokus nicht in einem Eingabefeld ist, Kürzel im `title` des Knopfs (ID #17). → K4 (mit den Kürzeln aus dem Gesamtkonzept) (erledigt mit K4: Kürzel nach dem Gesamtkonzept, `?` zeigt sie, Abgleich 2026-11-18)
+- [x] „Nicht interessiert“: Film in der App ausblenden, ohne die Letterboxd-Watchlist zu ändern; eigener Filter unter „More filters“, um ihn wieder zu zeigen. → K4 („Not now“) (erledigt mit K4: „Not now“ mit Filter „Also show films I set aside“, Abgleich 2026-11-18)
+- [x] Erster Start: ohne Benutzernamen und ohne Watchlist-Datei öffnet die App die Einstellungsseite statt eines leeren Rasters. → K6 (Einrichtung) (erledigt mit K6: Hinweiskasten auf Tonight statt Weiterleitung, Abgleich 2026-11-18)
 - Rückgängig nach dem Entfernen eines Favoriten steht jetzt in Etappe 9i.
 
 ### Etappe 15: Gemeinsam schauen
@@ -741,8 +742,8 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
 - Baut auf „Meine Abos“ aus Etappe 7 auf. Die Abstimmung ist ohne Anmeldung gedacht, also nur fürs Heimnetz.
 
 ### Etappe 16: Ausgabe und Benachrichtigung
-- [ ] Kalender-Feed (ICS) oder RSS mit „neu verfügbar“.
-- [ ] Wöchentliche Zusammenfassung per Mail oder ntfy. → K5
+- [x] Kalender-Feed (ICS) oder RSS mit „neu verfügbar“. (erledigt mit A6: `/calendar.ics` aus den Fristen; „neu verfügbar“ steht nicht darin, Abgleich 2026-11-18)
+- [x] Wöchentliche Zusammenfassung per Mail oder ntfy. → K5 (erledigt mit K5, Abgleich 2026-11-18)
 - [ ] Kleine API mit Dokumentation für Home Assistant oder Dashboards.
 - [ ] Startseiten-Kachel („heute neu / Tipp des Tages“) zum Einbetten in Homepage oder Homarr.
 - Baut auf Zeitplan und Historie auf.

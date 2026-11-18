@@ -53,6 +53,18 @@ def film_weight(film: dict, favorites: frozenset[str] = frozenset()) -> int:
     return 2 if (film.get("letterboxd_rating") or 0) >= GOOD_RATING else 1
 
 
+def service_counts(films: list[dict], subscriptions: list[str]) -> dict[str, tuple[int, int]]:
+    """For each own paid service: (watchable films, films only there). Free services are left out."""
+    free = mostly_free_from_scan(films, [])
+    counts = {}
+    for name in subscriptions:
+        if name in free:
+            continue
+        on = [film for film in films if _watchable(film, name)]
+        counts[name] = (len(on), sum(1 for film in on if only_on_my_services(film, subscriptions)))
+    return counts
+
+
 def overview(
     films: list[dict],
     subscriptions: list[str],
@@ -171,6 +183,32 @@ def overview(
             rent_only, key=lambda item: (-(item["letterboxd_rating"] or 0), item["title"] or "")
         ),
     }
+
+
+def other_countries(
+    offers: dict[str, dict[int, dict[str, list[str]]]], subscriptions: list[str], current: str, total: int
+) -> list[dict]:
+    """Where the same services show more of the watchlist: [{country, films, gain}] for countries that have
+    stored offers for at least half of the films, best first. `offers`: {country: {id: {provider: kinds}}}.
+    """
+    own = set(subscriptions)
+
+    def watchable(by_film: dict[int, dict[str, list[str]]]) -> int:
+        return sum(
+            1
+            for providers in by_film.values()
+            if any(name in own and WATCH_KINDS & set(kinds) for name, kinds in providers.items())
+        )
+
+    here = watchable(offers.get(current, {}))
+    found = []
+    for country, by_film in offers.items():
+        if country == current or total == 0 or len(by_film) * 2 < total:
+            continue
+        films = watchable(by_film)
+        if films > here:
+            found.append({"country": country, "films": films, "gain": films - here})
+    return sorted(found, key=lambda item: (-item["gain"], item["country"]))
 
 
 def plan_data(
