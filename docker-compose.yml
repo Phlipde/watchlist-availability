@@ -8,4 +8,11 @@ services:
       - ./data:/data
     environment:
       WATCHLIST_DATA_DIR: /data
+      # The values come from a .env file next to this file (never from the image).
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      LETTERBOXD_USERNAME: ${LETTERBOXD_USERNAME:-}
+      COUNTRY: ${COUNTRY:-DE}
+      TZ: ${TZ:-Europe/Berlin}
+      PUID: ${PUID:-99}
+      PGID: ${PGID:-100}
     restart: unless-stopped

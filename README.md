@@ -140,9 +140,15 @@ Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
 Deploy the application using the included Docker configuration:
 
 ```bash
-docker-compose up -d
-
+cp .env.example .env   # then put TMDB_API_KEY and LETTERBOXD_USERNAME into it
+docker compose up -d --build
 ```
+
+The container starts as root only to set up `/data`, then runs as `PUID`/`PGID` (default 99/100, Unraid's *nobody*/*users*). `/health` checks the database and the schedule; Docker uses it as the healthcheck. A backup of settings, favorites, history and the last scan is written once a day to `/data/backups/` (the newest 7 stay). To restore one, use *Settings → Restore backup* with the file.
+
+**Unraid:** build the image on the server (`docker build -t watchlist-availability .` from a clone of this repository, or add the repository as a build context), then add `unraid-template.xml` under *Docker → Add Container → Template*. Map `/data` to `/mnt/user/appdata/watchlist-availability`. Update: pull the repository, build again, recreate the container; the data stays in `/data`. GitHub builds and starts the image on every push (`.github/workflows/docker.yml`), so a broken image shows up there.
+
+**There is no login.** Run it in the home network only, or behind a reverse proxy that asks for a login; the proxy also gives you HTTPS, which installing the app as a PWA needs.
 
 #### Persistent Path Environment Variables
 

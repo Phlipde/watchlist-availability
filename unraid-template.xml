@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>watchlist-availability</Name>
+  <Repository>watchlist-availability:latest</Repository>
+  <Registry>https://github.com/</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Overview>Shows which films of your Letterboxd watchlist you can stream on your services. Build the image first (see README), then add this template. The app has no login: use it in the home network or behind a reverse proxy.</Overview>
+  <Category>MediaApp:Video</Category>
+  <WebUI>http://[IP]:[PORT:5000]/</WebUI>
+  <Config Name="Web UI port" Target="5000" Default="5000" Mode="tcp" Description="Port of the web page" Type="Port" Display="always" Required="true">5000</Config>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/watchlist-availability" Mode="rw" Description="Database, settings and the daily backups (backups/)" Type="Path" Display="always" Required="true">/mnt/user/appdata/watchlist-availability</Config>
+  <Config Name="TMDB API key" Target="TMDB_API_KEY" Default="" Mode="" Description="Free key from themoviedb.org" Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="Letterboxd user name" Target="LETTERBOXD_USERNAME" Default="" Mode="" Description="Whose public watchlist to read" Type="Variable" Display="always" Required="false"></Config>
+  <Config Name="Country" Target="COUNTRY" Default="DE" Mode="" Description="Two-letter country for the streaming offers" Type="Variable" Display="always" Required="false">DE</Config>
+  <Config Name="Time zone" Target="TZ" Default="Europe/Berlin" Mode="" Description="" Type="Variable" Display="advanced" Required="false">Europe/Berlin</Config>
+  <Config Name="User ID" Target="PUID" Default="99" Mode="" Description="Owner of the data files (Unraid: nobody = 99)" Type="Variable" Display="advanced" Required="false">99</Config>
+  <Config Name="Group ID" Target="PGID" Default="100" Mode="" Description="Group of the data files (Unraid: users = 100)" Type="Variable" Display="advanced" Required="false">100</Config>
+</Container>

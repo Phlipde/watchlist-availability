@@ -1,0 +1,36 @@
+name: Docker image
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t watchlist-availability .
+      - name: Start it without keys, as a new user would
+        run: |
+          mkdir data
+          docker run -d --name app -p 5000:5000 -v "$PWD/data:/data" -e PUID=1001 -e PGID=1001 watchlist-availability
+      - name: Wait until it is healthy, then ask the main pages
+        run: |
+          for i in $(seq 1 30); do
+            status=$(docker inspect --format '{{.State.Health.Status}}' app)
+            [ "$status" = "healthy" ] && break
+            sleep 2
+          done
+          docker logs app
+          test "$status" = "healthy"
+          curl -fsS http://127.0.0.1:5000/health
+          curl -fsS http://127.0.0.1:5000/ > /dev/null
+          curl -fsS http://127.0.0.1:5000/api/latest
+      - name: It does not run as root and keeps its data
+        run: |
+          test "$(docker exec app awk '/^Uid:/{print $2}' /proc/1/status)" = "1001"
+          ls -ln data | grep -q 1001
+          docker restart app
+          sleep 5
+          curl -fsS http://127.0.0.1:5000/health

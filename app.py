@@ -24,12 +24,20 @@ web_routes.register_routes(app, store=_STORE, settings=_SETTINGS, service=_SERVI
 
 # A scan that was running when the app stopped is closed and started again.
 _SERVICE.recover_interrupted()
+_SCHEDULER = None
 if os.getenv("WATCHLIST_DISABLE_SCHEDULER", "").lower() not in {"1", "true", "yes"}:
-    start_scheduler(_STORE, _SETTINGS, _SERVICE)
+    _SCHEDULER = start_scheduler(_STORE, _SETTINGS, _SERVICE)
 
 
 @app.get("/health")
 def health():
+    """For the Docker healthcheck: the database answers and, if there is a schedule, its thread is alive."""
+    try:
+        _STORE.list_jobs(limit=1)
+    except Exception:
+        return {"status": "database unavailable"}, 503
+    if _SCHEDULER is not None and not _SCHEDULER.is_alive():
+        return {"status": "schedule stopped"}, 503
     return {"status": "ok"}, 200
 
 
