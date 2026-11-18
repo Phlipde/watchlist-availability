@@ -264,7 +264,14 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             country=country,
             last_scan_at=scan["created"] if scan else None,
             deadlines=costs.upcoming_deadlines(settings.costs(country)),
-            costs=costs.overview(scan["results"] if scan else [], own, settings.costs(country)),
+            costs=costs.overview(
+                scan["results"] if scan else [],
+                own,
+                settings.costs(country),
+                len(scan["unavailable"]) if scan else 0,
+            ),
+            weekly_hours=settings.weekly_hours,
+            image_base_url=_TMDB_IMAGE_BASE_URL,
             logos=provider_logos(),
             logo_base_url=_TMDB_LOGO_BASE_URL,
         )

@@ -598,3 +598,28 @@ kbd { padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 4px
 .rec p { margin: 0 0 6px; }
 .rec .hint { margin: 0 0 8px; }
 .recs + .hint { margin-bottom: 18px; }
+
+/* Coverage of the watchlist: one bar in four parts. */
+.coverage { margin: 4px 0 18px; font: var(--fs-body) system-ui, sans-serif; }
+.coverage-text { margin: 0 0 8px; }
+.coverage-bar { display: flex; gap: 2px; height: 12px; overflow: hidden; border-radius: 999px; background: var(--line); }
+.coverage-bar .seg { display: block; min-width: 4px; }
+.seg-subscription { background: var(--accent); }
+.seg-free { background: oklch(70% 0.12 160); }
+.seg-rent { background: oklch(66% 0.07 250); }
+.seg-other { background: oklch(40% 0.01 160); }
+.coverage-bar .seg:hover, .coverage-bar .seg:focus-visible { filter: brightness(1.2); outline: none; }
+.coverage-key { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: var(--fs-small); }
+.key-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; }
+.cost-line { margin: 8px 0 0; font-variant-numeric: tabular-nums; }
+
+/* Only to rent: a row of small posters. */
+.rent-row { margin-top: 28px; }
+.rent-head { display: flex; align-items: baseline; justify-content: space-between; }
+.rent-track { display: flex; gap: 12px; margin: 8px 0 0; padding: 0 0 8px; overflow-x: auto; list-style: none; scroll-snap-type: x proximity; mask: linear-gradient(90deg, transparent, black 2% 96%, transparent); }
+.rent-track li { flex: 0 0 96px; scroll-snap-align: start; }
+.rent-track a { display: grid; gap: 4px; color: var(--ink); text-decoration: none; }
+.rent-track img, .rent-track .no-poster { width: 96px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .375rem; background: var(--panel); }
+.rent-title { color: var(--muted); font: var(--fs-small) system-ui, sans-serif; overflow-wrap: anywhere; }
+.rent-track a:hover .rent-title, .rent-track a:focus-visible .rent-title { color: var(--ink); }
+.rent-track a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

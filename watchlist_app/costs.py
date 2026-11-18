@@ -34,10 +34,18 @@ def catalog_name(name: str) -> str:
 
 
 def _label(film: dict) -> dict:
-    return {"key": film.get("key"), "title": film.get("title"), "year": film.get("year")}
+    return {
+        "key": film.get("key"),
+        "title": film.get("title"),
+        "year": film.get("year"),
+        "poster_path": film.get("poster_path"),
+        "letterboxd_rating": film.get("letterboxd_rating"),
+    }
 
 
-def overview(films: list[dict], subscriptions: list[str], costs: dict[str, dict]) -> dict:
+def overview(
+    films: list[dict], subscriptions: list[str], costs: dict[str, dict], unavailable: int = 0
+) -> dict:
     """What the costs page shows for the films of one scan.
 
     A film is "only here" when no other own service has it and no provider shows it
@@ -98,8 +106,10 @@ def overview(films: list[dict], subscriptions: list[str], costs: dict[str, dict]
         and any("rent" in kinds for kinds in film.get("providers", {}).values())
     ]
     cancel = loses_nothing or [item["name"] for item in ranked[:1]]
+    coverage = _coverage(films, subscriptions, free, unavailable)
     recommendations = _recommendations(services, cancel, bool(loses_nothing), book)
     return {
+        "coverage": coverage,
         "recommendations": recommendations,
         "services": services,
         "monthly_total": round(sum(item["price"] or 0 for item in services), 2),
@@ -112,7 +122,38 @@ def overview(films: list[dict], subscriptions: list[str], costs: dict[str, dict]
         "book": [{"name": name, "films": gain[0], "hours": round(gain[1] / 60)} for name, gain in book],
         "cancel": cancel,
         "cancel_loses_nothing": bool(loses_nothing),
-        "rent_only": sorted(rent_only, key=lambda item: item["title"] or ""),
+        "rent_only": sorted(
+            rent_only, key=lambda item: (-(item["letterboxd_rating"] or 0), item["title"] or "")
+        ),
+    }
+
+
+def _coverage(films: list[dict], subscriptions: list[str], free: frozenset[str], unavailable: int) -> dict:
+    """How much of the watchlist the own services cover: free, subscription, rent only, the rest."""
+    free_own = [name for name in subscriptions if name in free]
+    paid_own = [name for name in subscriptions if name not in free]
+    counts = {"free": 0, "subscription": 0, "rent": 0, "other": unavailable}
+    for film in films:
+        if any(_watchable(film, name) for name in free_own):
+            counts["free"] += 1
+        elif any(_watchable(film, name) for name in paid_own):
+            counts["subscription"] += 1
+        elif not any(WATCH_KINDS & set(kinds) for kinds in film.get("providers", {}).values()):
+            counts[
+                "rent" if any("rent" in kinds for kinds in film.get("providers", {}).values()) else "other"
+            ] += 1
+        else:
+            counts["other"] += 1  # on services the user does not have
+    total = sum(counts.values())
+    covered = counts["free"] + counts["subscription"]
+    return {
+        "total": total,
+        "covered": covered,
+        "percent": round(100 * covered / total) if total else 0,
+        "segments": [
+            {"id": key, "films": counts[key], "percent": round(100 * counts[key] / total, 1) if total else 0}
+            for key in ("subscription", "free", "rent", "other")
+        ],
     }
 
 

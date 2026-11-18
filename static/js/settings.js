@@ -19,6 +19,7 @@ form.addEventListener('submit', async event => {
         letterboxd_username: document.getElementById('letterboxd-username').value,
         country: country.value,
         scan_interval_hours: Number(document.getElementById('scan-interval').value),
+        weekly_hours: Number(document.getElementById('weekly-hours').value),
       }),
     });
     const data = await response.json().catch(() => ({}));

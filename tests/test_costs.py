@@ -76,6 +76,26 @@ class TestOverview:
         assert costs.overview(films, ["Netflix"], {})["recommendations"][0]["based_on"] == "count"
         assert costs.overview(FILMS, [], {})["recommendations"][0]["type"] == "subscribe"
 
+    def test_coverage_splits_the_watchlist_into_four_parts(self):
+        films = [
+            film("A", Arte=["free"]),
+            film("B", Netflix=["flatrate"]),
+            film("C", **{"Apple TV Store": ["rent"]}),
+            film("D", **{"Disney+": ["flatrate"]}),  # only on a service the user does not have
+        ]
+        coverage = costs.overview(films, ["Netflix", "Arte"], {}, unavailable=2)["coverage"]
+        counts = {item["id"]: item["films"] for item in coverage["segments"]}
+        assert counts == {"subscription": 1, "free": 1, "rent": 1, "other": 3}
+        assert (coverage["total"], coverage["covered"], coverage["percent"]) == (6, 2, 33)
+        assert costs.overview([], [], {})["coverage"]["percent"] == 0
+
+    def test_rent_only_films_come_best_rated_first(self):
+        films = [
+            {**film("Low", **{"Apple TV Store": ["rent"]}), "letterboxd_rating": 2.5},
+            {**film("High", **{"Apple TV Store": ["rent"]}), "letterboxd_rating": 4.1},
+        ]
+        assert [item["title"] for item in costs.overview(films, [], {})["rent_only"]] == ["High", "Low"]
+
     def test_only_on_my_services(self):
         assert costs.only_on_my_services(FILMS[1], ["Netflix", "MUBI"])
         assert not costs.only_on_my_services(FILMS[0], ["Netflix", "MUBI"])

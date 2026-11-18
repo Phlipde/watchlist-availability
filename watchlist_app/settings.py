@@ -7,6 +7,7 @@ from .store import Store
 
 # Shorter than a day would change nothing: a scan and its offers are reused for 24 hours.
 SCAN_INTERVALS_HOURS = (0, 24, 48, 168)
+DEFAULT_WEEKLY_HOURS = 5.0
 
 
 class AppSettings:
@@ -48,6 +49,15 @@ class AppSettings:
         except (TypeError, ValueError):
             return 0
 
+    @property
+    def weekly_hours(self) -> float:
+        """Hours of films the user watches in a week (for "your pace" on the subscriptions page)."""
+        try:
+            hours = float(self._store.get_setting("weekly_hours") or DEFAULT_WEEKLY_HOURS)
+        except (TypeError, ValueError):
+            return DEFAULT_WEEKLY_HOURS
+        return hours if 0.5 <= hours <= 80 else DEFAULT_WEEKLY_HOURS
+
     def loaded_providers(self) -> list[str]:
         """Display names of the providers loaded from TMDB, for all countries."""
         return sorted({providers.display_name(item["name"]) for item in self._store.provider_catalog()})
@@ -84,6 +94,7 @@ class AppSettings:
             "letterboxd_username": self.letterboxd_username or "",
             "country": self.country,
             "scan_interval_hours": self.scan_interval_hours,
+            "weekly_hours": self.weekly_hours,
             "subscriptions": self.subscriptions(),
             "tmdb_api_key_set": bool(self.tmdb_api_key),
         }
@@ -99,7 +110,7 @@ class AppSettings:
         restored = skipped = 0
         for key, value in stored.items():
             try:
-                if key in {"letterboxd_username", "country", "scan_interval_hours"}:
+                if key in {"letterboxd_username", "country", "scan_interval_hours", "weekly_hours"}:
                     self.update({key: value})
                 elif isinstance(key, str) and key.startswith("subscriptions:"):
                     country = key.split(":", 1)[1]
@@ -141,6 +152,14 @@ class AppSettings:
             if interval not in SCAN_INTERVALS_HOURS:
                 raise ValueError("Unsupported scan interval.")
             validated["scan_interval_hours"] = str(interval)
+        if "weekly_hours" in changes:
+            try:
+                hours = float(changes["weekly_hours"])
+            except (TypeError, ValueError):
+                raise ValueError("The film time per week must be a number of hours.") from None
+            if not 0.5 <= hours <= 80:
+                raise ValueError("The film time per week must be between 0.5 and 80 hours.")
+            validated["weekly_hours"] = str(round(hours, 1))
         # The subscriptions page edits any country without switching the app's country.
         country = changes.get("subscriptions_country") or validated.get("country", self.country)
         if country not in config.COUNTRIES:

@@ -275,6 +275,14 @@ class TestCosts:
         page = client.get("/subscriptions").get_data(as_text=True)
         assert 'data-service="MUBI"' in page and 'data-service="Netflix"' not in page
 
+    def test_film_time_per_week_is_checked_and_saved(self, client, settings):
+        assert settings.weekly_hours == 5.0
+        assert client.put("/api/settings", json={"weekly_hours": 7.5}).status_code == 200
+        assert settings.weekly_hours == 7.5
+        for bad in (0, 100, "lots"):
+            assert client.put("/api/settings", json={"weekly_hours": bad}).status_code == 400
+        assert settings.weekly_hours == 7.5
+
     def test_unknown_country_is_refused(self, client):
         answer = client.put("/api/settings", json={"subscriptions_country": "XX", "subscriptions": []})
         assert answer.status_code == 400

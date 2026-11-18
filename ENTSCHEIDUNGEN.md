@@ -56,3 +56,10 @@ Auftrag: Plan von oben nach unten abarbeiten, nach jedem Schritt prüfen, nach j
 - **[ENTSCHIEDEN]** „Open Y ↗“, „Plan it“, „Rent instead“, „Watch first“ entfallen (keine Daten dafür).
 - **[ENTSCHIEDEN]** Fristen nur ab heute (vergangene Daten erscheinen nicht im Banner); die Status-Seite listet sie weiter.
 - **[ERLEDIGT]** A2: Python 315, Browser-Test Banner; Seite im Browser angesehen.
+
+### A3 Abdeckung und Zeit
+- **[ENTSCHIEDEN]** Der vierte Balkenteil heißt „Not on your services“ (nicht „Not available“): er enthält auch Filme, die nur bei Diensten laufen, die der Nutzer nicht hat.
+- **[ENTSCHIEDEN]** Wochenzeit als Einstellung in Settings → General (Standard 5 h) statt eines Feldes auf der Abo-Seite.
+- **[ENTSCHIEDEN]** Poster-Reihe zeigt höchstens 24 Filme; „See all →“ öffnet die Watchlist mit `cost=rent`.
+- **[ERLEDIGT]** A3: Python 318, im Browser angesehen.
+- **[FEHLER]** (nach A3) Zwei Tastatur-Tests (drei Tab-Stopps, Fokus nach Favorit) schlugen im vollen Browser-Lauf zufällig fehl. Wahrscheinliche Ursache: `loadFavorites` holte Favoriten und Flags nacheinander, das spätere Neuzeichnen nahm dem Test den Fokus. Behoben durch gleichzeitiges Laden (`Promise.all`); danach 3 von 3 vollen Läufen grün (Ursache nicht anders bewiesen). Der frühere Eintrag [OFFEN] zu `three_stops` gilt damit als behoben.

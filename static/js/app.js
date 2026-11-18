@@ -577,10 +577,13 @@ const state = createAppState();
       pollScan();
     }
     async function loadFavorites() {
-      const response = await fetch('/api/favorites');
+      // Both requests at once: the page redraws when they are in, and a later redraw steals the keyboard focus.
+      const [response, flags] = await Promise.all([
+        fetch('/api/favorites'),
+        fetch('/api/flags').then(answer => (answer.ok ? answer.json() : []), () => []),
+      ]);
       const favorites = await response.json();
       state.favorites = new Map(favorites.map(movie => [movie.key, movie]));
-      const flags = await fetch('/api/flags').then(answer => (answer.ok ? answer.json() : []), () => []);
       state.flags = new Map(flags.map(entry => [entry.key, entry]));
     }
     // Watched / Not now from the card menu, the details and the keys; "Undo" puts the film back for five seconds.

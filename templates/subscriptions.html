@@ -6,7 +6,7 @@
   <title>Subscriptions · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261118-15') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261118-17') }}" rel="stylesheet">
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -17,6 +17,17 @@
     <div class="deadline-banner" id="deadline-banner" role="status" hidden data-deadlines="{{ deadlines|tojson|forceescape }}"></div>
     {% if not last_scan_at %}<p class="meta">No scan for {{ country }} yet; the film counts appear after the first scan.</p>{% endif %}
 
+    {% if costs.coverage.total %}
+    <section class="coverage" aria-labelledby="coverage-heading">
+      <h2 class="visually-hidden" id="coverage-heading">Coverage of your watchlist</h2>
+      <p class="coverage-text"><strong>{{ costs.coverage.percent }} %</strong> of your watchlist is watchable without extra cost ({{ costs.coverage.covered }} of {{ costs.coverage.total }}).</p>
+      <div class="coverage-bar" role="img" aria-label="{{ costs.coverage.percent }} percent covered">
+        {% for segment in costs.coverage.segments if segment.films %}{% set label = {'subscription': 'Subscriptions', 'free': 'Free', 'rent': 'Rent only', 'other': 'Not on your services'}[segment.id] %}{% set link = {'subscription': '/watchlist?cost=subscription', 'free': '/watchlist?cost=free', 'rent': '/watchlist?cost=rent', 'other': '/watchlist?unavailable=1'}[segment.id] %}<a class="seg seg-{{ segment.id }}" style="flex: {{ segment.films }}" href="{{ link }}" title="{{ label }}: {{ segment.films }} films ({{ segment.percent|round(0)|int }} %)"><span class="visually-hidden">{{ label }}: {{ segment.films }} films</span></a>{% endfor %}
+      </div>
+      <ul class="coverage-key">{% for segment in costs.coverage.segments if segment.films %}<li><span class="key-dot seg-{{ segment.id }}" aria-hidden="true"></span>{{ {'subscription': 'Subscriptions', 'free': 'Free', 'rent': 'Rent only', 'other': 'Not on your services'}[segment.id] }} {{ segment.percent|round(0)|int }} %</li>{% endfor %}</ul>
+      <p class="meta cost-line">{% if costs.monthly_total %}€ <span data-money>{{ '%.2f'|format(costs.monthly_total) }}</span> / month · € <span data-money>{{ '%.2f'|format(costs.yearly_total) }}</span> / year{% else %}<button class="film-link add-price" type="button">Add prices</button> to see what your services cost{% endif %}</p>
+    </section>
+    {% endif %}
     {% if costs.recommendations %}
     <h2 class="h4" id="recs-heading">Recommendations</h2>
     <div class="recs" aria-labelledby="recs-heading">
@@ -52,6 +63,7 @@
             <th scope="col" class="num"><button class="sort-head" type="button" data-sort="films">Watchlist</button> {{ info('Watchlist films you can watch on this service without paying per film.') }}</th>
             <th scope="col" class="num"><button class="sort-head" type="button" data-sort="only" aria-sort="descending">Only here</button> {{ info('Films none of your other services has and no service shows for free: you lose them when you cancel.') }}</th>
             <th scope="col" class="num"><button class="sort-head" type="button" data-sort="hours">Hours</button> {{ info('Running time of the films only here.') }}</th>
+            <th scope="col" class="num">Your pace {{ info('Hours only here divided by the film time you set per week (Settings): how long these films keep you busy.') }}</th>
             <th scope="col" class="num"><button class="sort-head" type="button" data-sort="perfilm">€ / film</button> {{ info('Price divided by the films only here: what one film you would lose costs you each month.') }}</th>
           </tr>
         </thead>
@@ -64,11 +76,12 @@
             <td class="num" data-label="Watchlist">{{ service.films }}</td>
             <td class="num" data-label="Only here">{% if service.only_here %}<details class="only-here"><summary>{{ service.only_here|length }}</summary><ul>{% for film in service.only_here %}<li>{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</li>{% endfor %}</ul></details>{% else %}0{% endif %}</td>
             <td class="num" data-label="Hours">{% if service.only_here %}{{ service.hours|round(0)|int }} h{% else %}–{% endif %}</td>
+            <td class="num" data-label="Your pace">{% if service.only_here %}{% set weeks = service.hours / weekly_hours %}{% if weeks >= 4.345 %}≈ {{ (weeks / 4.345)|round(0)|int }} mo{% else %}≈ {{ [weeks|round(0)|int, 1]|max }} wk{% endif %}{% else %}–{% endif %}</td>
             <td class="num per-film" data-label="€ / film">{% if service.per_film is not none %}<span data-money>{{ '%.2f'|format(service.per_film) }}</span>{% elif service.only_here %}<button class="film-link add-price" type="button">add price</button>{% else %}–{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>
-        <tfoot><tr><th scope="row" colspan="2">Total <span class="totals">€ <span data-money id="total-month">{{ '%.2f'|format(costs.monthly_total) }}</span> / month · € <span data-money id="total-year">{{ '%.2f'|format(costs.yearly_total) }}</span> / year</span></th><td colspan="5"><span class="feedback" id="save-state" role="status"></span></td></tr></tfoot>
+        <tfoot><tr><th scope="row" colspan="2">Total <span class="totals">€ <span data-money id="total-month">{{ '%.2f'|format(costs.monthly_total) }}</span> / month · € <span data-money id="total-year">{{ '%.2f'|format(costs.yearly_total) }}</span> / year</span></th><td colspan="6"><span class="feedback" id="save-state" role="status"></span></td></tr></tfoot>
       </table>
     </div>
     <p class="hint" id="price-hint" hidden>Add the prices to see what the services cost and what a lost film costs you. <button class="film-link add-price" type="button">Add a price</button></p>
@@ -84,12 +97,14 @@
     <p class="meta">No services chosen for {{ country }} yet. <a href="/settings/services">Choose your services</a>.</p>
     {% endif %}
 
-    <h2 class="h4 mt-4">Only to rent ({{ costs.rent_only|length }})</h2>
-    {% if costs.rent_only %}
-    <ul class="meta">{% for film in costs.rent_only %}<li>{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</li>{% endfor %}</ul>
-    {% else %}<p class="meta">No film is only available to rent.</p>{% endif %}
+    <section class="rent-row" aria-labelledby="rent-heading">
+      <div class="rent-head"><h2 class="h4" id="rent-heading">Only to rent <span class="row-count">{{ costs.rent_only|length }}</span></h2>{% if costs.rent_only %}<a class="film-link" href="/watchlist?cost=rent">See all <span aria-hidden="true">→</span></a>{% endif %}</div>
+      {% if costs.rent_only %}
+      <ul class="rent-track">{% for film in costs.rent_only[:24] %}<li><a href="/watchlist?film={{ film.key|urlencode }}"{% if not film.key %} hidden{% endif %}>{% if film.poster_path %}<img src="{{ image_base_url }}{{ film.poster_path }}" alt="" loading="lazy">{% else %}<span class="no-poster" aria-hidden="true">No poster</span>{% endif %}<span class="rent-title">{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</span></a></li>{% endfor %}</ul>
+      {% else %}<p class="meta">No film is only available to rent.</p>{% endif %}
+    </section>
   </main>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261118-15') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261118-15') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261118-17') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261118-17') }}" type="module"></script>
 </body>
 </html>
