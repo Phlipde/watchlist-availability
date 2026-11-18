@@ -170,6 +170,12 @@ The app is a PWA: over https (or on localhost) your browser offers to install it
 
 *Settings → Notifications* sends messages to ntfy, Gotify or a webhook: a favorite left your services, a renewal date is 3 and 1 day away, a Friday summary, optionally every new film. At most one message a day, none between 22:00 and 08:00. `GET /api/sensors` returns numbers for a Home Assistant REST sensor (`new_on_my_services`, `gone_from_my_services`, `next_subscription_deadline`, `watchlist_coverage`, `films_available`).
 
+#### Start-page tile, RSS and the small API
+
+- `GET /tile`: a small page for Homepage or Homarr (iframe): new this week on your services and a pick of the day (a well-rated film on your services that is not marked watched or "not now"; the same all day).
+- `GET /feed.xml`: RSS feed of films that became watchable on your services in the last 30 days.
+- `GET /api/latest` the last scan, `GET /api/sensors` numbers for Home Assistant, `GET /calendar.ics` renewal dates, `GET /api/flags` watched and "not now" marks, `GET /api/backup` a full backup, `GET /health` for a container check. Writing calls (`PUT /api/settings`, `PUT /api/flags/<key>`) refuse requests from other sites.
+
 #### Security
 
 The app has no login; run it only in your home network or behind a reverse proxy with authentication. Changing requests (scan, settings, favorites, backup restore, match corrections) are refused when another web site makes the browser send them, so a page you visit cannot change your data. Tools without a browser (command line, `curl`, Home Assistant) are not affected. A restored backup is checked field by field; entries that do not fit are skipped and counted.

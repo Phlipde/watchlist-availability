@@ -12,6 +12,7 @@ from flask import Flask, Response, jsonify, make_response, redirect, render_temp
 from watchlist_app import (
     calendar,
     costs,
+    feed,
     letterboxd,
     matches,
     notifications,
@@ -553,6 +554,24 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         """The dates entered on the subscriptions page, for a calendar app to subscribe to."""
         body = calendar.build_ics({country: settings.costs(country) for country in COUNTRIES})
         return Response(body, mimetype="text/calendar", headers={"Cache-Control": "no-store"})
+
+    @app.get("/feed.xml")
+    def rss_feed():
+        """Films that became watchable on the own services in the last 30 days, for a feed reader."""
+        changes = store.recent_changes(settings.country, time.time() - 30 * 24 * 3600)
+        body = feed.build_rss(changes, request.host_url.rstrip("/"), set(settings.subscriptions()))
+        return Response(body, mimetype="application/rss+xml", headers={"Cache-Control": "no-store"})
+
+    @app.get("/tile")
+    def tile():
+        """A small page for Homepage or Homarr to embed: new this week and the pick of the day."""
+        scan = store.latest_scan(settings.country)
+        own = settings.subscriptions()
+        week = store.recent_changes(settings.country, time.time() - 7 * 24 * 3600)
+        new = [c for c in week if c["change"] == "added" and c["provider"] in own]
+        hidden = {flag["key"] for flag in store.list_flags()}
+        pick = feed.pick_of_the_day(scan["results"] if scan else [], own, hidden, time.strftime("%Y-%m-%d"))
+        return render_template("tile.html", new=new[:5], new_total=len(new), pick=pick)
 
     @app.get("/api/sensors")
     def sensors():

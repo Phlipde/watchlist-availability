@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Watchlist tile</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; padding: 12px 14px; background: oklch(20% 0.01 160); color: oklch(92% 0.01 160); font: .875rem/1.45 system-ui, sans-serif; }
+    h2 { margin: 0 0 4px; font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: oklch(72% 0.02 160); }
+    h2 + * { margin-top: 0; }
+    section + section { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgb(255 255 255 / .12); }
+    ul { margin: 0; padding: 0; list-style: none; }
+    a { color: inherit; text-decoration-color: oklch(78% 0.15 75); text-underline-offset: 3px; }
+    .service { color: oklch(72% 0.02 160); }
+    p { margin: 0; }
+  </style>
+</head>
+<body>
+  <section>
+    <h2>New this week</h2>
+    {% if new %}
+    <ul>{% for item in new %}<li><a href="/watchlist" target="_blank" rel="noopener">{{ item.title }}{% if item.year %} ({{ item.year }}){% endif %}</a> <span class="service">on {{ item.provider }}</span></li>{% endfor %}</ul>
+    {% if new_total > new|length %}<p class="service">and {{ new_total - new|length }} more</p>{% endif %}
+    {% else %}<p class="service">Nothing new on your services.</p>{% endif %}
+  </section>
+  <section>
+    <h2>Pick of the day</h2>
+    {% if pick %}<p><a href="/watchlist" target="_blank" rel="noopener">{{ pick.title }}{% if pick.year %} ({{ pick.year }}){% endif %}</a>{% if pick.rating %} <span class="service">· {{ '%.1f'|format(pick.rating) }}</span>{% endif %}</p>
+    {% else %}<p class="service">No film to suggest yet.</p>{% endif %}
+  </section>
+</body>
+</html>

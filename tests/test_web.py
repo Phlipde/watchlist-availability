@@ -700,3 +700,49 @@ class TestFirstStart:
         assert "Set up in a minute" in page and "Letterboxd user name" in page
         settings.update({"letterboxd_username": "someone"})
         assert "Set up in a minute" not in client.get("/").get_data(as_text=True)
+
+
+class TestFeedAndTile:
+    def _scan(self, store, settings):
+        settings.update({"subscriptions": ["Netflix"]})
+        store.save_scan(
+            "DE",
+            "letterboxd",
+            None,
+            [
+                {
+                    "key": "1",
+                    "title": "Heat & Co",
+                    "year": 1995,
+                    "rating": 8.0,
+                    "providers": {"Netflix": ["flatrate"]},
+                },
+                {
+                    "key": "2",
+                    "title": "Alien",
+                    "year": 1979,
+                    "rating": 8.4,
+                    "providers": {"MUBI": ["flatrate"]},
+                },
+            ],
+            [],
+            {},
+        )
+        store.add_changes(
+            "DE",
+            [{"film_key": "1", "title": "Heat & Co", "year": 1995, "provider": "Netflix", "change": "added"}],
+        )
+
+    def test_rss_lists_new_films_on_own_services_and_escapes_text(self, client, store, settings):
+        self._scan(store, settings)
+        response = client.get("/feed.xml")
+        assert response.mimetype == "application/rss+xml"
+        assert "Heat &amp; Co (1995) is now on Netflix" in response.get_data(as_text=True)
+
+    def test_tile_shows_the_new_film_and_a_pick_on_own_services(self, client, store, settings):
+        self._scan(store, settings)
+        html = client.get("/tile").get_data(as_text=True)
+        assert "Heat &amp; Co" in html and "Alien" not in html  # Alien is not on an own service
+
+    def test_tile_without_a_scan_is_still_a_page(self, client):
+        assert "No film to suggest yet." in client.get("/tile").get_data(as_text=True)
