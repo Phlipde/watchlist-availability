@@ -56,3 +56,5 @@ htmlcov/
 # graphify knowledge graph (rebuilt with: graphify update .)
 graphify-out/
 .claude/settings.json.graphify-bak
+
+.claude-flow/cost/
