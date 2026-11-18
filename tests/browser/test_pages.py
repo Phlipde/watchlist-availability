@@ -936,3 +936,14 @@ def test_views_switch_between_grid_compact_and_table(app_server, page):
     expect(page.locator("#results.view-compact article.film").first).to_be_visible()
     page.locator("#view-switch label[title=Grid]").click()
     expect(page.locator("#results.view-compact")).to_have_count(0)
+
+
+def test_details_have_one_main_button_and_people_are_search_links(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    page.locator("article.film .film-open").first.click()
+    expect(page.locator("#film-details-title")).to_be_visible()
+    assert page.locator("#film-details-content .btn-accent").count() <= 1  # only the main button is amber
+    for link in page.locator("#film-details-content .film-modal-credits a").all():
+        assert "/watchlist?q=" in link.get_attribute("href")

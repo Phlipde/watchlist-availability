@@ -731,3 +731,18 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 /* The details: one main button over the full width, the rest as a grid of small buttons. */
 .film-modal-primary { grid-column: 1 / -1; min-height: 44px; white-space: normal; text-align: center; }
 .film-modal-ratings { margin: -4px 0 8px; color: var(--ink); font: 600 var(--fs-body) system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+
+/* The top of the details: the backdrop with a small poster over its lower edge; the title stays in the header. */
+.film-hero { position: relative; margin: -16px -16px 28px; aspect-ratio: 16 / 9; background: var(--panel); }
+.film-hero-backdrop { display: block; width: 100%; height: 100%; object-fit: cover; }
+.film-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, var(--surface-raised), transparent 55%); pointer-events: none; }
+.film-hero-poster { position: absolute; left: 16px; bottom: -22px; z-index: 2; width: 80px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .375rem; border: 1px solid var(--line-strong); box-shadow: 0 6px 20px rgb(0 0 0 / .5); }
+.hero-play { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; width: 100%; border: 0; background: transparent; color: #fff; font-size: 2.5rem; cursor: pointer; }
+.hero-play i { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: rgb(0 0 0 / .55); }
+.hero-play:hover i, .hero-play:focus-visible i { background: var(--accent); color: var(--on-accent); }
+.hero-play:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+.film-modal-layout { grid-template-columns: 1fr; }
+.film-modal-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+.chip-link { padding: 3px 10px; border: 1px solid var(--line-field); border-radius: 999px; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; text-decoration: none; }
+.chip-link:hover, .chip-link:focus-visible { color: var(--ink); border-color: var(--line-strong); }
+@media (pointer: coarse) { .chip-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; } }
