@@ -991,3 +991,16 @@ def test_a_failed_scan_says_what_is_wrong_and_offers_to_try_again(app_server, pa
     page.locator("#sync-toggle").click()  # close the sync panel: it covers the banner
     page.locator("#state-retry").click()
     expect(page.locator("#state-banner")).to_be_hidden(timeout=15000)
+
+
+def test_details_actions_sit_in_one_row_with_a_clear_main_button(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    tick_all_services(page)
+    page.locator('article.film[data-key="348"] .film-open').click()
+    toolbar = page.locator("#film-details-content .film-modal-toolbar .btn")
+    expect(toolbar).to_have_count(6)
+    tops = toolbar.evaluate_all("buttons => buttons.map(b => Math.round(b.getBoundingClientRect().top))")
+    assert len(set(tops)) == 1  # one row, nothing wraps
+    expect(page.get_by_role("button", name="Mark as watched")).to_be_visible()

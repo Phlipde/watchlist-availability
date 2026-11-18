@@ -684,9 +684,9 @@ const state = createAppState();
       if (hadFocus) results.querySelector(`.film[data-key="${CSS.escape(key)}"] .favorite`)?.focus();
       document.querySelectorAll(`.modal-favorite[data-key="${CSS.escape(key)}"]`).forEach(modalButton => {
         const active = state.favorites.has(key);
-        modalButton.innerHTML = `<i class="ti ${active ? 'ti-heart-filled' : 'ti-heart'}" aria-hidden="true"></i> ${favoriteLabel(active)}`;
-        modalButton.classList.toggle('btn-accent', active);
-        modalButton.classList.toggle('btn-outline-secondary', !active);
+        modalButton.innerHTML = `<i class="ti ${active ? 'ti-heart-filled' : 'ti-heart'}" aria-hidden="true"></i><span class="btn-label"> ${favoriteLabel(active)}</span>`;
+        modalButton.title = favoriteLabel(active);
+        modalButton.setAttribute('aria-pressed', String(active));
         modalButton.disabled = false;
       });
     }
@@ -777,8 +777,14 @@ const state = createAppState();
       const country = document.getElementById('country-select').value;
       // One main button: the way to watch it that costs least on a service of yours.
       const cheapest = Object.entries(offers).filter(([name]) => own.has(name)).map(([name, kinds]) => [name, ['free', 'ads', 'flatrate'].find(kind => kinds.includes(kind))]).filter(([, kind]) => kind).sort((a, b) => ['free', 'ads', 'flatrate'].indexOf(a[1]) - ['free', 'ads', 'flatrate'].indexOf(b[1]) || a[0].localeCompare(b[0]))[0];
-      const primaryText = cheapest ? `Where to watch on ${escapeHtml(cheapest[0])}${cheapest[1] === 'free' ? ' (free)' : cheapest[1] === 'ads' ? ' (with ads)' : ''}` : 'Where to watch';
-      const watchLink = film.tmdb_url ? `<a class="btn btn-accent film-modal-primary" href="${escapeHtml(`${film.tmdb_url}/watch?locale=${encodeURIComponent(country)}`)}" target="_blank" rel="noreferrer"><i class="ti ti-player-play" aria-hidden="true"></i> ${primaryText}</a>` : '';
+      const logoPath = cheapest ? window.WATCHLIST_CONFIG.providerLogos[cheapest[0]] : '';
+      const primaryText = cheapest
+        ? `${logoPath ? `<img class="provider-logo" src="${escapeHtml(window.WATCHLIST_CONFIG.logoBaseUrl + logoPath)}" alt="">` : ''}<span>Watch on ${escapeHtml(cheapest[0])} · ${cheapest[1] === 'free' ? 'Free' : cheapest[1] === 'ads' ? 'Free with ads' : 'Included'}</span><span class="own-badge">Your service</span>`
+        : 'Where to watch';
+      const seenLabel = state.flags.get(key)?.flag === 'watched' || state.favorites.get(key)?.status === 'watched' ? 'Not watched after all' : 'Mark as watched';
+      const hideLabel = hiddenKeys().has(key) ? 'Bring back' : 'Not now (30 days)';
+      const compareLabel = state.compareKeys.has(key) ? 'Remove from comparison' : 'Add to comparison';
+      const watchLink = film.tmdb_url ? `<a class="btn btn-accent film-modal-primary" href="${escapeHtml(`${film.tmdb_url}/watch?locale=${encodeURIComponent(country)}`)}" target="_blank" rel="noreferrer">${cheapest ? '' : '<i class="ti ti-player-play" aria-hidden="true"></i> '}${primaryText}</a>` : '';
       const savedFavorite = state.favorites.get(key);
       // Other films of the same series on the watchlist, oldest first.
       const series = film.collection
@@ -803,7 +809,7 @@ const state = createAppState();
       const favoriteButtonClass = 'btn-outline-secondary';  // only the main button is amber
       const selectedForCompare = state.compareKeys.has(key);
       // Where to watch comes first: the own services and the actions, then the story and the rest.
-      document.getElementById('film-details-content').innerHTML = `${hero}<div class="film-modal-layout"><div><p class="film-modal-meta">${[numberText(film.year, 'Year unknown'), runtimeText(film.runtime), film.certification ? `rated ${escapeHtml(film.certification)}` : ''].filter(Boolean).join(' · ')}</p>${numberText(film.letterboxd_rating) || numberText(film.rating) ? `<p class="film-modal-ratings">${[numberText(film.letterboxd_rating) ? `Letterboxd ★ ${Number(film.letterboxd_rating).toFixed(1)}` : '', numberText(film.rating) ? `TMDB ${Number(film.rating).toFixed(1)}${film.vote_count ? ` (${Number(film.vote_count).toLocaleString()} votes)` : ''}` : ''].filter(Boolean).join(' · ')}</p>` : ''}<div class="film-modal-watch">${providerRows || '<p class="empty">No service data available.</p>'}${changeBadgesFor(film, state.selected) ? `<p class="provider-changes">${changeBadgesFor(film, state.selected)}</p>` : ''}</div><div class="film-modal-actions">${watchLink}<button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}"><i class="ti ${state.favorites.has(key) ? 'ti-heart-filled' : 'ti-heart'}" aria-hidden="true"></i> ${favoriteLabel(state.favorites.has(key))}</button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-columns-gap" aria-hidden="true"></i> ${selectedForCompare ? 'Remove from comparison' : 'Add to comparison'}</button><button class="btn btn-sm btn-outline-secondary modal-flag" type="button" data-flag="watched" data-key="${escapeHtml(key)}"><i class="ti ti-check" aria-hidden="true"></i> ${state.flags.get(key)?.flag === 'watched' || savedFavorite?.status === 'watched' ? 'Not watched after all' : 'Mark as watched'}</button><button class="btn btn-sm btn-outline-secondary modal-flag" type="button" data-flag="not_now" data-key="${escapeHtml(key)}"><i class="ti ti-eye-off" aria-hidden="true"></i> ${hiddenKeys().has(key) ? 'Bring back' : 'Not now (30 days)'}</button></div></div></div><div class="film-modal-about"><p>${escapeHtml(film.overview || 'No description available.')}</p><p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p>${releaseLine}${credits}${seriesLine}${similarLine}<p class="film-modal-elsewhere" id="film-elsewhere" hidden></p>${keywords}<p class="film-modal-links">${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb" aria-hidden="true"></i> TMDB</a>` : ''}${trailerLink}<a class="film-link" href="${letterboxdSearch}" target="_blank" rel="noreferrer"><i class="ti ti-device-tv" aria-hidden="true"></i> Search Letterboxd</a></p></div><div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${savedFavorite ? favoriteFields(key, film.title, savedFavorite) : ''}</div>`;
+      document.getElementById('film-details-content').innerHTML = `${hero}<div class="film-modal-layout"><div><p class="film-modal-meta">${[numberText(film.year, 'Year unknown'), runtimeText(film.runtime), film.certification ? (film.certification === '0' ? 'all ages' : `rated ${escapeHtml(film.certification)}`) : ''].filter(Boolean).join(' · ')}</p>${numberText(film.letterboxd_rating) || numberText(film.rating) ? `<p class="film-modal-ratings">${[numberText(film.letterboxd_rating) ? `Letterboxd ★ ${Number(film.letterboxd_rating).toFixed(1)}` : '', numberText(film.rating) ? `TMDB ${Number(film.rating).toFixed(1)}${film.vote_count ? ` (${Number(film.vote_count).toLocaleString()} votes)` : ''}` : ''].filter(Boolean).join(' · ')}</p>` : ''}<div class="film-modal-watch">${providerRows || '<p class="empty">No service data available.</p>'}${changeBadgesFor(film, state.selected) ? `<p class="provider-changes">${changeBadgesFor(film, state.selected)}</p>` : ''}</div><div class="film-modal-actions">${watchLink}<div class="film-modal-toolbar" role="group" aria-label="Actions"><button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}" aria-pressed="${state.favorites.has(key)}" title="${favoriteLabel(state.favorites.has(key))}"><i class="ti ${state.favorites.has(key) ? 'ti-heart-filled' : 'ti-heart'}" aria-hidden="true"></i><span class="btn-label"> ${favoriteLabel(state.favorites.has(key))}</span></button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}" title="${compareLabel}"><i class="ti ti-layout-columns" aria-hidden="true"></i><span class="btn-label"> ${compareLabel}</span></button><button class="btn btn-sm btn-outline-secondary modal-flag" type="button" data-flag="watched" data-key="${escapeHtml(key)}" title="${seenLabel}"><i class="ti ti-check" aria-hidden="true"></i><span class="btn-label"> ${seenLabel}</span></button><button class="btn btn-sm btn-outline-secondary modal-flag" type="button" data-flag="not_now" data-key="${escapeHtml(key)}" title="${hideLabel}"><i class="ti ti-eye-off" aria-hidden="true"></i><span class="btn-label"> ${hideLabel}</span></button><a class="btn btn-sm btn-outline-secondary" href="${letterboxdSearch}" target="_blank" rel="noreferrer" title="Search on Letterboxd"><i class="ti ti-device-tv" aria-hidden="true"></i><span class="btn-label"> Search on Letterboxd</span></a><button class="btn btn-sm btn-outline-secondary modal-share" type="button" title="Copy the link to this film"><i class="ti ti-share" aria-hidden="true"></i><span class="btn-label"> Share</span></button></div></div></div></div><div class="film-modal-about"><p class="film-modal-overview${(film.overview || '').length > 220 ? ' clamped' : ''}" id="film-overview">${escapeHtml(film.overview || 'No description available.')}</p>${(film.overview || '').length > 220 ? '<button class="film-link overview-more" type="button" aria-expanded="false" aria-controls="film-overview">more</button>' : ''}<p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p>${releaseLine}${credits}${seriesLine}${similarLine}<p class="film-modal-elsewhere" id="film-elsewhere" hidden></p>${keywords}<p class="film-modal-links">${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb" aria-hidden="true"></i> TMDB</a>` : ''}${trailerLink}</p></div><div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${savedFavorite ? favoriteFields(key, film.title, savedFavorite) : ''}</div>`;
       if (film.tmdb_id) showElsewhere(film.tmdb_id, key, own);
       const detailsOpen = document.getElementById('film-details-modal').classList.contains('show');
       openModal('film-details-modal', opener);
@@ -928,7 +934,18 @@ const state = createAppState();
       if (compareButton) {
         const key = compareButton.dataset.key;
         setCompared(key, !state.compareKeys.has(key));
-        compareButton.innerHTML = `<i class="ti ti-columns-gap" aria-hidden="true"></i> ${state.compareKeys.has(key) ? 'Remove from comparison' : 'Add to comparison'}`;
+        const label = state.compareKeys.has(key) ? 'Remove from comparison' : 'Add to comparison';
+        compareButton.innerHTML = `<i class="ti ti-layout-columns" aria-hidden="true"></i><span class="btn-label"> ${label}</span>`;
+        compareButton.title = label;
+      }
+      if (event.target.closest('.modal-share')) {
+        navigator.clipboard?.writeText(location.href).then(() => showToast('Link copied.'), () => showToast('Could not copy the link.', true));
+      }
+      const more = event.target.closest('.overview-more');
+      if (more) {
+        const clamped = document.getElementById('film-overview').classList.toggle('clamped');
+        more.textContent = clamped ? 'more' : 'less';
+        more.setAttribute('aria-expanded', String(!clamped));
       }
     });
     results.addEventListener('change', event => {
