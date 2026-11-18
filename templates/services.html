@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My services · Settings · Watchlist Availability</title>
+  <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261118-5') }}" rel="stylesheet">
+</head>
+<body>
+  {% include "partials/header.html" %}
+  <main class="page">
+    <h1 class="page-title">Settings</h1>
+    {% include "partials/settings-nav.html" %}
+    <p class="hint">The services you pay for or use for free in {{ country }}. Every page works from this list; the filter on the watchlist can only narrow it for a moment. Changes are saved as you tick.</p>
+    <input class="form-control mb-3" id="services-find" type="search" placeholder="Find a service…" aria-label="Find a service">
+    <div id="services-sections" data-country="{{ country }}">
+      {% for title, names, opened in sections %}
+      <details class="settings-group" data-section="{{ title }}"{% if opened %} open{% endif %}>
+        <summary>{{ title }} <span class="pill pill-neutral">{{ names|length }}</span></summary>
+        <ul class="service-list">
+          {% for name in names %}<li><label class="service-row"><input type="checkbox" value="{{ name }}"{% if name in selected %} checked{% endif %}>{% if logos.get(name) %}<img class="provider-logo" src="{{ logo_base_url }}{{ logos[name] }}" alt="" loading="lazy">{% else %}<span class="provider-logo"></span>{% endif %}<span class="service-name">{{ name }}</span><span class="option-count">{{ counts.get(name, 0) }}</span></label></li>{% endfor %}
+        </ul>
+      </details>
+      {% endfor %}
+    </div>
+    <div class="toast-bar" id="toast" role="status" hidden><span id="toast-text"></span><button class="film-link" id="toast-undo" type="button" hidden>Undo</button></div>
+  </main>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261118-5') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/services.js', v='20261118-5') }}" type="module"></script>
+</body>
+</html>

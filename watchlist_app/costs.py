@@ -1,6 +1,7 @@
 """Subscription costs: price per film, what cancelling loses, what to book next, rent-only films."""
 
 import datetime
+import re
 from typing import Any
 
 from .providers import mostly_free_from_scan
@@ -27,6 +28,11 @@ def mark_only_on_my_services(films: list[dict], subscriptions: list[str]) -> lis
     return [{**film, "only_on_my_services": only_on_my_services(film, subscriptions)} for film in films]
 
 
+def catalog_name(name: str) -> str:
+    """The main service of an Amazon Channel: "HBO Max Amazon Channel" shows the same films as "HBO Max"."""
+    return re.sub(r"\s+Amazon channels?$", "", name, flags=re.IGNORECASE)
+
+
 def _label(film: dict) -> dict:
     return {"key": film.get("key"), "title": film.get("title"), "year": film.get("year")}
 
@@ -37,10 +43,18 @@ def overview(films: list[dict], subscriptions: list[str], costs: dict[str, dict]
     A film is "only here" when no other own service has it and no provider shows it
     for free. `costs` maps a service to {"price": monthly price, "remind_on": date}.
     """
+    free = mostly_free_from_scan(films, [])  # the same rule as the "Free" label in the filter bar
     services: list[dict[str, Any]] = []
+    free_block: list[dict[str, Any]] = []
+    free_films: set[Any] = set()
     for name in subscriptions:
         on = [film for film in films if _watchable(film, name)]
         only = [film for film in on if only_on_my_services(film, subscriptions)]
+        if name in free:
+            # Free services are one compact block, not a table row each.
+            free_block.append({"name": name, "films": len(on)})
+            free_films.update(film.get("key") or film.get("title") for film in on)
+            continue
         price = (costs.get(name) or {}).get("price")
         services.append(
             {
@@ -48,10 +62,13 @@ def overview(films: list[dict], subscriptions: list[str], costs: dict[str, dict]
                 "price": price,
                 "remind_on": (costs.get(name) or {}).get("remind_on"),
                 "films": len(on),
-                "per_film": round(price / len(on), 2) if price and on else None,
+                "per_film": round(price / len(only), 2) if price and only else None,
+                "hours": round(sum(film.get("runtime") or 0 for film in only) / 60, 1),
                 "only_here": sorted((_label(film) for film in only), key=lambda item: item["title"] or ""),
             }
         )
+    # The service whose loss costs the most films comes first.
+    services.sort(key=lambda item: (-len(item["only_here"]), -item["films"], item["name"].casefold()))
 
     uncovered = [
         film
@@ -60,15 +77,16 @@ def overview(films: list[dict], subscriptions: list[str], costs: dict[str, dict]
     ]
     gains: dict[str, int] = {}
     for film in uncovered:
-        for name, kinds in film.get("providers", {}).items():
-            if "flatrate" in kinds:
-                gains[name] = gains.get(name, 0) + 1
+        # "X" and "X Amazon Channel" are one catalogue: count the film once for it.
+        for name in {
+            catalog_name(name) for name, kinds in film.get("providers", {}).items() if "flatrate" in kinds
+        }:
+            gains[name] = gains.get(name, 0) + 1
     book = sorted(gains.items(), key=lambda item: (-item[1], item[0]))[:5]
 
     # Cancel what loses nothing first, then the service with the fewest films of its own.
     # Free services (and ones saved with price 0) cost nothing to keep.
-    free = mostly_free_from_scan(films, [])  # the same rule as the "Free" label in the sidebar
-    paid = [item for item in services if item["name"] not in free and item["price"] != 0]
+    paid = [item for item in services if item["price"] != 0]
     ranked = sorted(paid, key=lambda item: (len(item["only_here"]), -(item["price"] or 0)))
     loses_nothing = [item["name"] for item in ranked if not item["only_here"]]
     rent_only = [
@@ -80,6 +98,12 @@ def overview(films: list[dict], subscriptions: list[str], costs: dict[str, dict]
     return {
         "services": services,
         "monthly_total": round(sum(item["price"] or 0 for item in services), 2),
+        "yearly_total": round(sum(item["price"] or 0 for item in services) * 12, 2),
+        "free_block": sorted(
+            (item for item in free_block if item["films"]), key=lambda item: (-item["films"], item["name"])
+        ),
+        "free_empty": sum(1 for item in free_block if not item["films"]),
+        "free_films": len(free_films),
         "book": [{"name": name, "films": count} for name, count in book],
         "cancel": loses_nothing or [item["name"] for item in ranked[:1]],
         "cancel_loses_nothing": bool(loses_nothing),

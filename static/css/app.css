@@ -423,7 +423,7 @@
 /* Settings and status pages */
 main.page { max-width: 980px; }
 main.page a { color: var(--accent); }
-.page-title { font-size: clamp(2rem, 5vw, 3.4rem); margin: 10px 0 26px; }
+.page-title { font-size: 1.5rem; margin: 18px 0 14px; }
 .settings-section { border: 1px solid var(--line); background: var(--panel); border-radius: .375rem; padding: 18px 20px; margin-bottom: 18px; }
 .settings-section .form-label { margin-top: 12px; }
 .settings-section .form-control { max-width: 360px; }
@@ -514,3 +514,36 @@ main.stats-page { max-width: 1440px; }
 .stats-films li + li { margin-top: 4px; }
 .muted { color: var(--muted); }
 .stats-link { margin: 24px 0 0; }
+
+/* Settings -> My services: a plain list, one row per service. */
+.service-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 2px 16px; margin: 8px 0 0; padding: 0; list-style: none; }
+.service-row { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 2px 6px; border-radius: .375rem; font: var(--fs-body) system-ui, sans-serif; cursor: pointer; }
+.service-row:hover { background: rgb(255 255 255 / .05); }
+.service-row .provider-logo { width: 24px; height: 24px; flex: none; border-radius: 4px; }
+.service-row .service-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.toast-bar { position: fixed; left: 50%; bottom: 24px; z-index: 1080; display: flex; align-items: center; gap: 14px; padding: 10px 16px; transform: translateX(-50%); background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: .5rem; box-shadow: 0 12px 32px rgb(0 0 0 / .45); font: var(--fs-body) system-ui, sans-serif; }
+@media (max-width: 800px) { .toast-bar { bottom: calc(76px + env(safe-area-inset-bottom)); } }
+
+/* Subscriptions: one table, 56px rows, numbers on the right, explanations in a tooltip. */
+.subscriptions-table td, .subscriptions-table th { vertical-align: middle; }
+.subscriptions-table tbody td { height: 56px; }
+.subscriptions-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.subscriptions-table .price-input { width: 110px; margin-left: auto; text-align: right; }
+.sort-head { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.sort-head[aria-sort="descending"]::after { content: " ↓"; }
+.sort-head[aria-sort="ascending"]::after { content: " ↑"; }
+.sort-head:hover { color: var(--ink); }
+.sort-head:focus-visible, .date-button:focus-visible, .info:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.info { display: inline-flex; vertical-align: middle; color: var(--muted); cursor: help; }
+.date-button { padding: 4px 8px; border: 1px solid transparent; border-radius: .375rem; background: transparent; color: var(--ink); font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; }
+.date-button:hover { border-color: var(--line-field); }
+.date-button.is-soon { color: oklch(72% 0.150 28); font-weight: 600; }
+.date-input { position: absolute; }
+.subscriptions-table tfoot th, .subscriptions-table tfoot td { border-bottom: 0; padding-top: 14px; }
+.totals { margin-left: 10px; font-weight: 400; color: var(--ink); font-variant-numeric: tabular-nums; }
+.only-here summary { cursor: pointer; }
+.only-here ul { margin: 6px 0 0; padding: 0; list-style: none; text-align: left; color: var(--muted); }
+.free-block { margin-top: 24px; }
+.chip-list { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.static-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 12px; border: 1px solid var(--line-field); border-radius: 999px; font: var(--fs-body) system-ui, sans-serif; }
+@media (max-width: 640px) { .subscriptions-table .price-input { margin-left: 0; } .subscriptions-table .info { display: none; } }

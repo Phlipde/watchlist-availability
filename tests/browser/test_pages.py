@@ -505,23 +505,35 @@ def test_settings_are_saved_and_checked(app_server, page):
     assert app_server["settings"].letterboxd_username == "someone_else"
 
 
-def test_subscription_with_price_is_saved_in_one_go(app_server, page):
+def test_price_is_saved_when_you_leave_the_field(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     page.goto(f"{app_server['url']}/subscriptions")
     netflix = page.locator('tr[data-service="Netflix"]')
-    netflix.locator('[name="price"]').fill("10")
-    page.locator('input[name="subscriptions"][value="MUBI"]').check()
-    page.locator("#subscriptions-save").click()
-    # After saving the page reloads with the new row and the per-film price.
-    expect(page).to_have_url(re.compile(r"saved=1"))
-    expect(page.locator("#subscriptions-message")).to_have_text("Saved.")
-    expect(page.locator('tr[data-service="MUBI"]')).to_be_visible()
-    expect(netflix.locator('td[data-label="Per film"]')).to_have_text("10.00")
-    settings = app_server["settings"]
-    assert sorted(settings.subscriptions("DE")) == ["MUBI", "Netflix"]
-    assert settings.country == "DE"
+    netflix.locator('[name="price"]').fill("10,5")  # a comma is fine
+    netflix.locator('[name="price"]').blur()
+    expect(page.locator("#save-state")).to_have_text("Saved")
+    assert app_server["settings"].costs("DE")["Netflix"]["price"] == 10.5
+    # The total follows without a reload.
+    expect(page.locator("#total-month")).to_contain_text(re.compile(r"10[.,]50"))
+    page.reload()
+    expect(netflix.locator('[name="price"]')).to_have_value("10.5")
+
+
+def test_services_are_saved_as_you_tick_and_can_be_undone(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    page.goto(f"{app_server['url']}/settings/services")
+    page.locator('#services-sections input[value="MUBI"]').check(force=True)
+    expect(page.locator("#toast-text")).to_have_text("Saved")
+    assert sorted(app_server["settings"].subscriptions("DE")) == ["MUBI", "Netflix"]
+    page.locator("#toast-undo").click()
+    expect(page.locator("#toast-text")).to_have_text("Undone")
+    assert app_server["settings"].subscriptions("DE") == ["Netflix"]
+    expect(page.locator('#services-sections input[value="MUBI"]')).not_to_be_checked()
+    assert app_server["settings"].country == "DE"
 
 
 def test_title_match_is_corrected_and_undone(app_server, page):

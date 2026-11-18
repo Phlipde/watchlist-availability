@@ -24,11 +24,36 @@ class TestOverview:
     def test_price_per_film_and_only_here(self):
         result = costs.overview(FILMS, ["Netflix", "MUBI"], {"Netflix": {"price": 12.0}})
         netflix, mubi = result["services"]
-        assert (netflix["films"], netflix["per_film"]) == (2, 6.0)
+        assert (netflix["films"], netflix["per_film"]) == (2, 12.0)  # price divided by the films only here
         assert [item["title"] for item in netflix["only_here"]] == ["Alien"]
         # Heat is also on Netflix and Brazil is free on Arte: cancelling MUBI loses nothing.
         assert (mubi["films"], mubi["per_film"], mubi["only_here"]) == (2, None, [])
         assert result["monthly_total"] == 12.0
+
+    def test_free_services_form_a_block_and_the_table_is_sorted_by_what_cancelling_loses(self):
+        result = costs.overview(FILMS, ["MUBI", "Arte", "Netflix", "ZDF"], {})
+        assert [item["name"] for item in result["services"]] == [
+            "Netflix",
+            "MUBI",
+        ]  # Netflix: Alien is only there
+        assert result["free_block"] == [{"name": "Arte", "films": 1}]
+        assert (result["free_empty"], result["free_films"]) == (1, 1)  # ZDF has no film
+
+    def test_hours_and_price_per_only_here_film_and_year(self):
+        films = [{**FILMS[1], "runtime": 90}, {**FILMS[0], "runtime": 120}]
+        result = costs.overview(films, ["Netflix", "MUBI"], {"Netflix": {"price": 12.0}})
+        netflix = result["services"][0]
+        assert (netflix["name"], netflix["hours"], netflix["per_film"]) == ("Netflix", 1.5, 12.0)
+        assert result["yearly_total"] == 144.0
+
+    def test_amazon_channels_count_as_their_main_service(self):
+        assert costs.catalog_name("HBO Max Amazon Channel") == "HBO Max"
+        assert costs.catalog_name("Netflix") == "Netflix"
+        films = [
+            film("A", **{"HBO Max": ["flatrate"]}),
+            film("B", **{"HBO Max Amazon Channel": ["flatrate"], "HBO Max": ["flatrate"]}),
+        ]
+        assert costs.overview(films, [], {})["book"] == [{"name": "HBO Max", "films": 2}]
 
     def test_only_on_my_services(self):
         assert costs.only_on_my_services(FILMS[1], ["Netflix", "MUBI"])

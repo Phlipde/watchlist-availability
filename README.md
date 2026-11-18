@@ -123,8 +123,8 @@ Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
 * **Filtering & Search:** Dynamic filtering by Provider, Free/Paid offer types, release year, trailer availability, poster availability, and minimum provider counts.
 * **Any / All Provider Modes:** Toggle between showing films available on *any* selected service vs. *all* selected services.
 * **Change History:** Every scan is compared with the earlier ones. "New on …" is stored with its date; "gone" needs two scans in a row without the service, so a one-day TMDB hiccup is not reported. Changes are kept for 30 days.
-* **Settings (`/settings`):** Letterboxd username, country, your own subscriptions per country, the automatic scan interval, and backup download / restore (settings, favorites, change history, last scan per country).
-* **My subscriptions / Rental shops:** One click selects the services you pay for, or only the shops where films are rented one by one.
+* **Settings (`/settings`):** Letterboxd username, country, the automatic scan interval, and backup download / restore (settings, favorites, change history, last scan per country). *My services* (`/settings/services`) is the list of services you pay for or use for free; ticking saves at once, with Undo.
+* **Subscriptions (`/subscriptions`):** One table of your paid services sorted by what cancelling would cost you (films only there, hours), prices and renewal dates that save when you leave the field, totals per month and year, your free services as a block, and a hint what to cancel or book next.
 * **Automatic Scans:** Optionally every 6, 12, 24 or 48 hours or once a week, while the app runs. A scan interrupted by a restart is started again.
 * **Stats (`/stats`):** Numbers for the last scan: films per service and offer type, what each subscription adds, genres, decades, runtime, ratings, languages, countries, people, series, keywords, changes per week and the films waiting longest.
 * **Settings → Data & status (`/settings/data`, formerly `/status`):** Last and next scan, and the recent scan runs with duration, failed lookups and the number of TMDB requests.

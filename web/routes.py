@@ -254,24 +254,47 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
 
     @app.get("/subscriptions")
     def subscriptions_page():
-        # Editing another country's subscriptions does not change the app's country.
-        country = request.args.get("country", settings.country)
-        if country not in COUNTRIES:
-            country = settings.country
+        # The country is the app's own (header); the services are chosen under Settings -> My services.
+        country = settings.country
         scan = store.latest_scan(country)
         own = settings.subscriptions(country)
         return page(
             "subscriptions.html",
             country=country,
-            countries=list(COUNTRIES),
-            saved=request.args.get("saved") == "1",
             last_scan_at=scan["created"] if scan else None,
             costs=costs.overview(scan["results"] if scan else [], own, settings.costs(country)),
-            free_services=providers.mostly_free_from_scan(scan["results"], scan["unavailable"])
-            if scan
-            else providers.MOSTLY_FREE,
-            provider_groups=providers.provider_groups(settings.loaded_providers()),
-            selected=set(own),
+            logos=provider_logos(),
+            logo_base_url=_TMDB_LOGO_BASE_URL,
+        )
+
+    @app.get("/settings/services")
+    def services_page():
+        scan = store.latest_scan(settings.country)
+        counts: dict[str, int] = {}
+        for film in scan["results"] if scan else []:
+            for name in film.get("providers", {}):
+                counts[name] = counts.get(name, 0) + 1
+        selected = set(settings.subscriptions())
+        groups = {
+            subgroup: names
+            for _, subgroups in providers.provider_groups(settings.loaded_providers())
+            for subgroup, names in subgroups
+        }
+        sections = [("My subscriptions", sorted(selected, key=str.casefold), True)]
+        for title, opened in (
+            ("Free and ad-supported", True),
+            ("Subscriptions", True),
+            ("Rental shops", True),
+            ("Amazon Channels", False),
+            ("More services", False),
+        ):
+            sections.append((title, [name for name in groups.get(title, []) if name not in selected], opened))
+        return page(
+            "services.html",
+            country=settings.country,
+            sections=[section for section in sections if section[1]],
+            selected=selected,
+            counts=counts,
             logos=provider_logos(),
             logo_base_url=_TMDB_LOGO_BASE_URL,
         )

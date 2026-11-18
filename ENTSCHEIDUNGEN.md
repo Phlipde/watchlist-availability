@@ -28,3 +28,13 @@ Auftrag: Plan von oben nach unten abarbeiten, nach jedem Schritt prüfen, nach j
 - **[ENTSCHIEDEN]** Kein Zusatz bei verwechselbaren Dienstnamen (Namen sind schon ausgeschrieben).
 - **[ENTSCHIEDEN]** Votes-Chips Any · 1k+ · 10k+ · 100k+ (aus der Vorlage) statt der alten 100+/1,000+/10,000+.
 - **[ERLEDIGT]** K3c: Python 304, JS 46, Browser 24, ruff, mypy; Leiste bei 1440 px und Panels im Browser angesehen.
+
+### A1 Abos-Mindestversion
+- **[ENTSCHIEDEN]** „€ / film“ = Preis ÷ Filme nur auf diesem Dienst (wie im Abschnitt), nicht mehr ÷ alle Filme; Test angepasst.
+- **[ENTSCHIEDEN]** Preis- und Datumsfelder speichern beim Verlassen (kein Save-Knopf); Summen werden im Browser nachgerechnet.
+- **[ENTSCHIEDEN]** Eigene Seite `/settings/services` (Plan 9.12) statt eines Blocks auf der Abo-Seite; Untergruppen „Subscriptions“ und „More services“ aus `providers.provider_groups`.
+- **[ENTSCHIEDEN]** Channels werden nur bei Empfehlungen („book“) zusammengefasst, nicht bei den eigenen Diensten (die wählt der Nutzer selbst).
+- **[ENTSCHIEDEN]** Währung fest €, Zahlen- und Datumsformat nach Browser-Sprache; Einstellung für Währung erst später.
+- **[OFFEN]** Datumsfeld: das Format des Kalender-Popups bleibt das des Browsers (nicht steuerbar).
+- **[OFFEN]** Filter „Only on one of my services“ kennt Channels nicht als gleichen Katalog (A2 oder später).
+- **[ERLEDIGT]** A1: Python 307, JS 46, Browser 25, ruff, mypy; Abo-Seite und My-services-Seite im Browser angesehen.
