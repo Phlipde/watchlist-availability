@@ -15,7 +15,7 @@ BACKUP_VERSION = 1
 # Time of the last match correction; a recent scan is not reused after it.
 MATCHES_CHANGED_SETTING = "matches_changed_at"
 # Settings the app keeps for itself; they are not part of a backup.
-INTERNAL_SETTINGS = frozenset({"legacy_import_done", MATCHES_CHANGED_SETTING})
+INTERNAL_SETTINGS = frozenset({"legacy_import_done", MATCHES_CHANGED_SETTING, "notify_token", "notify_state"})
 # Fields that identify a stored change, used to skip duplicates when restoring a backup.
 CHANGE_IDENTITY = ("created", "country", "film_key", "provider", "change")
 

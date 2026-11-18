@@ -594,3 +594,34 @@ class TestRecommendationsAndDeadlines:
             .split(";</script>")[0]
         )
         assert [item["name"] for item in config["deadlines"]] == ["Netflix"]
+
+
+class TestNotificationsAndSensors:
+    def test_settings_page_has_the_notification_form(self, client):
+        page = client.get("/settings").get_data(as_text=True)
+        assert 'id="notify-kind"' in page and 'name="notify_event" value="weekly"' in page
+
+    def test_test_message_needs_a_target_and_reports_a_refusal(self, client, settings, monkeypatch):
+        assert client.post("/api/notify/test").status_code == 400
+        settings.update({"notify_kind": "webhook", "notify_url": "https://hook.example/x"})
+
+        def refuse(*args, **kwargs):
+            raise routes.requests.ConnectionError("down")
+
+        monkeypatch.setattr(routes.notifications.requests, "post", refuse)
+        answer = client.post("/api/notify/test")
+        assert answer.status_code == 502 and "did not accept" in answer.get_json()["error"]
+
+    def test_sensors_for_home_assistant(self, client, store, settings):
+        settings.update({"subscriptions": ["Netflix"]})
+        store.save_scan(
+            "DE",
+            "letterboxd",
+            None,
+            [{"key": "1", "title": "Heat", "providers": {"Netflix": ["flatrate"]}}],
+            [],
+            {},
+        )
+        data = client.get("/api/sensors").get_json()
+        assert data["watchlist_coverage"] == 100 and data["films_available"] == 1
+        assert data["new_on_my_services"] == 0 and data["next_subscription_deadline"] is None

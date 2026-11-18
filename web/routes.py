@@ -6,9 +6,10 @@ import time
 from pathlib import Path
 from urllib.parse import urlsplit
 
+import requests
 from flask import Flask, Response, jsonify, make_response, redirect, render_template, request, send_file
 
-from watchlist_app import costs, letterboxd, matches, providers, scheduler, tmdb, validation
+from watchlist_app import costs, letterboxd, matches, notifications, providers, scheduler, tmdb, validation
 from watchlist_app.config import COUNTRIES
 from watchlist_app.scan_service import ScanService, with_changes
 from watchlist_app.settings import SCAN_INTERVALS_HOURS, AppSettings
@@ -484,6 +485,56 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
     def clear_flag(movie_key: str):
         store.clear_flag(movie_key)
         return jsonify({"ok": True})
+
+    # ----- notifications and sensors -----
+
+    @app.post("/api/notify/test")
+    def notify_test():
+        if not settings.notify_kind or not settings.notify_url:
+            return jsonify({"error": "Choose a target and an address first."}), 400
+        try:
+            notifications.send(
+                settings.notify_kind,
+                settings.notify_url,
+                settings.notify_token,
+                "Watchlist Availability",
+                "This is a test message. Notifications work.",
+                request.host_url.rstrip("/"),
+            )
+        except requests.RequestException as exc:
+            return jsonify(
+                {"error": f"The target did not accept the message: {exc.__class__.__name__}."}
+            ), 502
+        return jsonify({"ok": True})
+
+    @app.get("/api/sensors")
+    def sensors():
+        """Numbers for Home Assistant (a REST sensor): what changed this week, the next date, the coverage."""
+        scan = store.latest_scan(settings.country)
+        own = set(settings.subscriptions())
+        week = [
+            c
+            for c in store.recent_changes(settings.country, time.time() - 7 * 24 * 3600)
+            if c["provider"] in own
+        ]
+        deadlines = costs.reminders({settings.country: settings.costs(settings.country)})
+        upcoming = next((item for item in deadlines if item["days"] >= 0), None)
+        overview = costs.overview(
+            scan["results"] if scan else [],
+            settings.subscriptions(),
+            settings.costs(),
+            len(scan["unavailable"]) if scan else 0,
+        )
+        return jsonify(
+            {
+                "new_on_my_services": len({c["film_key"] for c in week if c["change"] == "added"}),
+                "gone_from_my_services": len({c["film_key"] for c in week if c["change"] == "removed"}),
+                "next_subscription_deadline": upcoming,
+                "watchlist_coverage": overview["coverage"]["percent"],
+                "films_available": overview["coverage"]["covered"],
+                "last_scan": scan["created"] if scan else None,
+            }
+        )
 
     # ----- settings, status, backup -----
 

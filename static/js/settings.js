@@ -20,6 +20,10 @@ form.addEventListener('submit', async event => {
         country: country.value,
         scan_interval_hours: Number(document.getElementById('scan-interval').value),
         weekly_hours: Number(document.getElementById('weekly-hours').value),
+        notify_kind: document.getElementById('notify-kind').value,
+        notify_url: document.getElementById('notify-url').value,
+        notify_token: document.getElementById('notify-token').value,
+        notify_events: Object.fromEntries([...document.querySelectorAll('input[name=notify_event]')].map(box => [box.value, box.checked])),
       }),
     });
     const data = await response.json().catch(() => ({}));
@@ -29,6 +33,20 @@ form.addEventListener('submit', async event => {
     show('settings-message', 'Could not reach the app.', true);
   } finally {
     button.disabled = false;
+  }
+});
+
+// "Send a test message" uses what is saved, so it saves the form first.
+document.getElementById('notify-test').addEventListener('click', async () => {
+  show('notify-message', 'Saving and sending…');
+  form.requestSubmit();
+  await new Promise(resolve => setTimeout(resolve, 600));
+  try {
+    const response = await fetch('/api/notify/test', {method: 'POST'});
+    const data = await response.json().catch(() => ({}));
+    show('notify-message', response.ok ? 'Sent. Look for the message.' : data.error || 'Could not send.', !response.ok);
+  } catch {
+    show('notify-message', 'Could not reach the app.', true);
   }
 });
 

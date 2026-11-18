@@ -162,6 +162,10 @@ Data is stored inside `/data` in the container. Map this directory to an appdata
 | `WATCHLIST_DISABLE_SCHEDULER` | not set | Set to `1` to switch off automatic scans in this process |
 | `WATCHLIST_TRUSTED_HOSTS` | not set | Host names the app is reached under behind a reverse proxy that changes the `Host` header, comma-separated (e.g. `watch.example.org`) |
 
+#### Notifications and Home Assistant
+
+*Settings → Notifications* sends messages to ntfy, Gotify or a webhook: a favorite left your services, a renewal date is 3 and 1 day away, a Friday summary, optionally every new film. At most one message a day, none between 22:00 and 08:00. `GET /api/sensors` returns numbers for a Home Assistant REST sensor (`new_on_my_services`, `gone_from_my_services`, `next_subscription_deadline`, `watchlist_coverage`, `films_available`).
+
 #### Security
 
 The app has no login; run it only in your home network or behind a reverse proxy with authentication. Changing requests (scan, settings, favorites, backup restore, match corrections) are refused when another web site makes the browser send them, so a page you visit cannot change your data. Tools without a browser (command line, `curl`, Home Assistant) are not affected. A restored backup is checked field by field; entries that do not fit are skipped and counted.

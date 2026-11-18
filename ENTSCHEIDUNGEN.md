@@ -77,3 +77,12 @@ Auftrag: Plan von oben nach unten abarbeiten, nach jedem Schritt prüfen, nach j
 - **[ENTSCHIEDEN]** Kündigungsseite nur http(s), keine Leerzeichen, höchstens 300 Zeichen (Server prüft, Link mit `rel=noreferrer noopener`).
 - **[OFFEN]** Verlauf „Only here über Zeit“ (braucht 30 Tage gespeicherte Scans), „Watch these first“, „Add all to Today“, Laufzeit monatlich/jährlich, Channel-Preisvergleich: nicht gebaut (siehe PLAN, Ergebnis A4).
 - **[ERLEDIGT]** A4: Python 321, Browser-Test Schublade; im Browser angesehen.
+
+### K5 Benachrichtigungen
+- **[ENTSCHIEDEN]** Läuft im vorhandenen Zeitplan-Thread (jede Minute geprüft), nicht als eigener Dienst; Fehlschläge werden dort wiederholt.
+- **[ENTSCHIEDEN]** Ruhezeit 22 bis 8 Uhr fest; ein Tageslimit von einer Nachricht (Ereignisse werden gebündelt, ein Test ignoriert das Limit).
+- **[ENTSCHIEDEN]** Token liegt in der Datenbank (`notify_token`), nicht in Sicherungen und nicht in `/api/settings` (nur „gesetzt“).
+- **[ENTSCHIEDEN]** Nur http/https als Ziel. **Risiko:** der Server schickt Anfragen an die eingetragene Adresse (auch an Adressen im Heimnetz); wer die Einstellungen ändern kann, kann das lenken. Die App hat keine Anmeldung (siehe README); das war schon so, bleibt aber hier wichtig.
+- **[ENTSCHIEDEN]** Zeitplan alle 6 Stunden entfällt (Plan 8b hat ihn bewusst entfernt, TMDB-Angebote werden 24 h wiederverwendet).
+- **[OFFEN]** Kein echter Sendeversuch gegen ntfy/Gotify/einen Webhook (nur mit Atrappe getestet).
+- **[ERLEDIGT]** K5: Python 331 (davon 7 Benachrichtigungen, 3 Web), ruff, mypy.
