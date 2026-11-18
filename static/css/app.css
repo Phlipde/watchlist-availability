@@ -222,7 +222,10 @@
     .filter-menu { position: absolute; z-index: 1040; top: calc(100% + 6px); left: 0; min-width: 260px; max-height: min(70vh, 560px); overflow-y: auto; padding: 12px; background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: .5rem; box-shadow: 0 12px 32px rgb(0 0 0 / .45); font: var(--fs-body) system-ui, sans-serif; }
     .more-filters .filter-menu { width: min(720px, calc(100vw - 16px)); }
     .option-count { margin-left: auto; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; font-variant-numeric: tabular-nums; }
-    .is-empty { opacity: .55; }
+    /* An option without films stays readable (4.5:1): dimmed by colour and logo, not by opacity. */
+    .is-empty { color: var(--muted); }
+    .is-empty img { opacity: .5; }
+    .is-empty .free-tag { opacity: 1; }
     .segmented label:has(input:disabled) { opacity: .4; cursor: not-allowed; }
     /* Cost: a segmented control, one radio per segment. */
     .segmented { display: inline-flex; min-height: 36px; border: 1px solid var(--line-field); border-radius: .375rem; background: var(--panel); overflow: hidden; font: var(--fs-body) system-ui, sans-serif; }
@@ -586,14 +589,15 @@ body:has(#film-details-modal.show) .modal-backdrop.show { opacity: .4; }
 kbd { padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--panel); color: var(--ink); font: var(--fs-small) ui-monospace, monospace; }
 
 /* A renewal date within a week; recommendation cards with their numbers and actions. */
-.deadline-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 0 0 16px; padding: 10px 14px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: .5rem; background: color-mix(in oklch, var(--accent) 10%, var(--surface)); font: var(--fs-body) system-ui, sans-serif; }
+.deadline-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 0 0 16px; padding: 10px 14px; border: 1px solid color-mix(in oklch, var(--accent) 40%, var(--line)); border-radius: .5rem; background: color-mix(in oklch, var(--accent) 10%, var(--surface)); font: var(--fs-body) system-ui, sans-serif; }
 .deadline-banner[hidden] { display: none; }
 .deadline-banner p { margin: 0; }
+.deadline-banner p::before, .rec h3::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--accent); vertical-align: middle; }
 .banner-actions, .rec-actions { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .recs { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin: 8px 0 10px; }
-.rec { padding: 14px 16px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: .5rem; background: var(--surface); font: var(--fs-body) system-ui, sans-serif; }
+.rec { padding: 14px 16px; border: 1px solid var(--line); border-radius: .5rem; background: var(--surface); font: var(--fs-body) system-ui, sans-serif; }
 .rec[hidden] { display: none; }
-.rec-subscribe { border-left-color: oklch(70% 0.12 160); }
+.rec-subscribe h3::before { background: oklch(70% 0.12 160); }
 .rec h3 { margin: 0 0 6px; font-size: 1rem; text-transform: none; letter-spacing: 0; }
 .rec p { margin: 0 0 6px; }
 .rec .hint { margin: 0 0 8px; }
@@ -623,3 +627,18 @@ kbd { padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 4px
 .rent-title { color: var(--muted); font: var(--fs-small) system-ui, sans-serif; overflow-wrap: anywhere; }
 .rent-track a:hover .rent-title, .rent-track a:focus-visible .rent-title { color: var(--ink); }
 .rent-track a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Touch: every control a finger can hit is at least 44px; plain text links get a 44px-high line. */
+@media (pointer: coarse) {
+  #result-tools .btn, #result-tools .form-select, .tonight-controls .btn, .tonight-controls .form-select, .sync-toggle, .quick-chip, .chip, .view-tab, .drawer-step, .sheet-close { min-height: 44px; }
+  .sync-toggle, .drawer-step { min-width: 44px; justify-content: center; }
+  .rec-actions .film-link, .banner-actions .film-link, .rent-head .film-link, .film-row-head .film-link, .services-group-head .film-link, .toast-bar .film-link, .cost-line .film-link { display: inline-flex; align-items: center; min-height: 44px; }
+  .film-modal-actions .btn { min-height: 44px; }
+  .settings-group > summary, .bars-more > summary, .only-here summary, .stats-details > summary { display: flex; align-items: center; min-height: 44px; }
+  .service-row { min-height: 44px; }
+  .coverage-bar .seg { position: relative; }
+  .coverage-bar .seg::after { content: ""; position: absolute; inset: -16px 0; }
+  .settings-nav a { display: inline-flex; align-items: center; min-height: 44px; }
+  .price-input, .date-button { min-height: 44px; }
+  .view-tab { min-width: 44px; }
+}
