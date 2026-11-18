@@ -2,6 +2,7 @@
 
 import io
 import json
+import time
 
 import pytest
 from flask import Flask
@@ -508,3 +509,35 @@ class TestHeader:
         assert html.count('class="sort-option"') == 8
         assert "Favorites first, then the Letterboxd rating." in html
         assert 'id="sort-order" value="priority"' in html
+
+
+class TestFlags:
+    def test_watched_and_not_now_are_saved_and_cleared(self, client):
+        assert client.put("/api/flags/949", json={"flag": "watched"}).status_code == 200
+        answer = client.put("/api/flags/950", json={"flag": "not_now"}).get_json()
+        assert answer["flag"] == "not_now" and answer["until"] > time.time() + 29 * 24 * 3600
+        flags = {item["key"]: item["flag"] for item in client.get("/api/flags").get_json()}
+        assert flags == {"949": "watched", "950": "not_now"}
+        client.delete("/api/flags/949")
+        assert [item["key"] for item in client.get("/api/flags").get_json()] == ["950"]
+
+    def test_unknown_flag_is_refused(self, client):
+        assert client.put("/api/flags/949", json={"flag": "loved"}).status_code == 400
+
+    def test_flags_survive_a_backup_and_an_expired_one_is_dropped(self, client, store):
+        store.set_flag("1", "watched")
+        store.set_flag("2", "not_now", time.time() + 3600)
+        store.set_flag("3", "not_now", time.time() - 10)  # over: no longer listed
+        backup = client.get("/api/backup").get_json()
+        assert sorted(item["key"] for item in backup["flags"]) == ["1", "2"]
+        store.clear_flag("1")
+        store.clear_flag("2")
+        upload = {"backup": (io.BytesIO(json.dumps(backup).encode()), "backup.json")}
+        client.post("/api/backup", data=upload, content_type="multipart/form-data")
+        assert sorted(item["key"] for item in store.list_flags()) == ["1", "2"]
+
+    def test_a_backup_cannot_hide_a_film_for_ever(self, client, store):
+        hostile = {"version": 1, "flags": [{"key": "9", "flag": "not_now", "until": time.time() + 10**9}]}
+        upload = {"backup": (io.BytesIO(json.dumps(hostile).encode()), "backup.json")}
+        answer = client.post("/api/backup", data=upload, content_type="multipart/form-data").get_json()
+        assert answer["imported"]["skipped"] == 1 and store.list_flags() == []

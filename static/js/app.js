@@ -46,7 +46,12 @@ const state = createAppState();
       toast.hide();
       undo?.();
     });
-    const watchedKeys = () => new Set([...state.favorites.values()].filter(film => film.status === 'watched').map(film => film.key));
+    const watchedKeys = () => new Set([
+      ...[...state.favorites.values()].filter(film => film.status === 'watched').map(film => film.key),
+      ...[...state.flags].filter(([, entry]) => entry.flag === 'watched').map(([key]) => key),
+    ]);
+    // "Not now": hidden until the date the server gave it.
+    const hiddenKeys = () => new Set([...state.flags].filter(([, entry]) => entry.flag === 'not_now' && entry.until > Date.now() / 1000).map(([key]) => key));
     // The dot in the header: nothing to see while the data is fresh; yellow when old, red after an error.
     function setSync(name, text) {
       document.getElementById('sync-toggle').dataset.state = name;
@@ -140,7 +145,7 @@ const state = createAppState();
       }
       const selected = state.selected;
       const filters = {...readFilters(document, state.favoritesOnly, {include: [...state.genres.include], exclude: [...state.genres.exclude]}), mode: state.matchMode || 'any'};
-      const filterContext = {selected, favorites: state.favorites, seed: state.seed};
+      const filterContext = {selected, favorites: state.favorites, seed: state.seed, hiddenKeys: hiddenKeys()};
       const view = filterFilms(state.films, state.unavailable, filters, filterContext);
       state.view = view;
       // A redraw (e.g. when a scan finishes) replaces the note field someone is typing in; carry the text and cursor over.
@@ -152,6 +157,8 @@ const state = createAppState();
         logoBaseUrl: window.WATCHLIST_CONFIG.logoBaseUrl,
         selected,
         favorites: state.favorites,
+        watched: watchedKeys(),
+        hiddenKeys: hiddenKeys(),
         compareKeys: state.compareKeys,
         greyKeys: greyKeys(),
         favoritesOnly: state.favoritesOnly,
@@ -266,7 +273,7 @@ const state = createAppState();
       return hours < 1 ? 'just now' : hours < 48 ? `${hours} h ago` : `${Math.floor(hours / 24)} days ago`;
     }
     function renderTonightPage() {
-      const {rows, available} = tonightRows(state.films, {services: state.selected, favorites: state.favorites, skip: watchedKeys(), chips: tonightChips, now: Date.now() / 1000});
+      const {rows, available} = tonightRows(state.films, {services: state.selected, favorites: state.favorites, skip: new Set([...watchedKeys(), ...hiddenKeys()]), chips: tonightChips, now: Date.now() / 1000});
       tonightAvailable = available;
       document.getElementById('context-text').innerHTML = `${available.length} films available on <a href="/subscriptions">${state.selected.size} services</a>${state.lastScan ? ` · synced ${ago(state.lastScan)}` : ''}`;
       document.querySelectorAll('.quick-chip').forEach(chip => chip.setAttribute('aria-pressed', String(tonightChips.has(chip.dataset.chip))));
@@ -571,6 +578,25 @@ const state = createAppState();
       const response = await fetch('/api/favorites');
       const favorites = await response.json();
       state.favorites = new Map(favorites.map(movie => [movie.key, movie]));
+      const flags = await fetch('/api/flags').then(answer => (answer.ok ? answer.json() : []), () => []);
+      state.flags = new Map(flags.map(entry => [entry.key, entry]));
+    }
+    // Watched / Not now from the card menu, the details and the keys; "Undo" puts the film back for five seconds.
+    async function setFlag(key, flag) {
+      const before = state.flags.get(key);
+      const turnOff = before?.flag === flag && (flag === 'watched' || before.until > Date.now() / 1000);
+      const request = (target, kind) => (kind ? fetch(`/api/flags/${encodeURIComponent(target)}`, {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({flag: kind})}) : fetch(`/api/flags/${encodeURIComponent(target)}`, {method: 'DELETE'}));
+      const apply = async kind => {
+        const response = await request(key, kind).catch(() => null);
+        if (!response?.ok) { showToast('Could not save this. Reload the page and try again.', true); return false; }
+        if (kind) state.flags.set(key, await response.json()); else state.flags.delete(key);
+        return true;
+      };
+      if (!(await apply(turnOff ? null : flag))) return;
+      const title = [...state.films, ...state.unavailable].find(film => filmKey(film) === key)?.title || 'Film';
+      const message = turnOff ? `${title}: back on the list` : flag === 'watched' ? `${title}: marked as watched` : `${title}: set aside for 30 days`;
+      showToast(message, false, async () => { if (await apply(before?.flag ?? null)) renderFilms(); });
+      renderFilms();
     }
     async function toggleFavorite(button) {
       const card = button.closest('.film');
@@ -712,12 +738,59 @@ const state = createAppState();
       const favoriteButtonClass = state.favorites.has(key) ? 'btn-accent' : 'btn-outline-secondary';
       const selectedForCompare = state.compareKeys.has(key);
       // Where to watch comes first: the own services and the actions, then the story and the rest.
-      document.getElementById('film-details-content').innerHTML = `<div class="film-modal-layout">${poster}<div><p class="film-modal-meta">${numberText(film.year, 'Year unknown')}${numberText(film.rating) ? ` · TMDB ${Number(film.rating).toFixed(1)}/10` : ''}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}${numberText(film.letterboxd_rating) ? ` · Letterboxd ${Number(film.letterboxd_rating).toFixed(2)}/5` : ''}${film.certification ? ` · rated ${escapeHtml(film.certification)}` : ''}</p><div class="film-modal-watch">${providerRows || '<p class="empty">No service data available.</p>'}${changeBadgesFor(film, state.selected) ? `<p class="provider-changes">${changeBadgesFor(film, state.selected)}</p>` : ''}</div><div class="film-modal-actions">${watchLink}<button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}"><i class="ti ${state.favorites.has(key) ? 'ti-heart-filled' : 'ti-heart'}" aria-hidden="true"></i> ${favoriteLabel(state.favorites.has(key))}</button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-columns-gap" aria-hidden="true"></i> ${selectedForCompare ? 'Remove from comparison' : 'Add to comparison'}</button></div></div></div><div class="film-modal-about"><p>${escapeHtml(film.overview || 'No description available.')}</p><p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p>${releaseLine}${credits}${seriesLine}${similarLine}<p class="film-modal-elsewhere" id="film-elsewhere" hidden></p>${keywords}<p class="film-modal-links">${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb" aria-hidden="true"></i> TMDB</a>` : ''}${trailerLink}<a class="film-link" href="${letterboxdSearch}" target="_blank" rel="noreferrer"><i class="ti ti-device-tv" aria-hidden="true"></i> Search Letterboxd</a></p></div><div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${savedFavorite ? favoriteFields(key, film.title, savedFavorite) : ''}</div>`;
+      document.getElementById('film-details-content').innerHTML = `<div class="film-modal-layout">${poster}<div><p class="film-modal-meta">${numberText(film.year, 'Year unknown')}${numberText(film.rating) ? ` · TMDB ${Number(film.rating).toFixed(1)}/10` : ''}${numberText(film.runtime) ? ` · ${numberText(film.runtime)} min` : ''}${numberText(film.letterboxd_rating) ? ` · Letterboxd ${Number(film.letterboxd_rating).toFixed(2)}/5` : ''}${film.certification ? ` · rated ${escapeHtml(film.certification)}` : ''}</p><div class="film-modal-watch">${providerRows || '<p class="empty">No service data available.</p>'}${changeBadgesFor(film, state.selected) ? `<p class="provider-changes">${changeBadgesFor(film, state.selected)}</p>` : ''}</div><div class="film-modal-actions">${watchLink}<button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}"><i class="ti ${state.favorites.has(key) ? 'ti-heart-filled' : 'ti-heart'}" aria-hidden="true"></i> ${favoriteLabel(state.favorites.has(key))}</button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}"><i class="ti ti-columns-gap" aria-hidden="true"></i> ${selectedForCompare ? 'Remove from comparison' : 'Add to comparison'}</button><button class="btn btn-sm btn-outline-secondary modal-flag" type="button" data-flag="watched" data-key="${escapeHtml(key)}"><i class="ti ti-check" aria-hidden="true"></i> ${state.flags.get(key)?.flag === 'watched' || savedFavorite?.status === 'watched' ? 'Not watched after all' : 'Mark as watched'}</button><button class="btn btn-sm btn-outline-secondary modal-flag" type="button" data-flag="not_now" data-key="${escapeHtml(key)}"><i class="ti ti-eye-off" aria-hidden="true"></i> ${hiddenKeys().has(key) ? 'Bring back' : 'Not now (30 days)'}</button></div></div></div><div class="film-modal-about"><p>${escapeHtml(film.overview || 'No description available.')}</p><p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p>${releaseLine}${credits}${seriesLine}${similarLine}<p class="film-modal-elsewhere" id="film-elsewhere" hidden></p>${keywords}<p class="film-modal-links">${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb" aria-hidden="true"></i> TMDB</a>` : ''}${trailerLink}<a class="film-link" href="${letterboxdSearch}" target="_blank" rel="noreferrer"><i class="ti ti-device-tv" aria-hidden="true"></i> Search Letterboxd</a></p></div><div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${savedFavorite ? favoriteFields(key, film.title, savedFavorite) : ''}</div>`;
       if (film.tmdb_id) showElsewhere(film.tmdb_id, key, own);
       const detailsOpen = document.getElementById('film-details-modal').classList.contains('show');
       openModal('film-details-modal', opener);
       setFilmAddress(key, !detailsOpen);
     }
+    // Previous / next film of the list behind the drawer (the grid or the Tonight rows, as drawn); ← and → do the same.
+    function neighbourFilm(step) {
+      const keys = [...new Set([...document.querySelectorAll('#results article.film[data-key], #tonight-rows article.film[data-key]')].map(card => card.dataset.key))];
+      const current = new URL(location.href).searchParams.get('film');
+      const next = keys[keys.indexOf(current) + step];
+      if (next !== undefined && keys.indexOf(current) >= 0) showFilmDetails(next, modalOpeners.get('film-details-modal'));
+    }
+    document.getElementById('film-prev').addEventListener('click', () => neighbourFilm(-1));
+    document.getElementById('film-next').addEventListener('click', () => neighbourFilm(1));
+    document.addEventListener('keydown', event => {
+      if (!document.getElementById('film-details-modal').classList.contains('show') || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.target.closest('input, select, textarea, [contenteditable]')) return;
+      if (event.key === 'ArrowLeft') { event.preventDefault(); neighbourFilm(-1); }
+      if (event.key === 'ArrowRight') { event.preventDefault(); neighbourFilm(1); }
+    });
+    // Keyboard shortcuts (outside text fields and dialogs): the film is the one in the open details, else the card in focus or under the pointer.
+    let hoveredCard = null;
+    document.addEventListener('pointerover', event => { hoveredCard = event.target.closest?.('article.film') || hoveredCard; });
+    function filmInFocus() {
+      const open = document.getElementById('film-details-modal').classList.contains('show');
+      if (open) return {key: new URL(location.href).searchParams.get('film'), card: null};
+      const card = document.activeElement?.closest?.('article.film') || (hoveredCard?.isConnected && hoveredCard.matches(':hover') ? hoveredCard : null);
+      return {key: card?.dataset.key, card};
+    }
+    let goPending = false;
+    document.addEventListener('keydown', event => {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+      if (event.target.closest?.('input, select, textarea, [contenteditable], dialog, .modal:not(#film-details-modal)')) return;
+      const dialog = document.getElementById('shortcuts-dialog');
+      if (event.key === '?') { dialog.showModal(); return; }
+      if (goPending) {
+        goPending = false;
+        const target = {t: '/', w: '/watchlist', s: '/subscriptions'}[event.key];
+        if (target) { event.preventDefault(); location.href = target; return; }
+      }
+      if (event.key === 'g') { goPending = true; setTimeout(() => { goPending = false; }, 1000); return; }
+      if (event.key === '/' && VIEW !== 'tonight') { event.preventDefault(); document.getElementById('film-search').focus(); return; }
+      if (event.key === 'R' && event.shiftKey) { document.getElementById('retry-scan')?.click(); return; }
+      const {key, card} = filmInFocus();
+      if (!key) return;
+      if (event.key === 'f') {
+        const button = (card || document).querySelector(card ? '.favorite' : '.modal-favorite');
+        if (button) { event.preventDefault(); toggleFavorite(button); }
+      } else if (event.key === 's') { event.preventDefault(); setFlag(key, 'watched'); }
+      else if (event.key === 'n') { event.preventDefault(); setFlag(key, 'not_now'); }
+      else if (event.key === 'c') { event.preventDefault(); setCompared(key, !state.compareKeys.has(key)); renderFilms(); }
+    });
     // The skip link moves the focus without a #results in the address: going back to a #fragment entry
     // would pull the focus away from the card the details were opened from.
     document.querySelector('.skip-link')?.addEventListener('click', event => { event.preventDefault(); (VIEW === 'tonight' ? document.getElementById('tonight-rows') : results).focus(); });
@@ -738,6 +811,14 @@ const state = createAppState();
       const key = new URL(location.href).searchParams.get('film');
       if (key) showFilmDetails(key, results);
       else bootstrap.Modal.getInstance(document.getElementById('film-details-modal'))?.hide();
+    });
+    document.addEventListener('click', event => {
+      const action = event.target.closest('.card-menu-items button, .modal-flag');
+      if (!action) return;
+      event.preventDefault();
+      if (action.closest('details')) action.closest('details').open = false;
+      if (action.dataset.flag) setFlag(action.dataset.key, action.dataset.flag);
+      if (action.dataset.compare) { setCompared(action.dataset.compare, !state.compareKeys.has(action.dataset.compare)); renderFilms(); }
     });
     document.addEventListener('click', event => {
       const link = event.target.closest('a.film-open');
@@ -768,7 +849,7 @@ const state = createAppState();
       }
     }
     results.addEventListener('click', event => {
-      if (event.target.closest('button, a, input, select, textarea, label')) return;
+      if (event.target.closest('button, a, input, select, textarea, label, summary, .card-menu-items')) return;
       const card = event.target.closest('.film');
       if (card) showFilmDetails(card.dataset.key);
     });
@@ -830,6 +911,7 @@ const state = createAppState();
         providers: [...state.selected].sort().join(','),
         minproviders: document.getElementById('provider-count-filter').value,
         only: document.getElementById('exclusive-filter').checked ? '1' : '',
+        hidden: document.getElementById('show-hidden').checked ? '1' : '',
         favoriteStatus: document.getElementById('favorite-status-filter').value,
         favorites: state.favoritesOnly ? '1' : '',
       };
@@ -848,7 +930,7 @@ const state = createAppState();
     // Typing in the search redraws only after a short pause, not on every key.
     let searchTimer;
     document.getElementById('film-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(renderFilms, 150); });
-    ['exclusive-filter', 'show-unavailable', 'keyword-filter', 'age-filter', 'language-filter', 'origin-filter', 'rating-filter', 'year-from', 'year-to', 'min-votes', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => document.getElementById(id).addEventListener('input', renderFilms));
+    ['exclusive-filter', 'show-unavailable', 'show-hidden', 'keyword-filter', 'age-filter', 'language-filter', 'origin-filter', 'rating-filter', 'year-from', 'year-to', 'min-votes', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => document.getElementById(id).addEventListener('input', renderFilms));
     const initialUrl = new URL(location.href).searchParams;
     const setInitial = (id, parameter, fallback) => {
       const element = document.getElementById(id);
@@ -872,6 +954,7 @@ const state = createAppState();
     setInitial('favorite-status-filter', 'favoriteStatus', 'all');
     // Older links used availability=exclusive for what is now its own checkbox.
     document.getElementById('exclusive-filter').checked = initialUrl.get('only') === '1' || initialUrl.get('availability') === 'exclusive';
+    document.getElementById('show-hidden').checked = initialUrl.get('hidden') === '1';
     filterBar.readUrl(initialUrl);
     filterBar.buildServicesMenu();
     ['sort-order', 'favorite-status-filter'].forEach(id => document.getElementById(id).addEventListener('change', renderFilms));

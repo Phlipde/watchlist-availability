@@ -451,6 +451,30 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         store.remove_favorite(movie_key)
         return jsonify({"ok": True})
 
+    # ----- flags: watched and not now -----
+
+    @app.get("/api/flags")
+    def list_flags():
+        return jsonify(store.list_flags())
+
+    @app.put("/api/flags/<path:movie_key>")
+    def set_flag(movie_key: str):
+        body = request.get_json(silent=True) or {}
+        now = time.time()
+        # "Not now" lasts 30 days from now; the client does not choose the date.
+        flag = validation.clean_flag(
+            {"key": movie_key, "flag": body.get("flag"), "until": now + validation.NOT_NOW_SECONDS}, now
+        )
+        if flag is None:
+            return jsonify({"error": "The flag must be watched or not_now."}), 400
+        store.set_flag(flag["key"], flag["flag"], flag["until"])
+        return jsonify({"ok": True, **flag})
+
+    @app.delete("/api/flags/<path:movie_key>")
+    def clear_flag(movie_key: str):
+        store.clear_flag(movie_key)
+        return jsonify({"ok": True})
+
     # ----- settings, status, backup -----
 
     @app.get("/api/settings")

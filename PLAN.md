@@ -593,10 +593,10 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
   - Tests: Python (Gratis-Block, Sortierung, Stunden, Jahressumme, Channels, Seiten), Browser (Preis speichert beim Verlassen, Dienste speichern und Undo).
   - Entschieden: „Only here“ pro Dienst rechnet weiter mit der bisherigen Regel (nicht auf einem anderen eigenen Dienst, nirgends gratis); die Filmfeld-Markierung `only_on_my_services` für den Filter „Only on one of my services“ behandelt Channels noch nicht als gleichen Katalog (offen für A2).
 
-### Etappe K4: Details und Aktionen
-- [ ] Detailfenster als Schublade von rechts (Desktop 480 px), am Handy Blatt von unten (60 % hoch, hochziehen = ganzer Bildschirm, nach unten wischen schließt). Raster bleibt dahinter sichtbar; Fokus bleibt drin und kehrt zurück (wie heute `openModal`).
+### Etappe K4: Details und Aktionen (teilweise gebaut 2026-11-18, siehe Ergebnis)
+- [x] Detailfenster als Schublade von rechts (Desktop 480 px), am Handy Blatt von unten (60 % hoch, hochziehen = ganzer Bildschirm, nach unten wischen schließt). Raster bleibt dahinter sichtbar; Fokus bleibt drin und kehrt zurück (wie heute `openModal`).
 - [ ] Aufbau: Backdrop 16:9 mit Titel und Jahr; Hauptknopf über die volle Breite für den günstigsten Weg („Where to watch on Netflix“, führt zur TMDB-Seite); Meta (Laufzeit · Genres · Altersfreigabe · Land · Regie, Regie filtert die Watchlist); Bewertungen Letterboxd · TMDB (Stimmen bei Hover/Tippen); Beschreibung 3 Zeilen mit „more“; „Where to watch“ nach Kosten (gibt es, 9d); Verlauf je Dienst der letzten 12 Monate als Zeitleiste; Trailer als Vorschaubild, startet nur auf Klick; Aktionen; „Similar on your services“ (höchstens 8).
-- [ ] ← und → blättern zum vorigen und nächsten Film der aktuellen Liste; die Adresse wechselt mit.
+- [x] ← und → blättern zum vorigen und nächsten Film der aktuellen Liste; die Adresse wechselt mit.
 - [ ] Feinheiten aus dem zweiten Auftrag:
   - Kopf: kleines Poster (80 px) überlappt den Rand des Backdrops; Originaltitel klein darunter, wenn er abweicht. Raster dahinter zu 40 % abgedunkelt; Öffnen in 220 ms, bei reduzierter Bewegung sofort.
   - Meta in einer Zeile ohne Umbruch: `2009 · 2h 21m · rated 12 · Sci-Fi, Drama`. Bewertungszeile: `Letterboxd ★ 3.7` · `TMDB 7.8`, eine Nachkommastelle, Stimmen beim Überfahren/Tippen.
@@ -609,11 +609,18 @@ Abnahme: Die Kündigungsfrage ist ohne Scrollen und ohne Rechnen beantwortet; je
   - Stichworte als kleine Chips; „Similar on your services“ als Reihe aus 4–6 Mini-Postern (96 px) mit Dienst-Logo.
   - Links unten als Chips: TMDB · Letterboxd · JustWatch.
   - Daten beim Überfahren oder Sichtbarwerden der Karte vorladen, Öffnen unter 100 ms.
-- [ ] Schnellaktionen im Menü „⋯“ an der Karte (am Handy auch langes Drücken): Watched, Not now (30 Tage aus Tonight, unter „Filters“ wieder sichtbar; ersetzt „Nicht interessiert“ aus Etappe 14), Add to compare. Drei Tab-Stopps je Karte (Titel, ♥, ⋯).
+- [x] Schnellaktionen im Menü „⋯“ an der Karte (am Handy auch langes Drücken): Watched, Not now (30 Tage aus Tonight, unter „Filters“ wieder sichtbar; ersetzt „Nicht interessiert“ aus Etappe 14), Add to compare. Drei Tab-Stopps je Karte (Titel, ♥, ⋯).
 - [ ] Vergleichen über eine Leiste unten („3 to compare · Compare“, höchstens 4) statt Knopf und Vergleichsmodus; im Vergleich ist der beste Wert je Zeile hervorgehoben.
 - [ ] Watched: Karte ausgegraut mit ✓, optional Letterboxd zum Eintragen öffnen; Abgleich mit dem Letterboxd-Tagebuch (aus Etappe 14).
-- [ ] Rückgängig statt Nachfragen: „Marked as watched · Undo“, 5 s. Nachfrage nur bei Unumkehrbarem, mit Liste dessen, was gelöscht wird.
-- [ ] Tastatur: `/` Suche, `g t` / `g w` / `g s` Seiten, Pfeiltasten im Raster, Enter Details, `f` Favorit, `s` Watched, `n` Not now, `c` Compare, `r` Zufall, `Shift+R` Sync, `?` zeigt alle Kürzel; nur außerhalb von Eingabefeldern. Ersetzt den Tastatur-Punkt aus Etappe 14.
+- [x] Rückgängig statt Nachfragen: „Marked as watched · Undo“, 5 s. Nachfrage nur bei Unumkehrbarem, mit Liste dessen, was gelöscht wird.
+- [x] Tastatur: `/` Suche, `g t` / `g w` / `g s` Seiten, Pfeiltasten im Raster, Enter Details, `f` Favorit, `s` Watched, `n` Not now, `c` Compare, `r` Zufall, `Shift+R` Sync, `?` zeigt alle Kürzel; nur außerhalb von Eingabefeldern. Ersetzt den Tastatur-Punkt aus Etappe 14.
+- Ergebnis (2026-11-18, selbstständig; Teil 1):
+  - Detailfenster als Schublade (Desktop 480 px von rechts, Handy Blatt von unten mit 88 % Höhe), Raster dahinter zu 40 % abgedunkelt, Öffnen in 220 ms (bei reduzierter Bewegung sofort); die Bootstrap-Dialog-Technik bleibt (Fokus, Escape, Rückkehr des Fokus). Knöpfe im Kopf: vorheriger/nächster Film der sichtbaren Liste (Raster oder Tonight-Reihen), ← und → auch per Tastatur; die Adresse `?film=` wechselt mit (ohne neuen Verlaufseintrag).
+  - Neu im Backend: Tabelle `flags` (`watched`, `not_now` mit Ablaufdatum 30 Tage, vom Server gesetzt), `GET /api/flags`, `PUT`/`DELETE /api/flags/<key>`, in Sicherung und Wiederherstellung (geprüft: ein Backup kann nichts länger als 30 Tage verstecken), Tests dazu.
+  - Karten-Menü „⋯“ (Mark as watched · Not now (30 days) · Add to comparison), dritter Tab-Stopp nach Titel und ♥ (nur im Aussehen rechts); dieselben Aktionen als Knöpfe im Detailfenster. „Not now“ blendet den Film in Raster und Tonight aus, bis der Filter „Also show films I set aside“ (unter „Filters“, Adresse `hidden=1`) an ist; „Watched“ zeigt das Abzeichen und nimmt den Film aus Tonight. Rückgängig: der Toast „… marked as watched · Undo“ (5 s).
+  - Tastatur (nicht in Eingabefeldern): `/` Suche, `g t` / `g w` / `g s` Seiten, `f` Favorit, `s` gesehen, `n` Not now, `c` Vergleich (für den Film im geöffneten Detailfenster, sonst den Film mit Fokus oder unter dem Zeiger), `r` Zufall (K3), `Shift+R` Sync, `?` zeigt alle (natives `dialog`).
+  - Tests: Python (Flags, Backup, Ablauf, feindliche Datei), Browser (Menü mit Undo und Filter, Pfeiltasten und Knöpfe, Tastaturkürzel, drei Tab-Stopps).
+  - Noch offen in K4: Aufbau des Fensters nach Vorlage (Backdrop 16:9 mit Titel, ein Hauptknopf „Where to watch on …“ voller Breite, Bewertungszeile mit Stimmen, Zeitleiste je Dienst, Trailer als Vorschaubild, Personen als Filter-Links, Chips für Länder und Stichworte), Vergleichsleiste unten statt Knopf und Modus (der Vergleich arbeitet weiter wie bisher; neu ist nur „Add to comparison“ im Menü), Ausgrauen gesehener Filme im Raster, Abgleich mit dem Letterboxd-Tagebuch (neue Datenquelle, entfällt), Vorladen der Daten beim Überfahren, Langdruck am Handy.
 
 ### Etappe K5: Abos und Benachrichtigungen
 - [ ] (ersetzt durch Teil C, A1 bis A5) Subscriptions als Tabelle: Dienst · Films now · Exclusive (nur hier) · Trend 30 days · Price/month · € per exclusive film · Recommendation (Keep / Can cancel / Worth it again).

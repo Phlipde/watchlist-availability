@@ -92,6 +92,11 @@ CREATE TABLE IF NOT EXISTS favorites (
     notes TEXT NOT NULL DEFAULT '',
     added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS flags (
+    movie_key TEXT PRIMARY KEY,
+    flag TEXT NOT NULL,
+    until REAL
+);
 CREATE TABLE IF NOT EXISTS jobs (
     id TEXT PRIMARY KEY,
     status TEXT NOT NULL,
@@ -552,6 +557,25 @@ class Store:
     def remove_favorite(self, movie_key: str) -> None:
         self._write("DELETE FROM favorites WHERE movie_key = ?", (movie_key,))
 
+    # ----- flags: "watched" and "not now" (hidden until a date), kept apart from favorites -----
+
+    def list_flags(self, now: float | None = None) -> list[dict]:
+        """Flags that count: watched ones, and "not now" until its date."""
+        now = now if now is not None else time.time()
+        rows = self._read(
+            "SELECT movie_key, flag, until FROM flags WHERE until IS NULL OR until > ? ORDER BY movie_key",
+            (now,),
+        )
+        return [{"key": key, "flag": flag, "until": until} for key, flag, until in rows]
+
+    def set_flag(self, movie_key: str, flag: str, until: float | None = None) -> None:
+        self._write(
+            "INSERT OR REPLACE INTO flags (movie_key, flag, until) VALUES (?, ?, ?)", (movie_key, flag, until)
+        )
+
+    def clear_flag(self, movie_key: str) -> None:
+        self._write("DELETE FROM flags WHERE movie_key = ?", (movie_key,))
+
     def rekey_favorites(self, films: list[Film]) -> int:
         """Move favorites saved under `Title|Year` to the TMDB id of the same film."""
         moved = 0
@@ -590,6 +614,7 @@ class Store:
                 if key not in INTERNAL_SETTINGS
             },
             "favorites": self.list_favorites(),
+            "flags": self.list_flags(),
             "changes": [dict(zip(change_names, row, strict=True)) for row in changes],
             "scans": [self.get_scan(scan_id) for scan_id in latest_ids],
             "matches": [
@@ -614,7 +639,8 @@ class Store:
         changes = backup.get("changes") or []
         scans = backup.get("scans") or []
         matches = backup.get("matches") or []  # missing in backups made before match corrections
-        if not all(isinstance(part, list) for part in (favorites, changes, scans, matches)):
+        flags = backup.get("flags") or []  # missing in backups made before "watched" and "not now"
+        if not all(isinstance(part, list) for part in (favorites, changes, scans, matches, flags)):
             raise ValueError("The backup file is damaged.")
         now = time.time()
         skipped = 0
@@ -627,6 +653,13 @@ class Store:
                 continue
             self.add_favorite(favorite)
             imported_favorites += 1
+
+        for raw_flag in flags:
+            flag = validation.clean_flag(raw_flag, now)
+            if flag is None:
+                skipped += 1
+                continue
+            self.set_flag(flag["key"], flag["flag"], flag["until"])
 
         known = {
             tuple(row)

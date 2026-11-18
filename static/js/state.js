@@ -6,6 +6,7 @@ export function createAppState() {
     changes: [],
     lastScan: null,
     favorites: new Map(),
+    flags: new Map(),  // key -> {flag: 'watched' | 'not_now', until}
     favoritesOnly: false,
     compareKeys: new Set(),
     view: null,

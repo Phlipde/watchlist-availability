@@ -195,6 +195,26 @@ def clean_favorite(data) -> dict | None:
     }
 
 
+FLAGS = ("watched", "not_now")
+NOT_NOW_SECONDS = 30 * 24 * 3600
+
+
+def clean_flag(data, now: float | None = None) -> dict | None:
+    """A "watched" or "not now" mark: not now needs a date that lies at most 30 days ahead (or is past)."""
+    if not isinstance(data, dict) or data.get("flag") not in FLAGS:
+        return None
+    key = text(data.get("key"), 300)
+    if not key:
+        return None
+    now = now if now is not None else time.time()
+    until = None
+    if data["flag"] == "not_now":
+        until = number(data.get("until"), 0, now + NOT_NOW_SECONDS)
+        if until is None:
+            return None
+    return {"key": key, "flag": data["flag"], "until": until}
+
+
 def clean_change(data, now: float | None = None) -> dict | None:
     if not isinstance(data, dict) or data.get("country") not in COUNTRIES:
         return None

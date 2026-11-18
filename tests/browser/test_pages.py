@@ -400,7 +400,7 @@ def test_phone_filter_sheet_stays_open_while_choosing(app_server, page):
     assert not page.evaluate("document.getElementById('app-header').inert")
 
 
-def test_skip_link_and_two_stops_per_card(app_server, page):
+def test_skip_link_and_three_stops_per_card(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
@@ -409,12 +409,15 @@ def test_skip_link_and_two_stops_per_card(app_server, page):
     expect(page.locator(".skip-link")).to_be_focused()
     page.keyboard.press("Enter")
     expect(page.locator("#results")).to_be_focused()
-    # Per card the keyboard stops at the title (it opens the details) and the heart.
+    # Per card the keyboard stops at the title (it opens the details), the heart and the "..." menu.
     page.keyboard.press("Tab")
     first = page.locator("article.film").first
     expect(first.locator(".film-open")).to_be_focused()
     page.keyboard.press("Tab")
     expect(first.locator("button.favorite")).to_be_focused()
+    page.keyboard.press("Tab")
+    expect(first.locator(".card-more")).to_be_focused()
+    page.keyboard.press("Shift+Tab")
     # After the skip link, closing the details returns the focus to the title (no #results to go back to).
     page.keyboard.press("Shift+Tab")
     page.keyboard.press("Enter")
@@ -738,3 +741,67 @@ def test_year_and_rating_panels_and_service_search(app_server, page):
     page.locator("#services-button").click()
     page.locator("#services-search").fill("zzzz")
     expect(page.locator("#services-list .services-group:visible")).to_have_count(0)
+
+
+def test_card_menu_sets_a_film_aside_and_marks_it_watched_with_undo(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    titles = visible_titles(page)
+    first = page.locator("article.film").first
+    name = first.locator(".film-title").inner_text()
+    # Watched: the poster says so, the toast offers Undo.
+    first.locator(".card-more").click()
+    first.get_by_role("button", name="Mark as watched").click()
+    expect(page.locator("#toast-message")).to_contain_text("marked as watched")
+    expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_text("Watched")
+    assert any(item["flag"] == "watched" for item in app_server["store"].list_flags())
+    page.locator("#toast-undo").click()
+    expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_count(0)
+    assert app_server["store"].list_flags() == []
+    # Not now: the film leaves the list until the filter asks for it.
+    first = page.locator("article.film").first
+    first.locator(".card-more").click()
+    first.get_by_role("button", name="Not now (30 days)").click()
+    expect(page.locator("article.film")).to_have_count(len(titles) - 1)
+    page.locator("#more-filters summary").click()
+    page.locator("#show-hidden").check()
+    expect(page.locator("article.film")).to_have_count(len(titles))
+    assert "hidden=1" in page.url
+
+
+def test_arrow_keys_and_buttons_move_through_the_films_in_the_drawer(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    tick_all_services(page)
+    expect(page.locator("article.film")).to_have_count(2)
+    titles = page.locator("article.film .film-title").all_inner_texts()
+    page.locator("article.film .film-open").first.click()
+    expect(page.locator("#film-details-title")).to_have_text(titles[0])
+    page.locator("#film-next").click()
+    expect(page.locator("#film-details-title")).to_have_text(titles[1])
+    page.keyboard.press("ArrowLeft")
+    expect(page.locator("#film-details-title")).to_have_text(titles[0])
+
+
+def test_keyboard_shortcuts(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    page.keyboard.press("?")
+    expect(page.locator("#shortcuts-dialog")).to_be_visible()
+    page.keyboard.press("Escape")
+    expect(page.locator("#shortcuts-dialog")).to_be_hidden()
+    page.keyboard.press("/")
+    expect(page.locator("#film-search")).to_be_focused()
+    page.keyboard.type("s")  # typing in the search must not trigger a shortcut
+    assert app_server["store"].list_flags() == []
+    page.locator("#film-search").fill("")
+    # "s" marks the card in focus as watched; "g" then "s" goes to the subscriptions.
+    page.locator("article.film .film-open").first.focus()
+    page.keyboard.press("s")
+    expect(page.locator("article.film .poster-badge")).to_have_text("Watched")
+    page.keyboard.press("g")
+    page.keyboard.press("s")
+    expect(page).to_have_url(re.compile(r"/subscriptions$"))

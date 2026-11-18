@@ -5,7 +5,7 @@ export const FILTER_CONTROLS = [
   ['year-from', 'From'], ['year-to', 'To'], ['min-votes', 'Votes'], ['keyword-filter', 'Keyword'],
   ['media-filter', 'Trailer'], ['change-filter', 'Changes'], ['provider-count-filter', 'Services'],
   ['exclusive-filter', 'Only on one of my services'], ['age-filter', 'Age rating'],
-  ['language-filter', 'Language'], ['origin-filter', 'Country'], ['show-unavailable', 'Also not available'],
+  ['language-filter', 'Language'], ['origin-filter', 'Country'], ['show-unavailable', 'Also not available'], ['show-hidden', 'Set aside shown'],
 ];
 
 // A control is set when it differs from its default (data-default), first option, empty value or "unchecked".
@@ -55,6 +55,7 @@ export function readFilters(doc, favoritesOnly, genres = {include: [], exclude: 
     // Films that are nowhere to stream only show on request, and only without a cost filter.
     availability: availability === 'available' && showUnavailable ? 'all' : availability,
     exclusive: Boolean(doc.getElementById('exclusive-filter')?.checked),
+    showHidden: Boolean(doc.getElementById('show-hidden')?.checked),
     kind,
     minRating: source === 'tmdb' ? Number(minimum) || 0 : 0,
     minVotes: Number(value('min-votes')) || 0,

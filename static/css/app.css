@@ -127,7 +127,7 @@
     .provider-logo-sm { width: 22px; height: 22px; flex: none; border-radius: 5px; object-fit: cover; }
     .offer-flatrate { color: oklch(87.1% 0.064 259); background: rgba(83,135,220,.2); }
     .offer-rent { color: oklch(83.9% 0.090 319); background: rgba(166,91,190,.2); }
-    .film-modal-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .film-modal-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 18px; }
     .film-modal-actions .btn { flex: 0 0 auto; }
     /* Only the picture fades; the text keeps a readable contrast. */
     .unavailable-card { background: oklch(21.2% 0.008 169) !important; }
@@ -547,3 +547,40 @@ main.stats-page { max-width: 1440px; }
 .chip-list { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .static-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 12px; border: 1px solid var(--line-field); border-radius: 999px; font: var(--fs-body) system-ui, sans-serif; }
 @media (max-width: 640px) { .subscriptions-table .price-input { margin-left: 0; } .subscriptions-table .info { display: none; } }
+
+/* The film details: a drawer from the right (a sheet from the bottom on a phone); the page stays visible behind it. */
+#film-details-modal .modal-dialog { position: fixed; top: 0; right: 0; bottom: 0; width: 480px; max-width: 100%; height: 100%; margin: 0; transform: translateX(100%); transition: transform .22s ease; }
+#film-details-modal.show .modal-dialog { transform: none; }
+#film-details-modal .modal-content { height: 100%; border-radius: 0; border-width: 0 0 0 1px; }
+body:has(#film-details-modal.show) .modal-backdrop.show { opacity: .4; }
+.drawer-nav { display: flex; gap: 2px; margin-left: auto; margin-right: 6px; }
+.drawer-step { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: .375rem; background: transparent; color: var(--ink); font-size: 1.25rem; cursor: pointer; }
+.drawer-step:hover { background: rgb(255 255 255 / .08); }
+.drawer-step:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 800px) {
+  #film-details-modal .modal-dialog { top: auto; width: 100%; height: 88dvh; transform: translateY(100%); }
+  #film-details-modal .modal-content { border-radius: 12px 12px 0 0; border-width: 1px 0 0; }
+}
+@media (prefers-reduced-motion: reduce) { #film-details-modal .modal-dialog { transition: none; } }
+
+/* The "..." menu on a card: sits above the stretched title link, next to the heart. */
+.card-actions { display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 6px; position: relative; z-index: 2; }  /* heart first for the keyboard, shown last */
+.card-menu { position: static; }  /* the items anchor to .card-actions, so they stay inside a narrow card */
+.card-more { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 999px; color: var(--muted); list-style: none; cursor: pointer; }
+.card-more::-webkit-details-marker { display: none; }
+.card-more:hover, .card-menu[open] > .card-more { background: rgb(255 255 255 / .1); color: var(--ink); }
+.card-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card-menu-items { position: absolute; right: 0; bottom: calc(100% + 6px); z-index: 5; display: grid; width: 160px; padding: 6px; background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: .5rem; box-shadow: 0 12px 32px rgb(0 0 0 / .45); }
+.card-menu-items button { padding: 8px 10px; border: 0; border-radius: .375rem; background: transparent; color: var(--ink); font: var(--fs-body) system-ui, sans-serif; text-align: left; cursor: pointer; }
+.card-menu-items button:hover, .card-menu-items button:focus-visible { background: rgb(255 255 255 / .08); outline: none; }
+.card-menu-items button:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+@media (pointer: coarse) { .card-more { width: 44px; height: 44px; } .card-menu-items button { min-height: 44px; } }
+
+/* The list of shortcuts (a native dialog: focus trap and Escape come with it). */
+.shortcuts { width: min(440px, 92vw); padding: 20px; border: 1px solid var(--line-strong); border-radius: .75rem; background: var(--surface-raised); color: var(--ink); }
+.shortcuts::backdrop { background: rgb(0 0 0 / .55); }
+.shortcuts h2 { margin: 0 0 12px; font-size: 1.125rem; }
+.shortcuts dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0 0 16px; font: var(--fs-body) system-ui, sans-serif; }
+.shortcuts dt { white-space: nowrap; }
+.shortcuts dd { margin: 0; color: var(--muted); }
+kbd { padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--panel); color: var(--ink); font: var(--fs-small) ui-monospace, monospace; }

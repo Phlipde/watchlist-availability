@@ -56,6 +56,8 @@ function genresMatch(genres, filmGenres = []) {
 // Filters that apply the same way to available and unavailable films.
 function commonMatches(film, filters, context) {
   const key = filmKey(film);
+  // Films set aside with "Not now" stay away until their date, unless asked for.
+  if (!filters.showHidden && context.hiddenKeys?.has(key)) return false;
   const year = Number(film.year) || 0;
   const favoriteMatch = !filters.favoritesOnly || (
     context.favorites.has(key)

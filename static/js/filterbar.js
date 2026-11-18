@@ -28,9 +28,9 @@ function keepInView(menu) {
 }
 
 export function initPopovers(doc = document) {
-  const popovers = () => [...doc.querySelectorAll('details.filter-pop, details.sync, details.export-menu')];
+  const popovers = () => [...doc.querySelectorAll('details.filter-pop, details.sync, details.export-menu, details.card-menu')];
   doc.addEventListener('toggle', event => {
-    if (!event.target.matches?.('details.filter-pop, details.sync, details.export-menu') || !event.target.open) return;
+    if (!event.target.matches?.('details.filter-pop, details.sync, details.export-menu, details.card-menu') || !event.target.open) return;
     popovers().forEach(other => { if (other !== event.target) other.open = false; });
     keepInView(event.target.querySelector('.filter-menu, .sync-panel'));
   }, true);
@@ -38,7 +38,7 @@ export function initPopovers(doc = document) {
     popovers().forEach(popover => { if (popover.open && !popover.contains(event.target)) popover.open = false; });
   });
   doc.addEventListener('keydown', event => {
-    const popover = event.target.closest?.('details.filter-pop, details.sync, details.export-menu');
+    const popover = event.target.closest?.('details.filter-pop, details.sync, details.export-menu, details.card-menu');
     if (!popover?.open) return;
     if (event.key === 'Escape') {
       popover.open = false;

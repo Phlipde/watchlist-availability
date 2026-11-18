@@ -38,3 +38,14 @@ Auftrag: Plan von oben nach unten abarbeiten, nach jedem Schritt prüfen, nach j
 - **[OFFEN]** Datumsfeld: das Format des Kalender-Popups bleibt das des Browsers (nicht steuerbar).
 - **[OFFEN]** Filter „Only on one of my services“ kennt Channels nicht als gleichen Katalog (A2 oder später).
 - **[ERLEDIGT]** A1: Python 307, JS 46, Browser 25, ruff, mypy; Abo-Seite und My-services-Seite im Browser angesehen.
+
+### K4 Details und Aktionen (Teil 1)
+- **[ENTSCHIEDEN]** Schublade mit der vorhandenen Bootstrap-Dialog-Technik (nur CSS und zwei Knöpfe) statt eines neuen Bauteils: Fokusfalle, Escape und Fokus-Rückkehr bleiben erprobt.
+- **[ENTSCHIEDEN]** „Watched“ und „Not now“ in eigener Tabelle `flags`, nicht in den Favoriten: ein Film muss nicht Favorit sein, um gesehen zu sein. Der alte Favoriten-Status „watched“ zählt weiter mit.
+- **[ENTSCHIEDEN]** Der Server setzt das Ablaufdatum von „Not now“ (30 Tage); ein Backup darf nichts weiter als 30 Tage in die Zukunft verstecken.
+- **[ENTSCHIEDEN]** Tab-Reihenfolge Titel, ♥, ⋯ (laut Plan); das ⋯ steht optisch links vom Herz.
+- **[ENTSCHIEDEN]** Die Vergleichsleiste und der Neuaufbau des Fensterinhalts bleiben offen (großer Umbau mit wenig Gewinn gegenüber K5 und Abo-Seite).
+- **[ENTSCHIEDEN]** Kein Abgleich mit dem Letterboxd-Tagebuch (neue Datenquelle, schon entschieden).
+- **[FEHLER]** (nicht im Plan) Ein Klick auf `summary` in einer Karte (neues ⋯) öffnete zusätzlich das Detailfenster, weil die Klickregel der Karte `summary` nicht ausnahm; behoben.
+- **[OFFEN]** `test_skip_link_and_three_stops_per_card` schlug in einem von drei vollen Läufen einmal fehl (einzeln und in den beiden anderen Läufen grün); vermutlich Zeitverhalten, nicht untersucht.
+- **[ERLEDIGT]** K4 Teil 1: Python 311, JS 46, Browser 28, ruff, mypy; Schublade, Karten-Menü und Detailfenster am Handy im Browser angesehen.
