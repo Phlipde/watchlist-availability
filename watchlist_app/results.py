@@ -54,6 +54,7 @@ def make_film(entry: WatchlistEntry, found: dict, targets: dict[str, str] | None
         popularity=details.get("popularity"),
         vote_count=details.get("vote_count"),
         director=details.get("director"),
+        original_title=details.get("original_title"),
         cast=list(details.get("cast") or []),
         keywords=list(details.get("keywords") or []),
         backdrop_path=details.get("backdrop_path"),

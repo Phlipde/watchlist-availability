@@ -27,6 +27,7 @@ class TestMovieBundle:
         assert bundle["details"]["trailer_url"].endswith("v=abc")
         assert bundle["details"]["collection"] is None
         assert bundle["details"]["original_language"] == "en"
+        assert bundle["details"]["original_title"] == "Inception (original)"
         assert bundle["details"]["origin_countries"] == ["US", "GB"]
         assert bundle["providers"]["DE"] == {
             "Netflix": ["flatrate", "rent"],

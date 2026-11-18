@@ -81,6 +81,7 @@ def _details_from_movie(data: dict, tmdb_id: int) -> dict:
         "similar_ids": _similar_ids(data, tmdb_id),
         "release_dates": _release_dates(data),
         "original_language": data.get("original_language") or None,
+        "original_title": data.get("original_title") or None,
         "origin_countries": [code for code in data.get("origin_country") or [] if isinstance(code, str)],
     }
 

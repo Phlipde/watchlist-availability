@@ -772,3 +772,11 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 .film-modal-toolbar .modal-favorite[aria-pressed=true] { color: var(--accent); }
 .film-modal-overview.clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .overview-more { margin: -6px 0 10px; }
+
+/* "Similar on your services": a row of mini posters, the service under each. */
+.film-modal-similar p { margin: 0 0 6px; }
+.mini-posters { display: flex; gap: 8px; margin: 0 0 12px; padding: 0 0 4px; list-style: none; overflow-x: auto; }
+.mini-posters button { display: block; width: 72px; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
+.mini-posters img, .mini-posters .no-poster { display: block; width: 72px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .25rem; border: 1px solid var(--line-card); background: var(--panel); font-size: var(--fs-small); overflow: hidden; }
+.mini-service { display: block; margin-top: 3px; font-size: var(--fs-small); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.film-original-title { margin: 0; font-size: var(--fs-small); font-weight: 400; color: var(--muted); }
