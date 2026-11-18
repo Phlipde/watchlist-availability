@@ -20,3 +20,11 @@ Auftrag: Plan von oben nach unten abarbeiten, nach jedem Schritt prüfen, nach j
 - **[FEHLER]** (nicht im Plan) gunicorn 27 stürzte mit „Control server error: Permission denied '/home/app'“ ab, sobald der Container nicht als root lief; behoben mit `--no-control-socket` in `CMD`.
 - **[ERLEDIGT]** 17a: Python 304 Tests, ruff, mypy; echtes Docker: Image gebaut, healthy, UID 1001, Backup-Ordner, Neustart (Docker Desktop habe ich dafür gestartet).
 - **[OFFEN]** 17a: Lauf auf Unraid und die GitHub-Prüfung `docker.yml` sind ungeprüft (kein Push von mir).
+
+### K3c Filterleiste
+- **[ENTSCHIEDEN]** „My favorites“ bleibt in der Werkzeugzeile (eigene Ansicht, kein Filter; ein Klick mehr wäre ein Rückschritt); neu bewerten mit K4.
+- **[ENTSCHIEDEN]** Kein Verschieben von Genre/Laufzeit/Bewertung in „Filters“ bei Tablet-Breite (doppelte Ids); die Leiste bricht zweizeilig um.
+- **[ENTSCHIEDEN]** Altersfreigabe-Adresse `ages=` (Menge) statt `age=` (bis N), alte Links werden umgedeutet, damit „nur 12“ und „bis 12“ nicht verwechselt werden.
+- **[ENTSCHIEDEN]** Kein Zusatz bei verwechselbaren Dienstnamen (Namen sind schon ausgeschrieben).
+- **[ENTSCHIEDEN]** Votes-Chips Any · 1k+ · 10k+ · 100k+ (aus der Vorlage) statt der alten 100+/1,000+/10,000+.
+- **[ERLEDIGT]** K3c: Python 304, JS 46, Browser 24, ruff, mypy; Leiste bei 1440 px und Panels im Browser angesehen.

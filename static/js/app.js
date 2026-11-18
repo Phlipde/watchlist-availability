@@ -212,9 +212,7 @@ const state = createAppState();
     function populateGenres() {
       filterBar.buildGenreMenu([...new Set(state.films.flatMap(film => film.genres || []))].sort());
       fillSelect(document.getElementById('keyword-filter'), 'All keywords', [...new Set(state.films.flatMap(film => film.keywords || []))].sort());
-      const age = document.getElementById('age-filter');
-      fillSelect(age, 'Any age rating', sortRatings([...state.films, ...state.unavailable].map(film => film.certification)));
-      [...age.options].slice(1).forEach(option => { if (/^\d+$/.test(option.value)) option.textContent = `Up to ${option.value}`; });
+      filterBar.buildAgeChips(sortRatings([...state.films, ...state.unavailable].map(film => film.certification)), initialUrl.get('ages') ? null : initialUrl.get('age'));
       // Codes as values ("ja", "JP"), names as text ("Japanese", "Japan"), sorted by name.
       const all = [...state.films, ...state.unavailable];
       const named = (select, allText, codes, type) => {
@@ -227,9 +225,7 @@ const state = createAppState();
       named(document.getElementById('origin-filter'), 'Any country', all.flatMap(film => film.origin_countries || []), 'region');
       // Ratings arrive with the first scan after the update; until then the filter and sort would only empty the list.
       const rated = all.some(film => film.letterboxd_rating != null);
-      const rating = document.getElementById('rating-filter');
-      rating.querySelectorAll('option[value^="lb:"]').forEach(option => { option.disabled = !rated; });
-      if (!rated && rating.value.startsWith('lb:')) rating.value = '';
+      filterBar.setRatingAvailability(rated);
       document.querySelector('#sort-menu input[value="letterboxd"]').disabled = !rated;
     }
     // "15 Mar 2027" for a date "2027-03-15".
@@ -647,7 +643,7 @@ const state = createAppState();
     document.getElementById('empty-relax').addEventListener('click', event => {
       const id = event.currentTarget.dataset.filter;
       if (id === 'genres') { state.genres = {include: new Set(), exclude: new Set()}; populateGenres(); renderFilms(); return; }
-      document.querySelector(`.filter-chip[data-filter-id="${id}"]`)?.click();
+      document.querySelector(`.filter-chip[data-filter-id="${id}"] .chip-remove`)?.click();
     });
     document.getElementById('favorites-show-all').addEventListener('click', () => setFavoritesOnly(false));
     results.addEventListener('click', event => { const favoriteButton = event.target.closest('.favorite'); if (favoriteButton) { event.preventDefault(); toggleFavorite(favoriteButton); } });
@@ -824,7 +820,7 @@ const state = createAppState();
         votes: document.getElementById('min-votes').value,
         sort: document.getElementById('sort-order').value,
         keyword: document.getElementById('keyword-filter').dataset.pending || document.getElementById('keyword-filter').value,
-        age: document.getElementById('age-filter').dataset.pending || document.getElementById('age-filter').value,
+        ages: document.getElementById('age-filter').value,
         lang: document.getElementById('language-filter').dataset.pending || document.getElementById('language-filter').value,
         origin: document.getElementById('origin-filter').dataset.pending || document.getElementById('origin-filter').value,
         from: document.getElementById('year-from').value,
@@ -858,14 +854,14 @@ const state = createAppState();
       const element = document.getElementById(id);
       const value = initialUrl.get(parameter) ?? fallback;
       if (element && (!element.options || [...element.options].some(option => option.value === value))) element.value = value;
-      else if (element && ['keyword-filter', 'age-filter', 'language-filter', 'origin-filter'].includes(id) && value !== 'all') element.dataset.pending = value;
+      else if (element && ['keyword-filter', 'language-filter', 'origin-filter'].includes(id) && value !== 'all') element.dataset.pending = value;
     };
-    ['keyword-filter', 'age-filter', 'language-filter', 'origin-filter'].forEach(id => document.getElementById(id).addEventListener('input', event => delete event.target.dataset.pending));
+    ['keyword-filter', 'language-filter', 'origin-filter'].forEach(id => document.getElementById(id).addEventListener('input', event => delete event.target.dataset.pending));
     setInitial('film-search', 'q', window.WATCHLIST_CONFIG.initialFilters.query);
     setInitial('sort-order', 'sort', window.WATCHLIST_CONFIG.initialFilters.sort);
     setInitial('min-votes', 'votes', '0');
     setInitial('keyword-filter', 'keyword', 'all');
-    setInitial('age-filter', 'age', 'all');
+    setInitial('age-filter', 'ages', 'all');
     setInitial('language-filter', 'lang', 'all');
     setInitial('origin-filter', 'origin', 'all');
     setInitial('year-from', 'from', '');

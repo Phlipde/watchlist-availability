@@ -210,10 +210,10 @@ test('similar films: only watchlist films on own services, in TMDB order, not wa
 test('age rating: up to a number, exact for other systems, unrated films out', () => {
   assert.equal(ageMatches('all', undefined), true);
   assert.equal(ageMatches(undefined, '18'), true);
-  assert.equal(ageMatches('12', '6'), true);
-  assert.equal(ageMatches('12', '16'), false);
+  assert.equal(ageMatches('6,12', '6'), true);
+  assert.equal(ageMatches('6,12', '16'), false);  // a chosen set, not "up to"
   assert.equal(ageMatches('12', null), false);
-  assert.equal(ageMatches('PG-13', 'PG-13'), true);
+  assert.equal(ageMatches('PG-13,R', 'PG-13'), true);
   assert.equal(ageMatches('PG-13', 'R'), false);
   assert.deepEqual(sortRatings(['16', 'PG', '6', null, '12', '6', 'G']), ['6', '12', '16', 'G', 'PG']);
 });

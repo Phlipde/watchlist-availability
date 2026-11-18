@@ -161,9 +161,9 @@
     .context-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
     .context-line p { margin: 0; color: var(--muted); font: var(--fs-body) system-ui, sans-serif; }
     .tonight-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
-    .quick-chip { min-height: 28px; padding: 0 12px; border: 1px solid var(--line-field); border-radius: 999px; background: transparent; color: var(--ink); font: var(--fs-body) system-ui, sans-serif; cursor: pointer; }
-    .quick-chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in oklch, var(--accent) 16%, transparent); }
-    .quick-chip:focus-visible, .view-tab:focus-visible, .row-arrow:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .quick-chip, .chip { min-height: 28px; padding: 0 12px; border: 1px solid var(--line-field); border-radius: 999px; background: transparent; color: var(--ink); font: var(--fs-body) system-ui, sans-serif; cursor: pointer; }
+    .quick-chip[aria-pressed="true"], .chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in oklch, var(--accent) 16%, transparent); }
+    .chip:focus-visible, .quick-chip:focus-visible, .view-tab:focus-visible, .row-arrow:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     #tonight-rows:focus { outline: none; }
     .film-row { margin-top: 20px; }
     .film-row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -216,12 +216,14 @@
     .filter-button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--line-field); border-radius: .375rem; background: var(--panel); color: var(--ink); font: var(--fs-body) system-ui, sans-serif; white-space: nowrap; cursor: pointer; }
     .filter-button::after { content: ""; width: 6px; height: 6px; margin-left: 2px; border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: translateY(-2px) rotate(45deg); }
     .filter-pop[open] > .filter-button, .filter-button:hover { border-color: var(--line-strong); }
+    .filter-pop[open] > .filter-button::after { transform: translateY(1px) rotate(225deg); }
     .filter-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .filter-value, #more-filters-count { color: var(--accent); }
     .filter-menu { position: absolute; z-index: 1040; top: calc(100% + 6px); left: 0; min-width: 260px; max-height: min(70vh, 560px); overflow-y: auto; padding: 12px; background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: .5rem; box-shadow: 0 12px 32px rgb(0 0 0 / .45); font: var(--fs-body) system-ui, sans-serif; }
     .more-filters .filter-menu { width: min(720px, calc(100vw - 16px)); }
     .option-count { margin-left: auto; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; font-variant-numeric: tabular-nums; }
     .is-empty { opacity: .55; }
+    .segmented label:has(input:disabled) { opacity: .4; cursor: not-allowed; }
     /* Cost: a segmented control, one radio per segment. */
     .segmented { display: inline-flex; min-height: 36px; border: 1px solid var(--line-field); border-radius: .375rem; background: var(--panel); overflow: hidden; font: var(--fs-body) system-ui, sans-serif; }
     .segmented label { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; color: var(--muted); cursor: pointer; }
@@ -235,7 +237,9 @@
     .logo-stack img { width: 22px; height: 22px; border-radius: 5px; box-shadow: 0 0 0 2px var(--panel); }
     .logo-stack img + img { margin-left: -6px; }
     .logo-more { margin-left: 6px; color: var(--muted); font-size: var(--fs-small); }
-    .services-menu { width: 320px; }
+    .services-menu { width: 360px; max-height: 70vh; }
+    .services-head { display: grid; gap: 8px; margin-bottom: 10px; }
+    .services-head .check-field { display: flex; align-items: center; gap: 8px; }
     .services-group + .services-group { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
     .services-group-head { display: flex; align-items: center; justify-content: space-between; }
     .services-group-head h3 { margin: 0 0 6px; }
@@ -257,6 +261,17 @@
     .menu-section > legend { float: none; width: auto; margin: 0 0 2px; padding: 0; }
     .menu-field { display: grid; gap: 4px; min-width: 0; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; }
     .menu-field select { width: 100%; }
+    .range-menu { display: grid; gap: 10px; width: 300px; }
+    .range-menu .segmented { justify-self: start; }
+    .menu-head { display: flex; align-items: center; justify-content: space-between; }
+    .menu-head .menu-group { margin: 0; }
+    .range-text { margin: 0; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+    .dual-range { position: relative; height: 24px; }
+    .dual-range input { position: absolute; inset: 0; width: 100%; margin: 0; background: transparent; pointer-events: none; accent-color: var(--accent); }
+    .dual-range input::-webkit-slider-thumb { pointer-events: auto; }
+    .dual-range input::-moz-range-thumb { pointer-events: auto; }
+    .chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip .option-count { margin-left: 2px; }
     .year-row { display: flex; align-items: center; gap: 6px; }
     .year-row input { flex: 1; min-width: 0; }
     .filter-menu .check-field { display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; }
@@ -313,7 +328,13 @@
     .film { background-color: var(--card-bg); border-color: var(--line-card); }
     .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px; margin: -8px 0 16px; }
     /* Free and Paid are separate sections, not one continuous grid. */
-    .filter-chip { border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; background: rgba(232,184,107,.1); color: var(--accent); font: var(--fs-small) system-ui, sans-serif; cursor: pointer; }
+    .filter-chip { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; background: rgba(232,184,107,.1); color: var(--accent); font: var(--fs-small) system-ui, sans-serif; }
+    .filter-chip > button { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+    .filter-chip .chip-open { padding: 3px 4px 3px 9px; border-radius: 999px 0 0 999px; }
+    .filter-chip .chip-remove { padding: 3px 9px 3px 4px; border-radius: 0 999px 999px 0; }
+    .filter-chip > button:hover { background: rgb(255 255 255 / .08); }
+    .filter-chip > button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .filter-chip.filter-reset { padding: 3px 9px; cursor: pointer; }
     .analysis-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin: 14px 0 20px; }
     .analysis-item { padding: 10px 12px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font: var(--fs-small) system-ui, sans-serif; }
     /* A visible label on the poster; the whole pill is the 44px-high hit area. */

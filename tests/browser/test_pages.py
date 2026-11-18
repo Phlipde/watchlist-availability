@@ -163,7 +163,7 @@ def page(browser):
 def tick_all_services(page) -> None:
     """Tick every service in the services menu, group by group, as a person would."""
     page.locator("#services-button").click()
-    for toggle in page.locator("#services-menu [data-group-toggle]").all():
+    for toggle in page.locator("#services-menu [data-group-toggle]:visible").all():
         group = toggle.locator("xpath=ancestor::section[1]")
         if group.locator("input:not(:checked)").count():
             toggle.click()
@@ -197,7 +197,7 @@ def test_scan_filters_and_favorite(app_server, page):
     assert visible_titles(page) == ["Alien"]
 
     # The services chip goes back to the saved subscriptions.
-    page.locator(".filter-chip[data-services]").click()
+    page.locator(".filter-chip[data-services] .chip-remove").click()
     expect(page.locator("#visible-count")).to_have_text("0")
 
     page.locator("#film-search").fill("")
@@ -283,9 +283,11 @@ def test_coming_soon_and_age_rating(app_server, page):
     page.locator("#film-details-modal .btn-close").click()
     expect(page.locator("#film-details-modal")).to_be_hidden()
     page.locator("#more-filters summary").click()
-    page.locator("#age-filter").select_option("16")
+    page.locator("#age-chips .chip[data-age='16']").click()
     expect(page.locator("#visible-count")).to_have_text("1")
-    expect(page.locator("#age-filter option[value='16']")).to_have_text("Up to 16")
+    expect(page.locator("#age-filter")).to_have_value("16")
+    expect(page.locator("#age-chips .chip[data-age='16']")).to_have_attribute("aria-pressed", "true")
+    assert "ages=16" in page.url
 
 
 def test_free_labels_follow_the_country(app_server, page):
@@ -317,9 +319,10 @@ def test_saved_results_show_the_tools(app_server, page):
     expect(page.locator("#compare-films")).to_be_visible()
     expect(page.locator(".stats-link a")).to_have_attribute("href", "/stats")
     expect(page.locator("#retry-scan")).to_have_text("Scan now")
-    # A rare filter set from a link sits behind "More filters"; the summary must still show it.
+    # A filter set from a link must show as a chip, also when its control sits in a closed panel.
     page.goto(app_server["url"] + "/watchlist?votes=1000")
-    expect(page.locator("#min-votes")).to_be_hidden()
+    expect(page.locator("#filter-chips")).to_contain_text("Votes: 1k+")
+    page.goto(app_server["url"] + "/watchlist?age=16&ages=")
     expect(page.locator("#more-filters summary")).to_have_text("Filters (1)")
 
 
@@ -336,10 +339,10 @@ def test_filters_from_a_link_survive_the_scan(app_server, page):
     expect(page.locator('#genre-list input[value="Action"]')).to_be_checked()
     # An old link's rating=7 is the TMDB rating; its chip clears it.
     expect(page.locator("#rating-filter")).to_have_value("tmdb:7")
-    page.locator('.filter-chip[data-filter-id="rating-filter"]').click()
+    page.locator('.filter-chip[data-filter-id="rating-filter"] .chip-remove').click()
     expect(page.locator("#rating-filter")).to_have_value("")
     # The genre chip clears the genre.
-    page.locator('.filter-chip[data-genre-include="Action"]').click()
+    page.locator('.filter-chip[data-genre-include="Action"] .chip-remove').click()
     expect(page.locator('#genre-list input[value="Action"]')).not_to_be_checked()
     # The favorite status only belongs to the favorites view.
     expect(page.locator("#favorite-status-filter")).to_be_hidden()
@@ -673,7 +676,7 @@ def test_filter_bar_cost_genres_runtime_and_the_address(app_server, page):
     page.reload()
     expect(page.locator("#progress-count")).to_have_text(re.compile("Complete|Saved"), timeout=15000)
     assert visible_titles(page) == ["Alien"]
-    page.locator('.filter-chip[data-genre-exclude="Action"]').click()
+    page.locator('.filter-chip[data-genre-exclude="Action"] .chip-remove').click()
     # Runtime: Heat runs 120 min, Alien has no runtime, so a limit keeps only Heat.
     page.locator("#runtime-pop summary").click()
     page.locator('#runtime-pop label:has(input[value="120"])').click()
@@ -692,3 +695,34 @@ def test_filter_menus_stay_inside_the_window(app_server, page):
         page.locator(f"#{name} > summary").click()
         box = page.locator(f"#{name} > .filter-menu").bounding_box()
         assert box["x"] >= 0 and box["x"] + box["width"] <= 820, name
+
+
+def test_year_and_rating_panels_and_service_search(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    page.locator("#year-pop > summary").click()
+    page.locator(
+        "#year-chips .chip", has_text="1990s"
+    ).count()  # chips are fixed: 2020s, 2010s, 2000s, Before 2000
+    page.locator("#year-chips .chip", has_text="Before 2000").click()
+    assert page.locator("#year-to").input_value() == "1999"
+    expect(page.locator("#filter-chips")).to_contain_text("To: 1999")
+    expect(page.locator("#year-reset")).to_be_visible()
+    # A chip's text opens its panel, its x removes only that filter.
+    page.keyboard.press("Escape")
+    page.locator("#filter-chips .chip-open", has_text="To: 1999").click()
+    expect(page.locator("#year-pop")).to_have_attribute("open", "")
+    page.locator("#filter-chips .filter-chip[data-filter-id='year-to'] .chip-remove").click()
+    expect(page.locator("#year-to")).to_have_value("")
+    page.locator("#rating-pop > summary").click()
+    page.locator("#rating-pop input[value=tmdb]").check(force=True)
+    page.locator("#rating-chips-tmdb .chip", has_text="7+").first.click()
+    expect(page.locator("#rating-filter")).to_have_value("tmdb:7")
+    assert "rating=tmdb%3A7" in page.url or "rating=tmdb:7" in page.url
+    page.locator("#rating-reset").click()
+    expect(page.locator("#rating-filter")).to_have_value("")
+    # The services menu finds a service that is not one of the own ones.
+    page.locator("#services-button").click()
+    page.locator("#services-search").fill("zzzz")
+    expect(page.locator("#services-list .services-group:visible")).to_have_count(0)

@@ -83,13 +83,11 @@ function commonMatches(film, filters, context) {
     && year <= filters.yearTo;
 }
 
-// Age rating filter: "up to 12" for numeric ratings (FSK and most of Europe); other systems
-// ("PG-13") match exactly. Films without a rating are left out once a limit is set.
-export function ageMatches(limit, certification) {
-  if (!limit || limit === 'all') return true;
-  if (!certification) return false;
-  const numeric = value => /^\d+$/.test(value);
-  return numeric(limit) && numeric(certification) ? Number(certification) <= Number(limit) : certification === limit;
+// Age rating filter: `selected` is "all" or a comma list of ratings ("6,12"). Films without a rating
+// are left out once a rating is chosen.
+export function ageMatches(selected, certification) {
+  if (!selected || selected === 'all') return true;
+  return Boolean(certification) && selected.split(',').includes(certification);
 }
 
 // Ratings in a sensible order: numbers ascending, then the others alphabetically.
