@@ -106,6 +106,7 @@ def clean_film(data) -> dict | None:
         popularity=number(data.get("popularity"), 0, 10**9),
         vote_count=integer(data.get("vote_count"), 0, 10**9),
         director=text(data.get("director"), 200),
+        original_title=text(data.get("original_title"), 300),
         cast=[person[:200] for person in cast[:MAX_PEOPLE] if isinstance(person, str)]
         if isinstance(cast, list)
         else [],

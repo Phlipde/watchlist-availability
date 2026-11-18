@@ -177,3 +177,6 @@ Noch offen (zur Auswahl): 11 Meldung, wenn ein „Demnächst“-Film streambar w
 - **[OFFEN]** Mini-Poster bei "Similar", Zeitleiste je Dienst, Report-Link, Flaggen-Chips, Originaltitel: nicht gebaut, bleiben im Plan.
 - **[OFFEN]** Ein Browser-Test (Dienst-Schublade) schlug einmal im Gesamtlauf fehl und lief danach allein 3-mal sowie im Gesamtlauf ohne meine Änderung durch: vermutlich ein Zeitproblem, nicht beobachtet wiederholt.
 - **[ERLEDIGT]** Python 346, JS 52, Browser 39, ruff und mypy sauber.
+- **[ERLEDIGT]** Detailfenster Rest: Originaltitel, Mini-Poster bei "Similar", JustWatch-Chip. Python 347, JS 52, Browser 39.
+- **[ENTSCHIEDEN]** Nicht gebaut: Zeitleiste je Film (Daten gibt es nur je Dienst), "Report" (kein Ziel für Meldungen, ein toter Link wäre schlechter als keiner), Flaggen-Chips (Flaggen-Emoji erscheinen unter Windows als zwei Buchstaben).
+- **[OFFEN]** Der Originaltitel erscheint erst nach dem nächsten Scan (`FILM_FORMAT` 3 erzwingt ihn).

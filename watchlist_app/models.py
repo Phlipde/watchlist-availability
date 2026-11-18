@@ -38,6 +38,7 @@ class Film:
     popularity: float | None = None
     vote_count: int | None = None
     director: str | None = None
+    original_title: str | None = None  # shown under the title when it differs
     cast: list[str] = field(default_factory=list)
     keywords: list[str] = field(default_factory=list)
     backdrop_path: str | None = None

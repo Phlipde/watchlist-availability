@@ -26,6 +26,7 @@ MOVIE = {
     "poster_path": "/p.jpg",
     "runtime": 148,
     "original_language": "en",
+    "original_title": "Inception (original)",
     "origin_country": ["US", "GB"],
     "release_date": "2010-07-15",
     "genres": [{"name": "Action"}],
