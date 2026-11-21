@@ -746,3 +746,12 @@ class TestFeedAndTile:
 
     def test_tile_without_a_scan_is_still_a_page(self, client):
         assert "No film to suggest yet." in client.get("/tile").get_data(as_text=True)
+
+
+class TestFlagPictures:
+    def test_flags_are_small_and_cached_for_a_month(self, client):
+        for code in ("es", "rs", "mx", "us"):
+            response = client.get(f"/static/flags/{code}.svg")
+            assert response.status_code == 200 and response.mimetype == "image/svg+xml"
+            assert "max-age=2592000" in response.headers["Cache-Control"]
+            assert len(response.data) < 12_000  # the coats of arms were 80 to 180 KB before they were shrunk
