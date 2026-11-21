@@ -220,3 +220,8 @@ Noch offen (zur Auswahl): 11 Meldung, wenn ein „Demnächst“-Film streambar w
 - **[ERLEDIGT]** Fenster: ←/→ blättern in allen drei Ansichten durch dieselbe Reihenfolge (Tabellenzeilen zählen mit). Escape gibt den Fokus an den Film zurück, den das Fenster zuletzt zeigte (nicht an den, der es geöffnet hat). Nach einem Neuzeichnen bleibt der Fokus auf demselben Film.
 - **[ENTSCHIEDEN]** Beim Wechsel der Ansicht bleibt derselbe Film der aktive (Tab-Stopp) und wird ins Bild gerollt; der Fokus bleibt auf dem Umschalter (er würde sonst beim Klicken weggenommen).
 - **[ERLEDIGT]** Tests: JS 67 (Spaltenberechnung und Zielindex), Browser 52 (Pfeile in Grid, Compact und Table bei 1400, 900 und 500 px, mit Enter, Escape und Blättern im Fenster). Die Test-Daten haben nur 2 Filme je Ansicht; die Spaltenberechnung für mehrere Reihen deckt der JS-Test ab.
+
+### Tonight-Pfeiltasten und Antippen des Textes (2026-11-22)
+- **[ERLEDIGT]** Tonight-Reihen: ←/→ entlang der Reihe, ↑/↓ in die Reihe darüber oder darunter (gleiche Stelle, soweit sie reicht), Home/End, ein Tab-Stopp für alle Reihen (`nextInRows` in `gridnav.js`, getestet). Dieselben Ausnahmen wie im Raster; die Pfeil-Knöpfe am Rand bleiben für die Maus.
+- **[ERLEDIGT]** Detailfenster auf dem Handy (bis 800 px): Antippen des abgeschnittenen Beschreibungstextes klappt ihn auf (nur aufklappen; "less" bleibt der Knopf, damit ein Tippen beim Lesen nichts zuklappt). Auf dem Desktop bleibt es beim Knopf "more", damit Text markieren nichts auslöst.
+- **[ERLEDIGT]** Python 348, JS 68, Browser 54, ruff und mypy sauber.

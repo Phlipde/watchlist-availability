@@ -24,4 +24,19 @@ export function nextIndex(key, index, columns, count) {
   return target === null || target === index ? null : target;
 }
 
+// Rows of different length (the Tonight page): [row, col] the key moves to, or null. ↑/↓ change the row and keep
+// the column as far as the other row reaches.
+export function nextInRows(key, row, col, lengths) {
+  if (row < 0 || row >= lengths.length || col < 0) return null;
+  const last = lengths[row] - 1;
+  let target = null;
+  if (key === 'ArrowRight') target = [row, Math.min(col + 1, last)];
+  else if (key === 'ArrowLeft') target = [row, Math.max(col - 1, 0)];
+  else if (key === 'Home') target = [row, 0];
+  else if (key === 'End') target = [row, last];
+  else if (key === 'ArrowDown' && row + 1 < lengths.length) target = [row + 1, Math.min(col, lengths[row + 1] - 1)];
+  else if (key === 'ArrowUp' && row > 0) target = [row - 1, Math.min(col, lengths[row - 1] - 1)];
+  return target === null || (target[0] === row && target[1] === col) ? null : target;
+}
+
 export const NAV_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']);

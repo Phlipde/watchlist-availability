@@ -875,3 +875,6 @@ summary.offer-heading { cursor: pointer; }
 
 /* A film reached with the arrow keys scrolls into view below the sticky header (and above the phone's page bar). */
 #results article.film, #results tr[data-key] { scroll-margin-top: 150px; scroll-margin-bottom: 96px; }
+
+@media (max-width: 800px) { .overview-box.clamped .film-modal-overview { cursor: pointer; } }
+#tonight-rows article.film { scroll-margin-top: 150px; scroll-margin-bottom: 96px; }
