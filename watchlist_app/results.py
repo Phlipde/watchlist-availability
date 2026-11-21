@@ -55,6 +55,7 @@ def make_film(entry: WatchlistEntry, found: dict, targets: dict[str, str] | None
         vote_count=details.get("vote_count"),
         director=details.get("director"),
         original_title=details.get("original_title"),
+        imdb_id=details.get("imdb_id"),
         cast=list(details.get("cast") or []),
         keywords=list(details.get("keywords") or []),
         backdrop_path=details.get("backdrop_path"),
@@ -112,7 +113,9 @@ def build_results(
             )
         film = make_film(entry, found, targets)
         film.watchlist_position = index
-        return ("available" if film.providers else "unavailable"), film
+        # Buying alone is not streaming (no section for it on the page); the details still show it.
+        streamable = any(kind != "buy" for kinds in film.providers.values() for kind in kinds)
+        return ("available" if streamable else "unavailable"), film
 
     available: dict[int, Film] = {}
     progress = tqdm(

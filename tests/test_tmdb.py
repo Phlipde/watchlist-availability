@@ -28,10 +28,11 @@ class TestMovieBundle:
         assert bundle["details"]["collection"] is None
         assert bundle["details"]["original_language"] == "en"
         assert bundle["details"]["original_title"] == "Inception (original)"
+        assert bundle["details"]["imdb_id"] == "tt1375666"
         assert bundle["details"]["origin_countries"] == ["US", "GB"]
         assert bundle["providers"]["DE"] == {
             "Netflix": ["flatrate", "rent"],
-            "Apple TV Store": ["rent"],
+            "Apple TV Store": ["rent", "buy"],
         }
         assert bundle["providers"]["US"] == {"Pluto TV": ["ads"]}
 
@@ -79,10 +80,10 @@ class TestMovieBundle:
             "DE": {"cinema": "2026-02-20", "home": "2026-06-01", "certification": "12"}
         }
 
-    def test_buy_only_country_is_left_out(self):
+    def test_buy_only_country_is_kept_for_the_details(self):
         with patch("watchlist_app.tmdb._http_get", return_value=response(MOVIE)):
             bundle = tmdb.get_movie_bundle(27205, API_KEY)
-        assert "FR" not in bundle["providers"]
+        assert bundle["providers"]["FR"] == {"Canal VOD": ["buy"]}
 
     def test_unknown_id_returns_none(self):
         with patch("watchlist_app.tmdb._http_get", return_value=response(status_code=404)):

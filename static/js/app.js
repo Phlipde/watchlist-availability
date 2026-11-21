@@ -1,6 +1,6 @@
 import {dateTime, escapeHtml, numberText} from './ui.js';
 import {createAppState, createScanState} from './state.js';
-import {availabilityByOffer, bestIndexes, changeBadgesFor, favoriteFields, filmCard, filmHref, renderResults, runtimeText} from './rendering.js';
+import {bestIndexes, favoriteFields, filmCard, filmHref, renderResults, runtimeText} from './rendering.js';
 import './register-sw.js';
 import {scanProblem} from './problems.js';
 import {renderViews, wireViews} from './saved-views.js';
@@ -10,7 +10,8 @@ import {readFilters} from './filters.js';
 import {createFilterBar, initPopovers} from './filterbar.js';
 import {bestRelaxation, comingSoon, elsewhereOnServices, filmKey, filterFilms, similarOnServices, sortRatings} from './filtering.js';
 import {updateScanFeedback} from './scans.js';
-import {favoriteLabel} from './favorites.js';
+import {abroadHtml, abroadRows} from './abroad.js';
+import {drawerHtml} from './drawer.js';
 
 const imageBaseUrl = window.WATCHLIST_CONFIG.imageBaseUrl;
 const scanState = createScanState();
@@ -699,8 +700,10 @@ const state = createAppState();
       if (hadFocus) results.querySelector(`.film[data-key="${CSS.escape(key)}"] .favorite`)?.focus();
       document.querySelectorAll(`.modal-favorite[data-key="${CSS.escape(key)}"]`).forEach(modalButton => {
         const active = state.favorites.has(key);
-        modalButton.innerHTML = `<i class="ti ${active ? 'ti-heart-filled' : 'ti-heart'}" aria-hidden="true"></i><span class="btn-label"> ${favoriteLabel(active)}</span>`;
-        modalButton.title = favoriteLabel(active);
+        modalButton.innerHTML = `<i class="ti ${active ? 'ti-heart-filled' : 'ti-heart'}" aria-hidden="true"></i><span class="tool-label">Favorite</span>`;
+        const label = active ? 'Remove favorite' : 'Add to favorites';
+        modalButton.title = label;
+        modalButton.setAttribute('aria-label', label);
         modalButton.setAttribute('aria-pressed', String(active));
         modalButton.disabled = false;
       });
@@ -741,7 +744,7 @@ const state = createAppState();
     });
     document.getElementById('favorites-show-all').addEventListener('click', () => setFavoritesOnly(false));
     results.addEventListener('click', event => { const favoriteButton = event.target.closest('.favorite'); if (favoriteButton) { event.preventDefault(); toggleFavorite(favoriteButton); } });
-    // "Also on your services in United Kingdom (Netflix)", from stored scan data; filled in when it arrives.
+    // "Abroad on your services": from stored scan data (no TMDB request); filled in when it arrives.
     async function showElsewhere(tmdbId, key, own) {
       let byCountry;
       try {
@@ -751,86 +754,101 @@ const state = createAppState();
       } catch {
         return;
       }
-      const target = document.getElementById('film-elsewhere');
+      const target = document.getElementById('film-abroad');
       // The dialog may show another film by now.
       if (!target || document.getElementById('modal-favorite-fields')?.dataset.key !== key) return;
-      const places = elsewhereOnServices(byCountry, own, document.getElementById('country-select').value);
-      if (!places.length) return;
-      const names = new Intl.DisplayNames(['en'], {type: 'region'});
-      places.sort(([a], [b]) => (names.of(a) || a).localeCompare(names.of(b) || b));
-      const shown = places.slice(0, 6).map(([country, services]) => `${escapeHtml(names.of(country) || country)} (${escapeHtml(services.join(', '))})`);
-      if (places.length > 6) shown.push(`${places.length - 6} more`);
-      target.innerHTML = `Also on your services in ${shown.join(', ')}.<span class="film-modal-note">Watching there needs a VPN or being in that country.</span>`;
+      const regions = new Intl.DisplayNames(['en'], {type: 'region'});
+      const nameOf = code => regions.of(code) || code;
+      const {providerLogos, logoBaseUrl} = window.WATCHLIST_CONFIG;
+      const logoOf = (name, className = 'provider-logo') => (providerLogos[name] ? `<img class="${className}" src="${escapeHtml(logoBaseUrl + providerLogos[name])}" alt="" loading="lazy">` : '');
+      const rows = abroadRows(byCountry, own, document.getElementById('country-select').value, nameOf);
+      if (!rows.length) return;
+      target.innerHTML = abroadHtml(rows, {nameOf, logoOf, open: localStorage.getItem('abroadOpen') === '1'});
       target.hidden = false;
     }
+    // The folded line and the "+N" of a row remember nothing but the line's own open state.
+    document.getElementById('film-details-content').addEventListener('toggle', event => {
+      if (event.target.matches?.('.abroad')) localStorage.setItem('abroadOpen', event.target.open ? '1' : '0');
+    }, true);
+    document.getElementById('film-details-content').addEventListener('click', event => {
+      const more = event.target.closest('.flag-more');
+      if (!more) return;
+      const grid = more.closest('.abroad-row').querySelector('.flag-grid');
+      grid.hidden = !grid.hidden;
+      more.setAttribute('aria-expanded', String(!grid.hidden));
+    });
+    // Every ISO country name in lower case (from the browser), to keep places out of the keyword chips.
+    let countryNameSet = null;
+    function allCountryNames() {
+      if (countryNameSet) return countryNameSet;
+      const names = new Intl.DisplayNames(['en'], {type: 'region'});
+      countryNameSet = new Set();
+      for (const a of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') for (const b of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+        try { const name = names.of(a + b); if (name && name !== a + b) countryNameSet.add(name.toLowerCase()); } catch { /* not a region code */ }
+      }
+      return countryNameSet;
+    }
+    // The title of the hero shows in the header once it scrolls out of sight.
+    let heroTitleWatcher = null;
+    function watchHeroTitle() {
+      heroTitleWatcher?.disconnect();
+      const header = document.querySelector('#film-details-modal .modal-header');
+      header.classList.remove('show-title');
+      const title = document.getElementById('film-hero-title');
+      if (!title || !('IntersectionObserver' in window)) { header.classList.add('show-title'); return; }
+      heroTitleWatcher = new IntersectionObserver(([entry]) => header.classList.toggle('show-title', !entry.isIntersecting), {root: document.getElementById('film-details-content')});
+      heroTitleWatcher.observe(title);
+    }
     function showFilmDetails(key, opener = document.activeElement) {
-      const film = [...state.films, ...state.unavailable].find(item => filmKey(item) === key);
+      const all = [...state.films, ...state.unavailable];
+      const film = all.find(item => filmKey(item) === key);
       if (!film) return;
       document.getElementById('film-details-title').textContent = film.title;
-      const original = film.original_title && film.original_title !== film.title ? film.original_title : '';
-      const letterboxdSearch = `https://letterboxd.com/search/${encodeURIComponent(`${film.title} ${film.year || ''}`.trim())}/`;
-      const trailerId = film.trailer_url ? new URL(film.trailer_url).searchParams.get('v') : null;
-      const trailerLink = trailerId ? `<button class="film-link trailer-link" data-trailer="${escapeHtml(trailerId)}" type="button"><i class="ti ti-brand-youtube" aria-hidden="true"></i> Trailer</button>` : '';
-      // Director and cast search the watchlist for the person; countries and keywords are chips.
-      const searchLink = name => `<a class="film-link" href="/watchlist?q=${encodeURIComponent(name)}">${escapeHtml(name)}</a>`;
-      const credits = film.director || (film.cast || []).length
-        ? `<p class="film-modal-credits">${film.director ? `Directed by ${searchLink(film.director)}` : ''}${film.director && film.cast?.length ? ' · ' : ''}${film.cast?.length ? `Cast: ${film.cast.slice(0, 5).map(searchLink).join(', ')}` : ''}</p>`
-        : '';
-      const regionNames = new Intl.DisplayNames(['en'], {type: 'region'});
-      const chip = (text, href) => `<a class="chip-link" href="${href}">${escapeHtml(text)}</a>`;
-      const keywords = (film.origin_countries?.length || film.keywords?.length)
-        ? `<p class="film-modal-chips">${[...(film.origin_countries || []).slice(0, 3).map(code => chip(regionNames.of(code) || code, `/watchlist?origin=${encodeURIComponent(code)}`)), ...(film.keywords || []).slice(0, 6).map(word => chip(word, `/watchlist?keyword=${encodeURIComponent(word)}`))].join('')}</p>` : '';
-      // The user's own services first; the other services fold away when there is at least one own.
-      const own = state.selected;
-      const offers = film.providers || {};
-      const pick = mine => Object.fromEntries(Object.entries(offers).filter(([name]) => own.has(name) === mine));
-      const rows = list => availabilityByOffer(list, window.WATCHLIST_CONFIG.providerLogos, window.WATCHLIST_CONFIG.logoBaseUrl, own);
-      const otherCount = Object.keys(pick(false)).length;
-      const providerRows = Object.keys(pick(true)).length
-        ? rows(pick(true)) + (otherCount ? `<details class="film-other-services"><summary>Other services (${otherCount})</summary>${rows(pick(false))}</details>` : '')
-        : rows(offers);
-      // TMDB's watch page (JustWatch data) for the shown country; tmdb_url is checked on the server.
       const country = document.getElementById('country-select').value;
-      // One main button: the way to watch it that costs least on a service of yours.
-      const cheapest = Object.entries(offers).filter(([name]) => own.has(name)).map(([name, kinds]) => [name, ['free', 'ads', 'flatrate'].find(kind => kinds.includes(kind))]).filter(([, kind]) => kind).sort((a, b) => ['free', 'ads', 'flatrate'].indexOf(a[1]) - ['free', 'ads', 'flatrate'].indexOf(b[1]) || a[0].localeCompare(b[0]))[0];
-      const logoPath = cheapest ? window.WATCHLIST_CONFIG.providerLogos[cheapest[0]] : '';
-      const primaryText = cheapest
-        ? `${logoPath ? `<img class="provider-logo" src="${escapeHtml(window.WATCHLIST_CONFIG.logoBaseUrl + logoPath)}" alt="">` : ''}<span>Watch on ${escapeHtml(cheapest[0])} · ${cheapest[1] === 'free' ? 'Free' : cheapest[1] === 'ads' ? 'Free with ads' : 'Included'}</span><span class="own-badge">Your service</span>`
-        : 'Where to watch';
-      const seenLabel = state.flags.get(key)?.flag === 'watched' || state.favorites.get(key)?.status === 'watched' ? 'Not watched after all' : 'Mark as watched';
-      const hideLabel = hiddenKeys().has(key) ? 'Bring back' : 'Not now (30 days)';
-      const compareLabel = state.compareKeys.has(key) ? 'Remove from comparison' : 'Add to comparison';
-      const watchLink = film.tmdb_url ? `<a class="btn btn-accent film-modal-primary" href="${escapeHtml(`${film.tmdb_url}/watch?locale=${encodeURIComponent(country)}`)}" target="_blank" rel="noreferrer">${cheapest ? '' : '<i class="ti ti-player-play" aria-hidden="true"></i> '}${primaryText}</a>` : '';
-      const savedFavorite = state.favorites.get(key);
-      // Other films of the same series on the watchlist, oldest first.
-      const series = film.collection
-        ? [...state.films, ...state.unavailable].filter(item => item.collection === film.collection && filmKey(item) !== key)
-          .sort((a, b) => (Number(a.year) || 0) - (Number(b.year) || 0))
-        : [];
-      const seriesLine = film.collection
-        ? `<p class="film-modal-series">Part of ${escapeHtml(film.collection)}${series.length ? `: also on your watchlist ${series.map(item => `<button class="film-link series-pick" type="button" data-key="${escapeHtml(filmKey(item))}">${escapeHtml(item.title)}${item.year ? ` (${numberText(item.year)})` : ''}</button>`).join(', ')}` : ''}</p>`
-        : '';
-      // Watchlist films TMDB recommends for this one that the user can watch now.
-      const similar = similarOnServices(film, state.films, own, watchedKeys());
-      const similarLine = similar.length
-        ? `<div class="film-modal-similar"><p>Similar on your services</p><ul class="mini-posters">${similar.slice(0, 6).map(item => `<li><button class="series-pick" type="button" data-key="${escapeHtml(filmKey(item))}" aria-label="${escapeHtml(item.title)}${item.year ? ` (${numberText(item.year)})` : ''}, ${escapeHtml(includedOn(item, own))}">${item.poster_path ? `<img src="${imageBaseUrl}${escapeHtml(item.poster_path)}" alt="" loading="lazy">` : `<span class="no-poster" aria-hidden="true">${escapeHtml(item.title)}</span>`}<span class="mini-service">${escapeHtml(includedOn(item, own))}</span></button></li>`).join('')}</ul></div>`
-        : '';
-      const upcoming = upcomingText(film);
-      const releaseLine = upcoming ? `<p class="film-modal-release">Coming ${escapeHtml(upcoming)}</p>` : '';
-      const posterImage = film.poster_path ? `<img class="film-hero-poster" src="${imageBaseUrl}${escapeHtml(film.poster_path)}" alt="Poster for ${escapeHtml(film.title)}">` : '';
-      // The trailer starts only on a click (YouTube is not contacted before); the backdrop is a TMDB image like the posters.
-      const play = trailerId ? `<button class="hero-play trailer-link" data-trailer="${escapeHtml(trailerId)}" type="button" aria-label="Play the trailer"><i class="ti ti-player-play-filled" aria-hidden="true"></i></button>` : '';
-      const hero = film.backdrop_path || film.poster_path
-        ? `<div class="film-hero">${film.backdrop_path ? `<img class="film-hero-backdrop" src="${imageBaseUrl.replace('/w500', '/w780')}${escapeHtml(film.backdrop_path)}" alt="">` : ''}${play}${posterImage}</div>` : '';
-      const favoriteButtonClass = 'btn-outline-secondary';  // only the main button is amber
-      const selectedForCompare = state.compareKeys.has(key);
-      // Where to watch comes first: the own services and the actions, then the story and the rest.
-      document.getElementById('film-details-content').innerHTML = `${hero}<div class="film-modal-layout"><div>${original ? `<p class="film-original-title">${escapeHtml(original)}</p>` : ''}<p class="film-modal-meta">${[numberText(film.year, 'Year unknown'), runtimeText(film.runtime), film.certification ? (film.certification === '0' ? 'all ages' : `rated ${escapeHtml(film.certification)}`) : ''].filter(Boolean).join(' · ')}</p>${numberText(film.letterboxd_rating) || numberText(film.rating) ? `<p class="film-modal-ratings">${[numberText(film.letterboxd_rating) ? `Letterboxd ★ ${Number(film.letterboxd_rating).toFixed(1)}` : '', numberText(film.rating) ? `TMDB ${Number(film.rating).toFixed(1)}${film.vote_count ? ` (${Number(film.vote_count).toLocaleString()} votes)` : ''}` : ''].filter(Boolean).join(' · ')}</p>` : ''}<div class="film-modal-watch">${providerRows || '<p class="empty">No service data available.</p>'}${changeBadgesFor(film, state.selected) ? `<p class="provider-changes">${changeBadgesFor(film, state.selected)}</p>` : ''}</div><div class="film-modal-actions">${watchLink}<div class="film-modal-toolbar" role="group" aria-label="Actions"><button class="btn btn-sm ${favoriteButtonClass} modal-favorite" type="button" data-key="${escapeHtml(key)}" aria-pressed="${state.favorites.has(key)}" title="${favoriteLabel(state.favorites.has(key))}"><i class="ti ${state.favorites.has(key) ? 'ti-heart-filled' : 'ti-heart'}" aria-hidden="true"></i><span class="btn-label"> ${favoriteLabel(state.favorites.has(key))}</span></button><button class="btn btn-sm btn-outline-secondary modal-compare" type="button" data-key="${escapeHtml(key)}" title="${compareLabel}"><i class="ti ti-layout-columns" aria-hidden="true"></i><span class="btn-label"> ${compareLabel}</span></button><button class="btn btn-sm btn-outline-secondary modal-flag" type="button" data-flag="watched" data-key="${escapeHtml(key)}" title="${seenLabel}"><i class="ti ti-check" aria-hidden="true"></i><span class="btn-label"> ${seenLabel}</span></button><button class="btn btn-sm btn-outline-secondary modal-flag" type="button" data-flag="not_now" data-key="${escapeHtml(key)}" title="${hideLabel}"><i class="ti ti-eye-off" aria-hidden="true"></i><span class="btn-label"> ${hideLabel}</span></button><a class="btn btn-sm btn-outline-secondary" href="${letterboxdSearch}" target="_blank" rel="noreferrer" title="Search on Letterboxd"><i class="ti ti-device-tv" aria-hidden="true"></i><span class="btn-label"> Search on Letterboxd</span></a><button class="btn btn-sm btn-outline-secondary modal-share" type="button" title="Copy the link to this film"><i class="ti ti-share" aria-hidden="true"></i><span class="btn-label"> Share</span></button></div></div></div></div><div class="film-modal-about"><p class="film-modal-overview${(film.overview || '').length > 220 ? ' clamped' : ''}" id="film-overview">${escapeHtml(film.overview || 'No description available.')}</p>${(film.overview || '').length > 220 ? '<button class="film-link overview-more" type="button" aria-expanded="false" aria-controls="film-overview">more</button>' : ''}<p class="film-modal-genres">${escapeHtml((film.genres || []).join(', ') || 'No genres available.')}</p>${releaseLine}${credits}${seriesLine}${similarLine}<p class="film-modal-elsewhere" id="film-elsewhere" hidden></p>${keywords}<p class="film-modal-links"><a class="film-link" href="https://www.justwatch.com/${encodeURIComponent(country.toLowerCase())}/search?q=${encodeURIComponent(film.title)}" target="_blank" rel="noreferrer"><i class="ti ti-external-link" aria-hidden="true"></i> JustWatch</a>${film.tmdb_url ? `<a class="film-link" href="${escapeHtml(film.tmdb_url)}" target="_blank" rel="noreferrer"><i class="ti ti-brand-tmdb" aria-hidden="true"></i> TMDB</a>` : ''}${trailerLink}</p></div><div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${savedFavorite ? favoriteFields(key, film.title, savedFavorite) : ''}</div>`;
+      const regions = new Intl.DisplayNames(['en'], {type: 'region'});
+      const own = state.selected;
+      const saved = state.favorites.get(key);
+      const watched = watchedKeys();
+      const ctx = {
+        own, country, key, watched,
+        regionName: regions.of(country) || country,
+        regionNames: code => regions.of(code) || code,
+        logos: window.WATCHLIST_CONFIG.providerLogos, logoBaseUrl: window.WATCHLIST_CONFIG.logoBaseUrl, imageBaseUrl,
+        countryNames: allCountryNames(),
+        isFavorite: state.favorites.has(key),
+        isSeen: state.flags.get(key)?.flag === 'watched' || saved?.status === 'watched',
+        isHidden: hiddenKeys().has(key),
+        inCompare: state.compareKeys.has(key),
+        series: film.collection ? all.filter(item => item.collection === film.collection).sort((a, b) => (Number(a.year) || 0) - (Number(b.year) || 0)) : [],
+        similar: similarOnServices(film, state.films, own, watched),
+        serviceOf: item => includedOn(item, own).split(', ')[0],
+        keyOf: filmKey,
+        releaseText: upcomingText(film),
+        favoriteFields: saved ? favoriteFields(key, film.title, saved) : '',
+      };
+      document.getElementById('film-details-content').innerHTML = drawerHtml(film, ctx);
+      watchHeroTitle();
       if (film.tmdb_id) showElsewhere(film.tmdb_id, key, own);
       const detailsOpen = document.getElementById('film-details-modal').classList.contains('show');
       openModal('film-details-modal', opener);
       setFilmAddress(key, !detailsOpen);
     }
+    // Phone sheet: opens at 60 %; pulling the grip up makes it full screen, pulling down shrinks it or closes it.
+    (() => {
+      const modal = document.getElementById('film-details-modal');
+      const grip = document.getElementById('sheet-grip');
+      let startY = null;
+      grip.addEventListener('pointerdown', event => { startY = event.clientY; grip.setPointerCapture(event.pointerId); });
+      grip.addEventListener('pointercancel', () => { startY = null; });
+      grip.addEventListener('pointerup', event => {
+        if (startY === null) return;
+        const moved = event.clientY - startY;
+        startY = null;
+        if (moved < -40) modal.classList.add('is-full');
+        else if (moved > 60) { if (modal.classList.contains('is-full')) modal.classList.remove('is-full'); else modal.querySelector('.btn-close').click(); }
+      });
+      modal.addEventListener('hidden.bs.modal', () => modal.classList.remove('is-full'));
+    })();
     // Previous / next film of the list behind the drawer (the grid or the Tonight rows, as drawn); ← and → do the same.
     function neighbourFilm(step) {
       const keys = [...new Set([...document.querySelectorAll('#results article.film[data-key], #tonight-rows article.film[data-key]')].map(card => card.dataset.key))];
@@ -951,17 +969,24 @@ const state = createAppState();
         const key = compareButton.dataset.key;
         setCompared(key, !state.compareKeys.has(key));
         const label = state.compareKeys.has(key) ? 'Remove from comparison' : 'Add to comparison';
-        compareButton.innerHTML = `<i class="ti ti-layout-columns" aria-hidden="true"></i><span class="btn-label"> ${label}</span>`;
+        compareButton.innerHTML = '<i class="ti ti-layout-columns" aria-hidden="true"></i><span class="tool-label">Compare</span>';
         compareButton.title = label;
+        compareButton.setAttribute('aria-label', label);
+        compareButton.setAttribute('aria-pressed', String(state.compareKeys.has(key)));
       }
       if (event.target.closest('.modal-share')) {
         navigator.clipboard?.writeText(location.href).then(() => showToast('Link copied.'), () => showToast('Could not copy the link.', true));
       }
       const more = event.target.closest('.overview-more');
       if (more) {
-        const clamped = document.getElementById('film-overview').classList.toggle('clamped');
+        const clamped = more.closest('.overview-box').classList.toggle('clamped');
         more.textContent = clamped ? 'more' : 'less';
         more.setAttribute('aria-expanded', String(!clamped));
+      }
+      const extra = event.target.closest('.chip-more');
+      if (extra) {
+        extra.parentElement.querySelectorAll('.is-extra').forEach(chip => { chip.hidden = false; });
+        extra.remove();
       }
     });
     results.addEventListener('change', event => {

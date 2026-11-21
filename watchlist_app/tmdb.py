@@ -13,7 +13,7 @@ import requests
 _TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500"
 _TMDB_LOGO_BASE_URL = "https://image.tmdb.org/t/p/w92"
 _API_BASE_URL = "https://api.themoviedb.org/3"
-_MONETIZATION_TYPES = ("free", "ads", "flatrate", "rent")
+_MONETIZATION_TYPES = ("free", "ads", "flatrate", "rent", "buy")
 _MAX_ATTEMPTS = 3
 _LOCAL = threading.local()
 _COUNT_LOCK = threading.Lock()
@@ -82,6 +82,7 @@ def _details_from_movie(data: dict, tmdb_id: int) -> dict:
         "release_dates": _release_dates(data),
         "original_language": data.get("original_language") or None,
         "original_title": data.get("original_title") or None,
+        "imdb_id": data.get("imdb_id") or None,
         "origin_countries": [code for code in data.get("origin_country") or [] if isinstance(code, str)],
     }
 

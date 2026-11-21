@@ -100,11 +100,9 @@
     .recently-removed summary { cursor: pointer; font: var(--fs-body) system-ui, sans-serif; }
     .film-modal-credits, .film-modal-keywords { color: var(--muted); font: var(--fs-body) system-ui, sans-serif; }
 
-    .film-modal-layout { display: grid; grid-template-columns: 112px 1fr; gap: 16px; }
     .film-modal-watch { margin-top: 12px; }
     .film-modal-about { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
     .film-modal-links { display: flex; flex-wrap: wrap; gap: 14px; margin: 12px 0 0; }
-    .film-modal-poster { width: 112px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .375rem; }
     .film-modal-section-title { margin: 18px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
     .film-provider-list { display: grid; gap: 6px; padding: 0; margin: 0; list-style: none; font: var(--fs-body) system-ui, sans-serif; }
     .film-provider-list li.own-service { border-color: rgba(76,175,80,.5); }
@@ -127,8 +125,6 @@
     .provider-logo-sm { width: 22px; height: 22px; flex: none; border-radius: 5px; object-fit: cover; }
     .offer-flatrate { color: oklch(87.1% 0.064 259); background: rgba(83,135,220,.2); }
     .offer-rent { color: oklch(83.9% 0.090 319); background: rgba(166,91,190,.2); }
-    .film-modal-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 18px; }
-    .film-modal-actions .btn { flex: 0 0 auto; }
     /* Only the picture fades; the text keeps a readable contrast. */
     .unavailable-card { background: oklch(21.2% 0.008 169) !important; }
     .unavailable-card .film-info { color: var(--muted); }
@@ -415,8 +411,6 @@
       .analysis-panel { grid-template-columns: 1fr 1fr; gap: 6px; }
       .analysis-item { min-width: 0; overflow-wrap: anywhere; padding: 8px; font-size: var(--fs-small); }
       .coverage-row { grid-template-columns: 90px 1fr 28px; gap: 5px; font-size: var(--fs-small); }
-      .film-modal-layout { grid-template-columns: 86px 1fr; gap: 12px; }
-      .film-modal-poster { width: 86px; }
     }
     @media (max-width: 380px) {
       .workspace { display: block; }
@@ -561,7 +555,8 @@ body:has(#film-details-modal.show) .modal-backdrop.show { opacity: .4; }
 .drawer-step:hover { background: rgb(255 255 255 / .08); }
 .drawer-step:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 800px) {
-  #film-details-modal .modal-dialog { top: auto; width: 100%; height: 88dvh; transform: translateY(100%); }
+  #film-details-modal .modal-dialog { top: auto; width: 100%; height: var(--sheet-h, 60dvh); transform: translateY(100%); transition: transform .22s ease, height .2s ease; }
+  #film-details-modal.is-full .modal-dialog { --sheet-h: 100dvh; }
   #film-details-modal .modal-content { border-radius: 12px 12px 0 0; border-width: 1px 0 0; }
 }
 @media (prefers-reduced-motion: reduce) { #film-details-modal .modal-dialog { transition: none; } }
@@ -633,7 +628,6 @@ kbd { padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 4px
   #result-tools .btn, #result-tools .form-select, .tonight-controls .btn, .tonight-controls .form-select, .sync-toggle, .quick-chip, .chip, .view-tab, .drawer-step, .sheet-close { min-height: 44px; }
   .sync-toggle, .drawer-step { min-width: 44px; justify-content: center; }
   .rec-actions .film-link, .banner-actions .film-link, .rent-head .film-link, .film-row-head .film-link, .services-group-head .film-link, .toast-bar .film-link, .cost-line .film-link { display: inline-flex; align-items: center; min-height: 44px; }
-  .film-modal-actions .btn { min-height: 44px; }
   .settings-group > summary, .bars-more > summary, .only-here summary, .stats-details > summary { display: flex; align-items: center; min-height: 44px; }
   .service-row { min-height: 44px; }
   .coverage-bar .seg { position: relative; }
@@ -721,25 +715,6 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 .film-table td { color: var(--muted); font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .view-compact .film .film-info { transition: none; } }
 
-/* The details: one main button over the full width, the rest as a grid of small buttons. */
-.film-modal-primary { grid-column: 1 / -1; min-height: 44px; white-space: normal; text-align: center; }
-.film-modal-ratings { margin: -4px 0 8px; color: var(--ink); font: 600 var(--fs-body) system-ui, sans-serif; font-variant-numeric: tabular-nums; }
-
-/* The top of the details: the backdrop with a small poster over its lower edge; the title stays in the header. */
-.film-hero { position: relative; margin: -16px -16px 28px; aspect-ratio: 16 / 9; background: var(--panel); }
-.film-hero-backdrop { display: block; width: 100%; height: 100%; object-fit: cover; }
-.film-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, var(--surface-raised), transparent 55%); pointer-events: none; }
-.film-hero-poster { position: absolute; left: 16px; bottom: -22px; z-index: 2; width: 80px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .375rem; border: 1px solid var(--line-strong); box-shadow: 0 6px 20px rgb(0 0 0 / .5); }
-.hero-play { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; width: 100%; border: 0; background: transparent; color: #fff; font-size: 2.5rem; cursor: pointer; }
-.hero-play i { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: rgb(0 0 0 / .55); }
-.hero-play:hover i, .hero-play:focus-visible i { background: var(--accent); color: var(--on-accent); }
-.hero-play:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
-.film-modal-layout { grid-template-columns: 1fr; }
-.film-modal-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
-.chip-link { padding: 3px 10px; border: 1px solid var(--line-field); border-radius: 999px; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; text-decoration: none; }
-.chip-link:hover, .chip-link:focus-visible { color: var(--ink); border-color: var(--line-strong); }
-@media (pointer: coarse) { .chip-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; } }
-
 /* The bar for the comparison: fixed at the bottom while films are chosen (above the phone's page bar). */
 .compare-bar { position: fixed; left: 50%; bottom: 20px; z-index: 1060; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 16px; transform: translateX(-50%); background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: 999px; box-shadow: 0 12px 32px rgb(0 0 0 / .45); font: var(--fs-body) system-ui, sans-serif; }
 .compare-bar[hidden] { display: none; }
@@ -755,26 +730,6 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 /* A watched film stays in the grid but steps back; the "Watched" badge says why. */
 .film.is-watched .poster img { opacity: .45; filter: grayscale(.6); }
 
-/* The details, finished: the main button with the service logo, one row of icon buttons, a 3-line description. */
-.film-modal-primary { display: flex; align-items: center; justify-content: center; gap: 8px; }
-.film-modal-primary .provider-logo { width: 24px; height: 24px; border-radius: .25rem; }
-.film-modal-primary .own-badge { padding: 1px 8px; border-radius: 999px; background: rgb(0 0 0 / .18); font-size: var(--fs-small); font-weight: 600; }
-.film-modal-toolbar { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: nowrap; }
-.film-modal-toolbar .btn { flex: 1 1 0; min-width: 0; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; font-size: 1rem; }
-.film-modal-toolbar .btn-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.film-modal-toolbar .modal-favorite[aria-pressed=true] { color: var(--accent); }
-.film-modal-overview.clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.overview-more { margin: -6px 0 10px; }
-
-/* "Similar on your services": a row of mini posters, the service under each. */
-.film-modal-similar p { margin: 0 0 6px; }
-.mini-posters { display: flex; gap: 8px; margin: 0 0 12px; padding: 0 0 4px; list-style: none; overflow-x: auto; }
-.mini-posters button { display: block; width: 72px; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
-.mini-posters img, .mini-posters .no-poster { display: block; width: 72px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .25rem; border: 1px solid var(--line-card); background: var(--panel); font-size: var(--fs-small); overflow: hidden; }
-.mini-service { display: block; margin-top: 3px; font-size: var(--fs-small); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.film-original-title { margin: 0; font-size: var(--fs-small); font-weight: 400; color: var(--muted); }
-
-
 /* Narrow cards (phone): the logos get their own row at full size; the heart and the menu go below. */
 @media (max-width: 800px) {
   .card-foot { flex-wrap: wrap; }
@@ -786,3 +741,122 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 
 /* "Pick for me" inside the drawer: the reason and a way to roll again. */
 .pick-reason { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; margin: 0 0 12px; font: var(--fs-body) system-ui, sans-serif; color: var(--muted); }
+
+/* ===== The film details drawer ===== */
+#film-details-modal .modal-header { gap: 8px; }
+#film-details-title { flex: 1; min-width: 0; margin: 0; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: opacity .15s ease; }
+#film-details-modal .modal-header.show-title #film-details-title { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #film-details-title { transition: none; } }
+
+/* Top: the backdrop with a Trailer pill, the poster over its lower edge, the title beside the poster. */
+.film-hero { position: relative; margin: -16px -16px 0; aspect-ratio: 16 / 9; background: var(--panel); }
+.film-hero.no-backdrop { aspect-ratio: auto; height: 8px; background: transparent; }
+.film-hero-backdrop { display: block; width: 100%; height: 100%; object-fit: cover; }
+.film-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, color-mix(in oklch, var(--surface-raised) 85%, transparent), transparent 34%); pointer-events: none; }
+.film-hero.no-backdrop::after { display: none; }
+.hero-play { position: absolute; z-index: 1; left: 50%; top: 42%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 0; border-radius: 999px; background: rgb(0 0 0 / .55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); color: #fff; font: 600 var(--fs-body) system-ui, sans-serif; cursor: pointer; }
+.hero-play:hover { background: rgb(0 0 0 / .72); }
+.hero-play:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.film-hero-head { position: relative; z-index: 2; display: grid; grid-template-columns: 96px 1fr; gap: 16px; align-items: end; margin: -56px 0 16px; }
+.film-hero.no-backdrop + .film-hero-head { margin-top: 8px; }
+.film-hero-poster { display: block; width: 96px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .375rem; border: 1px solid var(--line-strong); box-shadow: 0 6px 20px rgb(0 0 0 / .5); background: var(--panel); }
+.film-hero-text { min-width: 0; text-shadow: 0 1px 3px rgb(0 0 0 / .6); }
+.film-hero-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; color: var(--ink); font: 700 1.5rem/1.2 system-ui, sans-serif; overflow-wrap: anywhere; }
+.film-hero-title.is-long { font-size: 1.25rem; }
+.film-original-title { margin: 2px 0 0; color: var(--muted); font: 13px/1.3 system-ui, sans-serif; }
+.film-modal-meta { margin: 4px 0 0; color: var(--muted); font: var(--fs-body)/1.35 system-ui, sans-serif; }
+@media (max-width: 800px) { .film-hero-head { grid-template-columns: 80px 1fr; gap: 12px; } .film-hero-poster { width: 80px; } .film-hero-title { font-size: 1.25rem; } }
+
+/* Body: ratings, the one main button, alternatives, other services, the icon bar, then the story. */
+.film-modal-body { display: grid; gap: 12px; }
+.film-modal-ratings { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0; color: var(--ink); font: 600 var(--fs-text) system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.rating { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: default; }
+.rating-logo { height: 16px; width: auto; flex: none; }
+.rating-tmdb { display: inline-grid; place-items: center; padding: 0 5px; border-radius: 3px; background: oklch(76% 0.11 195); color: oklch(20% 0.03 200); font: 700 12px/16px system-ui, sans-serif; letter-spacing: .02em; }
+.rating[data-tip]:not([data-tip=""]):hover::after, .rating[data-tip]:not([data-tip=""]):focus::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 4px); z-index: 3; padding: 3px 8px; border: 1px solid var(--line-strong); border-radius: .25rem; background: var(--surface-raised); color: var(--ink); font: 400 var(--fs-small) system-ui, sans-serif; white-space: nowrap; }
+.status-badge { width: fit-content; margin: 0; padding: 3px 12px; border-radius: 999px; font: 600 var(--fs-small) system-ui, sans-serif; }
+.status-badge.is-new { color: oklch(88.4% 0.068 151); background: rgba(76,175,80,.18); }
+.status-badge.is-gone { color: oklch(85.5% 0.014 153); background: rgba(150,160,153,.18); }
+.film-modal-primary { display: flex; width: 100%; min-height: 44px; align-items: center; justify-content: center; gap: 8px; white-space: normal; text-align: center; }
+.film-modal-primary.disabled { opacity: .7; pointer-events: none; }
+.alt-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 0; color: var(--muted); font: var(--fs-body) system-ui, sans-serif; }
+.alt-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px 3px 5px; border: 1px solid var(--line-field); border-radius: 999px; color: var(--ink); text-decoration: none; }
+.alt-chip:hover, .alt-chip:focus-visible { border-color: var(--line-strong); background: rgb(255 255 255 / .06); }
+.other-services > summary, .abroad > summary { cursor: pointer; padding: 6px 0; color: var(--muted); font: var(--fs-body) system-ui, sans-serif; }
+.offer-heading { margin: 12px 0 4px; color: var(--muted); font: 600 var(--fs-small) system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; cursor: default; }
+summary.offer-heading { cursor: pointer; }
+.offer-list { margin: 0; padding: 0; list-style: none; }
+.offer-row { display: grid; grid-template-columns: 18px 24px 1fr auto 16px; align-items: center; gap: 10px; min-height: 40px; padding: 6px; border-radius: .375rem; color: var(--ink); font: var(--fs-body) system-ui, sans-serif; text-decoration: none; }
+.offer-row:hover, .offer-row:focus-visible { background: rgb(255 255 255 / .06); }
+.offer-row .provider-logo { width: 24px; height: 24px; border-radius: 5px; }
+.own-check { color: oklch(78% 0.15 150); }
+.offer-note, .offer-go { color: var(--muted); font-size: var(--fs-small); }
+.report-line { margin: 10px 0 0; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; }
+.report-line a { color: inherit; text-decoration: underline; }
+
+/* The icon bar: transparent, the label under the icon; gold only while a state is on. */
+.film-modal-toolbar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.tool { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 56px; padding: 6px 2px; border: 0; border-radius: .5rem; background: transparent; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; cursor: pointer; }
+.tool i { font-size: 1.35rem; line-height: 1; }
+.tool-label { font-size: 12px; }
+.tool:hover { background: rgb(255 255 255 / .07); color: var(--ink); }
+.tool[aria-pressed=true] { color: var(--accent); }
+.tool:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* The story and what hangs off it. */
+.film-modal-about { display: grid; gap: 14px; margin-top: 4px; padding-top: 16px; border-top: 1px solid var(--line); }
+.overview-box { position: relative; }
+.film-modal-overview { margin: 0; line-height: 1.5; }
+.overview-box.clamped .film-modal-overview { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.overview-more { padding: 0; border: 0; background: none; color: var(--ink); font-weight: 600; cursor: pointer; }
+.overview-more:hover, .overview-more:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+.overview-box.clamped .overview-more { position: absolute; right: 0; bottom: 0; padding-left: 28px; background: linear-gradient(90deg, transparent, var(--surface-raised) 45%); line-height: 1.5; }
+.film-modal-credits { margin: 0; color: var(--ink); font: var(--fs-body)/1.5 system-ui, sans-serif; }
+.person-link { color: inherit; text-decoration: none; }
+.person-link:hover, .person-link:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+.film-modal-series p, .film-modal-similar p { margin: 0 0 6px; color: var(--muted); font: var(--fs-body) system-ui, sans-serif; }
+.film-modal-release { margin: 0; font: var(--fs-body) system-ui, sans-serif; }
+.mini-posters { display: flex; gap: 8px; margin: 0; padding: 0 0 4px; list-style: none; overflow-x: auto; }
+.mini-posters button { display: block; width: 72px; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
+.mini-posters img, .mini-posters .no-poster { display: block; width: 72px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .25rem; border: 1px solid var(--line-card); background: var(--panel); font-size: var(--fs-small); overflow: hidden; }
+.mini-posters li.is-current img { outline: 2px solid var(--accent); outline-offset: -2px; }
+.mini-service { display: block; min-height: 16px; margin-top: 3px; color: var(--muted); font-size: var(--fs-small); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini-logo { display: block; width: 16px; height: 16px; border-radius: 3px; object-fit: cover; }
+.film-modal-chips, .film-modal-links { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.chip-link, .link-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border: 1px solid var(--line-field); border-radius: 999px; background: transparent; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; text-decoration: none; cursor: pointer; }
+.chip-link:hover, .chip-link:focus-visible, .link-chip:hover, .link-chip:focus-visible { color: var(--ink); border-color: var(--line-strong); }
+.chip-link[hidden] { display: none; }
+@media (pointer: coarse) { .chip-link, .link-chip, .alt-chip { min-height: 44px; padding: 0 14px; } .offer-row { min-height: 44px; } }
+
+/* Abroad on your services: one folded line, then a table with three flags per row. */
+.film-abroad[hidden] { display: none; }
+.abroad > summary { display: flex; align-items: center; gap: 10px; list-style: revert; }
+.abroad-logos { display: inline-flex; gap: 4px; margin-left: auto; }
+.abroad-count { color: var(--ink); font-variant-numeric: tabular-nums; }
+.abroad-note { margin: 2px 0 6px; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; }
+.abroad-table { margin: 0; padding: 0; list-style: none; }
+.abroad-line { display: flex; align-items: center; gap: 10px; min-height: 40px; font: var(--fs-body) system-ui, sans-serif; }
+.abroad-service { display: inline-flex; align-items: center; gap: 8px; flex: 1 1 40%; min-width: 0; }
+.abroad-flags { display: inline-flex; align-items: center; gap: 6px; }
+.abroad-hint { color: var(--muted); font-size: var(--fs-small); }
+.flag { position: relative; display: inline-block; line-height: 0; }
+.flag img { display: block; width: 20px; height: 15px; border: 1px solid var(--line-strong); border-radius: 2px; object-fit: cover; }
+.flag:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.flag:hover::after, .flag:focus::after { content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 6px); z-index: 4; transform: translateX(-50%); padding: 3px 8px; border: 1px solid var(--line-strong); border-radius: .25rem; background: var(--surface-raised); color: var(--ink); font: 400 var(--fs-small)/1.3 system-ui, sans-serif; white-space: nowrap; }
+.flag-more { display: inline-flex; align-items: center; gap: 2px; padding: 2px 8px; border: 1px solid var(--line-field); border-radius: 999px; background: transparent; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; cursor: pointer; }
+.flag-more:hover, .flag-more:focus-visible { color: var(--ink); border-color: var(--line-strong); }
+.flag-more[aria-expanded=true] i { transform: rotate(90deg); }
+.flag-grid { margin: 2px 0 8px 28px; }
+.flag-grid[hidden] { display: none; }
+.flag-grid h4 { margin: 8px 0 4px; color: var(--muted); font: 600 var(--fs-small) system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.flag-grid ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; margin: 0; padding: 0; list-style: none; }
+.flag-grid li { display: flex; align-items: center; gap: 8px; font: var(--fs-body) system-ui, sans-serif; }
+@media (pointer: coarse) { .flag-more { min-height: 44px; padding: 0 12px; } .abroad > summary { min-height: 44px; } }
+
+/* The phone sheet opens at 60 %; the grip pulls it to full height or down to close. */
+.sheet-grip { display: none; }
+@media (max-width: 800px) {
+  .sheet-grip { display: block; position: relative; height: 22px; touch-action: none; cursor: grab; }
+  .sheet-grip::before { content: ""; position: absolute; left: 50%; top: 9px; width: 40px; height: 4px; transform: translateX(-50%); border-radius: 2px; background: var(--line-strong); }
+}
+@media (prefers-reduced-motion: reduce) { #film-details-modal .modal-dialog { transition: none; } }

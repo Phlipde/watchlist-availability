@@ -988,8 +988,8 @@ def test_details_actions_sit_in_one_row_with_a_clear_main_button(app_server, pag
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     tick_all_services(page)
     page.locator('article.film[data-key="348"] .film-open').click()
-    toolbar = page.locator("#film-details-content .film-modal-toolbar .btn")
-    expect(toolbar).to_have_count(6)
+    toolbar = page.locator("#film-details-content .film-modal-toolbar .tool")
+    expect(toolbar).to_have_count(5)
     tops = toolbar.evaluate_all("buttons => buttons.map(b => Math.round(b.getBoundingClientRect().top))")
     assert len(set(tops)) == 1  # one row, nothing wraps
     expect(page.get_by_role("button", name="Mark as watched")).to_be_visible()
@@ -1014,3 +1014,26 @@ def test_services_get_their_own_row_on_narrow_phone_cards(app_server, page):
     card_width = card.bounding_box()["width"]
     # The logos used to be squeezed to 8 px slivers beside the heart; the row now spans the card.
     assert card.locator(".services").bounding_box()["width"] >= card_width * 0.8
+
+
+def test_details_title_sits_in_the_hero_and_the_button_always_says_what_to_do(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    tick_all_services(page)
+    page.locator('article.film[data-key="348"] .film-open').click()
+    expect(page.locator("#film-details-content .film-hero-title")).to_have_text("Alien")
+    expect(page.locator("#film-details-content .film-modal-primary")).to_have_text(
+        re.compile(r"(Watch on|Rent on|Buy on|On .+ \(not your service\)|Not streaming)")
+    )
+    expect(page.locator("#film-details-content")).not_to_contain_text("Where to watch")
+    expect(page.locator("#film-details-content")).not_to_contain_text(
+        "Your service"
+    )  # no badge in the top part
+
+
+def test_flags_are_pictures_served_by_the_app(app_server, page):
+    # Emoji flags show as letters on Windows, so the flags are SVG files of the app itself.
+    for code in ("nl", "at", "us", "jp"):
+        response = page.request.get(app_server["url"] + f"/static/flags/{code}.svg")
+        assert response.ok and "svg" in response.headers["content-type"]

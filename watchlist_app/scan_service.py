@@ -31,7 +31,7 @@ PROVIDER_CATALOG_TTL_SECONDS = 7 * 24 * 60 * 60
 ALL_PROVIDERS = "all"
 # Raise when films get new fields: a saved scan in an older format is not reused, so the new
 # fields arrive with the next scan instead of a day later.
-FILM_FORMAT = 3
+FILM_FORMAT = 4
 
 
 def refresh_provider_catalog(
