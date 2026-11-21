@@ -2,7 +2,7 @@
 
 from dataclasses import asdict, dataclass, field, fields
 
-OFFER_KINDS = ("free", "ads", "flatrate", "rent")
+OFFER_KINDS = ("free", "ads", "flatrate", "rent", "buy")
 
 
 def sort_kinds(kinds) -> list[str]:
@@ -39,6 +39,7 @@ class Film:
     vote_count: int | None = None
     director: str | None = None
     original_title: str | None = None  # shown under the title when it differs
+    imdb_id: str | None = None  # "tt0133093", for the IMDb link
     cast: list[str] = field(default_factory=list)
     keywords: list[str] = field(default_factory=list)
     backdrop_path: str | None = None

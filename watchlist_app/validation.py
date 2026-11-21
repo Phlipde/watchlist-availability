@@ -26,6 +26,7 @@ FUTURE_TOLERANCE_SECONDS = 24 * 60 * 60
 _IMAGE_PATH_RE = re.compile(r"^/[A-Za-z0-9._-]{1,200}$")
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _LANGUAGE_RE = re.compile(r"^[a-z]{2,3}$")
+_IMDB_RE = re.compile(r"^tt\d{5,12}$")
 _COUNTRY_RE = re.compile(r"^[A-Z]{2}$")
 _TMDB_URL_RE = re.compile(r"^https://www\.themoviedb\.org/movie/\d+$")
 _TRAILER_URL_RE = re.compile(r"^https://www\.youtube\.com/watch\?v=[A-Za-z0-9_-]{1,40}$")
@@ -107,6 +108,7 @@ def clean_film(data) -> dict | None:
         vote_count=integer(data.get("vote_count"), 0, 10**9),
         director=text(data.get("director"), 200),
         original_title=text(data.get("original_title"), 300),
+        imdb_id=_matching(data.get("imdb_id"), _IMDB_RE),
         cast=[person[:200] for person in cast[:MAX_PEOPLE] if isinstance(person, str)]
         if isinstance(cast, list)
         else [],

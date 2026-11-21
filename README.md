@@ -170,6 +170,8 @@ The app is a PWA: over https (or on localhost) your browser offers to install it
 
 *Settings → Notifications* sends messages to ntfy, Gotify or a webhook: a favorite left your services, a renewal date is 3 and 1 day away, a Friday summary, optionally every new film. At most one message a day, none between 22:00 and 08:00. `GET /api/sensors` returns numbers for a Home Assistant REST sensor (`new_on_my_services`, `gone_from_my_services`, `next_subscription_deadline`, `watchlist_coverage`, `films_available`).
 
+Flag images in `static/flags/` come from the npm package [flag-icons](https://github.com/lipis/flag-icons) (MIT, see `static/flags/LICENSE`).
+
 #### Start-page tile, RSS and the small API
 
 - `GET /tile`: a small page for Homepage or Homarr (iframe): new this week on your services and a pick of the day (a well-rated film on your services that is not marked watched or "not now"; the same all day).
