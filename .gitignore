@@ -58,3 +58,6 @@ graphify-out/
 .claude/settings.json.graphify-bak
 
 .claude-flow/cost/
+
+# Daily backups written by the app
+backups/
