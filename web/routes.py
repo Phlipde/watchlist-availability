@@ -126,6 +126,13 @@ def is_cross_site_write(method: str, headers, host: str) -> bool:
 def register_routes(app: Flask, *, store: Store, settings: AppSettings, service: ScanService) -> None:
     app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 
+    @app.after_request
+    def keep_flags(response):
+        # The flag pictures never change: the browser keeps them for a month instead of asking again.
+        if request.path.startswith("/static/flags/"):
+            response.headers["Cache-Control"] = "public, max-age=2592000"
+        return response
+
     @app.errorhandler(413)
     def upload_too_large(error):
         return jsonify({"error": "The file is too large."}), 413
