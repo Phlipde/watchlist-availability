@@ -11,6 +11,7 @@ import {createFilterBar, initPopovers} from './filterbar.js';
 import {bestRelaxation, comingSoon, elsewhereOnServices, filmKey, filterFilms, similarOnServices, sortRatings} from './filtering.js';
 import {updateScanFeedback} from './scans.js';
 import {abroadHtml, abroadRows} from './abroad.js';
+import {NAV_KEYS, columnsFromTops, nextIndex} from './gridnav.js';
 import {drawerHtml} from './drawer.js';
 
 const imageBaseUrl = window.WATCHLIST_CONFIG.imageBaseUrl;
@@ -135,6 +136,7 @@ const state = createAppState();
     // Bootstrap does not give the focus back after a dialog: return it to the control that opened it.
     // A redrawn card has a new button, so look it up again by the film key.
     const modalOpeners = new Map();
+    let lastDrawerKey = null;  // the film the drawer showed last
     function openModal(id, opener = document.activeElement) {
       modalOpeners.set(id, opener);
       bootstrap.Modal.getOrCreateInstance(document.getElementById(id)).show();
@@ -144,8 +146,11 @@ const state = createAppState();
         const opener = modalOpeners.get(id);
         modalOpeners.delete(id);
         if (!opener || opener === document.body) return;
-        const key = opener.dataset?.key;
-        const target = opener.isConnected ? opener : key && document.querySelector(`#results .film-open[data-key="${CSS.escape(key)}"]`);
+        // After paging through the drawer the focus goes to the film that was shown last, not the one that opened it.
+        const key = (id === 'film-details-modal' && lastDrawerKey) || opener.dataset?.key;
+        const shown = key && document.querySelector(`#results .film-open[data-key="${CSS.escape(key)}"]`);
+        const target = shown || (opener.isConnected ? opener : null);
+        if (shown) { activeKey = key; applyRoving(); }
         target?.focus();
       });
     });
@@ -174,6 +179,7 @@ const state = createAppState();
       const view = filterFilms(state.films, state.unavailable, filters, filterContext);
       state.view = view;
       // A redraw (e.g. when a scan finishes) replaces the note field someone is typing in; carry the text and cursor over.
+      const heldKey = document.activeElement?.closest?.('#results [data-key]')?.dataset.key;
       const typing = document.activeElement?.matches('#results .favorite-note') ? document.activeElement : null;
       const typed = typing && {key: typing.dataset.key, value: typing.value, start: typing.selectionStart, end: typing.selectionEnd};
       renderResults(view, {results, unavailableResults: document.getElementById('unavailable-results')}, {
@@ -192,6 +198,8 @@ const state = createAppState();
       });
       const note = typed && results.querySelector(`.favorite-note[data-key="${CSS.escape(typed.key)}"]`);
       if (note) { note.value = typed.value; note.focus(); note.setSelectionRange(typed.start, typed.end); }
+      applyRoving();
+      if (heldKey && !note && document.activeElement === document.body) results.querySelector(`.film-open[data-key="${CSS.escape(heldKey)}"]`)?.focus();
       openPendingFilm();
       document.getElementById('unavailable-panel').hidden = view.unavailable.length === 0;
       document.getElementById('unavailable-badge').textContent = view.unavailable.length;
@@ -310,6 +318,8 @@ const state = createAppState();
       localStorage.setItem('viewMode', event.target.value);
       syncViewMode();
       renderFilms();
+      // The same film stays the active one (the tab stop) and in sight after the layout changed.
+      navItems().find(item => item.dataset.key === activeKey)?.scrollIntoView({block: 'nearest'});
     });
     syncViewMode();
     // Saved views: chips on Tonight and above the grid; "Save view" appears while filters are set.
@@ -814,6 +824,7 @@ const state = createAppState();
       const film = all.find(item => filmKey(item) === key);
       if (!film) return;
       document.getElementById('film-details-title').textContent = film.title;
+      lastDrawerKey = key;
       const country = document.getElementById('country-select').value;
       const regions = new Intl.DisplayNames(['en'], {type: 'region'});
       const own = state.selected;
@@ -843,6 +854,38 @@ const state = createAppState();
       openModal('film-details-modal', opener);
       setFilmAddress(key, !detailsOpen);
     }
+    // ---- Arrow keys through the films: grid, compact grid and table share one navigation ----
+    let activeKey = null;  // the film that holds the tab stop (roving tabindex): one stop in the whole list
+    const navItems = () => [...results.querySelectorAll('article.film[data-key], tr[data-key]')];
+    function applyRoving() {
+      const items = navItems();
+      if (!items.length) return;
+      // Until a film was chosen (focus or arrow keys) the first one holds the tab stop; a choice that was filtered away falls back to it.
+      const current = items.find(item => item.dataset.key === activeKey) || items[0];
+      for (const item of items) item.querySelectorAll('.film-open, .favorite, .card-more').forEach(control => { control.tabIndex = item === current ? 0 : -1; });
+    }
+    function focusItem(item) {
+      activeKey = item.dataset.key;
+      applyRoving();
+      item.querySelector('.film-open')?.focus();
+      item.scrollIntoView({block: 'nearest'});
+    }
+    results.addEventListener('focusin', event => {
+      const item = event.target.closest('article.film[data-key], tr[data-key]');
+      if (item && item.dataset.key !== activeKey) { activeKey = item.dataset.key; applyRoving(); }
+    });
+    document.addEventListener('keydown', event => {
+      if (!NAV_KEYS.has(event.key) || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.isComposing) return;
+      const item = event.target.closest?.('#results article.film[data-key], #results tr[data-key]');
+      // Not in a text field, a menu or a dialog: the arrows keep their own meaning there.
+      if (!item || event.target.closest('input, select, textarea, [contenteditable], dialog, details[open]') || document.querySelector('.modal.show')) return;
+      const items = navItems();
+      const columns = results.querySelector('table.film-table') ? 1 : columnsFromTops(items.map(card => card.getBoundingClientRect().top));
+      const next = nextIndex(event.key, items.indexOf(item), columns, items.length);
+      if (next === null) return;
+      event.preventDefault();
+      focusItem(items[next]);
+    });
     // Phone sheet: opens at 60 %; pulling the grip up makes it full screen, pulling down shrinks it or closes it.
     (() => {
       const modal = document.getElementById('film-details-modal');
@@ -861,7 +904,7 @@ const state = createAppState();
     })();
     // Previous / next film of the list behind the drawer (the grid or the Tonight rows, as drawn); ← and → do the same.
     function neighbourFilm(step) {
-      const keys = [...new Set([...document.querySelectorAll('#results article.film[data-key], #tonight-rows article.film[data-key]')].map(card => card.dataset.key))];
+      const keys = [...new Set([...document.querySelectorAll('#results article.film[data-key], #results tr[data-key], #tonight-rows article.film[data-key]')].map(card => card.dataset.key))];
       const current = new URL(location.href).searchParams.get('film');
       const next = keys[keys.indexOf(current) + step];
       if (next !== undefined && keys.indexOf(current) >= 0) showFilmDetails(next, modalOpeners.get('film-details-modal'));
