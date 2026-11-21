@@ -623,6 +623,22 @@ class Store:
     def clear_flag(self, movie_key: str) -> None:
         self._write("DELETE FROM flags WHERE movie_key = ?", (movie_key,))
 
+    def greyed_out_counts(self) -> dict[str, int]:
+        """How many films are greyed out: by the flag, and by a favorite with the status "watched"."""
+        flags = self._read("SELECT COUNT(*) FROM flags WHERE flag = 'watched'")[0][0]
+        favorites = self._read("SELECT COUNT(*) FROM favorites WHERE status = 'watched'")[0][0]
+        return {"flags": flags, "favorites": favorites}
+
+    def reset_greyed_out(self) -> dict[str, int]:
+        """Remove every grey-out; favorites stay, their status goes back to "plan". Returns the counts."""
+        with self._lock:
+            flags = self._db.execute("DELETE FROM flags WHERE flag = 'watched'").rowcount
+            favorites = self._db.execute(
+                "UPDATE favorites SET status = 'plan' WHERE status = 'watched'"
+            ).rowcount
+            self._db.commit()
+        return {"flags": flags, "favorites": favorites}
+
     def rekey_favorites(self, films: list[Film]) -> int:
         """Move favorites saved under `Title|Year` to the TMDB id of the same film."""
         moved = 0

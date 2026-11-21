@@ -755,3 +755,18 @@ class TestFlagPictures:
             assert response.status_code == 200 and response.mimetype == "image/svg+xml"
             assert "max-age=2592000" in response.headers["Cache-Control"]
             assert len(response.data) < 12_000  # the coats of arms were 80 to 180 KB before they were shrunk
+
+
+class TestGreyOuts:
+    def test_reset_removes_every_grey_out_and_keeps_the_favorites(self, client, store):
+        client.put("/api/flags/949", json={"flag": "watched"})
+        client.put("/api/flags/950", json={"flag": "not_now"})
+        client.post("/api/favorites", json={"title": "Heat", "key": "949", "status": "watched"})
+        assert client.get("/api/greyouts").get_json() == {"flags": 1, "favorites": 1}
+        done = client.post("/api/greyouts/reset").get_json()
+        assert (done["flags"], done["favorites"]) == (1, 1)
+        assert client.get("/api/greyouts").get_json() == {"flags": 0, "favorites": 0}
+        assert [flag["key"] for flag in client.get("/api/flags").get_json()] == [
+            "950"
+        ]  # "not now" is not a grey-out
+        assert client.get("/api/favorites").get_json()[0]["status"] == "plan"

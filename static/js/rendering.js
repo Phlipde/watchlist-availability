@@ -92,7 +92,7 @@ export function changeBadgesFor(film, selected) {
 export function favoriteFields(key, title, saved = {}) {
   const name = escapeHtml(title);
   const option = (value, label) => `<option value="${value}" ${saved.status === value ? 'selected' : ''}>${label}</option>`;
-  return `<div class="film-actions"><select class="favorite-status" data-key="${escapeHtml(key)}" aria-label="Favorite status for ${name}">${option('plan', 'Plan')}${option('watching', 'Watching')}${option('watched', 'Watched')}</select><input class="favorite-note" data-key="${escapeHtml(key)}" aria-label="Note for ${name}" placeholder="Note" value="${escapeHtml(saved.notes || '')}"></div>`;
+  return `<div class="film-actions"><select class="favorite-status" data-key="${escapeHtml(key)}" aria-label="Favorite status for ${name}">${option('plan', 'Plan')}${option('watching', 'Watching')}${option('watched', 'Greyed out')}</select><input class="favorite-note" data-key="${escapeHtml(key)}" aria-label="Note for ${name}" placeholder="Note" value="${escapeHtml(saved.notes || '')}"></div>`;
 }
 
 // context: {imageBaseUrl, selected: Set, favorites: Map, compareKeys: Set, greyKeys: Set, favoritesOnly, pageHref}
@@ -120,12 +120,12 @@ export function filmCard(film, section, context) {
   const watched = savedFavorite.status === 'watched' || Boolean(context.watched?.has(key));
   const hidden = Boolean(context.hiddenKeys?.has(key));
   const badge = watched
-    ? '<span class="poster-badge">Watched</span>'
+    ? '<span class="poster-badge">Greyed out</span>'
     : added.length ? `<span class="poster-badge poster-badge-new" title="New on ${escapeHtml(added.join(', '))}">New<span class="visually-hidden"> on ${escapeHtml(added.join(', '))}</span></span>`
       : removed.length ? `<span class="poster-badge poster-badge-gone" title="Gone from ${escapeHtml(removed.join(', '))}">Gone<span class="visually-hidden"> from ${escapeHtml(removed.join(', '))}</span></span>` : '';
   const services = serviceList(film, section, context);
   // The "..." menu: watched, not now, compare. The summary is the third tab stop of a card, after the title and the heart.
-  const menu = `<details class="card-menu"><summary class="card-more" aria-label="More actions: ${title}"><i class="ti ti-dots" aria-hidden="true"></i></summary><div class="card-menu-items"><button type="button" data-flag="watched" data-key="${escapeHtml(key)}">${watched ? 'Not watched after all' : 'Mark as watched'}</button><button type="button" data-flag="not_now" data-key="${escapeHtml(key)}">${hidden ? 'Bring back' : 'Not now (30 days)'}</button><button type="button" data-compare="${escapeHtml(key)}">${context.compareKeys.has(key) ? 'Remove from comparison' : 'Add to comparison'}</button></div></details>`;
+  const menu = `<details class="card-menu"><summary class="card-more" aria-label="More actions: ${title}"><i class="ti ti-dots" aria-hidden="true"></i></summary><div class="card-menu-items"><button type="button" data-flag="watched" data-key="${escapeHtml(key)}">${watched ? 'Remove grey-out' : 'Grey out'}</button><button type="button" data-flag="not_now" data-key="${escapeHtml(key)}">${hidden ? 'Bring back' : 'Not now (30 days)'}</button><button type="button" data-compare="${escapeHtml(key)}">${context.compareKeys.has(key) ? 'Remove from comparison' : 'Add to comparison'}</button></div></details>`;
   // The title link covers the whole card (see .film-open::after); the star sits above it. Two tab stops per card.
   return `<article class="film${grey}${watched ? ' is-watched' : ''}" data-key="${escapeHtml(key)}" data-section="${section}"><div class="poster"><label class="comparison-toggle"><input class="comparison-check" type="checkbox" aria-label="Compare ${title}" ${compareChecked}><span aria-hidden="true">Compare</span></label>${badge}${poster}</div><div class="film-info"><h3 class="film-title">${filmLink(film, key, pageHref)}</h3><p class="year">${meta}</p><div class="card-foot">${services ? `<ul class="services">${services}</ul>` : '<span></span>'}<span class="card-actions">${favoriteButton}${menu}</span></div>${favoriteControls}</div></article>`;
 }

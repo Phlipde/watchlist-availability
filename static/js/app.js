@@ -12,7 +12,7 @@ import {bestRelaxation, comingSoon, elsewhereOnServices, filmKey, filterFilms, s
 import {updateScanFeedback} from './scans.js';
 import {abroadHtml, abroadRows} from './abroad.js';
 import {NAV_KEYS, columnsFromTops, nextIndex, nextInRows} from './gridnav.js';
-import {drawerHtml} from './drawer.js';
+import {drawerHtml, letterboxdUrl} from './drawer.js';
 
 const imageBaseUrl = window.WATCHLIST_CONFIG.imageBaseUrl;
 const scanState = createScanState();
@@ -674,7 +674,7 @@ const state = createAppState();
       };
       if (!(await apply(turnOff ? null : flag))) return;
       const title = [...state.films, ...state.unavailable].find(film => filmKey(film) === key)?.title || 'Film';
-      const message = turnOff ? `${title}: back on the list` : flag === 'watched' ? `${title}: marked as watched` : `${title}: set aside for 30 days`;
+      const message = turnOff ? `${title}: back on the list` : flag === 'watched' ? `${title}: greyed out` : `${title}: set aside for 30 days`;
       showToast(message, false, async () => { if (await apply(before?.flag ?? null)) renderFilms(); });
       renderFilms();
     }
@@ -979,6 +979,10 @@ const state = createAppState();
         if (button) { event.preventDefault(); toggleFavorite(button); }
       } else if (event.key === 's') { event.preventDefault(); setFlag(key, 'watched'); }
       else if (event.key === 'n') { event.preventDefault(); setFlag(key, 'not_now'); }
+      else if (event.key === 'l') {
+        const film = [...state.films, ...state.unavailable].find(item => filmKey(item) === key);
+        if (film) { event.preventDefault(); window.open(letterboxdUrl(film), '_blank', 'noopener'); }
+      }
       else if (event.key === 'c') { event.preventDefault(); setCompared(key, !state.compareKeys.has(key)); renderFilms(); }
     });
     // The skip link moves the focus without a #results in the address: going back to a #fragment entry
