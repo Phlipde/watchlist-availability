@@ -234,6 +234,10 @@ def test_tonight_page_rows_chips_and_pick_for_me(app_server, page):
     page.locator("#pick-for-me").click()
     expect(page.locator("#film-details-title")).to_have_text("Heat")
     expect(page.locator("#pick-for-me")).to_contain_text("Again")
+    # The drawer covers the button, so it carries the reason and a way to roll again.
+    expect(page.locator("#film-details-content .pick-reason")).to_contain_text("Picked for you")
+    page.get_by_role("button", name="Pick another").click()
+    expect(page.locator("#film-details-title")).to_have_text("Heat")  # the only film that fits
     # An old watchlist link to "/" with filters goes to the watchlist page.
     page.goto(app_server["url"] + "/?genre=Action")
     expect(page).to_have_url(re.compile(r"/watchlist\?genre=Action"))
@@ -911,21 +915,6 @@ def test_a_saved_view_comes_back_as_a_chip_on_tonight(app_server, page):
     expect(page.locator("#tonight-views")).to_be_hidden()
 
 
-def test_compact_view_shows_posters_only_and_is_remembered(app_server, page):
-    expect = playwright_api.expect
-    page.goto(app_server["url"] + "/watchlist")
-    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
-    expect(page.locator("article.film .year").first).to_be_visible()
-    page.locator("#view-mode").click()
-    expect(page.locator("#view-mode")).to_have_attribute("aria-pressed", "true")
-    expect(page.locator("article.film .year").first).to_be_hidden()
-    expect(page.locator("article.film .film-open").first).to_have_text(
-        "Heat"
-    )  # still the link, for screen readers
-    page.reload()
-    expect(page.locator("#view-mode")).to_have_attribute("aria-pressed", "true")
-
-
 def test_views_switch_between_grid_compact_and_table(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"] + "/watchlist")
@@ -1004,3 +993,24 @@ def test_details_actions_sit_in_one_row_with_a_clear_main_button(app_server, pag
     tops = toolbar.evaluate_all("buttons => buttons.map(b => Math.round(b.getBoundingClientRect().top))")
     assert len(set(tops)) == 1  # one row, nothing wraps
     expect(page.get_by_role("button", name="Mark as watched")).to_be_visible()
+
+
+def test_header_says_synced_in_words_right_after_a_scan(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    # The new scan has arrived: never "Out of date" beside fresh data; the words show on a desktop.
+    expect(page.locator("#sync-label")).to_have_text("Synced just now")
+    expect(page.locator("#sync-label")).to_be_visible()
+
+
+def test_services_get_their_own_row_on_narrow_phone_cards(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    tick_all_services(page)
+    page.set_viewport_size({"width": 375, "height": 812})
+    card = page.locator("article.film").first
+    card_width = card.bounding_box()["width"]
+    # The logos used to be squeezed to 8 px slivers beside the heart; the row now spans the card.
+    assert card.locator(".services").bounding_box()["width"] >= card_width * 0.8

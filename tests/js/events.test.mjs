@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
-import {newOnServices, nowOnText, pickFilm, recentlyGone, tonightRows, watchableOn} from '../../static/js/events.js';
+import {newOnServices, nowOnText, pickFilm, pickReason, recentlyGone, tonightRows, watchableOn} from '../../static/js/events.js';
 
 const NOW = 2_000_000_000;
 const DAY = 24 * 3600;
@@ -68,4 +68,21 @@ test('pick for me avoids films picked before, until none is left', () => {
   assert.equal(pickFilm(films, new Set(['1']), () => 0.9).key, '2');
   assert.ok(['1', '2'].includes(pickFilm(films, new Set(['1', '2']), () => 0).key));
   assert.equal(pickFilm([], new Set()), null);
+});
+
+test('pick for me favours well rated films and says why', () => {
+  const films = [{key: '1', rating: 1}, {key: '2', rating: 8.2, runtime: 107}];
+  assert.equal(pickFilm(films, new Set(), () => 0.5).key, '2');  // a 1.0 has almost no chance next to an 8.2
+  assert.equal(pickFilm(films, new Set(), () => 0).key, '1');  // but it is still possible
+  assert.equal(pickReason(films[1], 'on Netflix'), 'Highly rated · 1h 47m · on Netflix');
+  assert.equal(pickReason({key: '3'}, ''), '');
+});
+
+test('a film under "New" is not repeated in the service rows', () => {
+  const films = [
+    {key: '1', title: 'Fresh', providers: {Netflix: ['flatrate']}, provider_changes: {added: ['Netflix'], since: NOW - 3600}},
+    {key: '2', title: 'Old', providers: {Netflix: ['flatrate']}},
+  ];
+  const {rows} = tonightRows(films, {services: new Set(['Netflix']), now: NOW});
+  assert.deepEqual(rows.map(row => [row.title, titles(row.films)]), [['New on your services', ['Fresh']], ['On Netflix', ['Old']]]);
 });

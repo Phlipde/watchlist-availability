@@ -186,3 +186,12 @@ Noch offen (zur Auswahl): 11 Meldung, wenn ein „Demnächst“-Film streambar w
 - **[ENTSCHIEDEN]** Deutsche Filmtitel: nicht gebaut. Die TMDB-Details werden einmal je Film gespeichert und von allen Ländern geteilt; ein Titel in Landessprache bräuchte Details je Sprache (mehr Abfragen, größere Datenbank). Der Originaltitel im Detailfenster deckt den Bedarf teilweise.
 - **[ENTSCHIEDEN]** TV-Ansicht: nicht gebaut (im Plan "optional"; Tastatur-Bedienung und große Poster gibt es).
 - **[ENTSCHIEDEN]** Datenbank aufräumen: nicht jetzt. Es lohnt erst nach Monaten Betrieb, und Löschen von Daten geht nur nach Rückfrage mit einer Liste, was entfällt.
+
+### Design-Kritik vom 2026-11-21 (24/40) abgearbeitet
+- **[ERLEDIGT]** Sync-Status: Ursache war eine Reihenfolge: nach dem Scan setzte der Kopf den Status, bevor das neue Scan-Datum ankam ("Out of date" neben "synced just now"). Eine Funktion `updateSyncLabel` entscheidet jetzt, und sie läuft nochmal, wenn der Scan angekommen ist. Der Status steht auf dem Desktop als Text ("Synced just now"), auf dem Handy bleibt nur der Punkt (Text für Screenreader).
+- **[ERLEDIGT]** Handy-Karten: Die Dienst-Logos waren 8x28 px (gemessen); jetzt eigene Zeile, 28x28 px. Das Herz blieb auf der Karte (kleinere Variante: nicht ins Menü verschoben).
+- **[ERLEDIGT]** "Pick for me": Chance wächst mit der TMDB-Bewertung (Bewertung hoch 3), im Fenster steht der Grund ("Highly rated · 1h 47m · on Netflix") und "Pick another".
+- **[ERLEDIGT]** Watchlist-Leiste: der alte "Compact"-Knopf samt zweitem Mechanismus und Regeln entfernt (der Schalter Grid/Compact/Table bleibt), "My favorites" mit Herz statt Stern.
+- **[ERLEDIGT]** Tonight: ein Film unter "New" steht nicht mehr zusätzlich in den Dienst-Reihen. "Free" und Dienst-Reihen dürfen sich weiter überschneiden (so war es gewollt).
+- **[OFFEN]** Die Reihenfolge "Favorites first, then rating" wird nur im Sortiermenü erklärt, nicht an den Tonight-Reihen. Filter auf dem Handy bleiben ein langer Block (die Watchlist-Leiste bleibt; nur die Doppelung ist weg).
+- **[ERLEDIGT]** Python 347, JS 54, Browser 40, ruff und mypy sauber.

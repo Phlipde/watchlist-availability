@@ -78,13 +78,15 @@ export function tonightRows(films, {services, favorites = new Map(), skip = new 
     ? [...services].some(service => offeredAs(film, service, FREE_KINDS))
     : watchableOn(film, services).length);
   const sorted = list => sortFilms(list, 'priority', {favorites});
+  const fresh = sorted(newOnServices(watchable, services, now));
+  const freshKeys = new Set(fresh.map(filmKey));  // a film shown under "New" is not repeated in the service rows
   const rows = [
-    {id: 'new', title: 'New on your services', films: sorted(newOnServices(watchable, services, now)), href: '/watchlist?changes=added'},
+    {id: 'new', title: 'New on your services', films: fresh, href: '/watchlist?changes=added'},
     {id: 'free', title: 'Free', films: sorted(watchable.filter(film => [...services].some(service => offeredAs(film, service, FREE_KINDS)))), href: '/watchlist?cost=free'},
   ];
   if (!freeOnly) {
     [...services]
-      .map(service => ({service, films: watchable.filter(film => offeredAs(film, service, ['flatrate']))}))
+      .map(service => ({service, films: watchable.filter(film => offeredAs(film, service, ['flatrate']) && !freshKeys.has(filmKey(film)))}))
       .filter(row => row.films.length)
       .sort((a, b) => b.films.length - a.films.length || a.service.localeCompare(b.service))
       .forEach(row => rows.push({
@@ -95,9 +97,26 @@ export function tonightRows(films, {services, favorites = new Map(), skip = new 
   return {rows: rows.filter(row => row.films.length), available: watchable};
 }
 
-// "Pick for me": a random film from `candidates` that was not picked yet in this visit.
+// "Pick for me": a film from `candidates` that was not picked yet in this visit. Chance grows with the TMDB
+// rating (rating cubed, 5 when unrated), so a 4.5 beats a 3.3 most of the time but is not certain.
 export function pickFilm(candidates, picked, random = Math.random) {
   const fresh = candidates.filter(film => !picked.has(filmKey(film)));
   const pool = fresh.length ? fresh : candidates;
-  return pool.length ? pool[Math.floor(random() * pool.length)] : null;
+  if (!pool.length) return null;
+  const weights = pool.map(film => Math.max(Number(film.rating) || 5, 1) ** 3);
+  let point = random() * weights.reduce((sum, weight) => sum + weight, 0);
+  for (let index = 0; index < pool.length; index += 1) {
+    point -= weights[index];
+    if (point < 0) return pool[index];
+  }
+  return pool[pool.length - 1];
+}
+
+// Why this film was picked, in a few words: "Highly rated · 1h 47m · on Netflix".
+export function pickReason(film, serviceText) {
+  const parts = [];
+  if (Number(film.rating) >= 7.5) parts.push('Highly rated');
+  if (Number(film.runtime) > 0) parts.push(`${Math.floor(film.runtime / 60) ? `${Math.floor(film.runtime / 60)}h ` : ''}${film.runtime % 60}m`.trim());
+  if (serviceText) parts.push(serviceText);
+  return parts.join(' · ');
 }

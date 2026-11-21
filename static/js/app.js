@@ -5,7 +5,7 @@ import './register-sw.js';
 import {scanProblem} from './problems.js';
 import {renderViews, wireViews} from './saved-views.js';
 import {showDeadlines} from './deadlines.js';
-import {TONIGHT_CHIPS, nowOnText, pickFilm, recentlyGone, tonightRows} from './events.js';
+import {TONIGHT_CHIPS, nowOnText, pickFilm, pickReason, recentlyGone, tonightRows} from './events.js';
 import {readFilters} from './filters.js';
 import {createFilterBar, initPopovers} from './filterbar.js';
 import {bestRelaxation, comingSoon, elsewhereOnServices, filmKey, filterFilms, similarOnServices, sortRatings} from './filtering.js';
@@ -61,13 +61,17 @@ const state = createAppState();
       document.getElementById('sync-toggle').dataset.state = name;
       document.getElementById('sync-label').textContent = text;
     }
+    // One place decides the header's state from the age of the data; it runs again when the new scan has arrived.
+    function updateSyncLabel(failed = false) {
+      const age = state.lastScan ? Date.now() / 1000 - state.lastScan : Infinity;
+      if (failed) setSync('error', 'Scan failed');
+      else if (age > 24 * 3600) setSync('stale', `Out of date · ${ago(state.lastScan)}`);
+      else setSync('ok', state.lastScan ? `Synced ${ago(state.lastScan)}` : 'Synced');
+    }
     // After a scan the button starts another one; "Retry" is only right after an error.
     function showScanButton(failed = false) {
       if (!failed) document.getElementById('state-banner').hidden = true;
-      const age = state.lastScan ? Date.now() / 1000 - state.lastScan : Infinity;
-      if (failed) setSync('error', 'Scan failed');
-      else if (age > 24 * 3600) setSync('stale', 'Out of date');
-      else setSync('ok', state.lastScan ? `Synced ${dateTime(state.lastScan)}` : 'Synced');
+      updateSyncLabel(failed);
       document.getElementById('cancel-scan').hidden = true;
       document.getElementById('cancel-scan').disabled = false;
       const button = document.getElementById('retry-scan');
@@ -354,7 +358,14 @@ const state = createAppState();
       sessionStorage.setItem('pickedFilms', JSON.stringify([...picked]));
       document.getElementById('pick-for-me').innerHTML = '<i class="ti ti-dice-5" aria-hidden="true"></i> Again';
       showFilmDetails(filmKey(film), opener);
+      // The drawer covers the button, so the reason and "Pick another" sit inside it.
+      const where = includedOn(film, state.selected);
+      const reason = pickReason(film, where ? `on ${where}` : '');
+      document.getElementById('film-details-content').insertAdjacentHTML('afterbegin', `<p class="pick-reason"><span>Picked for you${reason ? `: ${escapeHtml(reason)}` : ''}</span><button class="film-link pick-again" type="button"><i class="ti ti-dice-5" aria-hidden="true"></i> Pick another</button></p>`);
     }
+    document.getElementById('film-details-content').addEventListener('click', event => {
+      if (event.target.closest('.pick-again')) pickForMe(modalOpeners.get('film-details-modal'));
+    });
     document.getElementById('pick-for-me')?.addEventListener('click', event => pickForMe(event.currentTarget));
     // "r" picks a film; only outside text fields and dialogs.
     document.addEventListener('keydown', event => {
@@ -479,7 +490,11 @@ const state = createAppState();
       state.films = films || [];
       state.unavailable = unavailable || [];
       state.changes = changes || [];
-      if (lastScan) state.lastScan = lastScan;
+      if (lastScan) {
+        state.lastScan = lastScan;
+        // The scan has just arrived: a header that still says "Out of date" would contradict the page.
+        if (['ok', 'stale'].includes(document.getElementById('sync-toggle').dataset.state)) updateSyncLabel();
+      }
       seen.clear();
       state.films.forEach(film => seen.add(filmKey(film)));
       if (!state.films.length && !state.unavailable.length) results.innerHTML = '';
@@ -1053,15 +1068,6 @@ const state = createAppState();
     favoritesButton.classList.toggle('active', state.favoritesOnly);
     favoritesButton.setAttribute('aria-pressed', String(state.favoritesOnly));
     favoritesButton.addEventListener('click', () => setFavoritesOnly(!state.favoritesOnly));
-    // Compact: posters only (the title stays for screen readers and as a tooltip); the choice is kept in this browser.
-    const viewButton = document.getElementById('view-mode');
-    const setCompact = on => {
-      results.classList.toggle('compact', on);
-      viewButton.setAttribute('aria-pressed', String(on));
-      localStorage.setItem('compactView', on ? '1' : '0');
-    };
-    setCompact(localStorage.getItem('compactView') === '1');
-    viewButton.addEventListener('click', () => setCompact(!results.classList.contains('compact')));
     document.getElementById('compare-go').addEventListener('click', compareFilms);
     document.getElementById('compare-bar-clear').addEventListener('click', () => { [...state.compareKeys].forEach(key => setCompared(key, false)); renderFilms(); });
     updateCompareButton();
