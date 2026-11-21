@@ -1051,3 +1051,44 @@ def test_details_never_scroll_sideways(app_server, page):
     assert content.evaluate(
         "el => el.scrollWidth <= el.clientWidth"
     )  # a tooltip or a row must not widen the drawer
+
+
+@pytest.mark.parametrize("width", [1400, 900, 500])
+@pytest.mark.parametrize("view", ["Grid", "Compact", "Table"])
+def test_arrow_keys_move_through_the_films_in_every_view_and_width(app_server, page, view, width):
+    expect = playwright_api.expect
+    page.set_viewport_size({"width": 1400, "height": 900})
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    tick_all_services(page)
+    page.locator(f"#view-switch label[title={view}]").click()
+    page.set_viewport_size({"width": width, "height": 900})
+    items = page.locator("#results tr[data-key]" if view == "Table" else "#results article.film")
+    expect(items).to_have_count(2)
+    keys = items.evaluate_all("rows => rows.map(row => row.dataset.key)")
+    focused = "document.activeElement.closest('[data-key]')?.dataset.key"
+    # Only the first film holds the tab stop; the arrows move it.
+    assert items.nth(1).locator(".film-open").get_attribute("tabindex") == "-1"
+    items.nth(0).locator(".film-open").focus()
+    columns = page.evaluate(
+        "() => { const tops = [...document.querySelectorAll('#results article.film, #results tr[data-key]')]"
+        ".map(el => Math.round(el.getBoundingClientRect().top));"
+        " return tops.filter(top => top === tops[0]).length; }"
+    )
+    page.keyboard.press("ArrowRight" if view != "Table" and columns > 1 else "ArrowDown")
+    assert page.evaluate(focused) == keys[1]
+    assert items.nth(1).locator(".film-open").get_attribute("tabindex") == "0"  # the tab stop moved with it
+    assert items.nth(0).locator(".film-open").get_attribute("tabindex") == "-1"
+    page.keyboard.press("Home")
+    assert page.evaluate(focused) == keys[0]
+    page.keyboard.press("End")
+    assert page.evaluate(focused) == keys[1]
+    # Enter opens the details; Escape returns the focus to that film; the arrows page through the drawer.
+    page.keyboard.press("Enter")
+    expect(page.locator("#film-details-modal")).to_have_class(re.compile("show"))
+    page.wait_for_function("document.getElementById('film-details-modal').contains(document.activeElement)")
+    page.keyboard.press("ArrowLeft")
+    expect(page.locator("#film-details-title")).to_have_text(items.nth(0).locator(".film-open").inner_text())
+    page.keyboard.press("Escape")
+    expect(page.locator("#film-details-modal")).to_be_hidden()
+    page.wait_for_function(f"{focused} === '{keys[0]}'")  # back on the film the drawer showed last

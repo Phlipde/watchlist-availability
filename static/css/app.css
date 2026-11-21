@@ -872,3 +872,6 @@ summary.offer-heading { cursor: pointer; }
 /* Tooltips of flags and logos grow to the right, or to the left near the right edge (app.js sets data-side). */
 .flag:hover::after, .flag:focus::after { left: 0; transform: none; white-space: normal; width: max-content; max-width: 220px; }
 .flag[data-side="end"]:hover::after, .flag[data-side="end"]:focus::after, .svc[data-side="end"]:hover::after, .svc[data-side="end"]:focus::after { left: auto; right: 0; }
+
+/* A film reached with the arrow keys scrolls into view below the sticky header (and above the phone's page bar). */
+#results article.film, #results tr[data-key] { scroll-margin-top: 150px; scroll-margin-bottom: 96px; }
