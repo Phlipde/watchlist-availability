@@ -1092,3 +1092,55 @@ def test_arrow_keys_move_through_the_films_in_every_view_and_width(app_server, p
     page.keyboard.press("Escape")
     expect(page.locator("#film-details-modal")).to_be_hidden()
     page.wait_for_function(f"{focused} === '{keys[0]}'")  # back on the film the drawer showed last
+
+
+def test_arrow_keys_move_through_the_tonight_rows(app_server, page):
+    expect = playwright_api.expect
+    # Two saved subscriptions give two rows (Free and On Netflix) that share a film.
+    response = page.request.put(
+        app_server["url"] + "/api/settings", data={"subscriptions": ["Netflix", "Arte"]}
+    )
+    assert response.ok
+    page.goto(app_server["url"])
+    expect(page.locator(".film-row").first).to_be_visible(timeout=15000)
+    rows = page.locator(".film-row")
+    assert rows.count() >= 2
+    first_row = rows.nth(0).locator("article.film")
+    second_row = rows.nth(1).locator("article.film")
+    # One tab stop in all the rows: the first film.
+    assert first_row.nth(0).locator(".film-open").get_attribute("tabindex") == "0"
+    assert second_row.nth(0).locator(".film-open").get_attribute("tabindex") == "-1"
+    first_row.nth(0).locator(".film-open").focus()
+    page.keyboard.press("ArrowDown")
+    assert second_row.nth(0).locator(".film-open").evaluate("el => el === document.activeElement")
+    assert second_row.nth(0).locator(".film-open").get_attribute("tabindex") == "0"
+    assert first_row.nth(0).locator(".film-open").get_attribute("tabindex") == "-1"
+    page.keyboard.press("ArrowUp")
+    assert first_row.nth(0).locator(".film-open").evaluate("el => el === document.activeElement")
+    if first_row.count() > 1:
+        page.keyboard.press("ArrowRight")
+        assert first_row.nth(1).locator(".film-open").evaluate("el => el === document.activeElement")
+        page.keyboard.press("Home")
+        assert first_row.nth(0).locator(".film-open").evaluate("el => el === document.activeElement")
+
+
+def test_on_a_phone_a_tap_on_the_cut_off_description_opens_it(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    tick_all_services(page)
+    page.set_viewport_size({"width": 375, "height": 812})
+    page.locator("article.film .film-open").first.click()
+    box = page.locator("#film-details-content .overview-box")
+    long_text = "A very long description. " * 20
+    page.evaluate(
+        "text => { const box = document.querySelector('#film-details-content .overview-box');"
+        " box.classList.add('clamped'); box.querySelector('.film-modal-overview').textContent = text;"
+        " if (!box.querySelector('.overview-more')) box.insertAdjacentHTML('beforeend',"
+        ' \'<button class="overview-more" type="button">more</button>\'); }',
+        long_text,
+    )
+    expect(box).to_have_class(re.compile("clamped"))
+    box.locator(".film-modal-overview").click()
+    expect(box).not_to_have_class(re.compile("clamped"))
+    expect(box.locator(".overview-more")).to_have_text("less")

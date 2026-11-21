@@ -11,7 +11,7 @@ import {createFilterBar, initPopovers} from './filterbar.js';
 import {bestRelaxation, comingSoon, elsewhereOnServices, filmKey, filterFilms, similarOnServices, sortRatings} from './filtering.js';
 import {updateScanFeedback} from './scans.js';
 import {abroadHtml, abroadRows} from './abroad.js';
-import {NAV_KEYS, columnsFromTops, nextIndex} from './gridnav.js';
+import {NAV_KEYS, columnsFromTops, nextIndex, nextInRows} from './gridnav.js';
 import {drawerHtml} from './drawer.js';
 
 const imageBaseUrl = window.WATCHLIST_CONFIG.imageBaseUrl;
@@ -339,6 +339,7 @@ const state = createAppState();
       const section = (row, film) => (row.id === 'free' || (row.id === 'new' && !Object.values(film.providers || {}).flat().includes('flatrate')) ? 'Free' : 'Paid');
       document.getElementById('tonight-rows').innerHTML = rows.map(row => `<section class="film-row" aria-labelledby="row-${escapeHtml(row.id)}"><div class="film-row-head"><h2 id="row-${escapeHtml(row.id)}">${escapeHtml(row.title)} <span class="row-count">${row.films.length}</span></h2><a class="film-link" href="${escapeHtml(row.href)}">See all <span aria-hidden="true">→</span></a></div><div class="row-scroller"><button class="row-arrow row-prev" type="button" aria-label="Scroll ${escapeHtml(row.title)} back" tabindex="-1"><i class="ti ti-chevron-left" aria-hidden="true"></i></button><div class="row-track films">${row.films.slice(0, 24).map(film => filmCard(film, section(row, film), context)).join('')}</div><button class="row-arrow row-next" type="button" aria-label="Scroll ${escapeHtml(row.title)} on" tabindex="-1"><i class="ti ti-chevron-right" aria-hidden="true"></i></button></div></section>`).join('')
         || '<p class="empty">No film fits. Tick more services or turn a quick filter off.</p>';
+      applyTonightRoving();
       const gone = recentlyGone(state.changes, [...state.films, ...state.unavailable], state.selected, Date.now() / 1000);
       document.getElementById('tonight-gone').hidden = gone.length === 0;
       document.getElementById('tonight-gone-count').textContent = gone.length;
@@ -886,6 +887,37 @@ const state = createAppState();
       event.preventDefault();
       focusItem(items[next]);
     });
+    // The Tonight rows: ←/→ along a row, ↑/↓ to the row above or below (same position as far as it reaches).
+    let tonightSpot = [0, 0];  // [row, column] of the film that holds the tab stop
+    const tonightGrid = () => [...document.querySelectorAll('#tonight-rows .film-row')].map(row => [...row.querySelectorAll('article.film[data-key]')]);
+    function applyTonightRoving() {
+      const grid = tonightGrid();
+      if (!grid.length) return;
+      const row = Math.min(tonightSpot[0], grid.length - 1);
+      const col = Math.min(tonightSpot[1], Math.max(grid[row].length - 1, 0));
+      grid.forEach((cards, r) => cards.forEach((card, c) => card.querySelectorAll('.film-open, .favorite, .card-more').forEach(control => { control.tabIndex = r === row && c === col ? 0 : -1; })));
+    }
+    document.getElementById('tonight-rows')?.addEventListener('focusin', event => {
+      const card = event.target.closest('article.film[data-key]');
+      const grid = tonightGrid();
+      const row = grid.findIndex(cards => cards.includes(card));
+      if (row >= 0) { tonightSpot = [row, grid[row].indexOf(card)]; applyTonightRoving(); }
+    });
+    document.addEventListener('keydown', event => {
+      if (!NAV_KEYS.has(event.key) || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.isComposing) return;
+      const card = event.target.closest?.('#tonight-rows article.film[data-key]');
+      if (!card || event.target.closest('input, select, textarea, [contenteditable], dialog, details[open]') || document.querySelector('.modal.show')) return;
+      const grid = tonightGrid();
+      const row = grid.findIndex(cards => cards.includes(card));
+      const next = nextInRows(event.key, row, grid[row].indexOf(card), grid.map(cards => cards.length));
+      if (!next) return;
+      event.preventDefault();
+      tonightSpot = next;
+      applyTonightRoving();
+      const target = grid[next[0]][next[1]];
+      target.querySelector('.film-open')?.focus();
+      target.scrollIntoView({block: 'nearest', inline: 'nearest'});
+    });
     // Phone sheet: opens at 60 %; pulling the grip up makes it full screen, pulling down shrinks it or closes it.
     (() => {
       const modal = document.getElementById('film-details-modal');
@@ -1031,10 +1063,14 @@ const state = createAppState();
         navigator.clipboard?.writeText(location.href).then(() => showToast('Link copied.'), () => showToast('Could not copy the link.', true));
       }
       const more = event.target.closest('.overview-more');
-      if (more) {
-        const clamped = more.closest('.overview-box').classList.toggle('clamped');
-        more.textContent = clamped ? 'more' : 'less';
-        more.setAttribute('aria-expanded', String(!clamped));
+      // On a phone a tap on the cut-off text opens it as well (it only expands; "less" is the button).
+      const tapped = matchMedia('(max-width: 800px)').matches && event.target.closest('.overview-box.clamped .film-modal-overview');
+      if (more || tapped) {
+        const box = (more || tapped).closest('.overview-box');
+        const button = box.querySelector('.overview-more');
+        const clamped = more ? box.classList.toggle('clamped') : (box.classList.remove('clamped'), false);
+        button.textContent = clamped ? 'more' : 'less';
+        button.setAttribute('aria-expanded', String(!clamped));
       }
       const extra = event.target.closest('.chip-more');
       if (extra) {
