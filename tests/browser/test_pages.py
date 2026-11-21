@@ -1037,3 +1037,17 @@ def test_flags_are_pictures_served_by_the_app(app_server, page):
     for code in ("nl", "at", "us", "jp"):
         response = page.request.get(app_server["url"] + f"/static/flags/{code}.svg")
         assert response.ok and "svg" in response.headers["content-type"]
+
+
+def test_details_never_scroll_sideways(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    tick_all_services(page)
+    page.locator('article.film[data-key="348"] .film-open').click()
+    content = page.locator("#film-details-content")
+    expect(content).to_be_visible()
+    page.evaluate("document.getElementById('film-more')?.setAttribute('open', '')")
+    assert content.evaluate(
+        "el => el.scrollWidth <= el.clientWidth"
+    )  # a tooltip or a row must not widen the drawer

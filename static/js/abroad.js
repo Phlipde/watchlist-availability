@@ -85,19 +85,19 @@ const flag = (code, name, serviceName, kind) => {
   return `<span class="flag" role="img" tabindex="0" aria-label="${escapeHtml(tip)}" data-tip="${escapeHtml(tip)}"><img src="/static/flags/${escapeHtml(code.toLowerCase())}.svg" alt="" width="20" height="15" loading="lazy"></span>`;
 };
 
-// The collapsed line and the table. logoOf(name) → <img> or ''. nameOf(code) → country name.
-export function abroadHtml(rows, {nameOf, logoOf, open = false}) {
+// The block inside "Other services": a heading with the country count, the VPN note and one compact line per
+// service (logo, three flags, "+N" for the rest). logoOf(name) → <img> or ''. nameOf(code) → country name.
+export function abroadHtml(rows, {nameOf, logoOf}) {
   if (!rows.length) return '';
   const total = new Set(rows.flatMap(row => row.countries)).size;
-  const logos = rows.slice(0, 4).map(row => logoOf(row.service, 'provider-logo-sm')).join('');
   const table = rows.map(row => {
     const shown = row.countries.slice(0, 3);
     const more = row.countries.slice(3);
-    const groups = groupByRegion(more);
     const grid = more.length
-      ? `<div class="flag-grid" hidden>${groups.map(([group, codes]) => `<section><h4>${group}</h4><ul>${codes.map(code => `<li>${flag(code, nameOf(code), row.service, row.kinds[code])}<span>${escapeHtml(nameOf(code))}</span></li>`).join('')}</ul></section>`).join('')}</div>`
+      ? `<div class="flag-grid" hidden>${groupByRegion(more).map(([group, codes]) => `<section><h4>${group}</h4><ul>${codes.map(code => `<li>${flag(code, nameOf(code), row.service, row.kinds[code])}<span>${escapeHtml(nameOf(code))}</span></li>`).join('')}</ul></section>`).join('')}</div>`
       : '';
-    return `<li class="abroad-row"><div class="abroad-line"><span class="abroad-service">${logoOf(row.service, 'provider-logo-sm')}<span>${escapeHtml(row.service)}</span></span><span class="abroad-flags">${shown.map(code => flag(code, nameOf(code), row.service, row.kinds[code])).join('')}${more.length ? `<button class="flag-more" type="button" aria-expanded="false">+${more.length} <i class="ti ti-chevron-right" aria-hidden="true"></i></button>` : ''}</span>${row.hint ? `<span class="abroad-hint">${row.hint}</span>` : ''}</div>${grid}</li>`;
+    const logo = logoOf(row.service, 'provider-logo-sm');
+    return `<li class="abroad-row"><div class="abroad-line"><span class="abroad-service" title="${escapeHtml(row.service)}">${logo || escapeHtml(row.service)}</span><span class="abroad-flags">${shown.map(code => flag(code, nameOf(code), row.service, row.kinds[code])).join('')}${more.length ? `<button class="flag-more" type="button" aria-expanded="false">+${more.length} <i class="ti ti-chevron-right" aria-hidden="true"></i></button>` : ''}</span>${row.hint ? `<span class="abroad-hint">${row.hint}</span>` : ''}</div>${grid}</li>`;
   }).join('');
-  return `<details class="abroad"${open ? ' open' : ''}><summary><span>Abroad on your services</span><span class="abroad-logos">${logos}</span><span class="abroad-count">${total} ${total === 1 ? 'country' : 'countries'}</span></summary><p class="abroad-note">Needs a VPN or being in that country.</p><ul class="abroad-table">${table}</ul></details>`;
+  return `<div class="abroad"><h3 class="offer-heading">Abroad on your services <span class="abroad-count">· ${total} ${total === 1 ? 'country' : 'countries'}</span></h3><p class="abroad-note">Needs a VPN or being in that country.</p><ul class="abroad-table">${table}</ul></div>`;
 }
