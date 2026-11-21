@@ -1144,3 +1144,28 @@ def test_on_a_phone_a_tap_on_the_cut_off_description_opens_it(app_server, page):
     box.locator(".film-modal-overview").click()
     expect(box).not_to_have_class(re.compile("clamped"))
     expect(box.locator(".overview-more")).to_have_text("less")
+
+
+def test_a_long_poster_row_does_not_widen_the_details(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    tick_all_services(page)
+    page.locator('article.film[data-key="348"] .film-open').click()
+    expect(page.locator("#film-details-content .film-modal-body")).to_be_visible()
+    # A series of many films (a wrapper around a scrolling row) used to widen the grid and clip text.
+    row = (
+        '<div class="film-modal-series"><ul class="mini-posters">'
+        + '<li><button type="button">x</button></li>' * 20
+    )
+    page.evaluate(
+        "html => document.querySelector('#film-details-content .film-modal-about')"
+        ".insertAdjacentHTML('afterbegin', html)",
+        row + "</ul></div>",
+    )
+    # Every block of the drawer ends inside it (the grid itself keeps its width even when its tracks grow).
+    assert page.evaluate(
+        "() => { const edge = document.getElementById('film-details-content').getBoundingClientRect().right;"
+        " return [...document.querySelectorAll('.film-modal-body > *, .film-modal-about > *')]"
+        ".every(el => el.getBoundingClientRect().right <= edge); }"
+    )
