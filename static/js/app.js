@@ -763,13 +763,23 @@ const state = createAppState();
       const logoOf = (name, className = 'provider-logo') => (providerLogos[name] ? `<img class="${className}" src="${escapeHtml(logoBaseUrl + providerLogos[name])}" alt="" loading="lazy">` : '');
       const rows = abroadRows(byCountry, own, document.getElementById('country-select').value, nameOf);
       if (!rows.length) return;
-      target.innerHTML = abroadHtml(rows, {nameOf, logoOf, open: localStorage.getItem('abroadOpen') === '1'});
+      target.innerHTML = abroadHtml(rows, {nameOf, logoOf});
       target.hidden = false;
+      // The block lives inside "Other services": show that, and say in its line how many countries there are.
+      const more = document.getElementById('film-more');
+      more.hidden = false;
+      const total = new Set(rows.flatMap(row => row.countries)).size;
+      more.querySelector('.os-abroad').textContent = ` · ${total} abroad`;
     }
-    // The folded line and the "+N" of a row remember nothing but the line's own open state.
-    document.getElementById('film-details-content').addEventListener('toggle', event => {
-      if (event.target.matches?.('.abroad')) localStorage.setItem('abroadOpen', event.target.open ? '1' : '0');
-    }, true);
+    // A tooltip must stay inside the drawer: near the right edge it grows to the left.
+    const placeTip = event => {
+      const target = event.target.closest?.('.flag[data-tip], .svc[data-tip]');
+      if (!target) return;
+      const room = document.getElementById('film-details-content').getBoundingClientRect().right - target.getBoundingClientRect().left;
+      target.dataset.side = room < 240 ? 'end' : 'start';
+    };
+    document.getElementById('film-details-content').addEventListener('pointerover', placeTip);
+    document.getElementById('film-details-content').addEventListener('focusin', placeTip);
     document.getElementById('film-details-content').addEventListener('click', event => {
       const more = event.target.closest('.flag-more');
       if (!more) return;

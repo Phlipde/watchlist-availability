@@ -207,3 +207,9 @@ Noch offen (zur Auswahl): 11 Meldung, wenn ein „Demnächst“-Film streambar w
 - **[OFFEN]** Nicht geprüft: der Letterboxd-Link `letterboxd.com/tmdb/<id>/` (Weiterleitung, nicht geöffnet), Kontrast des Titels auf sehr hellen Backdrops (nur der Text unter dem Hero wurde gemessen: 59 Elemente, alle ≥ 4,5:1), das Ziehen am Griff des Handy-Blatts per Touch (nur Anblick bei 60 % Höhe).
 - **[OFFEN]** Toter Code, nicht gelöscht: `availabilityByOffer` (`rendering.js`) und `elsewhereOnServices` (`filtering.js`) samt ihren Tests werden vom Fenster nicht mehr benutzt.
 - **[ERLEDIGT]** Entfernt (CSS, nicht mehr erzeugte Klassen): `.film-modal-layout`, `.film-modal-poster`, `.film-modal-actions`, die alten Hero-, Chip- und Haupt-Button-Regeln und der Block "details, finished".
+
+### Detailfenster: Rückmeldung zu Scrollen und "Other services" (2026-11-22)
+- **[FEHLER]** Das Fenster ließ sich seitlich scrollen: Die Tooltips der Flaggen (`white-space: nowrap`, mittig) ragten über den Rand. Jetzt `overflow-x: hidden` am Inhalt, Tooltips mit Höchstbreite, die nach rechts wachsen und am rechten Rand nach links (`data-side`, gesetzt in `app.js`). Ein Browser-Test prüft `scrollWidth <= clientWidth`.
+- **[ENTSCHIEDEN]** "Other services" und "Abroad" sind ein Block: ein eingeklapptes "Other services (10) · 3 abroad". Darin stehen die Dienste je Angebotsart als Logo-Reihe (Namen im Tooltip, eigene mit grünem Rand und Haken), darunter "Abroad on your services" mit Logo und drei Flaggen je Dienst. Statt eines Links je Dienst gibt es einen Link "All offers" unten (derselbe Weg wie der Haupt-Button) neben "Report". Das ist dem JustWatch-Muster nachempfunden; die Vorlage im Auftrag beschrieb nur Zeilen mit Link.
+- **[ENTSCHIEDEN]** Der Zustand "Abroad aufgeklappt" wird nicht mehr gemerkt (der Block liegt im Aufklapp-Feld).
+- **[ERLEDIGT]** Python 348, JS 64, Browser 43, ruff und mypy sauber.

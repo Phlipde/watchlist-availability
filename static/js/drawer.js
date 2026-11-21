@@ -171,19 +171,22 @@ function mainButton(action) {
   return `<${tag} class="btn ${tone} film-modal-primary${action.disabled ? ' disabled' : ''}" ${attrs}>${icon}<span>${escapeHtml(action.text)}</span></${tag}>`;
 }
 
+// One folded block: the services by offer type as a row of logos (names on hover or focus), the countries
+// abroad below (filled in later by app.js), and one link for all of it instead of one per service.
 function otherServicesHtml(film, ctx, action) {
   const groups = catalogRows(film.providers, ctx.own);
   const others = new Set(groups.flatMap(group => group.rows.filter(row => !row.own).map(row => row.name)));
   const url = action.href || watchUrl(film, ctx.country);
-  if (!groups.length || !others.size) return '';
-  const rowHtml = row => `<li><a class="offer-row${row.own ? ' is-own' : ''}" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${row.own ? '<i class="ti ti-check own-check" aria-hidden="true"></i><span class="visually-hidden">Your service: </span>' : '<span class="own-check"></span>'}${logoImg(ctx, row.name)}<span class="offer-name">${escapeHtml(row.name)}</span>${row.via.length ? `<span class="offer-note">also via ${escapeHtml([...new Set(row.via)].join(', '))}</span>` : ''}<i class="ti ti-chevron-right offer-go" aria-hidden="true"></i></a></li>`;
-  const groupHtml = group => {
-    const body = `<h3 class="offer-heading">${group.label}</h3><ul class="offer-list">${group.rows.map(rowHtml).join('')}</ul>`;
-    return group.kind === 'buy'
-      ? `<details class="offer-group offer-buy" data-offer="buy"><summary class="offer-heading">Buy (${group.rows.length})</summary><ul class="offer-list">${group.rows.map(rowHtml).join('')}</ul></details>`
-      : `<section class="offer-group" data-offer="${group.kind}">${body}</section>`;
+  const chip = row => {
+    const tip = `${row.name}${row.own ? ' · your service' : ''}${row.via.length ? ` · also via ${[...new Set(row.via)].join(', ')}` : ''}`;
+    const logo = logoImg(ctx, row.name, 'svc-logo');
+    return `<li class="svc${row.own ? ' is-own' : ''}${logo ? '' : ' no-logo'}" tabindex="0" role="img" aria-label="${escapeHtml(tip)}" data-tip="${escapeHtml(tip)}">${logo || `<span class="svc-name">${escapeHtml(row.name)}</span>`}${row.own ? '<i class="ti ti-check own-badge" aria-hidden="true"></i>' : ''}</li>`;
   };
-  return `<details class="other-services"><summary>Other services (${others.size})</summary>${groups.map(groupHtml).join('')}<p class="report-line">Something wrong? <a href="${escapeHtml(reportUrl(film, ctx.country, action.service || ''))}" target="_blank" rel="noreferrer">Report</a></p></details>`;
+  const groupHtml = group => (group.kind === 'buy'
+    ? `<details class="offer-group offer-buy" data-offer="buy"><summary class="offer-heading">Buy (${group.rows.length})</summary><ul class="svc-list">${group.rows.map(chip).join('')}</ul></details>`
+    : `<section class="offer-group" data-offer="${group.kind}"><h3 class="offer-heading">${group.label}</h3><ul class="svc-list">${group.rows.map(chip).join('')}</ul></section>`);
+  const visible = groups.length && others.size;
+  return `<details class="other-services" id="film-more"${visible ? '' : ' hidden'}><summary><span>Other services</span> <span class="os-count">${others.size ? `(${others.size})` : ''}</span><span class="os-abroad"></span></summary>${groups.map(groupHtml).join('')}<div id="film-abroad" class="film-abroad" hidden></div><p class="report-line">${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">All offers <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a> · ` : ''}Something wrong? <a href="${escapeHtml(reportUrl(film, ctx.country, action.service || ''))}" target="_blank" rel="noreferrer">Report</a></p></details>`;
 }
 
 // A row of mini posters: the series (`current` marked) or the similar films, the service logo under each.
@@ -252,7 +255,7 @@ export function drawerHtml(film, ctx) {
     ? `<p class="film-modal-chips">${words.slice(0, 8).map(chip).join('')}${words.slice(8).map(word => chip(word).replace('class="chip-link"', 'class="chip-link is-extra" hidden')).join('')}${words.length > 8 ? `<button class="chip-link chip-more" type="button" aria-expanded="false">+${words.length - 8}</button>` : ''}</p>` : '';
   const release = ctx.releaseText ? `<p class="film-modal-release">Coming ${escapeHtml(ctx.releaseText)}</p>` : '';
 
-  return `${hero}<div class="film-modal-body">${ratingsHtml(film)}${badges}${mainButton(action)}${altLine}${otherServicesHtml(film, ctx, action)}<div id="film-abroad" class="film-abroad" hidden></div>${tools}${trailerFallback}<div class="film-modal-about"><div class="overview-box${clamp ? ' clamped' : ''}"><p class="film-modal-overview" id="film-overview">${escapeHtml(overview)}</p>${clamp ? '<button class="overview-more" type="button" aria-expanded="false" aria-controls="film-overview">more</button>' : ''}</div>${release}${credits}${collection}${similar}${keywords}${linkChips(film, ctx.country)}</div><div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${ctx.favoriteFields}</div></div>`;
+  return `${hero}<div class="film-modal-body">${ratingsHtml(film)}${badges}${mainButton(action)}${altLine}${otherServicesHtml(film, ctx, action)}${tools}${trailerFallback}<div class="film-modal-about"><div class="overview-box${clamp ? ' clamped' : ''}"><p class="film-modal-overview" id="film-overview">${escapeHtml(overview)}</p>${clamp ? '<button class="overview-more" type="button" aria-expanded="false" aria-controls="film-overview">more</button>' : ''}</div>${release}${credits}${collection}${similar}${keywords}${linkChips(film, ctx.country)}</div><div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${ctx.favoriteFields}</div></div>`;
 }
 
 const personLink = person => `<a class="person-link" href="/watchlist?q=${encodeURIComponent(person)}">${escapeHtml(person)}</a>`;
