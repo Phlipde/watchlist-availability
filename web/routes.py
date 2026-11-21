@@ -527,6 +527,14 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         store.clear_flag(movie_key)
         return jsonify({"ok": True})
 
+    @app.get("/api/greyouts")
+    def greyed_out():
+        return jsonify(store.greyed_out_counts())
+
+    @app.post("/api/greyouts/reset")
+    def reset_greyed_out():
+        return jsonify({"ok": True, **store.reset_greyed_out()})
+
     # ----- notifications and sensors -----
 
     @app.post("/api/tmdb/test")

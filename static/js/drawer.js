@@ -131,12 +131,12 @@ export function letterboxdUrl(film) {
 
 export function linkChips(film, country) {
   const links = [
-    ['Letterboxd', letterboxdUrl(film)],
+    ['Letterboxd', letterboxdUrl(film), 'Log or rate on Letterboxd'],
     film.tmdb_url ? ['TMDB', film.tmdb_url] : null,
     /^tt\d+$/.test(film.imdb_id || '') ? ['IMDb', `https://www.imdb.com/title/${film.imdb_id}/`] : null,
     ['JustWatch', justWatchSearch(film, country)],
   ].filter(Boolean);
-  return `<p class="film-modal-links">${links.map(([name, href]) => `<a class="link-chip" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${name} <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a>`).join('')}</p>`;
+  return `<p class="film-modal-links">${links.map(([name, href, tip]) => `<a class="link-chip" href="${escapeHtml(href)}" target="_blank" rel="noreferrer"${tip ? ` title="${escapeHtml(tip)}"` : ''}>${name} <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a>`).join('')}</p>`;
 }
 
 export function reportUrl(film, country, service = '') {
@@ -228,14 +228,14 @@ export function drawerHtml(film, ctx) {
   const original = film.original_title && film.original_title !== film.title ? `<p class="film-original-title">${escapeHtml(film.original_title)}</p>` : '';
   const hero = `<div class="film-hero${backdrop ? '' : ' no-backdrop'}">${backdrop}${play}</div><div class="film-hero-head">${poster}<div class="film-hero-text"><h2 class="film-hero-title${long ? ' is-long' : ''}" id="film-hero-title" title="${name}">${name}</h2>${original}<p class="film-modal-meta">${escapeHtml(metaLine(film, ctx.country))}</p></div></div>`;
 
-  const seenName = ctx.isSeen ? 'Not watched after all' : 'Mark as watched';
+  const seenName = ctx.isSeen ? 'Remove grey-out' : 'Grey out this film';
   const hideName = ctx.isHidden ? 'Bring back' : 'Not now (30 days)';
   const compareName = ctx.inCompare ? 'Remove from comparison' : 'Add to comparison';
   const favName = ctx.isFavorite ? 'Remove favorite' : 'Add to favorites';
   const tools = `<div class="film-modal-toolbar" role="group" aria-label="Actions">${[
     toolButton('modal-favorite', `data-key="${escapeHtml(key)}"`, ctx.isFavorite ? 'ti-heart-filled' : 'ti-heart', 'Favorite', favName, String(ctx.isFavorite)),
     toolButton('modal-compare', `data-key="${escapeHtml(key)}"`, 'ti-layout-columns', 'Compare', compareName, String(ctx.inCompare)),
-    toolButton('modal-flag', `data-flag="watched" data-key="${escapeHtml(key)}"`, ctx.isSeen ? 'ti-circle-check-filled' : 'ti-circle-check', 'Seen', seenName, String(ctx.isSeen)),
+    toolButton('modal-flag', `data-flag="watched" data-key="${escapeHtml(key)}"`, ctx.isSeen ? 'ti-circle-check-filled' : 'ti-circle-check', 'Grey out', seenName, String(ctx.isSeen)),
     toolButton('modal-flag', `data-flag="not_now" data-key="${escapeHtml(key)}"`, 'ti-eye-off', 'Not now', hideName, String(ctx.isHidden)),
     toolButton('modal-share', '', 'ti-share', 'Share', 'Copy the link to this film'),
   ].join('')}</div>`;

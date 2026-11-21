@@ -757,9 +757,9 @@ def test_card_menu_sets_a_film_aside_and_marks_it_watched_with_undo(app_server, 
     name = first.locator(".film-title").inner_text()
     # Watched: the poster says so, the toast offers Undo.
     first.locator(".card-more").click()
-    first.get_by_role("button", name="Mark as watched").click()
-    expect(page.locator("#toast-message")).to_contain_text("marked as watched")
-    expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_text("Watched")
+    first.get_by_role("button", name="Grey out").click()
+    expect(page.locator("#toast-message")).to_contain_text("greyed out")
+    expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_text("Greyed out")
     assert any(item["flag"] == "watched" for item in app_server["store"].list_flags())
     page.locator("#toast-undo").click()
     expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_count(0)
@@ -806,7 +806,7 @@ def test_keyboard_shortcuts(app_server, page):
     # "s" marks the card in focus as watched; "g" then "s" goes to the subscriptions.
     page.locator("article.film .film-open").first.focus()
     page.keyboard.press("s")
-    expect(page.locator("article.film .poster-badge")).to_have_text("Watched")
+    expect(page.locator("article.film .poster-badge")).to_have_text("Greyed out")
     page.keyboard.press("g")
     page.keyboard.press("s")
     expect(page).to_have_url(re.compile(r"/subscriptions$"))
@@ -992,7 +992,7 @@ def test_details_actions_sit_in_one_row_with_a_clear_main_button(app_server, pag
     expect(toolbar).to_have_count(5)
     tops = toolbar.evaluate_all("buttons => buttons.map(b => Math.round(b.getBoundingClientRect().top))")
     assert len(set(tops)) == 1  # one row, nothing wraps
-    expect(page.get_by_role("button", name="Mark as watched")).to_be_visible()
+    expect(page.get_by_role("button", name="Grey out this film")).to_be_visible()
 
 
 def test_header_says_synced_in_words_right_after_a_scan(app_server, page):
@@ -1169,3 +1169,14 @@ def test_a_long_poster_row_does_not_widen_the_details(app_server, page):
         " return [...document.querySelectorAll('.film-modal-body > *, .film-modal-about > *')]"
         ".every(el => el.getBoundingClientRect().right <= edge); }"
     )
+
+
+def test_grey_outs_can_be_reset_on_the_data_page(app_server, page):
+    expect = playwright_api.expect
+    assert page.request.put(app_server["url"] + "/api/flags/348", data={"flag": "watched"}).ok
+    page.goto(app_server["url"] + "/settings/data")
+    expect(page.locator("#greyouts-text")).to_contain_text("1 film is greyed out")
+    page.get_by_role("button", name="Reset grey-outs").click()
+    expect(page.locator("#greyouts-text")).to_contain_text("1 grey-outs removed")
+    expect(page.get_by_role("button", name="Reset grey-outs")).to_be_disabled()
+    assert page.request.get(app_server["url"] + "/api/greyouts").json() == {"flags": 0, "favorites": 0}
