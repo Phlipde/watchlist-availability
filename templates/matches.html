@@ -10,7 +10,7 @@
   <title>Unmatched films · Settings · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261122-20') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261122-21') }}" rel="stylesheet">
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -30,8 +30,8 @@
     <p class="meta" id="matches-empty" hidden>Nothing to check: every film on your watchlist is matched through its Letterboxd page or by you.</p>
     <ul class="match-list" id="match-list"></ul>
   </main>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261122-20') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261122-21') }}" type="module"></script>
   <script>window.MATCHES_PAGE = {{ client_config|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/matches.js', v='20261122-20') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/matches.js', v='20261122-21') }}" type="module"></script>
 </body>
 </html>

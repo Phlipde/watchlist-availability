@@ -1050,3 +1050,8 @@ body:has(.more-filters[open])::after { content: ""; position: fixed; inset: 0; z
 .field-clear { position: absolute; right: 26px; bottom: 5px; display: grid; place-items: center; width: 24px; height: 26px; padding: 0; border: 0; background: transparent; color: var(--text-2); cursor: pointer; }
 .field-clear:hover { color: var(--text); }
 .field-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
+/* Brand in sentence case; the country is a plain text trigger without a box. */
+.app-header .brand { color: var(--text-2); text-transform: none; letter-spacing: normal; font-size: var(--fs-body); }
+.app-header .country-select { padding: 0 16px 0 2px; border: 0; background-color: transparent; background-size: 10px; background-position: right 2px center; box-shadow: none; cursor: pointer; }
+.app-header .country-select:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+.app-header .country-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; box-shadow: none; }
