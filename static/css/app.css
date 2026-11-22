@@ -832,8 +832,9 @@ summary.offer-heading { cursor: pointer; }
 /* The phone sheet opens at 60 %; the grip pulls it to full height or down to close. */
 .sheet-grip { display: none; }
 @media (max-width: 800px) {
-  .sheet-grip { display: block; position: relative; height: 22px; touch-action: none; cursor: grab; }
-  .sheet-grip::before { content: ""; position: absolute; left: 50%; top: 9px; width: 40px; height: 4px; transform: translateX(-50%); border-radius: 2px; background: var(--line-strong); }
+  .sheet-grip { display: block; position: relative; height: 32px; touch-action: none; cursor: grab; }
+  #film-details-modal .modal-header { touch-action: none; }
+  .sheet-grip::before { content: ""; position: absolute; left: 50%; top: 13px; width: 40px; height: 4px; transform: translateX(-50%); border-radius: 2px; background: var(--line-strong); }
 }
 @media (prefers-reduced-motion: reduce) { #film-details-modal .modal-dialog { transition: none; } }
 
