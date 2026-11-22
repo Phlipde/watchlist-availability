@@ -173,7 +173,7 @@ test('every set filter gets a chip and reset clears them all', async () => {
     'change-filter': select('all', ['all', 'added']),
   };
   const doc = {getElementById: id => controls[id] ?? null};
-  assert.equal(FILTER_CONTROLS.length, 16);
+  assert.equal(FILTER_CONTROLS.length, 17);
   assert.deepEqual(activeFilters(doc).map(chip => chip.label), ['Search', 'Cost', 'Rating', 'Trailer', 'Services']);
   assert.equal(activeFilters(doc).find(chip => chip.id === 'rating-filter').text, 'Label tmdb:7');
   // A hidden input behind a custom control carries its readable text and its default.

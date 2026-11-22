@@ -414,17 +414,20 @@ def test_skip_link_and_three_stops_per_card(app_server, page):
     expect(page.locator(".skip-link")).to_be_focused()
     page.keyboard.press("Enter")
     expect(page.locator("#results")).to_be_focused()
-    # Per card the keyboard stops at the title (it opens the details), the heart and the "..." menu.
-    page.keyboard.press("Tab")
+    # Per card the keyboard stops at the title (it opens the details), the line about where to watch, the
+    # heart and the three actions; only the active card has stops, so one more Tab leaves the list.
     first = page.locator("article.film").first
-    expect(first.locator(".film-open")).to_be_focused()
-    page.keyboard.press("Tab")
-    expect(first.locator("button.favorite")).to_be_focused()
-    page.keyboard.press("Tab")
-    expect(first.locator(".card-more")).to_be_focused()
-    page.keyboard.press("Shift+Tab")
+    stops = []
+    for _ in range(9):
+        page.keyboard.press("Tab")
+        inside = first.evaluate("card => card.contains(document.activeElement)")
+        if not inside:
+            break
+        stops.append(page.evaluate("document.activeElement.className.split(' ')[0]"))
+    assert stops[0] == "film-open"
+    assert "favorite" in stops and "best-way-link" in stops and stops.count("card-action") == 3
     # After the skip link, closing the details returns the focus to the title (no #results to go back to).
-    page.keyboard.press("Shift+Tab")
+    first.locator(".film-open").focus()
     page.keyboard.press("Enter")
     page.wait_for_function("document.getElementById('film-details-modal').contains(document.activeElement)")
     page.keyboard.press("Escape")
@@ -715,6 +718,7 @@ def test_filter_menus_stay_inside_the_window(app_server, page):
         page.locator(f"#{name} > summary").click()
         box = page.locator(f"#{name} > .filter-menu").bounding_box()
         assert box["x"] >= 0 and box["x"] + box["width"] <= 820, name
+        page.locator(f"#{name} > summary").click()  # close it again: an open panel may cover the next button
 
 
 def test_year_and_rating_panels_and_service_search(app_server, page):
@@ -756,7 +760,7 @@ def test_card_menu_sets_a_film_aside_and_marks_it_watched_with_undo(app_server, 
     first = page.locator("article.film").first
     name = first.locator(".film-title").inner_text()
     # Watched: the poster says so, the toast offers Undo.
-    first.locator(".card-more").click()
+    first.hover()  # the action bar shows while the pointer is on the card
     first.get_by_role("button", name="Grey out").click()
     expect(page.locator("#toast-message")).to_contain_text("greyed out")
     expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_text("Greyed out")
@@ -766,7 +770,7 @@ def test_card_menu_sets_a_film_aside_and_marks_it_watched_with_undo(app_server, 
     assert app_server["store"].list_flags() == []
     # Not now: the film leaves the list until the filter asks for it.
     first = page.locator("article.film").first
-    first.locator(".card-more").click()
+    first.hover()
     first.get_by_role("button", name="Not now (30 days)").click()
     expect(page.locator("article.film")).to_have_count(len(titles) - 1)
     page.locator("#more-filters summary").click()
@@ -951,7 +955,7 @@ def test_compare_bar_appears_with_the_first_film_and_marks_the_best_value(app_se
     expect(page.locator("#compare-bar")).to_be_hidden()
     for index in (0, 1):
         card = page.locator("article.film").nth(index)
-        card.locator(".card-more").click()
+        card.hover()
         card.get_by_role("button", name=re.compile("comparison")).click()
     expect(page.locator("#compare-count")).to_have_text("2 to compare")
     page.locator("#compare-go").click()
@@ -1005,16 +1009,20 @@ def test_header_says_synced_in_words_right_after_a_scan(app_server, page):
     expect(page.locator("#sync-label")).to_be_visible()
 
 
-def test_services_get_their_own_row_on_narrow_phone_cards(app_server, page):
+def test_cards_in_a_row_are_equally_high_and_say_where_to_watch_in_one_line(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"] + "/watchlist")
-    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
     tick_all_services(page)
-    page.set_viewport_size({"width": 375, "height": 812})
-    card = page.locator("article.film").first
-    card_width = card.bounding_box()["width"]
-    # The logos used to be squeezed to 8 px slivers beside the heart; the row now spans the card.
-    assert card.locator(".services").bounding_box()["width"] >= card_width * 0.8
+    cards = page.locator("article.film")
+    expect(cards).to_have_count(2)
+    heights = cards.evaluate_all(
+        "cards => cards.map(card => Math.round(card.getBoundingClientRect().height))"
+    )
+    assert len(set(heights)) == 1  # no gaps in the grid from cards with more or fewer logos
+    for index in (0, 1):
+        assert cards.nth(index).locator(".best-way").count() == 1
+        assert "€" not in cards.nth(index).locator(".card-foot").inner_text()  # no prices
 
 
 def test_details_title_sits_in_the_hero_and_the_button_always_says_what_to_do(app_server, page):
@@ -1200,3 +1208,37 @@ def test_data_page_exports_and_previews_an_import_before_changing_anything(app_s
     page.get_by_role("button", name="Import", exact=True).click()
     expect(page.locator("#import-preview")).to_have_text("Imported 2 favorites.")
     assert len(page.request.get(app_server["url"] + "/api/favorites").json()) == 2
+
+
+def test_the_abroad_switch_adds_films_your_services_have_in_other_countries(app_server, page):
+    expect = playwright_api.expect
+    store = app_server["store"]
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text(
+        "Complete", timeout=15000
+    )  # the scan stores the offers
+    offers = store.offers_by_country(348)  # Alien: not on Netflix at home
+    offers["AT"] = {"Netflix": ["flatrate"]}
+    store.save_bundle(348, {"details": {}, "providers": offers})
+    page.reload()
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    here = page.locator("article.film").count()
+    toggle = page.locator("#abroad-toggle")
+    expect(toggle).to_contain_text("+1")  # one more film would come in
+    toggle.click()
+    expect(page.locator("article.film")).to_have_count(here + 1)
+    expect(page.locator("article.film .way-flag")).to_have_count(1)
+    expect(page.locator("article.film", has=page.locator(".way-flag")).locator(".best-way")).to_contain_text(
+        "Abroad"
+    )
+    expect(page.locator("#result-meta")).to_contain_text("1 via VPN")
+    assert "where=both" in page.url
+    expect(page.locator("#filter-chips")).to_contain_text("Where: Here and abroad")
+    # "Only abroad" in the panel shows just that film; the switch and the field are one setting.
+    page.locator("#more-filters summary").click()
+    page.locator("#where-filter").select_option("abroad")
+    expect(page.locator("article.film")).to_have_count(1)
+    expect(toggle).to_have_attribute("aria-pressed", "true")
+    page.locator("#where-filter").select_option("all")
+    expect(page.locator("article.film")).to_have_count(here)
+    expect(toggle).to_have_attribute("aria-pressed", "false")

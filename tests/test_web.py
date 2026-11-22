@@ -774,7 +774,26 @@ class TestGreyOuts:
 
 class TestDevUi:
     def test_the_states_page_exists_only_in_development(self, client, monkeypatch):
+        monkeypatch.delenv("WATCHLIST_DEV", raising=False)  # a local .env may set it
         assert client.get("/dev/ui").status_code == 404
         monkeypatch.setenv("WATCHLIST_DEV", "1")
         page = client.get("/dev/ui")
         assert page.status_code == 200 and b"Dropdown trigger" in page.data
+
+
+class TestAbroad:
+    def test_films_your_services_have_abroad(self, client, store, settings):
+        settings.update({"subscriptions": ["Netflix"]})
+        store.save_scan(
+            "DE",
+            "letterboxd",
+            None,
+            [{"key": "7", "tmdb_id": 7, "title": "Heat", "providers": {}}],
+            [],
+            {},
+        )
+        store.save_bundle(7, {"details": {}, "providers": {"AT": {"Netflix": ["flatrate"]}}})
+        data = client.get("/api/abroad?country=DE&services=Netflix").get_json()
+        assert data == {"7": {"Netflix": {"AT": "flatrate"}}}
+        assert client.get("/api/abroad?country=DE&services=MUBI").get_json() == {}
+        assert client.get("/api/abroad?country=ZZ&services=Netflix").status_code == 400

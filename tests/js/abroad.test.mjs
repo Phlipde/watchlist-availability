@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
-import {abroadHtml, abroadRows, countryScore, groupByRegion, rankCountries} from '../../static/js/abroad.js';
+import {abroadFilm, abroadForFilm, abroadHtml, abroadRows, countryScore, groupByRegion, rankCountries} from '../../static/js/abroad.js';
 
 const names = {AT: 'Austria', CH: 'Switzerland', FR: 'France', NL: 'Netherlands', BE: 'Belgium', US: 'United States', GB: 'United Kingdom', AD: 'Andorra', IT: 'Italy', ES: 'Spain', JP: 'Japan', VA: 'Vatican City', SM: 'San Marino'};
 const nameOf = code => names[code] || code;
@@ -46,4 +46,19 @@ test('the collapsed line counts the countries; three flags a row and the rest be
   assert.match(html, /aria-label="Austria · Prime Video \(subscription\)"/);
   assert.equal(abroadHtml([], {nameOf, logoOf: () => ''}), '');
   assert.deepEqual(groupByRegion(['US', 'AT', 'JP', 'ZZ']), [['Europe', ['AT']], ['Americas', ['US']], ['Asia / Pacific', ['JP']], ['Rest of the world', ['ZZ']]]);
+});
+
+test('the card takes the service with the most countries, its countries in the drawer order', () => {
+  const entry = {Netflix: {JP: 'flatrate', US: 'flatrate'}, 'Prime Video': {NL: 'flatrate', AT: 'flatrate', FR: 'ads'}};
+  const best = abroadForFilm(entry, 'DE', nameOf);
+  assert.deepEqual([best.service, best.countries], ['Prime Video', ['AT', 'FR', 'NL']]);
+  assert.equal(abroadForFilm({}, 'DE'), null);
+  assert.equal(abroadForFilm(undefined, 'DE'), null);
+});
+
+test('a film listed because of the abroad switch only has your services abroad as offers', () => {
+  const film = abroadFilm({key: '1', title: 'Heat', providers: {HBO: ['flatrate']}}, {Netflix: {AT: 'flatrate', JP: 'ads'}, MUBI: {US: 'flatrate'}});
+  assert.deepEqual(film.providers, {Netflix: ['flatrate', 'ads'], MUBI: ['flatrate']});  // the home offers are not mixed in
+  assert.equal(film.abroadOnly, true);
+  assert.equal(film.title, 'Heat');
 });

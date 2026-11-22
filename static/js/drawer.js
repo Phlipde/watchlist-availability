@@ -11,8 +11,9 @@ const KIND_LABEL = {free: 'Free', ads: 'With ads', flatrate: 'Subscription', ren
 const WATCH = ['free', 'ads', 'flatrate'];
 const PAY = ['rent', 'buy'];
 
-// "HBO Max Amazon Channel" shows the same films as "HBO Max" (same rule as costs.catalog_name in Python).
-export const catalogName = name => String(name).replace(/\s+Amazon channels?$/i, '');
+import {catalogName} from './catalog.js';
+import {bestWay} from './bestway.js';
+export {catalogName};
 const isChannel = name => catalogName(name) !== name;
 
 // 148 → "2 h 28", 61 → "1 h 01", 58 → "58 min".
@@ -77,25 +78,21 @@ export function watchUrl(film, country) {
 }
 const justWatchSearch = (film, country) => `https://www.justwatch.com/${encodeURIComponent(String(country).toLowerCase())}/search?q=${encodeURIComponent(film.title)}`;
 
-// The one way to watch it that the main button shows, or why there is none. `primary` is true only for
-// something watchable on an own service (that is the only gold button).
+// The main button: the best way (bestWay, the same as on the card) in words, or why there is none. `primary` is
+// true only for something watchable on an own service (the only gold button).
 export function primaryAction(film, own, country, regionName = country) {
-  const offers = Object.entries(film.providers || {});
-  const best = (names, kinds) => offers
-    .filter(([name, offered]) => names(name) && kinds.some(kind => offered.includes(kind)))
-    .map(([name, offered]) => ({name: catalogName(name), kind: kinds.find(kind => offered.includes(kind))}))
-    .sort((a, b) => kinds.indexOf(a.kind) - kinds.indexOf(b.kind) || a.name.localeCompare(b.name))[0];
-  const mine = name => own.has(name) || own.has(catalogName(name));
   const href = watchUrl(film, country);
-  let found = best(mine, WATCH);
-  if (found) return {primary: true, text: `Watch on ${found.name} · ${KIND_LABEL[found.kind]}`, service: found.name, href};
-  found = best(mine, PAY);
-  if (found) return {primary: false, text: `${found.kind === 'buy' ? 'Buy' : 'Rent'} on ${found.name}`, service: found.name, href};
-  found = best(() => true, WATCH);
-  if (found) return {primary: false, text: `On ${found.name} (not your service)`, service: found.name, href};
-  found = best(() => true, PAY);
-  if (found) return {primary: false, text: `${found.kind === 'buy' ? 'Buy' : 'Rent'} on ${found.name}`, service: found.name, href};
-  return {primary: false, text: `Not streaming in ${regionName}`, service: null, href: '', disabled: true};
+  const way = bestWay(film, {own});
+  const label = {free: 'Free', flatrate: 'Subscription', ads: 'With ads'};
+  switch (way.kind) {
+    case 'free':
+    case 'flatrate':
+    case 'ads': return {primary: true, text: `Watch on ${way.service} · ${label[way.kind]}`, service: way.service, href};
+    case 'rent': return {primary: false, text: `Rent on ${way.service}`, service: way.service, href};
+    case 'buy': return {primary: false, text: `Buy on ${way.service}`, service: way.service, href};
+    case 'foreign': return {primary: false, text: `On ${way.service} (not your service)`, service: way.service, href};
+    default: return {primary: false, text: `Not streaming in ${regionName}`, service: null, href: '', disabled: true};
+  }
 }
 
 // More own services that carry it for nothing extra, besides the one on the button.
