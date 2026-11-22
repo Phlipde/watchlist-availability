@@ -1043,18 +1043,29 @@ const state = createAppState();
     (() => {
       const modal = document.getElementById('film-details-modal');
       const handles = [document.getElementById('sheet-grip'), modal.querySelector('.modal-header')];
+      const dialog = modal.querySelector('.modal-dialog');
       let startY = null;
+      let baseOffset = 0;
       handles.forEach(handle => {
         handle.addEventListener('pointerdown', event => {
           if (event.target.closest('button, a')) return;  // the arrows and the close button stay buttons
           startY = event.clientY;
+          baseOffset = modal.classList.contains('is-full') ? 0 : innerHeight * 0.4;
           handle.setPointerCapture(event.pointerId);
         });
-        handle.addEventListener('pointercancel', () => { startY = null; });
+        // The sheet follows the finger (transform only); on release the classes decide where it settles.
+        handle.addEventListener('pointermove', event => {
+          if (startY === null) return;
+          dialog.style.transition = 'none';
+          dialog.style.transform = `translateY(${Math.max(0, baseOffset + event.clientY - startY)}px)`;
+        });
+        const release = () => { dialog.style.transition = ''; dialog.style.transform = ''; };
+        handle.addEventListener('pointercancel', () => { startY = null; release(); });
         handle.addEventListener('pointerup', event => {
           if (startY === null) return;
           const moved = event.clientY - startY;
           startY = null;
+          release();
           const full = modal.classList.contains('is-full');
           if (moved < -24) modal.classList.add('is-full');
           else if (moved > 48) { if (full) modal.classList.remove('is-full'); else modal.querySelector('.btn-close').click(); }

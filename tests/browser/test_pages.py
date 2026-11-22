@@ -404,7 +404,7 @@ def test_phone_details_sheet_can_be_pulled_to_full_screen(app_server, page):
     drag("#sheet-grip", 80)  # pull the grip down: 60 %
     expect(modal).not_to_have_class(re.compile("is-full"))
     page.wait_for_timeout(450)
-    assert dialog.evaluate("el => el.getBoundingClientRect().height") < 600
+    assert dialog.evaluate("el => el.getBoundingClientRect().top") > 200  # 60 % shows
     drag("#sheet-grip", -80)  # pull the grip up
     expect(modal).to_have_class(re.compile("is-full"))
     drag("#sheet-grip", 80)  # and down again
@@ -448,6 +448,7 @@ def test_phone_filter_sheet_stays_open_while_choosing(app_server, page):
     sheet = page.locator("#film-filters")
     expect(sheet).to_have_attribute("role", "dialog")
     expect(sheet).to_have_attribute("aria-modal", "true")
+    page.wait_for_timeout(450)  # it slides up first
     # The sheet reaches the bottom edge and has a way out and a Reset.
     assert page.evaluate("document.getElementById('film-filters').getBoundingClientRect().bottom") == 800
     expect(page.locator("#filter-sheet-close")).to_be_visible()
@@ -1022,7 +1023,12 @@ def test_service_drawer_saves_notes_and_splits_the_price(app_server, page):
     page.locator("#drawer-note").fill("family account")
     page.locator("#drawer-note").blur()
     expect(page.locator("#save-state")).to_have_text("Saved")
-    saved = app_server["settings"].costs("DE")["Netflix"]
+    # "Saved" may still be showing from the price: wait until the note is really stored.
+    for _ in range(30):
+        saved = app_server["settings"].costs("DE")["Netflix"]
+        if saved.get("note") == "family account":
+            break
+        page.wait_for_timeout(100)
     assert (saved["price"], saved["shared"], saved["note"]) == (12.0, 3, "family account")
     page.keyboard.press("Escape")
     expect(page.locator("#service-drawer")).to_be_hidden()

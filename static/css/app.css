@@ -551,8 +551,11 @@ body:has(#film-details-modal.show) .modal-backdrop.show { opacity: .4; }
 .drawer-step:hover { background: rgb(255 255 255 / .08); }
 .drawer-step:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 800px) {
-  #film-details-modal .modal-dialog { top: auto; width: 100%; height: var(--sheet-h, 60dvh); transform: translateY(100%); transition: transform .22s ease, height .2s ease; }
-  #film-details-modal.is-full .modal-dialog { --sheet-h: 100dvh; }
+  #film-details-modal .modal-dialog { top: 0; width: 100%; height: 100dvh; transform: translateY(100%); transition: transform .3s cubic-bezier(.2, .8, .2, 1); will-change: transform; }
+  #film-details-modal.show .modal-dialog { transform: translateY(40dvh); }
+  #film-details-modal.show.is-full .modal-dialog { transform: none; }
+  /* The lower 40 % is off screen at first: pad the body so that scrolling is always possible (and expands the sheet). */
+  #film-details-modal:not(.is-full) .modal-body { padding-bottom: 40dvh; }
   #film-details-modal .modal-content { border-radius: 12px 12px 0 0; border-width: 1px 0 0; }
 }
 @media (prefers-reduced-motion: reduce) { #film-details-modal .modal-dialog { transition: none; } }
@@ -1148,3 +1151,11 @@ body.modal-open .compare-bar, body.tools-open .compare-bar, body:has(dialog[open
   .tabs-view-slot { flex: none; margin: 0 0 6px; }
   .tabs-view-slot .view-switch { min-height: 36px; }
 }
+
+/* Phones: the filter sheet slides up and the backdrop fades in, instead of appearing at once. */
+@media (max-width: 800px) and (prefers-reduced-motion: no-preference) {
+  body.tools-open .filter-bar { animation: sheet-up .26s cubic-bezier(.2, .8, .2, 1); will-change: transform; }
+  body.tools-open::before { animation: backdrop-in .2s ease-out; }
+}
+@keyframes sheet-up { from { transform: translateY(100%); } }
+@keyframes backdrop-in { from { opacity: 0; } }
