@@ -1,12 +1,12 @@
 // The filter bar of the watchlist page: services menu, cost, genres, runtime, rating, chips and counts.
 // Pure counting lives in filtering.js; this module only reads and writes the bar's DOM.
 import {escapeHtml} from './ui.js';
-import {COST, FILTER_CONTROLS, activeFilters, clearFilter, resetFilters} from './filters.js';
+import {COST, FILTER_CONTROLS, activeFilters, clearFilter, durationText, resetFilters} from './filters.js';
 import {SECTION_KINDS, countVisible, facetCounts} from './filtering.js';
 
 const ALL_KINDS = ['free', 'ads', 'flatrate', 'rent'];
 const RUNTIME_STEPS = [90, 120, 150];
-const runtimeText = minutes => (Number(minutes) ? `Up to ${minutes} min` : 'Any length');
+const runtimeText = minutes => (Number(minutes) ? `Up to ${durationText(minutes)}` : 'Any length');
 
 // Offer types a cost choice allows, for the per-service counts.
 function costKinds(filters) {
@@ -145,10 +145,10 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     const input = $('runtime-filter');
     input.value = String(value);
     input.dataset.text = runtimeText(value);
-    $('runtime-summary').textContent = value ? `≤ ${value}` : '';
+    $('runtime-summary').textContent = value ? `≤ ${durationText(value)}` : '';
     const radio = document.querySelector(`#runtime-pop input[name=runtime][value="${value}"]`);
     document.querySelectorAll('#runtime-pop input[name=runtime]').forEach(item => { item.checked = item === radio; });
-    if (value) { $('runtime-slider').value = String(value); $('runtime-slider-value').textContent = value; }
+    if (value) { $('runtime-slider').value = String(value); $('runtime-slider-value').textContent = runtimeText(value); }
     if (notify) onChange();
   }
   $('runtime-pop').addEventListener('change', event => {
@@ -206,7 +206,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     $('min-votes').dataset.text = votes === '0' ? '' : votesChip ? votesChip.textContent.trim() : `${votes}+`;
     $('rating-filter').dataset.text = minimum ? `${source === 'lb' ? 'Letterboxd' : 'TMDB'} ${minimum}+` : '';
     document.querySelectorAll('#votes-chips .chip').forEach(chip => chip.setAttribute('aria-pressed', String(chip.dataset.votes === votes)));
-    $('rating-summary').textContent = minimum ? `${minimum}+` : '';
+    $('rating-summary').textContent = minimum ? `${source === 'lb' ? 'Letterboxd' : 'TMDB'} ${minimum}+` : '';
     $('rating-reset').hidden = !minimum && votes === '0';
   }
   $('year-chips').addEventListener('click', event => {
@@ -226,13 +226,16 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   $('rating-pop').addEventListener('change', event => {
     if (event.target.name !== 'rating-source') return;
     ratingSource = event.target.value;
+    const hadValue = Boolean($('rating-filter').value);
     setRating('');  // the two scales differ: a number from one is no limit on the other
+    $('rating-note').hidden = !hadValue;
   });
   $('rating-pop').addEventListener('click', event => {
     const chip = event.target.closest('.chip');
     if (!chip) return;
     if (chip.dataset.votes !== undefined) setVotes(chip.dataset.votes);
     else setRating(chip.getAttribute('aria-pressed') === 'true' ? '' : chip.dataset.rating);
+    $('rating-note').hidden = true;
   });
   $('rating-slider').addEventListener('input', event => setRating(Number(event.target.value) ? `${ratingSource}:${event.target.value}` : ''));
   $('rating-reset').addEventListener('click', () => { setRating('', false); setVotes('0'); });
@@ -389,6 +392,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
       ...[...state.genres.exclude].map(genre => chip(`data-genre-exclude="${escapeHtml(genre)}"`, `No ${genre}`, 'genre-pop')),
       ...activeFilters(document).map(({id, label, text}) => chip(`data-filter-id="${id}"`, text ? `${label}: ${text}` : label, PANELS[id] || 'more-filters')),
     ];
+    $('tools-count').textContent = chips.length ? ` · ${chips.length}` : '';
     if (chips.length) chips.push('<button class="filter-chip filter-reset" type="button" data-reset-filters>Reset all</button>');
     $('filter-chips').innerHTML = chips.join('');
     $('filter-chips').hidden = !chips.length;

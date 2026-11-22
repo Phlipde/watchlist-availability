@@ -465,6 +465,54 @@ def test_phone_filter_sheet_stays_open_while_choosing(app_server, page):
     assert not page.evaluate("document.getElementById('app-header').inert")
 
 
+def test_phone_head_is_two_rows_and_the_posters_start_high(app_server, page):
+    expect = playwright_api.expect
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    # Row 1: search and Filters side by side; the first poster starts in the top quarter of the screen.
+    search = page.locator("#film-search").bounding_box()
+    filters = page.locator("#tools-toggle").bounding_box()
+    assert abs(search["y"] - filters["y"]) < 12 and search["x"] < filters["x"]
+    assert page.locator("article.film .poster").first.bounding_box()["y"] <= 844 * 0.25
+    # The source name and the Letterboxd account are not in the count line.
+    expect(page.locator("#source-name")).to_be_hidden()
+    # View switch, heart and link live in the filter sheet.
+    expect(page.locator("#view-switch")).to_be_hidden()
+    page.locator("#tools-toggle").click()
+    expect(page.locator("#view-switch")).to_be_visible()
+    expect(page.locator("#favorites-view")).to_be_visible()
+    expect(page.locator("#share-button")).to_be_visible()
+    page.locator("#film-search").fill("zzzz-no-film")
+    expect(page.locator("#tools-toggle")).to_contain_text("1")
+
+
+def test_runtime_and_rating_filters_show_unit_and_source(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    page.locator("#runtime-pop summary").click()
+    page.locator("#runtime-slider").evaluate(
+        "e => { e.value = 225; e.dispatchEvent(new Event('input', {bubbles: true})); }"
+    )
+    expect(page.locator("#runtime-slider-value")).to_have_text("Up to 3 h 45")
+    # The label is one line, not a column of letters.
+    assert page.locator("#runtime-slider-value").bounding_box()["height"] < 30
+    expect(page.locator("#runtime-summary")).to_have_text("≤ 3 h 45")
+    page.keyboard.press("Escape")
+    page.locator("#rating-pop summary").click()
+    page.locator('#rating-pop input[name="rating-source"][value="tmdb"]').check(force=True)
+    page.locator('[data-rating="tmdb:7"]').click()
+    expect(page.locator("#rating-summary")).to_have_text("TMDB 7+")
+    expect(page.locator('.filter-chip[data-filter-id="rating-filter"]')).to_have_text("Rating: TMDB 7+")
+    # Changing the source resets the minimum and says so.
+    letterboxd = page.locator('#rating-pop input[name="rating-source"][value="lb"]')
+    letterboxd.evaluate("e => { e.disabled = false; }")  # the fake data has no Letterboxd ratings
+    letterboxd.check(force=True)
+    expect(page.locator("#rating-summary")).to_have_text("")
+    expect(page.locator("#rating-note")).to_be_visible()
+
+
 def test_skip_link_and_three_stops_per_card(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"] + "/watchlist")
@@ -796,7 +844,7 @@ def test_filter_bar_cost_genres_runtime_and_the_address(app_server, page):
     page.keyboard.press("Escape")
     assert visible_titles(page) == ["Heat"]
     runtime_chip = page.locator('.filter-chip[data-filter-id="runtime-filter"]')
-    expect(runtime_chip).to_have_text("Runtime: Up to 120 min")
+    expect(runtime_chip).to_have_text("Runtime: Up to 2 h")
 
 
 def test_filter_menus_stay_inside_the_window(app_server, page):
@@ -1077,9 +1125,35 @@ def test_compare_bar_appears_with_the_first_film_and_marks_the_best_value(app_se
     page.locator("#compare-go").click()
     expect(page.locator("#compare-table")).to_be_visible()
     expect(page.locator("#compare-table th", has_text="Runtime")).to_be_visible()
+    expect(page.locator("#compare-bar")).to_be_hidden()  # the bar gives way to the open comparison
+    page.wait_for_function("document.getElementById('compare-modal').contains(document.activeElement)")
     page.keyboard.press("Escape")
+    expect(page.locator("#compare-modal")).to_be_hidden()
     page.locator("#compare-bar-clear").click()
     expect(page.locator("#compare-bar")).to_be_hidden()
+
+
+def test_phone_compare_bar_sits_above_the_tab_bar_and_gives_way_to_sheets(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    tick_all_services(page)
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.wait_for_timeout(500)
+    for index in (0, 1):
+        card = page.locator("article.film").nth(index)
+        card.hover()
+        card.get_by_role("button", name=re.compile("comparison")).click()
+    bar = page.locator("#compare-bar")
+    expect(bar).to_be_visible()
+    box, nav = bar.bounding_box(), page.locator(".page-nav").bounding_box()
+    assert box["x"] == 0 and box["width"] == 390 and box["height"] >= 56
+    assert box["y"] + box["height"] <= nav["y"] + 1
+    expect(page.locator("#compare-go")).to_be_enabled()
+    page.locator("#tools-toggle").click()
+    expect(bar).to_be_hidden()
+    page.locator("#filter-sheet-close").click()
+    expect(bar).to_be_visible()
 
 
 def test_a_failed_scan_says_what_is_wrong_and_offers_to_try_again(app_server, page):
@@ -1343,10 +1417,9 @@ def test_the_abroad_switch_adds_films_your_services_have_in_other_countries(app_
     expect(toggle).to_contain_text("+1")  # one more film would come in
     toggle.click()
     expect(page.locator("article.film")).to_have_count(here + 1)
-    expect(page.locator("article.film .way-flag")).to_have_count(1)
-    expect(page.locator("article.film", has=page.locator(".way-flag")).locator(".best-way")).to_contain_text(
-        "Abroad"
-    )
+    expect(page.locator("article.film .way-badge-flag")).to_have_count(1)
+    abroad_card = page.locator("article.film", has=page.locator(".way-badge-flag"))
+    expect(abroad_card.locator(".best-way")).to_contain_text("Abroad")
     expect(page.locator("#result-meta")).to_contain_text("1 via VPN")
     assert "where=both" in page.url
     expect(page.locator("#filter-chips")).to_contain_text("Where: Here and abroad")

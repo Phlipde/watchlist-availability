@@ -10,7 +10,7 @@ import {COST, readFilters} from './filters.js';
 import {createFilterBar, initPopovers} from './filterbar.js';
 import {bestRelaxation, comingSoon, elsewhereOnServices, filmKey, filterFilms, similarOnServices, sortFilms, sortRatings} from './filtering.js';
 import {updateScanFeedback} from './scans.js';
-import {abroadFilm, abroadForFilm, abroadHtml, abroadRows} from './abroad.js';
+import {abroadFilm, abroadForFilm, abroadHtml, abroadRows, abroadServices} from './abroad.js';
 import {NAV_KEYS, columnsFromTops, nextIndex, nextInRows} from './gridnav.js';
 import {drawerHtml, letterboxdUrl} from './drawer.js';
 
@@ -178,6 +178,8 @@ const state = createAppState();
     }
     const abroadOnFor = () => (VIEW === 'tonight' ? localStorage.getItem('abroadOn') === '1' : document.getElementById('where-filter').value !== 'all');
     const abroadFor = film => abroadForFilm(state.abroad?.[filmKey(film)], document.getElementById('country-select').value, code => regionLabel.of(code) || code);
+    // With the switch on, every card also shows your services that have the film abroad.
+    const abroadList = film => (abroadOnFor() ? abroadServices(state.abroad?.[filmKey(film)], document.getElementById('country-select').value, code => regionLabel.of(code) || code) : []);
     // Films with an abroad entry that are not already shown as films you can watch here (those count as "here").
     const abroadCandidates = shownKeys => (state.abroad ? [...state.films, ...state.unavailable].filter(film => state.abroad[filmKey(film)] && !shownKeys.has(filmKey(film))).map(film => abroadFilm(film, state.abroad[filmKey(film)])) : []);
     // Filter the state, then draw the cards from the result. Filters never read card attributes.
@@ -250,6 +252,7 @@ const state = createAppState();
         country: document.getElementById('country-select').value,
         countryName: code => regionLabel.of(code) || code,
         abroadFor,
+        abroadList,
       });
       const note = typed && results.querySelector(`.favorite-note[data-key="${CSS.escape(typed.key)}"]`);
       if (note) { note.value = typed.value; note.focus(); note.setSelectionRange(typed.start, typed.end); }
@@ -400,7 +403,7 @@ const state = createAppState();
       }
       document.getElementById('context-text').innerHTML = `${available.length} films available on <a href="/subscriptions">${state.selected.size} services</a>${state.lastScan ? ` · synced ${ago(state.lastScan)}` : ''}`;
       document.querySelectorAll('.quick-chip').forEach(chip => chip.setAttribute('aria-pressed', String(tonightChips.has(chip.dataset.chip))));
-      const context = {imageBaseUrl, providerLogos: window.WATCHLIST_CONFIG.providerLogos, logoBaseUrl: window.WATCHLIST_CONFIG.logoBaseUrl, selected: state.selected, favorites: state.favorites, compareKeys: state.compareKeys, greyKeys: new Set(), favoritesOnly: false, pageHref: location.href, country: document.getElementById('country-select').value, countryName: code => regionLabel.of(code) || code, abroadFor};
+      const context = {imageBaseUrl, providerLogos: window.WATCHLIST_CONFIG.providerLogos, logoBaseUrl: window.WATCHLIST_CONFIG.logoBaseUrl, selected: state.selected, favorites: state.favorites, compareKeys: state.compareKeys, greyKeys: new Set(), favoritesOnly: false, pageHref: location.href, country: document.getElementById('country-select').value, countryName: code => regionLabel.of(code) || code, abroadFor, abroadList};
       const section = (row, film) => (row.id === 'free' || (row.id === 'new' && !Object.values(film.providers || {}).flat().includes('flatrate')) ? 'Free' : 'Paid');
       document.getElementById('tonight-rows').innerHTML = rows.map(row => `<section class="film-row" aria-labelledby="row-${escapeHtml(row.id)}"><div class="film-row-head"><h2 id="row-${escapeHtml(row.id)}">${escapeHtml(row.title)} <span class="row-count">${row.films.length}</span></h2><a class="film-link" href="${escapeHtml(row.href)}">See all <span aria-hidden="true">→</span></a></div><div class="row-scroller"><button class="row-arrow row-prev" type="button" aria-label="Scroll ${escapeHtml(row.title)} back" tabindex="-1"><i class="ti ti-chevron-left" aria-hidden="true"></i></button><div class="row-track films">${row.films.slice(0, 24).map(film => filmCard(film, section(row, film), context)).join('')}</div><button class="row-arrow row-next" type="button" aria-label="Scroll ${escapeHtml(row.title)} on" tabindex="-1"><i class="ti ti-chevron-right" aria-hidden="true"></i></button></div></section>`).join('')
         || '<p class="empty">No film fits. Tick more services or turn a quick filter off.</p>';
@@ -516,7 +519,10 @@ const state = createAppState();
       setCompareMode(count > 0);
       const bar = document.getElementById('compare-bar');
       bar.hidden = count === 0;
-      document.getElementById('compare-count').textContent = count === 1 ? '1 film chosen: pick one more' : count > 4 ? `${count} films chosen: at most 4` : `${count} to compare`;
+      const countText = document.getElementById('compare-count');
+      countText.textContent = count === 1 ? 'Pick one more' : count > 4 ? `${count} chosen: at most 4` : `${count} to compare`;
+      countText.dataset.hint = String(count < 2 || count > 4);
+      document.getElementById('compare-thumbs').innerHTML = state.films.filter(film => state.compareKeys.has(filmKey(film)) && film.poster_path).map(film => `<img src="${imageBaseUrl}${escapeHtml(film.poster_path)}" alt="${escapeHtml(film.title)}">`).join('');
       document.getElementById('compare-go').disabled = count < 2 || count > 4;
     }
     function setCompared(key, checked) {
@@ -1356,6 +1362,14 @@ const state = createAppState();
     });
     document.getElementById('country-select').addEventListener('change', switchCountry);
     // Phones: "Filters" opens the bar as a sheet from the bottom, a modal dialog while open.
+    // Phones keep the view switch, the heart and the link inside the sheet; wider screens keep them in the bar.
+    const phoneQuery = matchMedia('(max-width: 800px)');
+    const placeViewTools = () => {
+      const home = document.getElementById(phoneQuery.matches ? 'sheet-view-slot' : 'result-tools');
+      ['view-switch', 'favorites-view', 'share-button'].forEach(id => home.append(document.getElementById(id)));
+    };
+    placeViewTools();
+    phoneQuery.addEventListener('change', placeViewTools);
     const toolsToggle = document.getElementById('tools-toggle');
     const filterSheet = document.getElementById('film-filters');
     const behindSheet = () => [document.getElementById('app-header'), document.querySelector('.skip-link'), ...document.querySelectorAll('#watchlist-view > :not(.watch-bar), .watch-bar > :not(#film-filters)')].filter(Boolean);

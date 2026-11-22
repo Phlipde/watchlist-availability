@@ -62,3 +62,6 @@ export function wayText(way) {
     default: return 'Not streaming';
   }
 }
+
+// The small icon in a logo's corner for each way to watch.
+export const TYPE_ICON = {free: 'ti-gift', flatrate: 'ti-repeat', ads: 'ti-ad', rent: 'ti-clock', buy: 'ti-shopping-cart'};

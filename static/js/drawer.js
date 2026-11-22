@@ -3,9 +3,6 @@
 import {escapeHtml, numberText} from './ui.js';
 import {selectedChanges} from './filtering.js';
 
-// Where "Report" opens a prefilled issue (nothing is sent until the user submits it there).
-export const ISSUES_URL = 'https://github.com/Phlipde/watchlist-availability/issues/new';
-
 const KIND_ORDER = ['free', 'ads', 'flatrate', 'rent', 'buy'];
 const KIND_LABEL = {free: 'Free', ads: 'With ads', flatrate: 'Subscription', rent: 'Rent', buy: 'Buy'};
 const WATCH = ['free', 'ads', 'flatrate'];
@@ -136,12 +133,6 @@ export function linkChips(film, country) {
   return `<p class="film-modal-links">${links.map(([name, href, tip]) => `<a class="link-chip" href="${escapeHtml(href)}" target="_blank" rel="noreferrer"${tip ? ` title="${escapeHtml(tip)}"` : ''}>${name} <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a>`).join('')}</p>`;
 }
 
-export function reportUrl(film, country, service = '') {
-  const title = `Wrong availability: ${film.title}${service ? ` on ${service}` : ''} (${country})`;
-  const body = `Film: ${film.title}${film.year ? ` (${film.year})` : ''}\nTMDB id: ${film.tmdb_id ?? 'unknown'}\nCountry: ${country}${service ? `\nService: ${service}` : ''}\n\nWhat is wrong:\n`;
-  return `${ISSUES_URL}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
-}
-
 // ---- HTML pieces ----
 
 const logoImg = (ctx, name, className = 'provider-logo') => {
@@ -183,7 +174,7 @@ function otherServicesHtml(film, ctx, action) {
     ? `<details class="offer-group offer-buy" data-offer="buy"><summary class="offer-heading">Buy (${group.rows.length})</summary><ul class="svc-list">${group.rows.map(chip).join('')}</ul></details>`
     : `<section class="offer-group" data-offer="${group.kind}"><h3 class="offer-heading">${group.label}</h3><ul class="svc-list">${group.rows.map(chip).join('')}</ul></section>`);
   const visible = groups.length && others.size;
-  return `<details class="other-services" id="film-more"${visible ? '' : ' hidden'}><summary><span>Other services</span> <span class="os-count">${others.size ? `(${others.size})` : ''}</span><span class="os-abroad"></span></summary>${groups.map(groupHtml).join('')}<div id="film-abroad" class="film-abroad" hidden></div><p class="report-line">${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">All offers <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a> · ` : ''}Something wrong? <a href="${escapeHtml(reportUrl(film, ctx.country, action.service || ''))}" target="_blank" rel="noreferrer">Report</a></p></details>`;
+  return `<details class="other-services" id="film-more"${visible ? '' : ' hidden'}><summary><span>Other services</span> <span class="os-count">${others.size ? `(${others.size})` : ''}</span><span class="os-abroad"></span></summary>${groups.map(groupHtml).join('')}<div id="film-abroad" class="film-abroad" hidden></div><p class="report-line">${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">All offers <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a>` : ''}</p></details>`;
 }
 
 // A row of mini posters: the series (`current` marked) or the similar films, the service logo under each.
