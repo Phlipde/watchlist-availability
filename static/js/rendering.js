@@ -118,12 +118,15 @@ export function favoriteFields(key, title, saved = {}) {
   return `<div class="film-actions"><select class="favorite-status" data-key="${escapeHtml(key)}" aria-label="Favorite status for ${name}">${option('plan', 'Plan')}${option('watching', 'Watching')}${option('watched', 'Hidden away')}</select><input class="favorite-note" data-key="${escapeHtml(key)}" aria-label="Note for ${name}" placeholder="Note" value="${escapeHtml(saved.notes || '')}"></div>`;
 }
 
+// TMDB serves a poster in several widths; the base url is w500 (the drawer's size).
+const sized = (base, size) => base.replace('/w500', '/' + size);
+
 // context: {imageBaseUrl, selected: Set, favorites: Map, compareKeys: Set, greyKeys: Set, favoritesOnly, pageHref}
 export function filmCard(film, section, context) {
   const key = filmKey(film);
   const pageHref = context.pageHref || 'http://localhost/';
   // The title link below names the film, so the poster is decoration here (the details window keeps its alt text).
-  const poster = film.poster_path ? `<img src="${context.imageBaseUrl}${escapeHtml(film.poster_path)}" alt="" loading="lazy">` : '<div class="no-poster" aria-hidden="true">No poster available</div>';
+  const poster = film.poster_path ? `<img src="${sized(context.imageBaseUrl, 'w342')}${escapeHtml(film.poster_path)}" srcset="${['w185', 'w342', 'w500'].map(size => `${sized(context.imageBaseUrl, size)}${escapeHtml(film.poster_path)} ${size.slice(1)}w`).join(', ')}" sizes="(max-width: 800px) 45vw, 220px" alt="" loading="lazy">` : '<div class="no-poster" aria-hidden="true">No poster available</div>';
   // Letterboxd first (the community the watchlist comes from), TMDB when Letterboxd has no value yet.
   const rating = numberText(film.letterboxd_rating)
     ? `<span aria-hidden="true">★</span><span class="visually-hidden">Letterboxd</span> ${Number(film.letterboxd_rating).toFixed(1)}`
@@ -177,7 +180,7 @@ export function filmTable(films, context) {
           : `<span class="table-service" title="${tip}">${escapeHtml(entry.name)}</span>`;
       }).join('');
     const runtime = runtimeText(film.runtime);
-    return `<tr data-key="${escapeHtml(key)}"><th scope="row"><span class="table-title">${film.poster_path ? `<img class="table-poster" src="${context.imageBaseUrl}${escapeHtml(film.poster_path)}" alt="" loading="lazy" width="28" height="42">` : '<span class="table-poster" aria-hidden="true"></span>'}${filmLink(film, key, pageHref)}</span></th><td>${numberText(film.year, '')}</td><td>${runtime ? `<span aria-hidden="true">${runtime}</span><span class="visually-hidden">${runtimeSpoken(film.runtime)}</span>` : ''}</td><td>${rating}</td><td class="table-services">${services}</td></tr>`;
+    return `<tr data-key="${escapeHtml(key)}"><th scope="row"><span class="table-title">${film.poster_path ? `<img class="table-poster" src="${sized(context.imageBaseUrl, 'w92')}${escapeHtml(film.poster_path)}" alt="" loading="lazy" width="28" height="42">` : '<span class="table-poster" aria-hidden="true"></span>'}${filmLink(film, key, pageHref)}</span></th><td>${numberText(film.year, '')}</td><td>${runtime ? `<span aria-hidden="true">${runtime}</span><span class="visually-hidden">${runtimeSpoken(film.runtime)}</span>` : ''}</td><td>${rating}</td><td class="table-services">${services}</td></tr>`;
   }).join('');
   return `<div class="table-scroll"><table class="status-table film-table"><thead><tr><th scope="col">Title</th><th scope="col">Year</th><th scope="col">Runtime</th><th scope="col">Rating</th><th scope="col">Services</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
