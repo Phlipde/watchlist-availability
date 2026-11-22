@@ -328,7 +328,7 @@ def test_saved_results_show_the_tools(app_server, page):
     page.goto(app_server["url"] + "/watchlist?votes=1000")
     expect(page.locator("#filter-chips")).to_contain_text("Votes: 1k+")
     page.goto(app_server["url"] + "/watchlist?age=16&ages=")
-    expect(page.locator("#more-filters summary")).to_have_text("More filters (1)")
+    expect(page.locator("#more-filters summary")).to_have_text("More filters · 1")
 
 
 def test_filters_from_a_link_survive_the_scan(app_server, page):
