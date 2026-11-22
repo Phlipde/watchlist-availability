@@ -1025,10 +1025,10 @@ body:has(.more-filters[open])::after { content: ""; position: fixed; inset: 0; z
 .table-service { margin-right: 6px; color: var(--text-2); }
 .view-compact .film .poster-actions, .view-compact .film .card-foot { display: none; }
 .film > .poster { order: -1; }
-.watch-bar #abroad-toggle { min-height: var(--h-md); }
-#abroad-toggle .ti { margin-right: 4px; }
-#abroad-toggle[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
-#abroad-count { color: var(--text-2); font-variant-numeric: tabular-nums; }
+.watch-bar #abroad-toggle { min-height: var(--h-md); }
+#abroad-toggle .ti { margin-right: 4px; }
+#abroad-toggle[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
+#abroad-count { color: var(--text-2); font-variant-numeric: tabular-nums; }
 #abroad-toggle[aria-pressed="true"] #abroad-count { color: var(--text); }
 
 /* The card's line is only the logo; the words are a bubble on hover, focus or tap (the text stays for screen readers). */
@@ -1132,13 +1132,11 @@ body.modal-open .compare-bar, body.tools-open .compare-bar, body:has(dialog[open
 .best-way-link.is-abroad .way-logo, .best-way-link.is-abroad .way-name { outline: 1.5px dashed var(--text-2); outline-offset: 1px; }
 .abroad-service { position: relative; }
 .abroad-service .way-badge { width: 14px; height: 14px; right: -5px; bottom: -5px; }
-/* A6: Tonight chips in one scrolling row; table title stays while scrolling sideways; subscription actions as buttons. */
+/* A6: Tonight chips in one scrolling row; table subscription actions as buttons. */
 .tonight-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .tonight-chips .quick-chip { flex: none; white-space: nowrap; }
 .rec-actions { gap: 8px; }
 .rec-actions .btn { min-height: 36px; display: inline-flex; align-items: center; }
-.film-table th[scope=row] { position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--line); }
-.film-table th[scope=col]:first-child { position: sticky; left: 0; z-index: 2; background: var(--surface); }
 .filter-chip.chips-more { cursor: pointer; background: transparent; color: var(--muted); }
 .table-title { display: flex; align-items: center; gap: 10px; }
 .table-poster { flex: none; width: 28px; height: 42px; border-radius: 3px; object-fit: cover; background: var(--panel); }
