@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import requests
-from flask import Flask, Response, jsonify, make_response, redirect, render_template, request, send_file
+from flask import Flask, Response, jsonify, make_response, render_template, request, send_file
 
 from watchlist_app import (
     calendar,
@@ -169,41 +169,8 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             if (path := validation.image_path(item["logo_path"]))
         }
 
-    # Parameters of the watchlist's filter links; a link to "/" with one of them is an old watchlist link.
-    watchlist_params = {
-        "q",
-        "cost",
-        "genre",
-        "nogenre",
-        "max",
-        "rating",
-        "providers",
-        "sort",
-        "match",
-        "unavailable",
-        "votes",
-        "keyword",
-        "age",
-        "lang",
-        "origin",
-        "from",
-        "to",
-        "media",
-        "changes",
-        "minproviders",
-        "only",
-        "favorites",
-        "favoriteStatus",
-        "availability",
-        "kind",
-        "runtime",
-        "lb",
-    }
-
     @app.route("/")
     def tonight():
-        if watchlist_params & set(request.args):
-            return redirect(f"/watchlist?{request.query_string.decode()}", code=301)
         return films_page("tonight")
 
     @app.get("/watchlist")
@@ -260,19 +227,6 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
     @app.get("/settings/data")
     def status_page():
         return page("status.html", status=status_overview(store, settings, service))
-
-    # Status and matches moved under Settings; old bookmarks still work.
-    @app.get("/status")
-    def old_status_page():
-        return redirect("/settings/data", code=301)
-
-    @app.get("/matches")
-    def old_matches_page():
-        return redirect("/settings/matches", code=301)
-
-    @app.get("/costs")
-    def costs_page():
-        return redirect("/subscriptions", code=301)
 
     def _other_countries(scan: dict | None, own: list[str], country: str) -> list[dict]:
         """Countries where your services show more of the watchlist (stored offers, no TMDB request)."""

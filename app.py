@@ -7,7 +7,6 @@ import os
 from flask import Flask
 
 from watchlist_app import config
-from watchlist_app.legacy_import import import_legacy_data
 from watchlist_app.scan_service import ScanService
 from watchlist_app.scheduler import start_scheduler
 from watchlist_app.settings import AppSettings
@@ -16,7 +15,6 @@ from web import routes as web_routes
 
 app = Flask(__name__)
 _STORE = Store(config.database_path())
-import_legacy_data(_STORE, **config.legacy_paths())
 _SETTINGS = AppSettings(_STORE)
 _SERVICE = ScanService(_STORE, _SETTINGS)
 

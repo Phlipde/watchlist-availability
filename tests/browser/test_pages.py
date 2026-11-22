@@ -240,9 +240,6 @@ def test_tonight_page_rows_chips_and_pick_for_me(app_server, page):
     expect(page.locator("#film-details-content .pick-reason")).to_contain_text("Picked for you")
     page.get_by_role("button", name="Pick another").click()
     expect(page.locator("#film-details-title")).to_have_text("Heat")  # the only film that fits
-    # An old watchlist link to "/" with filters goes to the watchlist page.
-    page.goto(app_server["url"] + "/?genre=Action")
-    expect(page).to_have_url(re.compile(r"/watchlist\?genre=Action"))
 
 
 def test_trailer_from_the_details_window_is_in_front(app_server, page):
@@ -329,14 +326,14 @@ def test_saved_results_show_the_tools(app_server, page):
     # A filter set from a link must show as a chip, also when its control sits in a closed panel.
     page.goto(app_server["url"] + "/watchlist?votes=1000")
     expect(page.locator("#filter-chips")).to_contain_text("Votes: 1k+")
-    page.goto(app_server["url"] + "/watchlist?age=16&ages=")
+    page.goto(app_server["url"] + "/watchlist?ages=16")
     expect(page.locator("#more-filters > summary")).to_have_text("More filters · 1")
 
 
 def test_filters_from_a_link_survive_the_scan(app_server, page):
     expect = playwright_api.expect
     # The genre list is filled only when films arrive; the genre from the link must wait for it.
-    page.goto(app_server["url"] + "/watchlist?genre=Action&rating=7&providers=Netflix,Arte")
+    page.goto(app_server["url"] + "/watchlist?genre=Action&rating=tmdb:7&providers=Netflix,Arte")
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     expect(page.locator('#genre-list input[value="Action"]')).to_be_checked()
     expect(page.locator("#visible-count")).to_have_text("1")
@@ -344,7 +341,7 @@ def test_filters_from_a_link_survive_the_scan(app_server, page):
     # The same link again, now from the saved scan.
     page.reload()
     expect(page.locator('#genre-list input[value="Action"]')).to_be_checked()
-    # An old link's rating=7 is the TMDB rating; its chip clears it.
+    # The rating from the link shows as a chip; the chip clears it.
     expect(page.locator("#rating-filter")).to_have_value("tmdb:7")
     page.locator('.filter-chip[data-filter-id="rating-filter"] .chip-remove').click()
     expect(page.locator("#rating-filter")).to_have_value("")

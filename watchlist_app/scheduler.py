@@ -21,7 +21,7 @@ def next_scan_at(store: Store, settings: AppSettings) -> float | None:
     if interval <= 0:
         return None
     latest = store.latest_scan(settings.country)
-    # Older versions offered 6 and 12 hours; they count as a day.
+    # Never more often than once a day.
     return (latest["created"] if latest else 0) + max(interval, 24) * 3600
 
 

@@ -311,7 +311,7 @@ const state = createAppState();
     function populateGenres() {
       filterBar.buildGenreMenu([...new Set(state.films.flatMap(film => film.genres || []))].sort());
       fillSelect(document.getElementById('keyword-filter'), 'All keywords', [...new Set(state.films.flatMap(film => film.keywords || []))].sort());
-      filterBar.buildAgeChips(sortRatings([...state.films, ...state.unavailable].map(film => film.certification)), initialUrl.get('ages') ? null : initialUrl.get('age'));
+      filterBar.buildAgeChips(sortRatings([...state.films, ...state.unavailable].map(film => film.certification)));
       // Codes as values ("ja", "JP"), names as text ("Japanese", "Japan"), sorted by name.
       const all = [...state.films, ...state.unavailable];
       const named = (select, allText, codes, type) => {

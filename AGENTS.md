@@ -35,7 +35,7 @@ Flask app (`app.py`, `web/routes.py`, `watchlist_app/`) with SQLite, Tabler/Boot
 ### Decisions
 
 - "Where to watch" uses `tmdb_url + /watch?locale=XX` instead of storing TMDB's `link` field (same page, no DB/backup change)
-- Subscriptions and prices live on `/subscriptions`; `PUT /api/settings` takes `subscriptions_country` so another country is edited without switching the app's country; `/costs` redirects (301)
+- Subscriptions and prices live on `/subscriptions`; `PUT /api/settings` takes `subscriptions_country` so another country is edited without switching the app's country
 - Letterboxd CSV is sorted by its `Date` column newest first, to match the website order (assumed newest first, not verified)
 - 44px touch targets only under `pointer: coarse`, so the desktop stays dense
 

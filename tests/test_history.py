@@ -54,16 +54,6 @@ class TestDiffScans:
             == []
         )
 
-    def test_old_scan_without_tmdb_keys_is_matched_by_title_and_year(self):
-        older = previous([{"title": "Heat", "year": 1995, "providers": {"Netflix": ["rent"]}}])
-        before = previous([{"title": "Heat", "year": 1995, "providers": {}}])
-        changes = history.diff_scans(before, [film("949", "Heat", ["Arte"], year=1995)], [], older=older)
-        assert {(change["provider"], change["change"]) for change in changes} == {
-            ("Arte", "added"),
-            ("Netflix", "removed"),
-        }
-        assert {change["film_key"] for change in changes} == {"949"}
-
 
 def change(key, provider, kind, created):
     return {
