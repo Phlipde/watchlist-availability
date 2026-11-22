@@ -255,3 +255,12 @@ Noch offen (zur Auswahl): 11 Meldung, wenn ein „Demnächst“-Film streambar w
 - **[ERLEDIGT]** Die Anbieter-Zeile auf der Karte zeigt nur noch das Logo (ohne Logo den Namen als kleine Pille) und "+N"; der Text ("Free", "Netflix · Subscription", "Rent · 6 shops", "Abroad in Italy, on Prime Video" ...) kommt als Blase bei Hover und Tastaturfokus. Der Text bleibt für Screenreader immer im Dokument. "Not streaming" ist ein gedämpftes Symbol, "nur auf fremdem Abo" ein gedämpftes Logo.
 - **[ERLEDIGT]** Touch: Das erste Tippen auf das Logo zeigt die Blase, das zweite geht zum Dienst; ein Tippen daneben schließt sie. Auf dem echten Handy nicht getestet (nur die Logik und ein Browser-Test für Hover).
 - **[ERLEDIGT]** Python 353, JS 81, Browser 59, ruff und mypy sauber.
+
+### Kartenreihe, Panel und README (2026-11-22)
+- **[ERLEDIGT]** Karte: eine Reihe Logo-Kacheln nur für die eigenen Services (€-Badge bei reinem Leihen/Kaufen, +N für den Rest; ohne eigenen Service die eine beste Möglichkeit). Das weicht von der Vorgabe "genau eine Anbieter-Zeile, kein €-Badge" ab, auf Wunsch des Nutzers.
+- **[ERLEDIGT]** Kosten-Tooltips ("No rental shops selected", "Films can be in several groups"), × je Dropdown im Panel, Marke in Satzschreibung, Land als Text, Year/Runtime/Rating wandern bei zu schmaler Leiste ins Panel (Liste `GIVE_WAY` in `filterbar.js`). "Available here first" bewusst nicht gebaut (Inlandsfilme stehen immer vorn).
+- **[ERLEDIGT]** README komplett neu mit Screenshots (`docs/screenshots/`, echte Watchlist, Letterboxd-Name ersetzt).
+- **[FEHLER]** Im Panel "More filters" bricht die Beschriftung des Runtime-Reglers ("Up to 180 min") um ("Up / to"). Nicht behoben.
+- **[FEHLER]** Bei 1440 px Fensterbreite steht der Ansichten-Schalter (Grid/Compact/Table) auf einer zweiten Zeile, obwohl Year, Runtime und Rating schon im Panel sind; die Leiste passt erst ab etwa 1600 px in eine Zeile. Nicht behoben (Idee: Services-Feld schmaler oder Genre früher ins Panel).
+- **[FEHLER]** Year steht oft im Panel, auch bei sehr breiten Fenstern, weil die Zeile bei etwa 1750 px endet. Gewollt, aber ungewohnt.
+- **[OFFEN]** Das automatische Verschieben (ResizeObserver) feuert im Vorschau-Fenster der Desktop-App nicht (Fenster wird nicht gezeichnet); nur im Playwright-Browser-Test belegt, nicht mit eigenen Augen gesehen.
