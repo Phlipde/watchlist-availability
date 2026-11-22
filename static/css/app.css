@@ -1061,3 +1061,5 @@ body:has(.more-filters[open])::after { content: ""; position: fixed; inset: 0; z
 .more-filters .filter-pop.is-moved > summary { min-height: 0; padding: 0; border: 0; background: none; color: var(--text-2); font: 500 12px system-ui, sans-serif; pointer-events: none; cursor: default; }
 .more-filters .filter-pop.is-moved > summary::after { display: none; }
 .more-filters .is-moved .filter-menu { position: static; width: auto; min-width: 0; max-height: none; padding: 6px 0 0; border: 0; background: transparent; box-shadow: none; translate: none; }
+.more-filters .is-moved .menu-head .menu-group { display: none; }  /* the control's own name is already the label */
+.more-filters .more-filters-menu { max-height: min(85vh, 760px); }
