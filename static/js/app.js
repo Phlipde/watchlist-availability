@@ -1386,8 +1386,16 @@ const state = createAppState();
     const toolsToggle = document.getElementById('tools-toggle');
     const filterSheet = document.getElementById('film-filters');
     const behindSheet = () => [document.getElementById('app-header'), document.querySelector('.skip-link'), ...document.querySelectorAll('#watchlist-view > :not(.watch-bar), .watch-bar > :not(#film-filters)')].filter(Boolean);
-    function setSheet(open) {
-      document.body.classList.toggle('tools-open', open);
+    let sheetTimer = null;
+    // Closing on a phone slides the sheet down first (`tools-closing`), then drops `tools-open`.
+    function setSheet(open, instant = false) {
+      clearTimeout(sheetTimer);
+      const body = document.body;
+      const slide = !open && !instant && body.classList.contains('tools-open') && phoneQuery.matches
+        && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+      body.classList.toggle('tools-closing', slide);
+      if (slide) sheetTimer = setTimeout(() => body.classList.remove('tools-open', 'tools-closing'), 230);
+      else body.classList.toggle('tools-open', open);
       toolsToggle?.setAttribute('aria-expanded', String(open));
       filterSheet.setAttribute('role', open ? 'dialog' : 'search');
       if (open) filterSheet.setAttribute('aria-modal', 'true'); else filterSheet.removeAttribute('aria-modal');
@@ -1396,6 +1404,34 @@ const state = createAppState();
       else toolsToggle?.focus();
     }
     toolsToggle?.addEventListener('click', () => setSheet(!document.body.classList.contains('tools-open')));
+    // Pulling the sheet's header down follows the finger; past 80 px it slides out and closes.
+    (() => {
+      const head = filterSheet.querySelector('.sheet-head');
+      let startY = null;
+      head.addEventListener('pointerdown', event => {
+        if (event.target.closest('button, a') || !phoneQuery.matches) return;
+        startY = event.clientY;
+        head.setPointerCapture(event.pointerId);
+      });
+      head.addEventListener('pointermove', event => {
+        if (startY === null) return;
+        filterSheet.style.transition = 'none';
+        filterSheet.style.transform = `translateY(${Math.max(0, event.clientY - startY)}px)`;
+      });
+      const end = event => {
+        if (startY === null) return;
+        const far = event.type === 'pointerup' && event.clientY - startY > 80;
+        startY = null;
+        filterSheet.style.transition = 'transform .22s cubic-bezier(.2, .8, .2, 1)';
+        filterSheet.style.transform = far ? 'translateY(100%)' : '';
+        setTimeout(() => {
+          filterSheet.style.transition = '';
+          if (far) { setSheet(false, true); filterSheet.style.transform = ''; }
+        }, 230);
+      };
+      head.addEventListener('pointerup', end);
+      head.addEventListener('pointercancel', end);
+    })();
     document.getElementById('filter-sheet-done').addEventListener('click', () => setSheet(false));
     document.getElementById('filter-sheet-close').addEventListener('click', () => setSheet(false));
     document.getElementById('filter-sheet-reset').addEventListener('click', () => filterBar.resetAll());
