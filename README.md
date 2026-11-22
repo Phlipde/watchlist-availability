@@ -40,7 +40,7 @@ Results saved: /Users/you/Downloads/watchlist_2026-06-06.md
 ## Installation
 
 ```bash
-git clone [https://github.com/CorbeusUltra/watchlist-availability.git](https://github.com/CorbeusUltra/watchlist-availability.git)
+git clone https://github.com/CorbeusUltra/watchlist-availability.git
 cd watchlist-availability
 python3 -m venv .venv
 source .venv/bin/activate        # On Windows: .venv\Scripts\activate
@@ -118,11 +118,18 @@ Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
 #### Web Features
 
 * **Tonight (`/`):** The start page: rows of films on your ticked services (new in the last 14 days, free, one row per subscription), quick filters, "Pick for me" (key `r`) and what recently left your services and where it runs now.
-* **Watchlist (`/watchlist`):** All films with one filter bar (services, cost, genres, runtime, rating, more), eight sorts, and a **Changes** tab with every change of the last 30 days. Old links to `/` with filters redirect here.
+* **Watchlist (`/watchlist`):** All films with one filter bar in a single row: search, services, cost (*Available / Free / Subscription / Rent* with counts), genre, ♥ favorites, **Abroad**, **More filters** and sort. Grid, compact and table views, a **Changes** tab with every change of the last 30 days, and a link icon that copies the current view. When the bar does not fit one row, *Year*, *Runtime* and *Rating* move into the *More filters* panel (same controls, shown inline). Old links to `/` with filters redirect here.
+* **Film cards:** A card shows the poster with a small heart, the title, the meta line and one row of logo tiles for **your own services** (a small € badge marks a shop that only rents or sells; the words come on hover, focus or a first tap on a phone). A card without any of your services shows its one best way. Hover or long-press the poster for *Compare*, *Not now* and *Grey out*. No prices are shown anywhere: the data source has none.
+* **Abroad:** The *Abroad* chip also lists films that your ticked services have in another country but not at home (a VPN is needed). It shows how many films would be added; the card names the country with a flag, and the details list all countries, the nearest and same-language ones first. *More filters → Where* can show only here, here and abroad, or only abroad.
+* **Film details:** A side drawer (a bottom sheet on phones) with one main button (the best way to watch), the services grouped by offer, abroad countries, the collection, similar films and links (Letterboxd first, with a direct link, then TMDB, JustWatch and others). `l` opens Letterboxd, `s` greys out, `n` sets aside for 30 days.
+* **Keyboard:** The arrow keys move through films in the grid, compact view, table and the Tonight rows; only one film holds the tab stop.
+* **Saved views:** *Save view* appears when filters are active; saved views show up as a *Views* menu and as chips on Tonight.
 * **Progressive Scans & Caching:** Scans execute in the background with progressive card loading. The app caches results locally and restores previous state on reload.
-* **Filtering & Search:** Dynamic filtering by Provider, Free/Paid offer types, release year, trailer availability, poster availability, and minimum provider counts.
+* **Filtering & Search:** Services, cost, genres (alt-click excludes), runtime, year, rating (Letterboxd or TMDB), age rating, original language, country, keyword, trailer, number of services and availability changes. Everything that is set shows as a chip; each dropdown in *More filters* has a small × and the panel has *Reset*.
 * **Any / All Provider Modes:** Toggle between showing films available on *any* selected service vs. *all* selected services.
 * **Change History:** Every scan is compared with the earlier ones. "New on …" is stored with its date; "gone" needs two scans in a row without the service, so a one-day TMDB hiccup is not reported. Changes are kept for 30 days.
+* **Export and import:** Under *Settings → Data*: films and favorites as CSV or JSON, and a favorites import with a preview ("12 found · 3 already set · 9 new") before anything is changed.
+* **Grey out:** A film you do not want to see any more can be greyed out; *Settings → Data* lists the greyed-out films and resets them. The app never writes to Letterboxd: log or rate a film there, and it leaves the watchlist at the next sync.
 * **Settings (`/settings`):** Letterboxd username, country, the automatic scan interval, and backup download / restore (settings, favorites, change history, last scan per country). *My services* (`/settings/services`) is the list of services you pay for or use for free; ticking saves at once, with Undo.
 * **Subscriptions (`/subscriptions`):** One table of your paid services sorted by what cancelling would cost you (films only there, hours), prices and renewal dates that save when you leave the field, totals per month and year, your free services as a block, and a hint what to cancel or book next.
 * **Automatic Scans:** Optionally every 6, 12, 24 or 48 hours or once a week, while the app runs. A scan interrupted by a restart is started again.
@@ -160,6 +167,7 @@ Data is stored inside `/data` in the container. Map this directory to an appdata
 | `WATCHLIST_DB` | `<DATA_DIR>/.watchlist.sqlite3` | One SQLite database for film data, offers per country, scans, favorites and settings |
 | `WATCHLIST_SCAN_WORKERS` | `6` | Films looked up at the same time |
 | `WATCHLIST_DISABLE_SCHEDULER` | not set | Set to `1` to switch off automatic scans in this process |
+| `WATCHLIST_DEV` | not set | Set to `1` to open `/dev/ui`, a page with every button, menu and chip in every state (also open in debug mode) |
 | `WATCHLIST_TRUSTED_HOSTS` | not set | Host names the app is reached under behind a reverse proxy that changes the `Host` header, comma-separated (e.g. `watch.example.org`) |
 
 #### Install and offline
@@ -176,7 +184,7 @@ Flag images in `static/flags/` come from the npm package [flag-icons](https://gi
 
 - `GET /tile`: a small page for Homepage or Homarr (iframe): new this week on your services and a pick of the day (a well-rated film on your services that is not marked watched or "not now"; the same all day).
 - `GET /feed.xml`: RSS feed of films that became watchable on your services in the last 30 days.
-- `GET /api/latest` the last scan, `GET /api/sensors` numbers for Home Assistant, `GET /calendar.ics` renewal dates, `GET /api/flags` watched and "not now" marks, `GET /api/backup` a full backup, `GET /health` for a container check. Writing calls (`PUT /api/settings`, `PUT /api/flags/<key>`) refuse requests from other sites.
+- `GET /api/latest` the last scan, `GET /api/sensors` numbers for Home Assistant, `GET /calendar.ics` renewal dates, `GET /api/flags` greyed-out and "not now" marks, `GET /api/abroad` films your services have in other countries, `GET /api/greyouts` and `POST /api/greyouts/reset`, `GET /api/backup` a full backup, `GET /health` for a container check. Writing calls (`PUT /api/settings`, `PUT /api/flags/<key>`) refuse requests from other sites.
 
 #### Security
 
@@ -271,7 +279,8 @@ watchlist-availability/
 │   └── tmdb.py                 # TMDB API access
 ├── web/                        # Web app modules
 │   └── routes.py               # Pages and API endpoints
-├── static/                     # Bundled frontend scripts and stylesheets
+├── static/                     # Bundled frontend (plain ES modules, no build step), flags
+│   └── js/                     # filtering, filterbar, bestway (card and drawer), drawer, abroad, gridnav...
 ├── templates/                  # Jinja2 templates and UI partials
 ├── platforms.toml              # Regional streaming provider toggles
 ├── run.sh                      # CLI launch script
@@ -292,7 +301,7 @@ Developed with the assistance of [Claude Code](https://claude.com/claude-code) (
 
 ## License
 
-[MIT](https://www.google.com/search?q=LICENSE)
+[MIT](LICENSE)
 
 ```
 
