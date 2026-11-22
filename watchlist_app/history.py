@@ -1,20 +1,15 @@
 """Availability changes between scans: "new on ..." and "no longer on ..."."""
 
-from .models import legacy_key
-
 # "Recently gone" looks back 30 days; "new on" badges use the last 14 (static/js/events.js).
 CHANGE_WINDOW_SECONDS = 30 * 24 * 60 * 60
 
 
 def _provider_index(scan: dict) -> dict[str, set[str]]:
-    """Providers per film of a stored scan, reachable by key and by the old Title|Year key."""
-    index: dict[str, set[str]] = {}
-    for film in [*scan.get("results", []), *scan.get("unavailable", [])]:
-        providers = set(film.get("providers") or {})
-        index[legacy_key(film.get("title"), film.get("year"))] = providers
-        if film.get("key"):
-            index[film["key"]] = providers
-    return index
+    """Providers per film of a stored scan, by film key."""
+    return {
+        film["key"]: set(film.get("providers") or {})
+        for film in [*scan.get("results", []), *scan.get("unavailable", [])]
+    }
 
 
 def diff_scans(
@@ -41,14 +36,12 @@ def diff_scans(
     earlier = _provider_index(older) if older else {}
     changes = []
     for film in [*results, *unavailable]:
-        key = film.get("key") or legacy_key(film.get("title"), film.get("year"))
+        key = film["key"]
         old = before.get(key)
-        if old is None:
-            old = before.get(legacy_key(film.get("title"), film.get("year")))
         if old is None:
             continue
         new = set(film.get("providers") or {})
-        oldest = earlier.get(key, earlier.get(legacy_key(film.get("title"), film.get("year")), old))
+        oldest = earlier.get(key, old)
         if compare_only is not None:
             old, new, oldest = old & compare_only, new & compare_only, oldest & compare_only
         added = new - old - oldest if older else new - old
@@ -78,7 +71,7 @@ def apply_changes(films: list[dict], changes: list[dict]) -> list[dict]:
         latest.setdefault(change["film_key"], {}).setdefault(change["provider"], change)
     annotated = []
     for film in films:
-        film_changes = latest.get(film.get("key") or legacy_key(film.get("title"), film.get("year")), {})
+        film_changes = latest.get(film["key"], {})
         current = set(film.get("providers") or {})
         added = sorted(
             provider

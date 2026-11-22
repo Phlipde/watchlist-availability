@@ -163,7 +163,6 @@ def perform_scan(
     if recent is not None and reusable:
         store.touch_ids(seen)
         films = [Film.from_dict(result) for result in recent["results"]]
-        store.rekey_favorites(films)
         return ScanOutcome(
             films=films,
             **with_changes(store, country, recent["results"], recent["unavailable"]),
@@ -233,7 +232,6 @@ def perform_scan(
             created=created,
         )
     store.touch_ids(seen, seen_at=created)
-    store.rekey_favorites(films)
     return ScanOutcome(
         films=films,
         **with_changes(store, country, results, unavailable),

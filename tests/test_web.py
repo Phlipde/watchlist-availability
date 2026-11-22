@@ -252,10 +252,6 @@ class TestCosts:
         page = client.get("/subscriptions").get_data(as_text=True)
         assert "No services chosen" in page and 'href="/settings/services"' in page
 
-    def test_old_costs_address_moves_to_subscriptions(self, client):
-        answer = client.get("/costs")
-        assert answer.status_code == 301 and answer.headers["Location"].endswith("/subscriptions")
-
     def test_another_country_is_edited_without_switching_the_app(self, client, settings):
         settings.update({"subscriptions": ["Netflix"]})
         answer = client.put(
@@ -335,7 +331,7 @@ class TestBackupApi:
                 "letterboxd_username": "<script>",
                 "subscriptions:GB": json.dumps(["MUBI", 5, "Brand New Stream"]),
                 "subscriptions:XX": "[]",
-                "legacy_import_done": "x",
+                "notify_state": "x",  # an internal value is never restored
                 "anything": "else",
             },
         }
@@ -402,9 +398,6 @@ class TestMatches:
         self._fill(store)
         assert b"Title matches" in client.get("/settings/matches").data
         assert b"stats-page.js" in client.get("/stats").data
-        # Old addresses from before the move under Settings redirect for good.
-        assert client.get("/matches").headers["Location"].endswith("/settings/matches")
-        assert client.get("/status").status_code == 301
         rows = client.get("/api/matches").get_json()
         assert [(row["film_key"], row["reason"], row["tmdb_title"]) for row in rows] == [
             ("title:heat|1995", "search", "Heat")

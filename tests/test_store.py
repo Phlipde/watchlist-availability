@@ -6,9 +6,8 @@ import pytest
 
 from tests.helpers import BUNDLE
 from watchlist_app import store as store_module
-from watchlist_app.legacy_import import import_legacy_data
 from watchlist_app.models import Film
-from watchlist_app.store import Store
+from watchlist_app.store import SCHEMA_VERSION, Store
 
 
 @pytest.fixture
@@ -102,104 +101,12 @@ class TestFavorites:
         store.remove_favorite("949")
         assert store.list_favorites() == []
 
-    def test_rekey_moves_title_year_keys_to_tmdb_id(self, store):
-        store.add_favorite({"key": "Heat|1995", "title": "Heat", "year": 1995, "notes": "keep me"})
-        store.add_favorite({"key": "Ray Gunn|null", "title": "Ray Gunn"})
-        moved = store.rekey_favorites(
-            [Film(title="Heat", year=1995, tmdb_id=949), Film(title="Ray Gunn", year=None, tmdb_id=5)]
-        )
-        assert moved == 2
-        favorites = {favorite["key"]: favorite for favorite in store.list_favorites()}
-        assert set(favorites) == {"949", "5"}
-        assert favorites["949"]["notes"] == "keep me"
-
-    def test_rekey_keeps_existing_new_key(self, store):
-        store.add_favorite({"key": "Heat|1995", "title": "Heat"})
-        store.add_favorite({"key": "949", "title": "Heat"})
-        assert store.rekey_favorites([Film(title="Heat", year=1995, tmdb_id=949)]) == 0
-        assert {favorite["key"] for favorite in store.list_favorites()} == {"Heat|1995", "949"}
-
 
 def test_settings(store):
     assert store.get_setting("missing", "default") == "default"
     store.set_setting("country", "DE")
     store.set_setting("country", "GB")
     assert store.get_setting("country") == "GB"
-
-
-class TestLegacyImport:
-    def _legacy_files(self, tmp_path):
-        favorites = tmp_path / "favorites.sqlite3"
-        connection = sqlite3.connect(favorites)
-        connection.execute(
-            "CREATE TABLE favorites (movie_key TEXT PRIMARY KEY, title TEXT NOT NULL, year INTEGER, "
-            "poster_path TEXT, tmdb_url TEXT, trailer_url TEXT, rating REAL, status TEXT, "
-            "notes TEXT, added_at TEXT)"
-        )
-        connection.execute(
-            "INSERT INTO favorites VALUES "
-            "('Heat|1995', 'Heat', 1995, NULL, NULL, NULL, 8.3, 'watching', 'n', 'x')"
-        )
-        connection.commit()
-        connection.close()
-
-        latest = tmp_path / "latest.json"
-        latest.write_text(
-            json.dumps(
-                {
-                    "created": 123.0,
-                    "country": "DE",
-                    "source_name": "Letterboxd @someone",
-                    "results": [{"title": "Heat", "year": 1995, "providers": {"Netflix": ["rent"]}}],
-                    "unavailable": [{"title": "Nope", "year": 2000}],
-                    "stats": {"total": 1},
-                }
-            ),
-            encoding="utf-8",
-        )
-
-        films = tmp_path / "films.sqlite3"
-        connection = sqlite3.connect(films)
-        connection.execute(
-            "CREATE TABLE films (film_key TEXT PRIMARY KEY, tmdb_id INTEGER, id_source TEXT, "
-            "id_checked_at REAL, poster_path TEXT, details TEXT, providers TEXT, fetched_at REAL)"
-        )
-        connection.execute(
-            "INSERT INTO films VALUES ('lb:heat', 949, 'letterboxd', 1.0, '/p.jpg', ?, ?, 2.0)",
-            (json.dumps(BUNDLE["details"]), json.dumps(BUNDLE["providers"])),
-        )
-        connection.execute(
-            "INSERT INTO films VALUES ('title:nope|2000', NULL, 'search', 3.0, NULL, NULL, NULL, NULL)"
-        )
-        connection.commit()
-        connection.close()
-        return {"favorites_db": favorites, "latest_json": latest, "film_cache_db": films}
-
-    def test_imports_everything_once(self, store, tmp_path):
-        paths = self._legacy_files(tmp_path)
-        counts = import_legacy_data(store, **paths)
-        assert counts == {"favorites": 1, "scans": 1, "films": 2}
-
-        favorite = store.list_favorites()[0]
-        assert (favorite["key"], favorite["status"], favorite["rating"]) == ("Heat|1995", "watching", 8.3)
-        scan = store.latest_scan("DE")
-        assert scan["created"] == 123.0 and scan["unavailable"] == [{"title": "Nope", "year": 2000}]
-        assert store.get_id("lb:heat")["tmdb_id"] == 949
-        assert store.get_film(949, "DE")["fetched_at"] == 2.0
-        assert store.get_id("title:nope|2000")["tmdb_id"] is None
-
-        assert import_legacy_data(store, **paths) is None
-        assert len(store.list_favorites()) == 1
-
-    def test_missing_files_are_fine(self, store, tmp_path):
-        counts = import_legacy_data(
-            store,
-            favorites_db=tmp_path / "a.sqlite3",
-            latest_json=tmp_path / "b.json",
-            film_cache_db=tmp_path / "c.sqlite3",
-        )
-        assert counts == {"favorites": 0, "scans": 0, "films": 0}
-        assert not (tmp_path / "a.sqlite3").exists()
 
 
 class TestJobs:
@@ -233,7 +140,6 @@ class TestJobs:
 class TestBackup:
     def _fill(self, store):
         store.set_setting("country", "GB")
-        store.set_setting("legacy_import_done", "{}")
         store.add_favorite({"key": "949", "title": "Heat", "status": "watching", "notes": "n"})
         store.add_changes(
             "DE",
@@ -397,26 +303,6 @@ class TestBackup:
         with pytest.raises(ValueError):
             store.import_backup(backup)
 
-    def test_old_database_gets_the_new_columns(self, tmp_path):
-        path = tmp_path / "old.sqlite3"
-        old = sqlite3.connect(path)
-        old.execute(
-            "CREATE TABLE film_ids (film_key TEXT PRIMARY KEY, tmdb_id INTEGER, source TEXT, checked_at REAL)"
-        )
-        old.execute("INSERT INTO film_ids VALUES ('lb:heat', 949, 'letterboxd', 5.0)")
-        old.commit()
-        old.close()
-        store = Store(path)
-        store.touch_ids([("lb:heat", "Heat", 1995)], seen_at=100.0)
-        match = store.list_matches()[0]
-        assert (match["title"], match["year"], match["last_seen"], match["tmdb_id"]) == (
-            "Heat",
-            1995,
-            100.0,
-            949,
-        )
-        store.close()
-
     def test_counts(self, store):
         self._fill(store)
         counts = store.counts()
@@ -433,3 +319,30 @@ def test_service_history_keeps_one_row_a_day_and_drops_a_year_old_one(store):
         "Netflix": [{"day": "2026-11-17", "films": 61, "only_here": 13}]
     }  # the first day is over a year old
     assert store.service_history("GB")["Netflix"][0]["films"] == 5
+
+
+class TestSchemaVersion:
+    def test_a_new_database_is_at_the_current_version(self, tmp_path):
+        store = Store(tmp_path / "new.sqlite3")
+        assert store._read("PRAGMA user_version")[0][0] == SCHEMA_VERSION
+
+    def test_a_database_of_the_baseline_without_a_version_is_marked_and_kept(self, tmp_path):
+        path = tmp_path / "prod.sqlite3"
+        Store(path).set_setting("country", "DE")
+        connection = sqlite3.connect(path)
+        connection.execute("PRAGMA user_version = 0")  # a layout before it was versioned
+        connection.commit()
+        connection.close()
+        again = Store(path)
+        assert again.get_setting("country") == "DE"
+        assert again._read("PRAGMA user_version")[0][0] == SCHEMA_VERSION
+
+    def test_a_database_from_a_newer_app_is_refused(self, tmp_path):
+        path = tmp_path / "future.sqlite3"
+        Store(path)
+        connection = sqlite3.connect(path)
+        connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION + 1}")
+        connection.commit()
+        connection.close()
+        with pytest.raises(RuntimeError, match="newer version"):
+            Store(path)

@@ -267,14 +267,11 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     document.querySelectorAll('#age-chips .chip').forEach(chip => chip.setAttribute('aria-pressed', String(values.includes(chip.dataset.age))));
     if (notify) onChange();
   }
-  // `values` come from the films (sorted young to old); an old link's single "up to N" is turned into the set.
-  function buildAgeChips(values, legacyLimit) {
+  // `values` come from the films, sorted young to old.
+  function buildAgeChips(values) {
     $('age-label').textContent = $('country-select')?.value === 'DE' ? 'FSK' : 'Age rating';
     $('age-chips').innerHTML = values.map(value => `<button class="chip" type="button" data-age="${escapeHtml(value)}" aria-pressed="false">${escapeHtml(value)} <span class="option-count" data-age-count="${escapeHtml(value)}"></span></button>`).join('') || '<span class="hint">Appears after the scan.</span>';
-    if (legacyLimit) {
-      const numeric = value => /^\d+$/.test(value);
-      setAges(values.filter(value => (numeric(legacyLimit) && numeric(value) ? Number(value) <= Number(legacyLimit) : value === legacyLimit)), false);
-    } else setAges(ageValues().filter(value => values.includes(value)), false);
+    setAges(ageValues().filter(value => values.includes(value)), false);
   }
   $('age-chips').addEventListener('click', event => {
     const chip = event.target.closest('.chip');
@@ -448,18 +445,12 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   });
 
   // ---- links --------------------------------------------------------------------------------------
-  // Old links used availability=, kind=, runtime=short|medium|long, rating=<tmdb>, lb=, genre=<one>.
   function readUrl(params) {
-    const oldCost = {Free: 'free', Paid: 'subscription'}[params.get('availability')] || {free: 'free', ads: 'free', flatrate: 'subscription', rent: 'rent'}[params.get('kind')];
-    setCost(params.get('cost') || oldCost || 'all', false);
-    if (['all', 'unavailable'].includes(params.get('availability'))) $('show-unavailable').checked = true;
+    setCost(params.get('cost') || 'all', false);
     if (params.get('unavailable') === '1') $('show-unavailable').checked = true;
-    const oldRuntime = {short: 90, medium: 120}[params.get('runtime')];
-    setRuntime(params.get('max') || oldRuntime || 0, false);
-    const rating = params.get('rating');
-    const oldRating = rating && /^\d+(\.\d+)?$/.test(rating) && rating !== '0' ? `tmdb:${rating}` : null;
-    const wanted = (rating && rating.includes(':') ? rating : null) || oldRating || (params.get('lb') && params.get('lb') !== '0' ? `lb:${params.get('lb')}` : '');
-    setRating(/^(lb|tmdb):\d+(\.\d+)?$/.test(wanted) ? wanted : '', false);
+    setRuntime(params.get('max') || 0, false);
+    const rating = params.get('rating') || '';
+    setRating(/^(lb|tmdb):\d+(\.\d+)?$/.test(rating) ? rating : '', false);
     const list = name => (params.get(name) || '').split(',').filter(value => value && value !== 'all');
     state.genres = {include: new Set(list('genre')), exclude: new Set(list('nogenre'))};
     state.matchMode = params.get('match') === 'all' ? 'all' : 'any';
@@ -473,7 +464,6 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     set('nogenre', [...state.genres.exclude].join(','));
     set('unavailable', $('show-unavailable').checked ? '1' : '');
     set('match', state.matchMode === 'all' ? 'all' : '');
-    ['availability', 'kind', 'runtime', 'lb'].forEach(name => url.searchParams.delete(name));
   }
 
   // ---- a bar that does not fit one row gives Year, then Runtime, then Rating to the "More filters" panel ----------
