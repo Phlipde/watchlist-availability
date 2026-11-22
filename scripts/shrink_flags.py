@@ -1,7 +1,7 @@
 """One-off tool: shrink the big flag files in static/flags/ (coats of arms made some 80 to 180 KB each).
 
 A flag over 3 KB is drawn once with the browser at 40x30 px (twice its shown size, 20x15 or less) and
-written back as a small SVG that wraps the PNG, so the file names and the code stay the same. Run it from the project root:
+written back as a small SVG that wraps the PNG, so names and code stay the same. Run it from the project root:
 
     .venv/Scripts/python.exe scripts/shrink_flags.py
 """
