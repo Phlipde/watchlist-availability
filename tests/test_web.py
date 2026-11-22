@@ -770,3 +770,11 @@ class TestGreyOuts:
             "950"
         ]  # "not now" is not a grey-out
         assert client.get("/api/favorites").get_json()[0]["status"] == "plan"
+
+
+class TestDevUi:
+    def test_the_states_page_exists_only_in_development(self, client, monkeypatch):
+        assert client.get("/dev/ui").status_code == 404
+        monkeypatch.setenv("WATCHLIST_DEV", "1")
+        page = client.get("/dev/ui")
+        assert page.status_code == 200 and b"Dropdown trigger" in page.data

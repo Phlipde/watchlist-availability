@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UI states · Watchlist Availability</title>
+  <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261122-12') }}" rel="stylesheet">
+  <style>
+    main { max-width: 1100px; padding-top: 24px; font-family: system-ui, sans-serif; }
+    h2 { margin: 28px 0 8px; font-size: 1.1rem; }
+    table.states { width: 100%; border-collapse: collapse; }
+    table.states th { padding: 6px 10px 6px 0; color: var(--muted); font: 600 12px system-ui, sans-serif; text-align: left; white-space: nowrap; }
+    table.states td { padding: 8px 10px 8px 0; border-top: 1px solid var(--line); vertical-align: middle; }
+    .note { color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1 class="h3">UI states</h1>
+  <p class="note">Dev page: every variant in its states. Hover, press and Tab through the samples to see the rest; the default, selected, value and disabled states are drawn here.</p>
+
+  <h2>Buttons</h2>
+  <table class="states">
+    <thead><tr><th>Variant</th><th>Default</th><th>Selected</th><th>Disabled</th><th>Sizes (sm · md · lg)</th></tr></thead>
+    <tbody>
+      <tr><th>Primary</th>
+        <td><button class="btn btn-accent" type="button"><i class="ti ti-player-play" aria-hidden="true"></i> Watch on Netflix</button></td>
+        <td class="note">only one per view</td>
+        <td><button class="btn btn-accent" type="button" disabled>Watch on Netflix</button></td>
+        <td><button class="btn btn-sm btn-accent" type="button">Small</button> <button class="btn btn-accent" type="button">Medium</button> <button class="btn btn-lg btn-accent" type="button">Large</button></td></tr>
+      <tr><th>Secondary</th>
+        <td><button class="btn btn-outline-secondary" type="button">Save view</button></td>
+        <td><button class="btn btn-outline-secondary" type="button" aria-pressed="true">Save view</button></td>
+        <td><button class="btn btn-outline-secondary" type="button" disabled>Save view</button></td>
+        <td><button class="btn btn-sm btn-outline-secondary" type="button">Small</button> <button class="btn btn-outline-secondary" type="button">Medium</button> <button class="btn btn-lg btn-outline-secondary" type="button">Large</button></td></tr>
+      <tr><th>Ghost</th>
+        <td><button class="btn btn-ghost btn-icon" type="button" aria-label="Copy link"><i class="ti ti-link" aria-hidden="true"></i></button> <button class="btn btn-ghost" type="button">Reset all</button></td>
+        <td><button class="btn btn-ghost btn-icon" type="button" aria-pressed="true" aria-label="Only favorites"><i class="ti ti-heart-filled" aria-hidden="true"></i></button></td>
+        <td><button class="btn btn-ghost btn-icon" type="button" disabled aria-label="Copy link"><i class="ti ti-link" aria-hidden="true"></i></button></td>
+        <td><button class="btn btn-sm btn-ghost btn-icon" type="button" aria-label="Copy link"><i class="ti ti-link" aria-hidden="true"></i></button> <button class="btn btn-ghost btn-icon" type="button" aria-label="Copy link"><i class="ti ti-link" aria-hidden="true"></i></button> <button class="btn btn-lg btn-ghost btn-icon" type="button" aria-label="Copy link"><i class="ti ti-link" aria-hidden="true"></i></button></td></tr>
+    </tbody>
+  </table>
+
+  <h2>Dropdown trigger, segmented control, chip, tab</h2>
+  <table class="states">
+    <thead><tr><th>Variant</th><th>Default</th><th>Selected / with a value</th><th>Disabled</th></tr></thead>
+    <tbody>
+      <tr><th>Dropdown trigger</th>
+        <td><details class="filter-pop"><summary class="filter-button">Genre</summary></details></td>
+        <td><details class="filter-pop" data-active><summary class="filter-button">Genre: Thriller</summary></details></td>
+        <td><details class="filter-pop"><summary class="filter-button" aria-disabled="true">Rating</summary></details></td></tr>
+      <tr><th>Segmented</th>
+        <td><div class="segmented"><label><input type="radio" name="seg-a" checked><span>All</span></label><label><input type="radio" name="seg-a"><span>Free</span></label><label><input type="radio" name="seg-a"><span>Rent</span></label></div></td>
+        <td class="note">the checked segment is filled</td>
+        <td><div class="segmented"><label><input type="radio" name="seg-b" checked><span>All</span></label><label><input type="radio" name="seg-b" disabled><span>Rent</span></label></div></td></tr>
+      <tr><th>Chip</th>
+        <td><button class="chip" type="button" aria-pressed="false">FSK 12</button> <button class="quick-chip" type="button" aria-pressed="false">Under 2 h</button></td>
+        <td><button class="chip" type="button" aria-pressed="true">FSK 12</button> <button class="quick-chip" type="button" aria-pressed="true">Under 2 h</button></td>
+        <td><button class="chip" type="button" disabled>FSK 18</button></td></tr>
+      <tr><th>Tab</th>
+        <td><div class="view-tabs" style="margin:0;border:0"><button class="view-tab" type="button" aria-selected="false">Changes</button></div></td>
+        <td><div class="view-tabs" style="margin:0;border:0"><button class="view-tab" type="button" aria-selected="true">Films</button></div></td>
+        <td class="note">underline = tab, nothing else</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Menu</h2>
+  <div class="menu" style="display:inline-block">
+    <button class="menu-item" type="button"><i class="ti ti-link" aria-hidden="true"></i> Copy link</button>
+    <button class="menu-item" type="button"><i class="ti ti-download" aria-hidden="true"></i> Export</button>
+    <div class="menu-sep"></div>
+    <button class="menu-item" type="button" disabled><i class="ti ti-upload" aria-hidden="true"></i> Import</button>
+  </div>
+</main>
+</body>
+</html>

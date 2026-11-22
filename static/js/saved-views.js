@@ -34,16 +34,35 @@ export function removeView(name, views = loadViews()) {
   return next;
 }
 
-// Draws the saved views as chips into `container`; `canSave` adds "Save this view" (used on the watchlist).
+// The "Save view" ghost button with its small popover (name and Save), shown only while filters are set.
+export function saveViewHtml(search) {
+  if (!viewSearch(search)) return '';
+  return '<details class="filter-pop save-pop"><summary class="btn btn-sm btn-ghost">Save view</summary><div class="filter-menu menu"><form class="view-form"><label class="visually-hidden" for="view-name">Name of the view</label><input class="form-control form-control-sm" id="view-name" maxlength="40" placeholder="Name this view" autocomplete="off"><button class="btn btn-sm btn-accent" type="submit">Save</button></form></div></details>';
+}
+
+// The saved views as a list for the "Views" dropdown (each an address, with a small delete button).
+export function viewsMenuHtml(views) {
+  return views.map(view => `<div class="menu-row"><a class="menu-item" href="/watchlist${escape(view.search)}">${escape(view.name)}</a><button class="btn btn-sm btn-ghost btn-icon" type="button" data-remove-view="${escape(view.name)}" aria-label="Delete the view ${escape(view.name)}"><i class="ti ti-x" aria-hidden="true"></i></button></div>`).join('');
+}
+
+// Tonight: the saved views as chips; the watchlist: "Save view" (row of the active filters) and the "Views" dropdown.
 export function renderViews(container, {canSave = false, search = ''} = {}) {
   if (!container) return;
   const views = loadViews();
+  if (canSave) {
+    const save = saveViewHtml(search);
+    container.innerHTML = save;
+    container.hidden = !save;
+    const pop = document.getElementById('views-pop');
+    if (pop) {
+      document.getElementById('views-menu').innerHTML = viewsMenuHtml(views);
+      pop.hidden = views.length === 0;
+    }
+    return;
+  }
   const chips = views.map(view => `<span class="filter-chip saved-view"><a class="chip-open" href="/watchlist${escape(view.search)}">${escape(view.name)}</a><button class="chip-remove" type="button" data-remove-view="${escape(view.name)}" aria-label="Delete the view ${escape(view.name)}"><i class="ti ti-x" aria-hidden="true"></i></button></span>`).join('');
-  const save = canSave && viewSearch(search)
-    ? '<form class="view-form"><label class="visually-hidden" for="view-name">Name of the view</label><input class="form-control form-control-sm" id="view-name" maxlength="40" placeholder="Name this view" autocomplete="off"><button class="btn btn-sm btn-outline-secondary" type="submit">Save view</button></form>'
-    : '';
-  container.innerHTML = chips || save ? `<span class="views-label">Views</span>${chips}${save}` : '';
-  container.hidden = !(chips || save);
+  container.innerHTML = chips ? `<span class="views-label">Views</span>${chips}` : '';
+  container.hidden = !chips;
 }
 
 export function wireViews(container, getSearch, onChange) {

@@ -10,7 +10,7 @@
   <title>Data &amp; status · Settings · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261122-7') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261122-12') }}" rel="stylesheet">
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -31,6 +31,19 @@
       <div class="analysis-item">Services from TMDB ({{ status.country }}): <strong>{% if status.provider_catalog.count %}{{ status.provider_catalog.count }}, <span class="time" data-time="{{ status.provider_catalog.fetched_at }}"></span>{% else %}not loaded yet{% endif %}</strong></div>
       <div class="analysis-item">Database: <strong>{% if status.database_bytes %}{{ '%.1f'|format(status.database_bytes / 1000000) }} MB{% else %}–{% endif %}</strong></div>
     </div>
+
+    <h2 class="h4 mt-4">Export</h2>
+    <div class="data-grid">
+      <span>Films</span><span class="data-actions"><button class="btn btn-sm btn-outline-secondary" type="button" data-export="films-csv">CSV</button><button class="btn btn-sm btn-outline-secondary" type="button" data-export="films-json">JSON</button></span>
+      <span>Favorites</span><span class="data-actions"><button class="btn btn-sm btn-outline-secondary" type="button" data-export="favorites-csv">CSV</button><button class="btn btn-sm btn-outline-secondary" type="button" data-export="favorites-json">JSON</button></span>
+    </div>
+
+    <h2 class="h4 mt-4">Import</h2>
+    <div class="data-grid">
+      <span>Favorites</span><span class="data-actions"><label class="btn btn-sm btn-outline-secondary mb-0" for="import-favorites">Choose file…</label><input class="visually-hidden" id="import-favorites" type="file" accept=".json,.csv,application/json,text/csv"></span>
+    </div>
+    <p class="meta" id="import-preview" aria-live="polite" hidden></p>
+    <button class="btn btn-sm btn-accent" id="import-go" type="button" hidden>Import</button>
 
     <h2 class="h4 mt-4">Greyed-out films</h2>
     <p class="meta" id="greyouts-text">Films you greyed out stay in the list, only paler. Letterboxd is where you log what you watched.</p>
@@ -68,8 +81,8 @@
     <p class="meta">No scan has run yet.</p>
     {% endif %}
   </main>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261122-7') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/data-tools.js', v='20261122-7') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261122-12') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/data-tools.js', v='20261122-12') }}" type="module"></script>
   <script>
     document.querySelectorAll('.time').forEach(element => {
       const seconds = Number(element.dataset.time);
