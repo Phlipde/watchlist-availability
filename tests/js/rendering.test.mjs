@@ -90,7 +90,7 @@ test('a card has exactly one line about where to watch: the best way in words an
   const base = {imageBaseUrl: '', favorites: new Map(), compareKeys: new Set(), greyKeys: new Set(), providerLogos: {Arte: '/a.png'}, logoBaseUrl: 'https://img/', country: 'DE'};
   const html = filmCard(film, 'All', {...base, selected: new Set(['Arte', 'Netflix'])});
   assert.equal((html.match(/class="best-way(?:"| )/g) || []).length, 1);
-  assert.match(html, /<a class="best-way-link" href="[^"]*"[^>]*><img class="way-logo" src="https:\/\/img\/\/a\.png" alt="" loading="lazy"><span>Free<\/span><\/a>/);
+  assert.match(html, /<a class="best-way-link" href="[^"]*"[^>]*><img class="way-logo" src="https:\/\/img\/\/a\.png" alt="" loading="lazy"><span class="way-text">Free<\/span><\/a>/);
   assert.match(html, /data-open-more data-key="x" aria-label="3 more ways to watch Film">\+3<\/button>/);
   assert.ok(!html.includes('data-provider='), 'no grid of logos');
   assert.ok(!html.includes('€'), 'no prices');
@@ -99,11 +99,11 @@ test('a card has exactly one line about where to watch: the best way in words an
 test('without a logo the service is named; rent and buy count shops; nothing is said plainly', () => {
   const base = {imageBaseUrl: '', favorites: new Map(), compareKeys: new Set(), greyKeys: new Set(), providerLogos: {}, country: 'DE'};
   const ads = filmCard({key: 'a', title: 'A', providers: {Netzkino: ['ads']}}, 'All', {...base, selected: new Set(['Netzkino'])});
-  assert.match(ads, /<span>Netzkino · With ads<\/span>/);
+  assert.match(ads, /<span class="way-name">Netzkino<\/span><span class="way-text">Netzkino · With ads<\/span>/);  // no logo: the name shows, the words come on hover
   const rent = filmCard({key: 'b', title: 'B', providers: {'Amazon VOD': ['rent'], 'Rakuten TV': ['rent']}}, 'All', {...base, selected: new Set()});
-  assert.match(rent, /<span>Rent · 2 shops<\/span>/);
+  assert.match(rent, /<span class="way-text">Rent · 2 shops<\/span>/);
   const nothing = filmCard({key: 'c', title: 'C', providers: {}}, 'All', {...base, selected: new Set()});
-  assert.match(nothing, /class="best-way is-muted"><span class="best-way-text">Not streaming<\/span>/);
+  assert.match(nothing, /class="best-way is-muted"><span class="best-way-link is-static" tabindex="0"><i class="ti ti-ban way-none" aria-hidden="true"><\/i><span class="way-text">Not streaming<\/span>/);
 });
 
 test('a film that is only available abroad shows the logo, the flag and "Abroad", and opens the details', () => {
@@ -112,7 +112,7 @@ test('a film that is only available abroad shows the logo, the flag and "Abroad"
     providerLogos: {'Prime Video': '/p.png'}, logoBaseUrl: 'https://img/', country: 'DE', countryName: code => ({IT: 'Italy'}[code]),
     abroadFor: () => ({service: 'Prime Video', countries: ['IT', 'ES', 'US']})};
   const html = filmCard(film, 'All', context);
-  assert.match(html, /<button class="best-way-link" type="button" data-open-more data-key="x"><img class="way-logo"[^>]*><img class="way-flag" src="\/static\/flags\/it\.svg"[^>]*><span>Abroad<span class="visually-hidden"> in Italy, on Prime Video<\/span><\/span><\/button>/);
+  assert.match(html, /<button class="best-way-link" type="button" data-open-more data-key="x"><img class="way-logo"[^>]*><img class="way-flag" src="\/static\/flags\/it\.svg"[^>]*><span class="way-text">Abroad in Italy, on Prime Video<\/span><\/button>/);
   assert.match(html, /\+2<\/button>/);
 });
 

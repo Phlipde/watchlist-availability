@@ -1242,3 +1242,16 @@ def test_the_abroad_switch_adds_films_your_services_have_in_other_countries(app_
     page.locator("#where-filter").select_option("all")
     expect(page.locator("article.film")).to_have_count(here)
     expect(toggle).to_have_attribute("aria-pressed", "false")
+
+
+def test_a_card_shows_only_the_logo_and_the_words_come_on_hover(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    tick_all_services(page)
+    card = page.locator("article.film").first
+    words = card.locator(".best-way-link .way-text")
+    expect(words).to_have_css("opacity", "0")  # only the logo (or the name) shows
+    assert words.inner_text().strip()  # the words are there for screen readers all the time
+    card.locator(".best-way-link").hover()
+    expect(words).to_have_css("opacity", "1")

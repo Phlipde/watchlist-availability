@@ -993,6 +993,19 @@ const state = createAppState();
       const box = document.getElementById('film-more');
       if (box) box.open = true;
     });
+    // Touch: the first tap on a card's logo shows what it is; a second tap goes to the service. A tap elsewhere closes it.
+    document.addEventListener('click', event => {
+      const link = event.target.closest('.best-way-link');
+      const open = document.querySelector('.best-way.is-open');
+      if (open && !event.target.closest('.best-way.is-open')) open.classList.remove('is-open');
+      if (!link || !matchMedia('(pointer: coarse)').matches) return;
+      const line = link.closest('.best-way');
+      if (!line.classList.contains('is-open')) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        line.classList.add('is-open');
+      }
+    }, true);
     // Touch: a long press on a card shows its action bar (compare, not now, grey out); a tap elsewhere hides it.
     let pressTimer = null;
     let swallowClick = false;
