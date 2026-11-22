@@ -990,6 +990,8 @@ const state = createAppState();
       const more = event.target.closest('[data-open-more]');
       if (!more) return;
       event.preventDefault();
+      // On a phone "+N" goes straight to the full-screen sheet: the list of services needs the room.
+      document.getElementById('film-details-modal').classList.toggle('is-full', matchMedia('(max-width: 800px)').matches);
       showFilmDetails(more.dataset.key, more);
       const box = document.getElementById('film-more');
       if (box) box.open = true;
