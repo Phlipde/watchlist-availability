@@ -61,7 +61,7 @@ function render(stats, scan) {
     tile(one(o.averageLetterboxd, 2), 'average Letterboxd'),
     tile(one(o.averageTmdb), 'average TMDB'),
     tile(o.oldestYear && o.newestYear ? `${o.oldestYear}–${o.newestYear}` : '–', 'release years'),
-    tile(o.favorites, 'favorites', `${o.watched} greyed out`),
+    tile(o.favorites, 'favorites', `${o.watched} hidden away`),
     tile(stats.changes.added30, 'newly available', 'last 30 days'),
     tile(stats.changes.removed30, 'gone from a service', 'last 30 days'),
   ].join('');

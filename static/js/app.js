@@ -12,7 +12,7 @@ import {bestRelaxation, comingSoon, elsewhereOnServices, filmKey, filterFilms, s
 import {updateScanFeedback} from './scans.js';
 import {abroadFilm, abroadForFilm, abroadHtml, abroadRows, abroadServices} from './abroad.js';
 import {NAV_KEYS, columnsFromTops, nextIndex, nextInRows} from './gridnav.js';
-import {drawerHtml, letterboxdUrl} from './drawer.js';
+import {drawerHtml, letterboxdUrl, seriesOrder} from './drawer.js';
 
 const imageBaseUrl = window.WATCHLIST_CONFIG.imageBaseUrl;
 const scanState = createScanState();
@@ -745,7 +745,7 @@ const state = createAppState();
       };
       if (!(await apply(turnOff ? null : flag))) return;
       const title = [...state.films, ...state.unavailable].find(film => filmKey(film) === key)?.title || 'Film';
-      const message = turnOff ? `${title}: back on the list` : flag === 'watched' ? `${title}: greyed out` : `${title}: set aside for 30 days`;
+      const message = turnOff ? `${title}: back on the list` : flag === 'watched' ? `${title}: hidden away` : `${title}: set aside for 30 days`;
       showToast(message, false, async () => { if (await apply(before?.flag ?? null)) renderFilms(); });
       renderFilms();
     }
@@ -913,7 +913,7 @@ const state = createAppState();
         isSeen: state.flags.get(key)?.flag === 'watched' || saved?.status === 'watched',
         isHidden: hiddenKeys().has(key),
         inCompare: state.compareKeys.has(key),
-        series: film.collection ? all.filter(item => item.collection === film.collection).sort((a, b) => (Number(a.year) || 0) - (Number(b.year) || 0)) : [],
+        series: film.collection ? seriesOrder(all.filter(item => item.collection === film.collection)) : [],
         similar: similarOnServices(film, state.films, own, watched),
         serviceOf: item => includedOn(item, own).split(', ')[0],
         keyOf: filmKey,

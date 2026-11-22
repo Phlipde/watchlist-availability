@@ -56,13 +56,13 @@ test('the card prefers the Letterboxd rating', () => {
   assert.match(filmCard(film, 'Paid', context), /★<\/span><span class="visually-hidden">Letterboxd<\/span> 3\.9</);
 });
 
-test('a new film gets one badge on the poster, a greyed-out favorite says so instead', () => {
+test('a new film gets one badge on the poster, a hidden-away favorite says so instead', () => {
   const film = {key: 'x', title: 'Film', providers: {Netflix: ['flatrate']}, provider_changes: {added: ['Netflix']}};
   const base = {imageBaseUrl: '', selected: new Set(['Netflix']), compareKeys: new Set(), greyKeys: new Set()};
   const fresh = filmCard(film, 'Paid', {...base, favorites: new Map()});
   assert.match(fresh, /class="poster-badge poster-badge-new"/);
   const watched = filmCard(film, 'Paid', {...base, favorites: new Map([['x', {status: 'watched'}]])});
-  assert.match(watched, /<span class="poster-badge">Greyed out<\/span>/);
+  assert.match(watched, /<span class="poster-badge">Hidden away<\/span>/);
   assert.match(watched, /<article class="film is-watched"/);  // dimmed in the grid
   assert.ok(!fresh.includes('is-watched'));
   assert.ok(!watched.includes('poster-badge-new'));

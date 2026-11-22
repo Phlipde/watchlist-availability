@@ -2,8 +2,8 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  alternatives, catalogName, catalogRows, certificationText, dedupeKeywords, letterboxdUrl, metaLine, primaryAction,
-  runtimeLong, statusBadges,
+  alternatives, catalogName, catalogRows, certificationText, dedupeKeywords, isReleased, letterboxdUrl, metaLine, primaryAction,
+  runtimeLong, seriesOrder, statusBadges,
 } from '../../static/js/drawer.js';
 
 const own = names => new Set(names);
@@ -21,7 +21,7 @@ test('runtime and age rating read the way people say them', () => {
 
 test('keywords: one of each, no countries or places', () => {
   const countries = new Set(['united states', 'japan']);
-  assert.deepEqual(dedupeKeywords(['Heist', 'heist ', 'United States', 'tokyo, japan', 'tokyo', 'Great Britain', 'dream'], countries), ['Heist', 'tokyo', 'dream']);
+  assert.deepEqual(dedupeKeywords(['Heist', 'heist ', 'United States', 'tokyo, japan', 'tokyo', 'Great Britain', 'dream'], countries), ['Heist', 'dream']);
   assert.deepEqual(dedupeKeywords(undefined), []);
 });
 
@@ -61,4 +61,18 @@ test('more own services come as alternatives; status badges carry the date', () 
 test('links: Letterboxd goes to the film by TMDB id', () => {
   assert.equal(letterboxdUrl({tmdb_id: 603, title: 'The Matrix'}), 'https://letterboxd.com/tmdb/603/');
   assert.equal(letterboxdUrl({title: 'The Matrix', year: 1999}), 'https://letterboxd.com/search/The%20Matrix%201999/');
+});
+
+test('keywords: cities, states and "<nationality> american" are places or origins, not topics', () => {
+  const words = ['los angeles, california', 'beverly hills', 'philadelphia, pennsylvania', 'boston, massachusetts', 'italian american', 'friendship', 'african american', 'time travel'];
+  assert.deepEqual(dedupeKeywords(words), ['friendship', 'african american', 'time travel']);
+});
+
+test('a series: oldest first, parts with no date or year last, and only released parts can be "start with"', () => {
+  const parts = [{title: 'Grown Ups 3'}, {title: 'Grown Ups 2', year: 2013}, {title: 'Grown Ups', year: 2010}, {title: 'Grown Ups 4', release_date: '2031-07-01', year: 2031}];
+  assert.deepEqual(seriesOrder(parts).map(part => part.title), ['Grown Ups', 'Grown Ups 2', 'Grown Ups 4', 'Grown Ups 3']);
+  assert.equal(isReleased({year: 2013}, '2026-11-22'), true);
+  assert.equal(isReleased({}, '2026-11-22'), false);
+  assert.equal(isReleased({year: 2026, release_date: '2026-12-25'}, '2026-11-22'), false);
+  assert.equal(isReleased({year: 2026, release_date: '2026-03-01'}, '2026-11-22'), true);
 });

@@ -289,3 +289,6 @@ Rules:
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
 - A committed graphify-out/graph.json is rewritten whole on every build, so a large diff to it in a pull request is expected. Do not flag it as churn or suggest skipping the graph rebuild or its hooks.
+- 2026-11-22: [Decisions] Fix plan `docs/PLAN-fehler-und-features.md` (A1-A6, then B); A1-A5 done, A6 open. Cards show all own services (max 4) with a corner type icon; the abroad (VPN) block alone has flag badges and type icons on its logos. Drawer "Other services" stays a compact logo row (tap shows the name), no provider list, no report link
+- 2026-11-22: [Decisions] "Grey out" stays as the action; its mark is now called "Hidden away" (badge, favorite status, toast, stats, settings). Stored value stays `watched`
+- 2026-11-22: [Gotchas] Scripted edits: mixed CRLF/LF files, multi-line `old` strings fail; Python heredoc via stdin gives mojibake for non-ASCII (use script files); ruff E501 limit 110

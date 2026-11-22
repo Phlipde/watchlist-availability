@@ -43,3 +43,6 @@ Flask app (`app.py`, `web/routes.py`, `watchlist_app/`) with SQLite, Tabler/Boot
 
 - 2026-11-16: [Decisions] Stages 9e-9j and most of 10 done (see PLAN.md); "Ähnliche Filme" left open because it needs extra TMDB requests per suggestion
 - 2026-11-16: [Gotchas] Filter bugs found by comparing each filter's count against counts computed from `/api/latest` data; repeat this method after filter changes
+- 2026-11-22: [Decisions] Fix plan `docs/PLAN-fehler-und-features.md` (A1-A6, then B); A1-A5 done, A6 open. Cards show all own services (max 4) with a corner type icon; the abroad (VPN) block alone has flag badges and type icons on its logos. Drawer "Other services" stays a compact logo row (tap shows the name), no provider list, no report link
+- 2026-11-22: [Decisions] "Grey out" stays as the action; its mark is now called "Hidden away" (badge, favorite status, toast, stats, settings). Stored value stays `watched`
+- 2026-11-22: [Gotchas] Scripted edits: mixed CRLF/LF files, multi-line `old` strings fail; Python heredoc via stdin gives mojibake for non-ASCII (use script files); ruff E501 limit 110
