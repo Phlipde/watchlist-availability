@@ -1156,6 +1156,13 @@ body.modal-open .compare-bar, body.tools-open .compare-bar, body:has(dialog[open
 @media (max-width: 800px) and (prefers-reduced-motion: no-preference) {
   body.tools-open .filter-bar { animation: sheet-up .26s cubic-bezier(.2, .8, .2, 1); will-change: transform; }
   body.tools-open::before { animation: backdrop-in .2s ease-out; }
+  body.tools-closing .filter-bar { animation: sheet-down .22s cubic-bezier(.4, 0, 1, 1) forwards; }
+  body.tools-closing::before { animation: backdrop-out .22s ease-in forwards; }
 }
 @keyframes sheet-up { from { transform: translateY(100%); } }
 @keyframes backdrop-in { from { opacity: 0; } }
+@keyframes sheet-down { to { transform: translateY(100%); } }
+@keyframes backdrop-out { to { opacity: 0; } }
+/* The detail sheet must stay in the DOM until its slide is over: Bootstrap waits for the modal's own transition. */
+#film-details-modal.fade { transition-duration: .3s; }
+@media (max-width: 800px) { body.tools-open .sheet-head { touch-action: none; } }
