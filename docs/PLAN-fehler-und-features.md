@@ -81,14 +81,14 @@ Heute: „Filters“ (volle Breite) → Suche (volle Breite) → Ansicht-Icons +
 
 ## Abnahme Teil A
 
-- [ ] Handy 390 × 844: erstes Poster der Watchlist bei ≤ 25 % Höhe.
-- [ ] Laufzeit- und Bewertungsfilter zeigen korrekte Werte mit Einheit/Quelle, einzeilig.
-- [ ] Compare-Leiste verdeckt nie Drawer, Vergleich oder Kartentitel.
-- [ ] Grid-Kacheln: ein Logo + Typ-Label, **kein Anbieter-Name**, keine unterstrichenen Titel.
-- [ ] Keine Orte in Schlagwörtern; „Start with“ nur für erschienene Teile.
-- [ ] „Grey out“ geklärt und umgesetzt wie entschieden.
-- [ ] Keine doppelten Toasts; Tabellentitel bleibt sichtbar.
-- [ ] Neue Unit-Tests grün (Bewertungsfilter, Filmreihe, Schlagwort-Filter, bester Weg).
+- [x] Handy 390 × 844: erstes Poster der Watchlist bei ≤ 25 % Höhe.
+- [x] Laufzeit- und Bewertungsfilter zeigen korrekte Werte mit Einheit/Quelle, einzeilig.
+- [x] Compare-Leiste verdeckt nie Drawer, Vergleich oder Kartentitel.
+- [x] Grid-Kacheln: auf Wunsch alle eigenen Dienste (max. 4) mit Typ-Icon in der Ecke statt ein Logo + Wort; kein Anbieter-Name, keine unterstrichenen Titel.
+- [x] Keine Orte in Schlagwörtern; „Start with“ nur für erschienene Teile.
+- [x] „Grey out“ bleibt als Aktion; die Markierung heißt „Hidden away“ (so entschieden).
+- [~] Tabellentitel bleibt sichtbar (CSS, nicht im Browser angesehen), Mini-Poster fehlt; doppelter Toast nicht reproduzierbar.
+- [x] Neue Unit-Tests grün (Bewertungsfilter, Filmreihe, Schlagwort-Filter, bester Weg).
 
 ---
 
