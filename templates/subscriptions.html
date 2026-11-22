@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101412">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  <title>Subscriptions · Watchlist Availability</title>
+  <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261122-28') }}" rel="stylesheet">
+</head>
+<body>
+  {% include "partials/header.html" %}
+  <main class="page" id="subscriptions-page" data-country="{{ country }}">
+    <h1 class="page-title">Subscriptions</h1>
+    {% macro info(text) %}<span class="info" tabindex="0" role="note" aria-label="{{ text }}" title="{{ text }}"><i class="ti ti-info-circle" aria-hidden="true"></i></span>{% endmacro %}
+    <p class="meta">Which subscriptions are worth it for your watchlist in {{ country }}. <a href="/settings/services">Choose your services</a></p>
+    <div class="deadline-banner" id="deadline-banner" role="status" hidden data-deadlines="{{ deadlines|tojson|forceescape }}"></div>
+    {% if not last_scan_at %}<p class="meta">No scan for {{ country }} yet; the film counts appear after the first scan.</p>{% endif %}
+
+    {% if costs.coverage.total %}
+    <section class="coverage" aria-labelledby="coverage-heading">
+      <h2 class="visually-hidden" id="coverage-heading">Coverage of your watchlist</h2>
+      <p class="coverage-text"><strong>{{ costs.coverage.percent }} %</strong> of your watchlist is watchable without extra cost ({{ costs.coverage.covered }} of {{ costs.coverage.total }}).</p>
+      <div class="coverage-bar" role="img" aria-label="{{ costs.coverage.percent }} percent covered">
+        {% for segment in costs.coverage.segments if segment.films %}{% set label = {'subscription': 'Subscriptions', 'free': 'Free', 'rent': 'Rent only', 'other': 'Not on your services'}[segment.id] %}{% set link = {'subscription': '/watchlist?cost=subscription', 'free': '/watchlist?cost=free', 'rent': '/watchlist?cost=rent', 'other': '/watchlist?unavailable=1'}[segment.id] %}<a class="seg seg-{{ segment.id }}" style="flex: {{ segment.films }}" href="{{ link }}" title="{{ label }}: {{ segment.films }} films ({{ segment.percent|round(0)|int }} %)"><span class="visually-hidden">{{ label }}: {{ segment.films }} films</span></a>{% endfor %}
+      </div>
+      <ul class="coverage-key">{% for segment in costs.coverage.segments if segment.films %}<li><span class="key-dot seg-{{ segment.id }}" aria-hidden="true"></span>{{ {'subscription': 'Subscriptions', 'free': 'Free', 'rent': 'Rent only', 'other': 'Not on your services'}[segment.id] }} {{ segment.percent|round(0)|int }} %</li>{% endfor %}</ul>
+      <p class="meta cost-line">{% if costs.monthly_total %}€ <span data-money>{{ '%.2f'|format(costs.monthly_total) }}</span> / month · € <span data-money>{{ '%.2f'|format(costs.yearly_total) }}</span> / year{% else %}<button class="film-link add-price" type="button">Add prices</button> to see what your services cost{% endif %}</p>
+    </section>
+    {% endif %}
+    {% if costs.recommendations %}
+    <h2 class="h4" id="recs-heading">Recommendations</h2>
+    <div class="recs" aria-labelledby="recs-heading">
+      {% for card in costs.recommendations %}
+      <article class="rec rec-{{ card.type }}" data-rec="{{ card.type }}:{{ card.name }}">
+        {% if card.type == 'cancel' %}
+        <h3>Cancel {{ card.name }}</h3>
+        <p>{% if card.loses_nothing %}You lose no watchlist film.{% else %}<strong>{{ card.films }}</strong> film{{ '' if card.films == 1 else 's' }} only there{% if card.hours %} (≈ {{ card.hours|round(0)|int }} h){% endif %}.{% endif %}{% if card.price %} € <span data-money>{{ '%.2f'|format(card.price) }}</span> a month{% if card.per_film %} = € <span data-money>{{ '%.2f'|format(card.per_film) }}</span> per film you would lose{% endif %}.{% endif %}</p>
+        {% else %}
+        <h3>Subscribe to {{ card.name }} for a month</h3>
+        <p><strong>{{ card.films }}</strong> watchlist films none of your services has{% if card.hours %} (≈ {{ card.hours }} h){% endif %}.</p>
+        {% endif %}
+        {% if card.based_on == 'count' %}<p class="hint">Based on the film count only{% if card.type == 'cancel' %}: <button class="film-link add-price" type="button">add a price</button> for a better recommendation{% endif %}.</p>{% endif %}
+        <div class="rec-actions">
+          {% if card.type == 'cancel' %}<button class="film-link set-reminder" type="button" data-service="{{ card.name }}">Set reminder</button><a class="film-link" href="/watchlist?providers={{ card.name|urlencode }}&only=1&cost=subscription">Show the {{ card.films }} film{{ '' if card.films == 1 else 's' }}</a>{% else %}<a class="film-link" href="/watchlist?providers={{ card.name|urlencode }}&cost=subscription">Show the films on {{ card.name }}</a>{% endif %}
+          <button class="film-link rec-hide" type="button">Not interested</button>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% if costs.book|length > 1 %}<p class="hint">Next best: {% for item in costs.book[1:] %}<a class="film-link" href="/watchlist?providers={{ item.name|urlencode }}&cost=subscription">{{ item.name }}</a> ({{ item.films }}){% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+    {% endif %}
+
+    {% if costs.services or costs.free_block or costs.free_empty %}
+    {% if costs.services %}
+    <div class="table-scroll">
+      <table class="status-table subscriptions-table" id="subscriptions-table">
+        <thead>
+          <tr>
+            <th scope="col"><button class="sort-head" type="button" data-sort="name">Service</button></th>
+            <th scope="col" class="num"><button class="sort-head" type="button" data-sort="price">Price / month</button></th>
+            <th scope="col"><button class="sort-head" type="button" data-sort="remind">Renews / cancel by</button></th>
+            <th scope="col" class="num"><button class="sort-head" type="button" data-sort="films">Watchlist</button> {{ info('Watchlist films you can watch on this service without paying per film.') }}</th>
+            <th scope="col" class="num"><button class="sort-head" type="button" data-sort="only">Only here</button> {{ info('Films none of your other services has and no service shows for free: you lose them when you cancel.') }}</th>
+            <th scope="col" class="num"><button class="sort-head" type="button" data-sort="value" aria-sort="descending">Value</button> {{ info('Films only here, weighted: 3 for a favorite, 2 for one rated 3.8 or more on Letterboxd, otherwise 1. The table starts with the service that gives you the most.') }}</th>
+            <th scope="col" class="num"><button class="sort-head" type="button" data-sort="hours">Hours</button> {{ info('Running time of the films only here.') }}</th>
+            <th scope="col" class="num">Your pace {{ info('Hours only here divided by the film time you set per week (Settings): how long these films keep you busy.') }}</th>
+            <th scope="col" class="num"><button class="sort-head" type="button" data-sort="perfilm">€ / film</button> {{ info('Price divided by the films only here: what one film you would lose costs you each month.') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for service in costs.services %}
+          <tr data-service="{{ service.name }}" data-only="{{ service.only_here|length }}" data-films="{{ service.films }}" data-hours="{{ service.hours }}" data-value="{{ service.value }}" data-detail="{{ service|tojson|forceescape }}" data-history="{{ (history.get(service.name) or [])|tojson|forceescape }}">
+            <td class="service-name" data-label="Service"><button class="service-open" type="button" data-service="{{ service.name }}" aria-haspopup="dialog">{% if logos.get(service.name) %}<img class="provider-logo" src="{{ logo_base_url }}{{ logos[service.name] }}" alt="" loading="lazy">{% endif %}<span>{{ service.name }}</span></button></td>
+            <td class="num" data-label="Price / month"><input class="form-control form-control-sm price-input" name="price" inputmode="decimal" autocomplete="off" placeholder="€ / month" value="{{ service.price if service.price is not none else '' }}" aria-label="Price per month for {{ service.name }}"></td>
+            <td data-label="Renews / cancel by"><button class="date-button" type="button" data-for="{{ service.name }}">{% if service.remind_on %}{{ service.remind_on }}{% else %}Set date{% endif %}</button><input class="visually-hidden date-input" type="date" name="remind_on" value="{{ service.remind_on or '' }}" tabindex="-1" aria-label="Renewal or cancellation date for {{ service.name }}"></td>
+            <td class="num" data-label="Watchlist">{{ service.films }}</td>
+            <td class="num" data-label="Only here">{% if service.only_here %}{% if service.favorites %}<span class="fav-count" title="{{ service.favorites }} of them are favorites"><i class="ti ti-heart-filled" aria-hidden="true"></i> {{ service.favorites }}</span> {% endif %}<details class="only-here"><summary>{{ service.only_here|length }}</summary><ul>{% for film in service.only_here %}<li>{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</li>{% endfor %}</ul></details>{% else %}0{% endif %}</td>
+            <td class="num" data-label="Value">{{ service.value }}</td>
+            <td class="num" data-label="Hours">{% if service.only_here %}{{ service.hours|round(0)|int }} h{% else %}–{% endif %}</td>
+            <td class="num" data-label="Your pace">{% if service.only_here %}{% set weeks = service.hours / weekly_hours %}{% if weeks >= 4.345 %}≈ {{ (weeks / 4.345)|round(0)|int }} mo{% else %}≈ {{ [weeks|round(0)|int, 1]|max }} wk{% endif %}{% else %}–{% endif %}</td>
+            <td class="num per-film" data-label="€ / film">{% if service.per_film is not none %}<span data-money>{{ '%.2f'|format(service.per_film) }}</span>{% elif service.only_here %}<button class="film-link add-price" type="button">add price</button>{% else %}–{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot><tr><th scope="row" colspan="2">Total <span class="totals">€ <span data-money id="total-month">{{ '%.2f'|format(costs.monthly_total) }}</span> / month · € <span data-money id="total-year">{{ '%.2f'|format(costs.yearly_total) }}</span> / year</span></th><td colspan="7"><span class="feedback" id="save-state" role="status"></span></td></tr></tfoot>
+      </table>
+    </div>
+    <p class="hint">Put the dates in your calendar: subscribe to <a href="/calendar.ics">/calendar.ics</a> in your calendar app.</p>
+    <p class="hint" id="price-hint" hidden>Add the prices to see what the services cost and what a lost film costs you. <button class="film-link add-price" type="button">Add a price</button></p>
+    {% endif %}
+
+    {% if costs.free_block or costs.free_empty %}
+    <section class="free-block" aria-labelledby="free-heading">
+      <h2 class="h4" id="free-heading">Free services <span class="pill pill-ok">{{ costs.free_films }} films free</span></h2>
+      <ul class="chip-list">{% for item in costs.free_block %}<li class="static-chip">{% if logos.get(item.name) %}<img class="provider-logo-sm" src="{{ logo_base_url }}{{ logos[item.name] }}" alt="" loading="lazy">{% endif %}{{ item.name }} <span class="option-count">{{ item.films }}</span></li>{% endfor %}{% if costs.free_empty %}<li class="hint">+{{ costs.free_empty }} with no films</li>{% endif %}</ul>
+    </section>
+    {% endif %}
+    {% else %}
+    <p class="meta">No services chosen for {{ country }} yet. <a href="/settings/services">Choose your services</a>.</p>
+    {% endif %}
+
+    {% if costs.book %}
+    <section class="worth" aria-labelledby="worth-heading">
+      <h2 class="h4" id="worth-heading">Worth a month?</h2>
+      <p class="hint">Services you do not have, by the watchlist films none of your services has.</p>
+      <div class="table-scroll"><table class="status-table worth-table">
+        <thead><tr><th scope="col">Service</th><th scope="col" class="num">Films</th><th scope="col" class="num">Favorites</th><th scope="col" class="num">Hours</th><th scope="col"></th></tr></thead>
+        <tbody>{% for item in costs.book %}<tr data-worth="{{ item.name }}"{% if loop.index > 5 %} hidden{% endif %}><td>{{ item.name }}</td><td class="num">{{ item.films }}</td><td class="num">{% if item.favorites %}<i class="ti ti-heart-filled fav-count" aria-hidden="true"></i> {{ item.favorites }}{% else %}–{% endif %}</td><td class="num">{{ item.hours }} h</td><td class="num"><a class="film-link" href="/watchlist?providers={{ item.name|urlencode }}&cost=subscription">Show films</a> · <button class="film-link try-it" type="button" data-service="{{ item.name }}">Try it</button></td></tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
+    {% endif %}
+
+    <section class="planner" id="planner" aria-labelledby="planner-heading" hidden>
+      <h2 class="h4" id="planner-heading">Plan</h2>
+      <p class="hint">Uses the prices you entered. For services you do not have, enter what a month costs; the prices stay in this browser.</p>
+      <label class="budget-label" for="budget">Monthly budget: € <output id="budget-value">15</output></label>
+      <input type="range" id="budget" min="0" max="50" step="1" value="15" aria-describedby="budget-result">
+      <div id="budget-result" role="status" aria-live="polite"></div>
+      <details class="candidate-details"><summary>Prices of services you do not have</summary><div id="candidate-prices" class="price-grid"></div></details>
+      <h3>Next months</h3>
+      <ol id="rotation" class="rotation"></ol>
+      <h3 id="whatif-heading">What if</h3>
+      <p class="hint">Pretend you have or do not have a service. Nothing is saved.</p>
+      <div id="whatif" class="whatif" role="group" aria-labelledby="whatif-heading"></div>
+      <p id="whatif-result" class="whatif-result" role="status" aria-live="polite"></p>
+      {% if other_countries %}<details class="overlap"><summary>Other countries</summary><ul class="meta other-countries">{% for item in other_countries[:6] %}<li>With your services in <strong>{{ item.country }}</strong> you would see <strong>+{{ item.gain }}</strong> films ({{ item.films }} in all). Needs a VPN or being in that country.</li>{% endfor %}</ul></details>{% endif %}
+      <details class="overlap" id="overlap"><summary>Overlap of your services</summary><p class="hint" id="overlap-text"></p><div class="table-scroll"><table class="status-table overlap-table" id="overlap-table"></table></div></details>
+    </section>
+
+    <section class="rent-row" aria-labelledby="rent-heading">
+      <div class="rent-head"><h2 class="h4" id="rent-heading">Only to rent <span class="row-count">{{ costs.rent_only|length }}</span></h2>{% if costs.rent_only %}<a class="film-link" href="/watchlist?cost=rent">See all <span aria-hidden="true">→</span></a>{% endif %}</div>
+      {% if costs.rent_only %}
+      <ul class="rent-track">{% for film in costs.rent_only[:24] %}<li><a href="/watchlist?film={{ film.key|urlencode }}"{% if not film.key %} hidden{% endif %}>{% if film.poster_path %}<img src="{{ image_base_url }}{{ film.poster_path }}" alt="" loading="lazy">{% else %}<span class="no-poster" aria-hidden="true">No poster</span>{% endif %}<span class="rent-title">{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</span></a></li>{% endfor %}</ul>
+      {% else %}<p class="meta">No film is only available to rent.</p>{% endif %}
+    </section>
+  </main>
+  <dialog class="side-drawer" id="service-drawer" aria-labelledby="service-drawer-title"><div class="drawer-head"><h2 id="service-drawer-title"></h2><button class="sheet-close" id="service-drawer-close" type="button" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button></div><div class="drawer-body" id="service-drawer-body"></div></dialog>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261122-28') }}" type="module"></script>
+  <script>window.PLAN_DATA = {{ costs.plan|tojson }};</script>
+  <script>window.IMAGE_BASE_URL = {{ image_base_url|tojson }}; window.WEEKLY_HOURS = {{ weekly_hours|tojson }};</script>
+  <script src="{{ url_for('static', filename='js/plan-page.js', v='20261122-28') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261122-28') }}" type="module"></script>
+</body>
+</html>

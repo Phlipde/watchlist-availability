@@ -36,3 +36,28 @@ htmlcov/
 .watchlist_latest.json
 .watchlist_favorites.sqlite3
 .watchlist_films.sqlite3
+
+# Ruflo local secrets and runtime data
+.env.local
+.env.*.local
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
+
+# Local Claude Code and ruflo state
+.claude/agent-metrics.jsonl
+.claude/command-history.log
+.claude/launch.json
+.claude/settings.json.bak-*
+.claude-flow/metrics/
+.claude-flow/mods/
+.swarm/memory.db
+
+# graphify knowledge graph (rebuilt with: graphify update .)
+graphify-out/
+.claude/settings.json.graphify-bak
+
+.claude-flow/cost/
+
+# Daily backups written by the app
+backups/

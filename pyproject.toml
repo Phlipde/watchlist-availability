@@ -1,7 +1,7 @@
 [tool.ruff]
 target-version = "py312"
 line-length = 110
-extend-exclude = [".venv"]
+extend-exclude = [".venv", ".claude", ".agents", ".claude-flow"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
@@ -19,6 +19,7 @@ addopts = "-m 'not browser'"
 markers = [
     "browser: end-to-end tests in a real browser (Playwright)",
     "provider_catalog: uses the real TMDB provider list function (mocked HTTP)",
+    "letterboxd_rating: uses the real Letterboxd rating function (mocked HTTP)",
 ]
 
 [tool.mypy]

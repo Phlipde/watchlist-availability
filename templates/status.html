@@ -3,15 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Status · Watchlist Availability</title>
+  <meta name="theme-color" content="#101412">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  <title>Data &amp; status · Settings · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261115-6') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261122-28') }}" rel="stylesheet">
 </head>
 <body>
+  {% include "partials/header.html" %}
   <main class="page">
-    <p class="meta"><a href="/"><i class="ti ti-arrow-left"></i> Back to the watchlist</a> · <a href="/settings">Settings</a> · <a href="/costs">Costs</a> · <a href="/matches">Matches</a></p>
-    <h1 class="page-title">Status</h1>
+    <h1 class="page-title">Settings</h1>
+    {% include "partials/settings-nav.html" %}
     {% if not status.tmdb_api_key_set %}<p class="error">The TMDB API key is missing, so no scan can run.</p>{% endif %}
 
     <div class="analysis-panel status-tiles">
@@ -22,15 +27,32 @@
       <div class="analysis-item">Films known: <strong>{{ status.counts.films }}</strong></div>
       <div class="analysis-item">Favorites: <strong>{{ status.counts.favorites }}</strong></div>
       <div class="analysis-item">Stored changes: <strong>{{ status.counts.changes }}</strong></div>
-      <div class="analysis-item">Matches to check: <strong><a href="/matches">{{ status.uncertain_matches }}</a></strong></div>
-      <div class="analysis-item">Providers from TMDB ({{ status.country }}): <strong>{% if status.provider_catalog.count %}{{ status.provider_catalog.count }}, <span class="time" data-time="{{ status.provider_catalog.fetched_at }}"></span>{% else %}not loaded yet{% endif %}</strong></div>
-      <div class="analysis-item">Database:<strong>{% if status.database_bytes %}{{ '%.1f'|format(status.database_bytes / 1000000) }} MB{% else %}–{% endif %}</strong></div>
+      <div class="analysis-item">Matches to check: <strong><a href="/settings/matches">{{ status.uncertain_matches }}</a></strong></div>
+      <div class="analysis-item">Services from TMDB ({{ status.country }}): <strong>{% if status.provider_catalog.count %}{{ status.provider_catalog.count }}, <span class="time" data-time="{{ status.provider_catalog.fetched_at }}"></span>{% else %}not loaded yet{% endif %}</strong></div>
+      <div class="analysis-item">Database: <strong>{% if status.database_bytes %}{{ '%.1f'|format(status.database_bytes / 1000000) }} MB{% else %}–{% endif %}</strong></div>
     </div>
+
+    <h2 class="h4 mt-4">Export</h2>
+    <div class="data-grid">
+      <span>Films</span><span class="data-actions"><button class="btn btn-sm btn-outline-secondary" type="button" data-export="films-csv">CSV</button><button class="btn btn-sm btn-outline-secondary" type="button" data-export="films-json">JSON</button></span>
+      <span>Favorites</span><span class="data-actions"><button class="btn btn-sm btn-outline-secondary" type="button" data-export="favorites-csv">CSV</button><button class="btn btn-sm btn-outline-secondary" type="button" data-export="favorites-json">JSON</button></span>
+    </div>
+
+    <h2 class="h4 mt-4">Import</h2>
+    <div class="data-grid">
+      <span>Favorites</span><span class="data-actions"><label class="btn btn-sm btn-outline-secondary mb-0" for="import-favorites">Choose file…</label><input class="visually-hidden" id="import-favorites" type="file" accept=".json,.csv,application/json,text/csv"></span>
+    </div>
+    <p class="meta" id="import-preview" aria-live="polite" hidden></p>
+    <button class="btn btn-sm btn-accent" id="import-go" type="button" hidden>Import</button>
+
+    <h2 class="h4 mt-4">Greyed-out films</h2>
+    <p class="meta" id="greyouts-text">Films you greyed out stay in the list, only paler. Letterboxd is where you log what you watched.</p>
+    <button class="btn btn-sm btn-outline-secondary" id="greyouts-reset" type="button" disabled>Reset grey-outs</button>
 
     {% if status.reminders %}
     <h2 class="h4 mt-4">Subscription reminders</h2>
     <ul class="meta">{% for item in status.reminders %}<li><strong>{{ item.date }}</strong>: {{ item.name }} ({{ item.country }}) · {% if item.days < 0 %}{{ -item.days }} days ago{% elif item.days == 0 %}today{% else %}in {{ item.days }} days{% endif %}</li>{% endfor %}</ul>
-    <p class="hint">Set on the <a href="/costs">costs page</a>.</p>
+    <p class="hint">Set on the <a href="/subscriptions">Subscriptions</a> page.</p>
     {% endif %}
 
     <h2 class="h4 mt-4">Recent scans</h2>
@@ -44,7 +66,7 @@
             <td class="time" data-time="{{ job.started_at }}"></td>
             <td>{{ {'manual': 'page', 'schedule': 'schedule', 'resume': 'after restart'}.get(job.trigger, job.trigger) }}</td>
             <td>{{ job.country }}</td>
-            <td><span class="status-{{ job.status }}">{{ job.status }}</span>{% if job.reused %} · reused{% endif %}{% if job.status in ('error', 'interrupted') and job.message %}<br><small>{{ job.message }}</small>{% endif %}</td>
+            <td><span class="pill status-{{ job.status }}">{{ job.status }}</span>{% if job.reused %} · reused{% endif %}{% if job.status in ('error', 'interrupted') and job.message %}<br><small>{{ job.message }}</small>{% endif %}</td>
             <td>{{ job.duration_seconds }} s</td>
             <td>{{ job.completed }}/{{ job.total }}</td>
             <td>{{ job.available }}</td>
@@ -59,11 +81,13 @@
     <p class="meta">No scan has run yet.</p>
     {% endif %}
   </main>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261122-28') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/data-tools.js', v='20261122-28') }}" type="module"></script>
   <script>
     document.querySelectorAll('.time').forEach(element => {
       const seconds = Number(element.dataset.time);
       if (!seconds) return;
-      element.textContent = element.dataset.past && seconds * 1000 < Date.now() ? element.dataset.past : new Date(seconds * 1000).toLocaleString();
+      element.textContent = element.dataset.past && seconds * 1000 < Date.now() ? element.dataset.past : new Date(seconds * 1000).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'});
     });
   </script>
 </body>

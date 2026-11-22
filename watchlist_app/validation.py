@@ -14,6 +14,8 @@ from .models import OFFER_KINDS, Film
 
 MAX_TEXT = 500
 MAX_OVERVIEW = 5000
+MAX_PEOPLE = 5
+MAX_KEYWORDS = 50
 MAX_NOTES = 2000
 MAX_FILMS_PER_SCAN = 20000
 FAVORITE_STATUSES = ("plan", "watching", "watched")
@@ -23,6 +25,9 @@ FUTURE_TOLERANCE_SECONDS = 24 * 60 * 60
 
 _IMAGE_PATH_RE = re.compile(r"^/[A-Za-z0-9._-]{1,200}$")
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_LANGUAGE_RE = re.compile(r"^[a-z]{2,3}$")
+_IMDB_RE = re.compile(r"^tt\d{5,12}$")
+_COUNTRY_RE = re.compile(r"^[A-Z]{2}$")
 _TMDB_URL_RE = re.compile(r"^https://www\.themoviedb\.org/movie/\d+$")
 _TRAILER_URL_RE = re.compile(r"^https://www\.youtube\.com/watch\?v=[A-Za-z0-9_-]{1,40}$")
 
@@ -62,6 +67,11 @@ def _matching(value, pattern: re.Pattern) -> str | None:
     return value if isinstance(value, str) and pattern.fullmatch(value) else None
 
 
+def image_path(value) -> str | None:
+    """A TMDB image path such as "/abc.png", or None."""
+    return _matching(value, _IMAGE_PATH_RE)
+
+
 def year(value) -> int | None:
     return integer(value, 1870, 2200)
 
@@ -83,6 +93,10 @@ def clean_film(data) -> dict | None:
                 if allowed:
                     providers[name] = allowed
     genres = data.get("genres")
+    cast = data.get("cast")
+    keywords = data.get("keywords")
+    similar = data.get("similar_ids")
+    origins = data.get("origin_countries")
     film = Film(
         title=title,
         year=year(data.get("year")),
@@ -90,6 +104,17 @@ def clean_film(data) -> dict | None:
         poster_path=_matching(data.get("poster_path"), _IMAGE_PATH_RE),
         overview=text(data.get("overview"), MAX_OVERVIEW) or "",
         rating=number(data.get("rating"), 0, 10),
+        popularity=number(data.get("popularity"), 0, 10**9),
+        vote_count=integer(data.get("vote_count"), 0, 10**9),
+        director=text(data.get("director"), 200),
+        original_title=text(data.get("original_title"), 300),
+        imdb_id=_matching(data.get("imdb_id"), _IMDB_RE),
+        cast=[person[:200] for person in cast[:MAX_PEOPLE] if isinstance(person, str)]
+        if isinstance(cast, list)
+        else [],
+        keywords=[keyword[:100] for keyword in keywords[:MAX_KEYWORDS] if isinstance(keyword, str)]
+        if isinstance(keywords, list)
+        else [],
         backdrop_path=_matching(data.get("backdrop_path"), _IMAGE_PATH_RE),
         runtime=integer(data.get("runtime"), 0, 2000),  # TMDB reports 0 for films not yet released
         genres=[genre[:100] for genre in genres[:30] if isinstance(genre, str)]
@@ -98,6 +123,19 @@ def clean_film(data) -> dict | None:
         release_date=_matching(data.get("release_date"), _DATE_RE),
         tmdb_url=_matching(data.get("tmdb_url"), _TMDB_URL_RE),
         trailer_url=_matching(data.get("trailer_url"), _TRAILER_URL_RE),
+        collection=text(data.get("collection"), 200),
+        watchlist_position=integer(data.get("watchlist_position"), 0, 10**6),
+        similar_ids=[n for n in similar[:40] if type(n) is int and 0 < n < 10**9]
+        if isinstance(similar, list)
+        else [],
+        letterboxd_rating=number(data.get("letterboxd_rating"), 0, 5),
+        certification=text(data.get("certification"), 20),
+        original_language=_matching(data.get("original_language"), _LANGUAGE_RE),
+        origin_countries=[code for code in origins[:10] if isinstance(code, str) and _COUNTRY_RE.match(code)]
+        if isinstance(origins, list)
+        else [],
+        cinema_date=_matching(data.get("cinema_date"), _DATE_RE),
+        home_date=_matching(data.get("home_date"), _DATE_RE),
     )
     film.providers = {name: kinds for name, kinds in providers.items()}
     return film.to_dict()
@@ -158,6 +196,26 @@ def clean_favorite(data) -> dict | None:
         "status": data.get("status") if data.get("status") in FAVORITE_STATUSES else "plan",
         "notes": text(data.get("notes"), MAX_NOTES) or "",
     }
+
+
+FLAGS = ("watched", "not_now")
+NOT_NOW_SECONDS = 30 * 24 * 3600
+
+
+def clean_flag(data, now: float | None = None) -> dict | None:
+    """A "watched" or "not now" mark: not now needs a date that lies at most 30 days ahead (or is past)."""
+    if not isinstance(data, dict) or data.get("flag") not in FLAGS:
+        return None
+    key = text(data.get("key"), 300)
+    if not key:
+        return None
+    now = now if now is not None else time.time()
+    until = None
+    if data["flag"] == "not_now":
+        until = number(data.get("until"), 0, now + NOT_NOW_SECONDS)
+        if until is None:
+            return None
+    return {"key": key, "flag": data["flag"], "until": until}
 
 
 def clean_change(data, now: float | None = None) -> dict | None:

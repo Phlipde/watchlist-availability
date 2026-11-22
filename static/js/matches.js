@@ -3,6 +3,9 @@ const config = window.MATCHES_PAGE;
 const list = document.getElementById('match-list');
 const showAll = document.getElementById('show-all');
 const rescan = document.getElementById('rescan');
+// After saving, the list is redrawn: keep the focus and the "saved" mark on the same film.
+let focusKey = null;
+let savedKey = null;
 
 function element(tag, attributes = {}, ...children) {
   const node = document.createElement(tag);
@@ -27,7 +30,7 @@ function show(text, failed = false) {
 async function requestJson(url, options = {}) {
   const response = await fetch(url, options);
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `Request failed (${response.status}).`);
+  if (!response.ok) throw new Error(data.error || (response.status >= 500 ? 'The app reported an error. The Status page shows the last scans; reload and try again.' : `The app refused the request (${response.status}). Reload the page and try again.`));
   return data;
 }
 
@@ -35,8 +38,8 @@ const withYear = (title, year) => (year ? `${title} (${year})` : title);
 const matchUrl = key => `/api/matches/${encodeURIComponent(key)}`;
 
 function poster(path, title) {
-  if (!path) return element('div', {className: 'match-poster empty'}, element('i', {className: 'ti ti-movie'}));
-  return element('img', {className: 'match-poster', src: `${config.imageBaseUrl}${path}`, alt: title, loading: 'lazy'});
+  if (!path) return element('div', {className: 'match-poster empty'}, element('i', {className: 'ti ti-movie', 'aria-hidden': 'true'}));
+  return element('img', {className: 'match-poster', src: `${config.imageBaseUrl}${path}`, alt: '', loading: 'lazy'});
 }
 
 async function save(match, tmdbId, row) {
@@ -50,6 +53,7 @@ async function save(match, tmdbId, row) {
     show(`Saved: ${withYear(match.title, match.year)} → ${withYear(result.tmdb_title || `TMDB ${result.tmdb_id}`, result.tmdb_year)}.`);
     rescan.hidden = false;
     row.classList.add('match-saved');
+    focusKey = savedKey = match.film_key;
     await load();
   } catch (error) {
     show(error.message, true);
@@ -61,6 +65,7 @@ async function reset(match) {
     await requestJson(matchUrl(match.film_key), {method: 'DELETE'});
     show(`${match.title} will be looked up again at the next scan.`);
     rescan.hidden = false;
+    focusKey = match.film_key;
     await load();
   } catch (error) {
     show(error.message, true);
@@ -98,7 +103,7 @@ function correctionPanel(match, row) {
 
   const panel = element('div', {className: 'match-correction'},
     element('form', {className: 'match-search', onsubmit: search}, query, year,
-      element('button', {className: 'btn btn-sm btn-outline-secondary', type: 'submit'}, element('i', {className: 'ti ti-search'}), ' Search TMDB')),
+      element('button', {className: 'btn btn-sm btn-outline-secondary', type: 'submit'}, element('i', {className: 'ti ti-search', 'aria-hidden': 'true'}), ' Search TMDB')),
     results,
     element('form', {className: 'match-search', onsubmit: event => { event.preventDefault(); save(match, reference.value, row); }}, reference,
       element('button', {className: 'btn btn-sm btn-outline-secondary', type: 'submit'}, 'Use id')));
@@ -117,7 +122,7 @@ function matchRow(match) {
     if (panel) { panel.remove(); panel = null; return; }
     panel = correctionPanel(match, row);
     row.append(panel);
-  }}, element('i', {className: 'ti ti-pencil'}), ' Correct');
+  }}, element('i', {className: 'ti ti-pencil', 'aria-hidden': 'true'}), ' Correct');
   row.append(
     element('div', {className: 'match-main'},
       poster(match.poster_path, match.title),
@@ -125,9 +130,9 @@ function matchRow(match) {
         element('strong', {}, withYear(match.title, match.year)),
         match.letterboxd_url ? element('a', {className: 'meta', href: match.letterboxd_url, target: '_blank', rel: 'noopener'}, ' Letterboxd') : null,
         element('div', {}, 'Matched to: ', found, element('span', {className: 'meta'}, ` · ${sourceText}`)),
-        match.reason ? element('span', {className: `match-reason reason-${match.reason}`}, match.reason_text) : null),
+        match.reason ? element('span', {className: `pill match-reason ${match.reason === 'not_found' ? 'pill-danger' : 'pill-warn'}`}, match.reason_text) : null),
       element('div', {className: 'match-actions'},
-        match.reason && match.tmdb_id ? element('button', {className: 'btn btn-sm btn-outline-secondary', type: 'button', onclick: () => save(match, match.tmdb_id, row)}, element('i', {className: 'ti ti-check'}), ' Looks right') : null,
+        match.reason && match.tmdb_id ? element('button', {className: 'btn btn-sm btn-outline-secondary', type: 'button', onclick: () => save(match, match.tmdb_id, row)}, element('i', {className: 'ti ti-check', 'aria-hidden': 'true'}), ' Looks right') : null,
         correct,
         match.source === 'manual' ? element('button', {className: 'btn btn-sm btn-outline-secondary', type: 'button', onclick: () => reset(match)}, 'Undo correction') : null)));
   return row;
@@ -138,6 +143,11 @@ async function load() {
     const matches = await requestJson(`/api/matches${showAll.checked ? '?all=1' : ''}`);
     list.replaceChildren(...matches.map(matchRow));
     document.getElementById('matches-empty').hidden = matches.length > 0;
+    const row = key => key && list.querySelector(`[data-film-key="${CSS.escape(key)}"]`);
+    row(savedKey)?.classList.add('match-saved');
+    // A film that is no longer uncertain leaves the list: the message says what was saved.
+    if (focusKey) (row(focusKey)?.querySelector('button') || document.getElementById('matches-message')).focus();
+    focusKey = null;
   } catch (error) {
     show(error.message, true);
   }

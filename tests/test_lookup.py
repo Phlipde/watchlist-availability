@@ -63,6 +63,59 @@ class TestLookupFilm:
         assert us["providers"] == {"Hulu": {"ads"}}
         assert gb["providers"] == {}
 
+    def test_release_dates_of_the_scanned_country(self, store):
+        bundle = {
+            **BUNDLE,
+            "details": {**BUNDLE["details"], "release_dates": {"DE": {"certification": "12"}}},
+        }
+        with (
+            patch("watchlist_app.letterboxd.fetch_tmdb_id", return_value=1),
+            patch("watchlist_app.tmdb.get_movie_bundle", return_value=bundle),
+        ):
+            de = lookup.lookup_film("Inception", 2010, "inception", "DE", API_KEY, store)
+            us = lookup.lookup_film("Inception", 2010, "inception", "US", API_KEY, store)
+        assert de["release"] == {"certification": "12"}
+        assert us["release"] == {}
+
+    @pytest.mark.letterboxd_rating
+    def test_letterboxd_rating_loaded_once_a_month(self, store):
+        with (
+            patch("watchlist_app.letterboxd.fetch_tmdb_id", return_value=1),
+            patch("watchlist_app.letterboxd.fetch_rating", return_value=4.3) as rating,
+            patch("watchlist_app.tmdb.search_movie_id", return_value=2),
+            patch("watchlist_app.tmdb.get_movie_bundle", return_value=BUNDLE),
+        ):
+            first = lookup.lookup_film("Inception", 2010, "inception", "DE", API_KEY, store)
+            again = lookup.lookup_film("Inception", 2010, "inception", "DE", API_KEY, store)
+            without_slug = lookup.lookup_film("Heat", 1995, None, "DE", API_KEY, store)
+        assert rating.call_count == 1
+        assert first["letterboxd_rating"] == again["letterboxd_rating"] == 4.3
+        assert without_slug["letterboxd_rating"] is None
+
+    @pytest.mark.letterboxd_rating
+    def test_letterboxd_failure_keeps_the_film(self, store):
+        from watchlist_app import letterboxd
+
+        with (
+            patch("watchlist_app.letterboxd.fetch_tmdb_id", return_value=1),
+            patch("watchlist_app.letterboxd.fetch_rating", side_effect=letterboxd.LetterboxdError("429")),
+            patch("watchlist_app.tmdb.get_movie_bundle", return_value=BUNDLE),
+        ):
+            found = lookup.lookup_film("Inception", 2010, "inception", "DE", API_KEY, store)
+        assert found["tmdb_id"] == 1 and found["letterboxd_rating"] is None
+        assert store.get_id("lb:inception")["lb_checked_at"] is None
+
+    def test_details_in_an_older_format_are_refetched(self, store):
+        old = {**BUNDLE, "details": {"runtime": 148}}
+        with (
+            patch("watchlist_app.letterboxd.fetch_tmdb_id", return_value=1),
+            patch("watchlist_app.tmdb.get_movie_bundle", side_effect=[old, BUNDLE]) as bundle,
+        ):
+            lookup.lookup_film("Inception", 2010, "inception", "DE", API_KEY, store)
+            again = lookup.lookup_film("Inception", 2010, "inception", "DE", API_KEY, store)
+        assert bundle.call_count == 2
+        assert again["details"]["origin_countries"] == []
+
     def test_stale_providers_refetched_but_id_kept(self, store):
         with (
             patch("watchlist_app.letterboxd.fetch_tmdb_id", return_value=1) as letterboxd_id,

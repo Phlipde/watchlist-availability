@@ -1,8 +1,12 @@
 """Automatic scans on a schedule."""
 
+import logging
 import threading
 import time
 
+from . import config
+from .backups import write_daily_backup
+from .notifications import run_notifications
 from .scan_service import ScanService
 from .settings import AppSettings
 from .store import Store
@@ -47,7 +51,15 @@ def start_scheduler(store: Store, settings: AppSettings, service: ScanService) -
             try:
                 run_due_scan(store, settings, service)
             except Exception:  # the schedule must survive a failed check
-                pass
+                logging.exception("Scheduled scan check failed")
+            try:
+                run_notifications(store, settings)
+            except Exception:  # a broken target must not stop the scans
+                logging.exception("Notification check failed")
+            try:
+                write_daily_backup(store, config.data_dir() / "backups")
+            except Exception:  # a full disk must not stop the scans
+                logging.exception("Daily backup failed")
             time.sleep(CHECK_SECONDS)
 
     thread = threading.Thread(target=loop, name="watchlist-scheduler", daemon=True)

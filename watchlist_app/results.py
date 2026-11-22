@@ -35,6 +35,7 @@ def make_film(entry: WatchlistEntry, found: dict, targets: dict[str, str] | None
     """
     available = found.get("providers") or {}
     details = found.get("details") or {}
+    release = found.get("release") or {}
     if targets is None:
         offered = {name: sort_kinds(kinds) for name, kinds in display_providers(available).items() if kinds}
     else:
@@ -50,12 +51,27 @@ def make_film(entry: WatchlistEntry, found: dict, targets: dict[str, str] | None
         poster_path=found.get("poster_path"),
         overview=details.get("overview") or "",
         rating=details.get("rating"),
+        popularity=details.get("popularity"),
+        vote_count=details.get("vote_count"),
+        director=details.get("director"),
+        original_title=details.get("original_title"),
+        imdb_id=details.get("imdb_id"),
+        cast=list(details.get("cast") or []),
+        keywords=list(details.get("keywords") or []),
         backdrop_path=details.get("backdrop_path"),
         runtime=details.get("runtime"),
         genres=list(details.get("genres") or []),
         release_date=details.get("release_date"),
         tmdb_url=details.get("tmdb_url"),
         trailer_url=details.get("trailer_url"),
+        collection=details.get("collection"),
+        similar_ids=details.get("similar_ids") or [],
+        letterboxd_rating=found.get("letterboxd_rating"),
+        certification=release.get("certification"),
+        original_language=details.get("original_language"),
+        origin_countries=list(details.get("origin_countries") or []),
+        cinema_date=release.get("cinema"),
+        home_date=release.get("home"),
         providers=offered,
     )
 
@@ -92,9 +108,14 @@ def build_results(
         except Exception as exc:  # one broken film must not stop the scan
             return "failed", exc
         if found is None:
-            return "unavailable", Film(title=entry.title, year=clean_year(entry.year))
+            return "unavailable", Film(
+                title=entry.title, year=clean_year(entry.year), watchlist_position=index
+            )
         film = make_film(entry, found, targets)
-        return ("available" if film.providers else "unavailable"), film
+        film.watchlist_position = index
+        # Buying alone is not streaming (no section for it on the page); the details still show it.
+        streamable = any(kind != "buy" for kinds in film.providers.values() for kind in kinds)
+        return ("available" if streamable else "unavailable"), film
 
     available: dict[int, Film] = {}
     progress = tqdm(

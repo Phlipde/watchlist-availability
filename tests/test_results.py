@@ -35,8 +35,25 @@ class TestFilmResults:
                 overview="Plot",
                 runtime=100,
                 genres=["Drama"],
+                watchlist_position=0,
                 providers={"Netflix": ["flatrate"]},
             )
+        ]
+
+    def test_release_dates_become_film_fields(self):
+        found = {
+            **_found({"Netflix": {"flatrate"}}),
+            "release": {"certification": "12", "cinema": "2026-03-05", "home": "2026-06-01"},
+        }
+        film = results.make_film(WatchlistEntry("Inception", 2010), found, None)
+        assert (film.certification, film.cinema_date, film.home_date) == ("12", "2026-03-05", "2026-06-01")
+
+    def test_position_on_the_watchlist_is_kept(self):
+        entries = [WatchlistEntry("Inception", 2010), WatchlistEntry("Alien", 1979)]
+        found = _run(entries, {"Netflix": "Netflix"}, {"Netflix": {"flatrate"}})
+        assert sorted((film.title, film.watchlist_position) for film in found) == [
+            ("Alien", 1),
+            ("Inception", 0),
         ]
 
     def test_rent_only_film_kept(self):
@@ -68,7 +85,7 @@ class TestFilmResults:
             lookup=lambda *args: None,
             unavailable_callback=unavailable.append,
         )
-        assert unavailable == [Film(title="Unknown", year=1900)]
+        assert unavailable == [Film(title="Unknown", year=1900, watchlist_position=0)]
 
     def test_display_names_map_to_tmdb_names(self):
         found = _run(
@@ -207,3 +224,22 @@ def test_without_targets_every_provider_is_kept():
     found = {"tmdb_id": 1, "providers": {"Amazon Prime Video": {"rent", "flatrate"}, "Other": set()}}
     film = make_film(WatchlistEntry("A", 2000), found, None)
     assert film.providers == {"Prime Video": ["flatrate", "rent"]}
+
+
+def test_tmdb_details_reach_the_film():
+    # Every detail field the scan fetches must end up on the film the page receives.
+    from unittest.mock import patch
+
+    from tests.helpers import API_KEY, MOVIE, response
+    from watchlist_app import tmdb
+    from watchlist_app.models import WatchlistEntry
+    from watchlist_app.results import make_film
+
+    with patch("watchlist_app.tmdb._http_get", return_value=response(MOVIE)):
+        bundle = tmdb.get_movie_bundle(27205, API_KEY)
+    found = {"tmdb_id": 27205, "details": bundle["details"], "providers": {}}
+    film = make_film(WatchlistEntry("Inception", 2010), found, None).to_dict()
+    for name, value in bundle["details"].items():
+        # release_dates holds every country; the scanned one arrives as "release" (see lookup).
+        if name not in {"tmdb_title", "release_dates"}:
+            assert film[name] == value, name

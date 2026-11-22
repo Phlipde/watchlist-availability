@@ -1,0 +1,67 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+
+import {
+  alternatives, catalogName, catalogRows, certificationText, dedupeKeywords, letterboxdUrl, metaLine, primaryAction,
+  reportUrl, runtimeLong, statusBadges,
+} from '../../static/js/drawer.js';
+
+const own = names => new Set(names);
+
+test('runtime and age rating read the way people say them', () => {
+  assert.equal(runtimeLong(148), '2 h 28');
+  assert.equal(runtimeLong(121), '2 h 01');
+  assert.equal(runtimeLong(58), '58 min');
+  assert.equal(runtimeLong(0), '');
+  assert.equal(certificationText('12', 'DE'), 'FSK 12');
+  assert.equal(certificationText('PG-13', 'US'), 'rated PG-13');
+  assert.equal(certificationText('', 'DE'), '');
+  assert.equal(metaLine({year: 2021, runtime: 148, certification: '16', genres: ['Sci-Fi', 'Action']}, 'DE'), '2021 · 2 h 28 · FSK 16 · Sci-Fi, Action');
+});
+
+test('keywords: one of each, no countries or places', () => {
+  const countries = new Set(['united states', 'japan']);
+  assert.deepEqual(dedupeKeywords(['Heist', 'heist ', 'United States', 'tokyo, japan', 'tokyo', 'Great Britain', 'dream'], countries), ['Heist', 'tokyo', 'dream']);
+  assert.deepEqual(dedupeKeywords(undefined), []);
+});
+
+test('an Amazon Channel is the same catalogue as its service', () => {
+  assert.equal(catalogName('HBO Max Amazon Channel'), 'HBO Max');
+  assert.equal(catalogName('Netflix'), 'Netflix');
+  const groups = catalogRows({'HBO Max': ['flatrate'], 'HBO Max Amazon Channel': ['flatrate'], Netflix: ['flatrate', 'rent'], 'Apple TV': ['buy']}, own(['Netflix']));
+  assert.deepEqual(groups.map(group => group.kind), ['flatrate', 'rent', 'buy']);
+  const subscription = groups[0].rows;
+  assert.deepEqual(subscription.map(row => [row.name, row.own, row.via]), [['Netflix', true, []], ['HBO Max', false, ['Amazon Channel']]]);
+});
+
+test('the main button always says what to do, never "Where to watch"', () => {
+  const href = 'https://www.themoviedb.org/movie/1/watch?locale=DE';
+  const film = providers => ({tmdb_url: 'https://www.themoviedb.org/movie/1', providers});
+  const free = primaryAction(film({Arte: ['free'], Netflix: ['flatrate']}), own(['Netflix', 'Arte']), 'DE');
+  assert.deepEqual([free.primary, free.text, free.href], [true, 'Watch on Arte · Free', href]);
+  assert.equal(primaryAction(film({Netflix: ['flatrate']}), own(['Netflix']), 'DE').text, 'Watch on Netflix · Subscription');
+  const rent = primaryAction(film({'Apple TV': ['rent']}), own(['Apple TV']), 'DE');
+  assert.deepEqual([rent.primary, rent.text], [false, 'Rent on Apple TV']);
+  assert.equal(primaryAction(film({'HBO Max': ['flatrate']}), own(['Netflix']), 'DE').text, 'On HBO Max (not your service)');
+  assert.equal(primaryAction(film({Amazon: ['buy', 'rent']}), own([]), 'DE').text, 'Rent on Amazon');
+  assert.equal(primaryAction({title: 'Heat', providers: {Arte: ['free']}}, own(['Arte']), 'DE').href, 'https://www.justwatch.com/de/search?q=Heat');  // no TMDB address: never an empty link
+  const none = primaryAction(film({}), own(['Netflix']), 'DE', 'Germany');
+  assert.deepEqual([none.disabled, none.text], [true, 'Not streaming in Germany']);
+});
+
+test('more own services come as alternatives; status badges carry the date', () => {
+  const film = {providers: {Arte: ['free'], filmfriend: ['free'], Netflix: ['flatrate'], Other: ['flatrate']}, provider_changes: {added: ['Netflix'], removed: ['Prime Video'], since: new Date(2026, 10, 12).getTime() / 1000}};
+  assert.deepEqual(alternatives(film, own(['Arte', 'filmfriend', 'Netflix']), 'Arte'), [{name: 'filmfriend', kind: 'free'}, {name: 'Netflix', kind: 'flatrate'}]);
+  assert.deepEqual(statusBadges(film, own(['Netflix', 'Prime Video'])), [
+    {tone: 'gone', text: 'No longer on Prime Video · since 12.11.'},
+    {tone: 'new', text: 'New on Netflix · since 12.11.'},
+  ]);
+});
+
+test('links: Letterboxd goes to the film by TMDB id; a report carries the film and the service', () => {
+  assert.equal(letterboxdUrl({tmdb_id: 603, title: 'The Matrix'}), 'https://letterboxd.com/tmdb/603/');
+  assert.equal(letterboxdUrl({title: 'The Matrix', year: 1999}), 'https://letterboxd.com/search/The%20Matrix%201999/');
+  const url = new URL(reportUrl({title: 'Heat', year: 1995, tmdb_id: 949}, 'DE', 'Netflix'));
+  assert.equal(url.searchParams.get('title'), 'Wrong availability: Heat on Netflix (DE)');
+  assert.match(url.searchParams.get('body'), /TMDB id: 949/);
+});

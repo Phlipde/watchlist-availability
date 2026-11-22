@@ -2,7 +2,7 @@
 
 import pytest
 
-from watchlist_app import tmdb
+from watchlist_app import letterboxd, tmdb
 
 
 @pytest.fixture(autouse=True)
@@ -13,3 +13,13 @@ def no_provider_catalog_request(request, monkeypatch):
     """
     if request.node.get_closest_marker("provider_catalog") is None:
         monkeypatch.setattr(tmdb, "get_region_providers", lambda country, api_key=None: [])
+
+
+@pytest.fixture(autouse=True)
+def no_letterboxd_rating_request(request, monkeypatch):
+    """Scans refresh the Letterboxd rating from the film page; tests must never load it.
+
+    Tests marked `letterboxd_rating` use the real function (with their own mocks).
+    """
+    if request.node.get_closest_marker("letterboxd_rating") is None:
+        monkeypatch.setattr(letterboxd, "fetch_rating", lambda slug, session=None: None)

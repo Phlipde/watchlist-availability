@@ -1,274 +1,265 @@
-# Watchlist Availability
-> Still under development, mostly vibecoded :)
-Automatically cross-references your **Letterboxd** watchlist with streaming provider availability via the **TMDB API** (data powered by JustWatch). Results are cleanly organized into **Free** (free or ad-supported) and **Paid** (subscription or rental) categories.
+<div align="center">
 
-The script fetches your public Letterboxd watchlist page directly—no manual export required. If scraping is unavailable, local CSV or ZIP exports are supported as a fallback.
+# 🎬 Watchlist Availability
 
-```console
-$ cd watchlist-availability
-$ ./run.sh
-Fetching Letterboxd watchlist: 100%|██████████| 12/12 [00:03<00:00,  3.6 film/s]
-Watchlist fetched from Letterboxd: @yourname (12 films)
-Checking streaming availability on TMDB: 100%|██████████| 12/12 [00:08<00:00,  1.45 film/s]
+**Which films on your Letterboxd watchlist can you watch tonight — on the streaming services you already pay for?**
 
-## Paid
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab?logo=python&logoColor=white)](#requirements)
+[![Flask](https://img.shields.io/badge/flask-SQLite-000?logo=flask)](#project-structure)
+[![Docker](https://img.shields.io/badge/docker-ready-2496ed?logo=docker&logoColor=white)](#docker--self-hosting-unraid)
+[![PWA](https://img.shields.io/badge/PWA-installable-5a0fc8)](#install-and-offline)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-|          Title |   Year |  Netflix  |  Canal+  |
-|---------------:|-------:|:---------:|:--------:|
-|           Heat |   1995 |     ✓     |    ✓     |
-|      Gone Girl |   2014 |     ✓     |          |
-| Ocean's Eleven |   2001 |           |    ✓     |
+<img src="docs/screenshots/watchlist.jpg" alt="The watchlist: filter bar, film cards with the logos of your own services" width="920">
 
----
-Netflix: 2 
-Canal+: 2
+*Still under development, mostly vibecoded :)*
 
-Results saved: /Users/you/Downloads/watchlist_2026-06-06.md
-
-```
+</div>
 
 ---
 
-## Requirements
+## What it does
 
-* **Python 3.11+** (uses standard library `tomllib`)
-* A free [TMDB Account & API Key](https://www.themoviedb.org/)
-* A Letterboxd account with a **public watchlist** (or an exported ZIP/CSV file)
+It reads your **public Letterboxd watchlist**, asks the **TMDB API** (data by JustWatch) where each film streams in your country, and shows you the result in a fast, self-hosted web app — or on the command line.
+
+- **Tonight** — rows of films on *your* services: new this week, free, one row per subscription, and a "Pick for me" button.
+- **Watchlist** — every film with one filter bar, three views, saved views and a change history.
+- **Know what to cancel** — which subscription holds films that are nowhere else, with prices and renewal dates you enter.
+- **Abroad** — films your services have in *other* countries (needs a VPN), nearest and same-language countries first.
+- **Yours** — one SQLite file, no account, no tracking, no CDN. Installable as an app, works offline.
+
+The app only **reads** from Letterboxd. Log or rate a film on Letterboxd; after the next sync it leaves the watchlist.
 
 ---
 
-## Installation
+## Screenshots
+
+<table>
+<tr>
+<td width="50%"><b>Tonight</b> — what you can watch now<br><img src="docs/screenshots/tonight.jpg" alt="Tonight: rows of new and free films on your services"></td>
+<td width="50%"><b>Film details</b> — one main button, the rest on demand<br><img src="docs/screenshots/details.jpg" alt="The details drawer with the best way to watch"></td>
+</tr>
+<tr>
+<td width="50%"><b>More filters</b> — everything else, with a × per field<br><img src="docs/screenshots/more-filters.jpg" alt="The More filters panel"></td>
+<td width="50%" align="center"><b>On a phone</b> — bottom navigation and a filter sheet<br><img src="docs/screenshots/phone.jpg" alt="The watchlist on a phone" width="250"></td>
+</tr>
+</table>
+
+*The screenshots show a real watchlist; the Letterboxd name is replaced.*
+
+---
+
+## Features
+
+### Finding films
+
+| | |
+| --- | --- |
+| **One filter bar** | Search, services, cost (*Available / Free / Subscription / Rent* with counts), genre (alt-click excludes), ♥ favorites, **Abroad**, **More filters**, sort. Everything that is set shows as a chip you can remove. |
+| **More filters** | Age rating (FSK), original language, country, keyword, trailer, number of services, availability changes, films not available or set aside, and — when the bar is too narrow for one row — year, runtime and rating. Each dropdown has its own ×, the panel has *Reset*. |
+| **Views** | Grid, compact and table (with a *Services* column of small logos). Sorts include priority, rating, runtime and year. |
+| **Saved views** | *Save view* appears once filters are active; saved views live in a *Views* menu and as chips on Tonight. The link icon copies the current view, filters included. |
+| **Keyboard** | Arrow keys move through films (grid, compact, table, Tonight rows) with one tab stop; `/` search, `f` favorite, `n` not now, `s` grey out, `l` Letterboxd, `c` compare, `r` pick on Tonight, `g t` / `g w` / `g s` to jump, `?` for the full list. |
+
+### The film card
+
+One row of logo tiles for **your own services**; a small **€** marks a shop that only rents or sells. The words ("Netflix · Subscription") appear on hover, focus or a first tap on a phone. A film that none of your services has shows its one best way instead. Hover or long-press the poster for *Compare*, *Not now* (30 days) and *Grey out*. **No prices** are shown anywhere — the data source has none.
+
+### The details drawer
+
+A side drawer (a bottom sheet on phones): the best way to watch as the one main button, other services grouped by offer, abroad countries with flags, the collection ("Start with …"), similar films, cast, trailer and links — **Letterboxd first**, then TMDB, JustWatch and more. `←` `→` move to the neighbouring film.
+
+### Abroad
+
+The **Abroad** chip adds films that your ticked services carry in another country but not at home, with the number it would add. The card shows the service, a flag and "Abroad"; the drawer lists all countries. *More filters → Where* switches between only here, here and abroad, and only abroad.
+
+### Staying on top of changes
+
+- **Change history:** every scan is compared with the earlier ones. "New on …" is stored with its date; "gone" needs two scans in a row without the service, so a one-day hiccup is not reported. Changes are kept for 30 days.
+- **Subscriptions (`/subscriptions`):** your paid services sorted by what cancelling would cost you (films only there, hours), prices and renewal dates that save when you leave the field, totals per month and year, and a hint what to cancel or book next.
+- **Stats (`/stats`):** films per service and offer type, what each subscription adds, genres, decades, runtime, ratings, languages, countries, people, keywords, changes per week.
+- **Notifications:** ntfy, Gotify or a webhook — a favorite left your services, a renewal is 3 and 1 day away, a Friday summary. At most one message a day, none between 22:00 and 08:00.
+- **Automatic scans:** every 6, 12, 24 or 48 hours or weekly, while the app runs.
+
+### Your data
+
+- **Settings (`/settings`):** Letterboxd name, country, scan interval, backup download and restore. *My services* (`/settings/services`) is the list of services you use; ticking saves at once, with Undo.
+- **Settings → Data (`/settings/data`):** last and next scan, recent runs; **export** films or favorites as CSV or JSON; **import** favorites with a preview ("12 found · 3 already set · 9 new"); the list of **greyed-out films** with a reset.
+- **Settings → Unmatched films (`/settings/matches`):** films matched by a title search, not found, or with a year more than one apart. Search TMDB or paste a TMDB link to correct a match; corrections are kept and are part of the backup.
+- **Provider list from TMDB:** once a week the scan loads every service TMDB knows in your country, so new services appear without a code change.
+
+### Around the app
+
+- `GET /tile` — a small page for Homepage or Homarr: new this week and a pick of the day.
+- `GET /feed.xml` — RSS of films that became watchable on your services (30 days).
+- `GET /calendar.ics` — your renewal dates as a calendar feed.
+- `GET /api/sensors` — numbers for a Home Assistant REST sensor (`new_on_my_services`, `gone_from_my_services`, `next_subscription_deadline`, `watchlist_coverage`, `films_available`).
+- PWA: installable over https or on localhost; opens offline with the data it saved last.
+
+---
+
+## Quick start
+
+### Requirements
+
+- **Python 3.11+**
+- A free [TMDB account and API key](https://www.themoviedb.org/settings/api)
+- A Letterboxd account with a **public watchlist** (or an exported ZIP/CSV)
+
+### Install
 
 ```bash
-git clone [https://github.com/CorbeusUltra/watchlist-availability.git](https://github.com/CorbeusUltra/watchlist-availability.git)
+git clone https://github.com/CorbeusUltra/watchlist-availability.git
 cd watchlist-availability
 python3 -m venv .venv
-source .venv/bin/activate        # On Windows: .venv\Scripts\activate
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-
-```
-
----
-
-## Configuration
-
-1. Copy the example environment file:
-```bash
 cp .env.example .env
-
 ```
 
+Edit `.env`:
 
-2. Edit `.env` with your credentials and region:
 ```ini
 TMDB_API_KEY=your_key_here
 LETTERBOXD_USERNAME=your_username
 COUNTRY=DE
-
 ```
 
+The key stays in the environment and is never stored in the database or a backup. `LETTERBOXD_USERNAME`, `COUNTRY` and `platforms.toml` are only **start values**: once you save the *Settings* page, the saved values win — for the web app and the command line alike.
 
-* **TMDB Key:** Obtain a free API key at [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api). The key stays in the environment and is never stored in the database or a backup.
-* **Country:** Set your ISO 3166-1 alpha-2 code (e.g., `FR`, `US`, `DE`).
-* **Start values only:** `LETTERBOXD_USERNAME`, `COUNTRY` and `platforms.toml` are only the start values. Once you save the **Settings** page of the web app (`/settings`), the saved values win, for the web app and the command line alike.
-
-
-
----
-
-## Fetching the Watchlist
-
-* **Automatic (Recommended):** Set `LETTERBOXD_USERNAME` in `.env`. The application reads your public watchlist directly (`letterboxd.com/<username>/watchlist/`).
-* **Fallback (ZIP or CSV):** If `LETTERBOXD_USERNAME` is empty or scraping fails, place your exported `watchlist.csv` or `watchlist.zip` (from [letterboxd.com/data/export](https://letterboxd.com/data/export)) into `~/Downloads`. The script auto-detects `watchlist*.csv` and extracts ZIP files automatically.
-* **Failure Handling:** If scraping fails and no local export is detected, the script displays a direct download link and waits for manual input without crashing.
-
----
-
-## Usage
-
-### 1. Terminal Interface (CLI)
-
-Execute `run.sh` inside the project folder. It activates the virtual environment automatically:
+### Run the web app
 
 ```bash
-cd watchlist-availability
+./run_web.sh          # macOS / Linux
+python app.py         # Windows (PowerShell)
+```
+
+Open <http://127.0.0.1:5000>. The first scan starts from the page.
+
+### Or the command line
+
+```bash
 ./run.sh
-
 ```
 
-*A dated HTML report (e.g., `watchlist_2026-06-06.html`) is saved to your `Downloads` folder upon completion. The command line uses the same database, settings and scan as the web app.*
+It fetches the watchlist, checks every film and saves a dated HTML report to your `Downloads` folder. The command line uses the same database, settings and scan as the web app.
+
+**No public watchlist?** Put `watchlist.csv` or `watchlist.zip` (from [letterboxd.com/data/export](https://letterboxd.com/data/export)) into `~/Downloads`; it is found automatically. If scraping fails and no export is found, the app shows a download link and waits instead of crashing.
 
 ---
 
-### 2. Interactive Web Application
-
-Launch the Flask web app to filter, search, and manage your watchlist visually:
+## Docker & self-hosting (Unraid)
 
 ```bash
-# macOS / Linux
-./run_web.sh
-
-# Windows (PowerShell)
-python app.py
-
+cp .env.example .env   # put TMDB_API_KEY and LETTERBOXD_USERNAME into it
+docker compose up -d --build
 ```
 
-Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
+The container starts as root only to set up `/data`, then runs as `PUID`/`PGID` (default 99/100, Unraid's *nobody*/*users*). `/health` checks the database and the schedule and is the Docker healthcheck. A backup of settings, favorites, history and the last scan is written once a day to `/data/backups/` (the newest 7 stay); restore one with *Settings → Restore backup*.
 
-#### Web Features
+**Unraid:** build the image on the server (`docker build -t watchlist-availability .` from a clone), add `unraid-template.xml` under *Docker → Add Container → Template*, and map `/data` to `/mnt/user/appdata/watchlist-availability`. To update: pull, build again, recreate the container; the data stays in `/data`. GitHub builds and starts the image on every push (`.github/workflows/docker.yml`).
 
-* **Progressive Scans & Caching:** Scans execute in the background with progressive card loading. The app caches results locally and restores previous state on reload.
-* **Filtering & Search:** Dynamic filtering by Provider, Free/Paid offer types, release year, trailer availability, poster availability, and minimum provider counts.
-* **Any / All Provider Modes:** Toggle between showing films available on *any* selected service vs. *all* selected services.
-* **Change History:** Every scan is compared with the previous one. "New on …" / "No longer on …" is stored with its date and shown for 14 days, also after a reload.
-* **Settings (`/settings`):** Letterboxd username, country, your own subscriptions per country, the automatic scan interval, and backup download / restore (settings, favorites, change history, last scan per country).
-* **My subscriptions / Rental shops:** One click selects the services you pay for, or only the shops where films are rented one by one.
-* **Automatic Scans:** Optionally every 6, 12, 24 or 48 hours or once a week, while the app runs. A scan interrupted by a restart is started again.
-* **Status (`/status`):** Last and next scan, and the recent scan runs with duration, failed lookups and the number of TMDB requests.
-* **Title matches (`/matches`):** Films matched by a TMDB title search, not found, or with a release year more than a year apart are listed for checking. Search TMDB or paste a TMDB link to correct a match; corrections are kept for good and are part of the backup.
-* **Provider list from TMDB:** Once a week, a scan loads every streaming service TMDB knows in your country. New services appear in the filters and in the settings without a code change.
-* **Favorites & Deep Links:** Persistent SQLite favorites, detailed modal popouts (trailers, TMDB links, Letterboxd search), and URL-synced search filter states.
-* **Bundled Assets:** Native Tabler Core UI components hosted under `static/` with zero CDN dependencies.
+> **There is no login.** Run it in your home network only, or behind a reverse proxy that asks for one. The proxy also gives you HTTPS, which installing the app as a PWA needs.
 
----
+### Environment variables
 
-### 3. Docker & Self-Hosting (Unraid)
-
-Deploy the application using the included Docker configuration:
-
-```bash
-docker-compose up -d
-
-```
-
-#### Persistent Path Environment Variables
-
-Data is stored inside `/data` in the container. Map this directory to an appdata folder on host environments (like Unraid):
-
-| Variable | Default Path | Purpose |
+| Variable | Default | Purpose |
 | --- | --- | --- |
-| `WATCHLIST_DATA_DIR` | App root directory | Base directory for the database |
-| `WATCHLIST_DB` | `<DATA_DIR>/.watchlist.sqlite3` | One SQLite database for film data, offers per country, scans, favorites and settings |
+| `TMDB_API_KEY` | — | Your TMDB key |
+| `LETTERBOXD_USERNAME`, `COUNTRY` | — | Start values (see above) |
+| `WATCHLIST_DATA_DIR` | app folder | Base directory of the database (`/data` in the container) |
+| `WATCHLIST_DB` | `<DATA_DIR>/.watchlist.sqlite3` | The SQLite database: films, offers per country, scans, favorites, settings |
 | `WATCHLIST_SCAN_WORKERS` | `6` | Films looked up at the same time |
-| `WATCHLIST_DISABLE_SCHEDULER` | not set | Set to `1` to switch off automatic scans in this process |
-| `WATCHLIST_TRUSTED_HOSTS` | not set | Host names the app is reached under behind a reverse proxy that changes the `Host` header, comma-separated (e.g. `watch.example.org`) |
+| `WATCHLIST_DISABLE_SCHEDULER` | not set | `1` switches off automatic scans in this process |
+| `WATCHLIST_DEV` | not set | `1` opens `/dev/ui`, a page with every button, menu and chip in every state (also open in debug mode) |
+| `WATCHLIST_TRUSTED_HOSTS` | not set | Host names you reach the app under behind a proxy that changes `Host`, comma-separated |
 
-#### Security
+### HTTP endpoints
 
-The app has no login; run it only in your home network or behind a reverse proxy with authentication. Changing requests (scan, settings, favorites, backup restore, match corrections) are refused when another web site makes the browser send them, so a page you visit cannot change your data. Tools without a browser (command line, `curl`, Home Assistant) are not affected. A restored backup is checked field by field; entries that do not fit are skipped and counted.
+`GET /api/latest` the last scan · `GET /api/abroad` films your services have in other countries · `GET /api/flags` greyed-out and "not now" marks · `GET /api/greyouts`, `POST /api/greyouts/reset` · `GET /api/backup` a full backup · `GET /health` for a container check. Writing calls (`PUT /api/settings`, `PUT /api/flags/<key>`, scan, favorites, backup restore, match corrections) refuse requests that another web site makes your browser send; tools without a browser (`curl`, Home Assistant) are not affected.
 
-On the first start, data from older versions (`.watchlist_favorites.sqlite3`, `.watchlist_latest.json`, `.watchlist_films.sqlite3`) is copied into the database once. The old files are left untouched and can be deleted afterwards. Favorites saved under `Title|Year` move to the film's TMDB id after the next scan.
+### Security
+
+The app has no login. A restored backup is checked field by field; entries that do not fit are skipped and counted. On the first start, data from older versions (`.watchlist_favorites.sqlite3`, `.watchlist_latest.json`, `.watchlist_films.sqlite3`) is copied into the database once; the old files stay untouched and can be deleted afterwards.
 
 ---
 
-## Provider Classification Logic
+## How offers are sorted
 
-Monetization categories are mapped dynamically per film based on TMDB / JustWatch data:
-
-| Section | A checkmark (✓) appears when TMDB reports the offer as… |
+| Group | TMDB reports the offer as… |
 | --- | --- |
-| **Free** | `free` or `ads` (free streaming, ad-supported streaming) |
-| **Paid** | `flatrate` (subscription) or `rent` (rental purchase) |
+| **Free** | `free` or `ads` — free or ad-supported streaming |
+| **Subscription** | `flatrate` |
+| **Rent / Buy** | `rent`, `buy` — shown as an offer type and a shop, never with a price |
 
-* **Note:** Permanent purchases (`buy`) are excluded. If a service offers a film under both free-with-ads and subscription models, it appears in both sections.
+A film that is only available to buy counts as *not available*. If a service offers a film both free with ads and in a subscription, it appears in both. "HBO Max" and its Amazon Channel count as one service.
 
----
-
-## Customizing Platforms (`platforms.toml`)
-
-`platforms.toml` configures which providers to check for your active region:
+### Customizing services (`platforms.toml`)
 
 ```toml
 [FR]
-# Free / Ad-supported
-Arte         = true
-Molotov      = false
-
-# Paid / Subscription
-Netflix      = true
+Arte         = true     # free / ad-supported
+Netflix      = true     # subscription
 "Canal+"     = true
-"TF1+"       = true
 
 [US]
 Netflix      = true
-"Prime Video" = true
 "Disney+"    = true
 Hulu         = false
-
 ```
 
-> **Note:** `platforms.toml` only knows the built-in provider names (`watchlist_app/providers.py`). Every other service TMDB lists for your country can be chosen on the Settings page once the first scan has loaded the provider list.
+`platforms.toml` only knows the built-in provider names (`watchlist_app/providers.py`); every other service TMDB lists for your country can be chosen on *Settings → My services* once the first scan has loaded the list.
 
 ---
 
-## Running Tests
-
-Install the development tools once, then run the checks:
+## Development
 
 ```bash
 pip install -r requirements-dev.txt
-python -m playwright install chromium   # only for the browser tests; an installed Chrome or Edge also works
+python -m playwright install chromium   # only for the browser tests
 
-pytest -q                # unit tests
-pytest -q -m browser     # end-to-end tests in a real browser (Playwright)
-node --test tests/js/    # filter logic of the page
+pytest -q                       # unit tests
+pytest -q -m browser tests/browser   # end-to-end in a real browser (Playwright)
+node --test tests/js/*.mjs      # the page's pure logic
 ruff check . && ruff format --check .
-mypy                     # type check
+mypy
 ```
 
-*All API calls and network requests in the test suite are fully mocked.* There is one test file per module. The browser tests start the app on a free local port with an empty database and fixed answers for Letterboxd and TMDB. GitHub Actions runs all of these on every push.
+All network calls in the tests are mocked; the browser tests start the app on a free port with an empty database and fixed answers for Letterboxd and TMDB. GitHub Actions runs everything on every push.
 
----
+No build step: the frontend is plain ES modules under `static/js/`. After a CSS or JS change, bump the `v=` in `templates/*.html` so browsers fetch the new files.
 
-## Project Structure
+### Project structure
 
 ```text
 watchlist-availability/
-├── watchlist_availability.py   # CLI entry point
-├── app.py                      # Flask web application entry point
-├── watchlist_app/              # Core application logic & ingestion
-│   ├── cli.py                  # CLI orchestration
-│   ├── config.py               # Path and environment settings
-│   ├── legacy_import.py        # One-time import of files from older versions
-│   ├── history.py              # Changes between scans
-│   ├── letterboxd.py           # Web scraping, CSV, and ZIP loading
-│   ├── lookup.py               # Cached film lookup (Letterboxd id, then TMDB)
-│   ├── matches.py              # Uncertain title matches and manual corrections
-│   ├── models.py               # Film and WatchlistEntry data classes
-│   ├── providers.py            # Provider catalogue, groups and platforms.toml
-│   ├── rendering.py            # Console, Markdown, and HTML formatters
-│   ├── results.py              # Parallel availability check
-│   ├── scan_service.py         # One scan for page, schedule and CLI; job state
-│   ├── scheduler.py            # Automatic scans
-│   ├── settings.py             # Settings from the database, .env as start values
-│   ├── store.py                # Shared SQLite database
-│   ├── validation.py           # Checks for restored backups and other outside data
-│   └── tmdb.py                 # TMDB API access
-├── web/                        # Web app modules
-│   └── routes.py               # Pages and API endpoints
-├── static/                     # Bundled frontend scripts and stylesheets
-├── templates/                  # Jinja2 templates and UI partials
-├── platforms.toml              # Regional streaming provider toggles
-├── run.sh                      # CLI launch script
-├── run_web.sh                  # Web server launch script
-├── Dockerfile                  # Production container build definition
-├── docker-compose.yml          # Docker Compose orchestration
-└── tests/                      # Automated unit test suite
-
+├── app.py                      # Flask entry point
+├── watchlist_availability.py   # command-line entry point
+├── watchlist_app/              # core logic
+│   ├── scan_service.py         #   one scan for page, schedule and CLI
+│   ├── letterboxd.py           #   scraping, CSV and ZIP
+│   ├── tmdb.py, lookup.py      #   TMDB access, cached film lookup
+│   ├── results.py, providers.py, costs.py, history.py, matches.py
+│   ├── store.py                #   the SQLite database
+│   ├── feed.py                 #   RSS, tile, calendar
+│   └── settings.py, validation.py, scheduler.py, config.py
+├── web/routes.py               # pages and API
+├── templates/                  # Jinja2 templates and partials
+├── static/
+│   ├── js/                     #   filtering, filterbar, bestway (card + drawer), drawer, abroad, gridnav …
+│   ├── css/, fonts/, flags/    #   one stylesheet, bundled Tabler, country flags
+│   └── sw.js                   #   service worker
+├── docs/screenshots/           # the pictures above
+├── platforms.toml, run.sh, run_web.sh, Dockerfile, docker-compose.yml
+└── tests/                      # unit, JS and browser tests
 ```
 
 ---
 
 ## Acknowledgements
 
-Developed with the assistance of [Claude Code](https://claude.com/claude-code) (Anthropic) and [GitHub Copilot](https://github.com/features/copilot) (GitHub / Microsoft).
-
----
+Film data by [TMDB](https://www.themoviedb.org/) and [JustWatch](https://www.justwatch.com/); this product uses the TMDB API but is not endorsed or certified by TMDB. Country flags from [flag-icons](https://github.com/lipis/flag-icons) (MIT). UI built on [Tabler](https://tabler.io/). Developed with the help of [Claude Code](https://claude.com/claude-code) (Anthropic) and [GitHub Copilot](https://github.com/features/copilot).
 
 ## License
 
-[MIT](https://www.google.com/search?q=LICENSE)
-
-```
-
-```
+[MIT](LICENSE)

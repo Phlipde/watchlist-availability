@@ -9,13 +9,13 @@ from pathlib import Path
 from . import validation
 from .models import Film, legacy_key
 
-MAX_SCANS = 30
+MAX_SCANS = 30  # per country
 MAX_JOBS = 100
 BACKUP_VERSION = 1
 # Time of the last match correction; a recent scan is not reused after it.
 MATCHES_CHANGED_SETTING = "matches_changed_at"
 # Settings the app keeps for itself; they are not part of a backup.
-INTERNAL_SETTINGS = frozenset({"legacy_import_done", MATCHES_CHANGED_SETTING})
+INTERNAL_SETTINGS = frozenset({"legacy_import_done", MATCHES_CHANGED_SETTING, "notify_token", "notify_state"})
 # Fields that identify a stored change, used to skip duplicates when restoring a backup.
 CHANGE_IDENTITY = ("created", "country", "film_key", "provider", "change")
 
@@ -92,6 +92,19 @@ CREATE TABLE IF NOT EXISTS favorites (
     notes TEXT NOT NULL DEFAULT '',
     added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS service_history (
+    country TEXT NOT NULL,
+    day TEXT NOT NULL,
+    service TEXT NOT NULL,
+    films INTEGER NOT NULL,
+    only_here INTEGER NOT NULL,
+    PRIMARY KEY (country, day, service)
+);
+CREATE TABLE IF NOT EXISTS flags (
+    movie_key TEXT PRIMARY KEY,
+    flag TEXT NOT NULL,
+    until REAL
+);
 CREATE TABLE IF NOT EXISTS jobs (
     id TEXT PRIMARY KEY,
     status TEXT NOT NULL,
@@ -128,7 +141,13 @@ CREATE TABLE IF NOT EXISTS provider_catalog (
 
 # Columns added after the first release; created on older databases at start.
 _ADDED_COLUMNS = {
-    "film_ids": (("title", "TEXT"), ("year", "INTEGER"), ("last_seen", "REAL")),
+    "film_ids": (
+        ("title", "TEXT"),
+        ("year", "INTEGER"),
+        ("last_seen", "REAL"),
+        ("lb_rating", "REAL"),
+        ("lb_checked_at", "REAL"),
+    ),
 }
 
 MATCH_FIELDS = ("film_key", "title", "year", "tmdb_id", "source", "checked_at", "last_seen")
@@ -155,6 +174,7 @@ class Store:
             Path(path).parent.mkdir(parents=True, exist_ok=True)
         self.path = str(path)
         self._lock = threading.Lock()
+        self.offers_version = 0  # counts the saved offers, so answers built from them can be cached safely
         self._db = sqlite3.connect(str(path), check_same_thread=False)
         with self._lock:
             self._db.executescript(_SCHEMA)
@@ -183,13 +203,26 @@ class Store:
 
     def get_id(self, film_key: str) -> dict | None:
         rows = self._read(
-            "SELECT tmdb_id, source, checked_at FROM film_ids WHERE film_key = ?",
+            "SELECT tmdb_id, source, checked_at, lb_rating, lb_checked_at FROM film_ids WHERE film_key = ?",
             (film_key,),
         )
         if not rows:
             return None
-        tmdb_id, source, checked_at = rows[0]
-        return {"tmdb_id": tmdb_id, "source": source, "checked_at": checked_at}
+        tmdb_id, source, checked_at, lb_rating, lb_checked_at = rows[0]
+        return {
+            "tmdb_id": tmdb_id,
+            "source": source,
+            "checked_at": checked_at,
+            "lb_rating": lb_rating,
+            "lb_checked_at": lb_checked_at,
+        }
+
+    def set_letterboxd_rating(self, film_key: str, rating: float | None, checked_at=None) -> None:
+        """Remember the Letterboxd average of a watchlist entry (None: too few ratings)."""
+        self._write(
+            "UPDATE film_ids SET lb_rating = ?, lb_checked_at = ? WHERE film_key = ?",
+            (rating, checked_at if checked_at is not None else time.time(), film_key),
+        )
 
     def set_id(
         self,
@@ -265,8 +298,26 @@ class Store:
             "fetched_at": fetched_at,
         }
 
+    def offers_by_country(self, tmdb_id: int) -> dict[str, dict[str, list[str]]]:
+        """The stored offers of every country: {country: {TMDB provider name: kinds}}."""
+        rows = self._read("SELECT country, providers FROM offers WHERE tmdb_id = ?", (tmdb_id,))
+        return {country: json.loads(providers) for country, providers in rows}
+
+    def offers_for(self, tmdb_ids: list[int]) -> dict[str, dict[int, dict[str, list[str]]]]:
+        """The stored offers of the given films in every country: {country: {tmdb_id: {provider: kinds}}}."""
+        found: dict[str, dict[int, dict[str, list[str]]]] = {}
+        for start in range(0, len(tmdb_ids), 500):  # SQLite limits the number of parameters
+            chunk = tmdb_ids[start : start + 500]
+            marks = ", ".join("?" for _ in chunk)
+            for tmdb_id, country, providers in self._read(
+                f"SELECT tmdb_id, country, providers FROM offers WHERE tmdb_id IN ({marks})", tuple(chunk)
+            ):
+                found.setdefault(country, {})[tmdb_id] = json.loads(providers)
+        return found
+
     def save_bundle(self, tmdb_id: int, bundle: dict, fetched_at=None) -> None:
         """Store details and the offers of every country from one TMDB response."""
+        self.offers_version += 1
         with self._lock:
             self._db.execute(
                 "INSERT INTO films (tmdb_id, poster_path, details, fetched_at) VALUES (?, ?, ?, ?) "
@@ -346,9 +397,11 @@ class Store:
                 json.dumps(stats),
             ),
         )
+        # Per country: a daily scan of one country must not push out the only scan of another.
         self._write(
-            "DELETE FROM scans WHERE id NOT IN (SELECT id FROM scans ORDER BY created DESC LIMIT ?)",
-            (MAX_SCANS,),
+            "DELETE FROM scans WHERE country = ? AND id NOT IN "
+            "(SELECT id FROM scans WHERE country = ? ORDER BY created DESC LIMIT ?)",
+            (country, country, MAX_SCANS),
         )
         assert cursor.lastrowid is not None
         return cursor.lastrowid
@@ -382,6 +435,15 @@ class Store:
             parameters,
         )
         return self._scan_from_row(rows[0]) if rows else None
+
+    def recent_scans(self, country: str, source_name: str, limit: int = 2) -> list[dict]:
+        """The newest scans of one watchlist in a country, newest first."""
+        rows = self._read(
+            f"SELECT {self._SCAN_COLUMNS} FROM scans WHERE country = ? AND source_name = ? "
+            "ORDER BY created DESC LIMIT ?",
+            (country, source_name, limit),
+        )
+        return [self._scan_from_row(row) for row in rows]
 
     def find_scan(self, country: str, watchlist_key: str, max_age: float) -> dict | None:
         """A recent scan of exactly this watchlist, to skip scanning again."""
@@ -517,6 +579,68 @@ class Store:
     def remove_favorite(self, movie_key: str) -> None:
         self._write("DELETE FROM favorites WHERE movie_key = ?", (movie_key,))
 
+    # ----- service history: how many films each own service had, one row a day, kept for a year -----
+
+    def record_service_counts(self, country: str, day: str, counts: dict[str, tuple[int, int]]) -> None:
+        """Save {service: (films, only_here)} for a day (a second scan the same day replaces it)."""
+        with self._lock:
+            for service, (films, only_here) in counts.items():
+                self._db.execute(
+                    "INSERT OR REPLACE INTO service_history (country, day, service, films, only_here) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (country, day, service, films, only_here),
+                )
+            self._db.execute(
+                "DELETE FROM service_history WHERE country = ? AND day < date(?, '-365 days')", (country, day)
+            )
+            self._db.commit()
+
+    def service_history(self, country: str) -> dict[str, list[dict]]:
+        """{service: [{day, films, only_here}]} oldest first."""
+        rows = self._read(
+            "SELECT service, day, films, only_here FROM service_history WHERE country = ? ORDER BY day",
+            (country,),
+        )
+        history: dict[str, list[dict]] = {}
+        for service, day, films, only_here in rows:
+            history.setdefault(service, []).append({"day": day, "films": films, "only_here": only_here})
+        return history
+
+    # ----- flags: "watched" and "not now" (hidden until a date), kept apart from favorites -----
+
+    def list_flags(self, now: float | None = None) -> list[dict]:
+        """Flags that count: watched ones, and "not now" until its date."""
+        now = now if now is not None else time.time()
+        rows = self._read(
+            "SELECT movie_key, flag, until FROM flags WHERE until IS NULL OR until > ? ORDER BY movie_key",
+            (now,),
+        )
+        return [{"key": key, "flag": flag, "until": until} for key, flag, until in rows]
+
+    def set_flag(self, movie_key: str, flag: str, until: float | None = None) -> None:
+        self._write(
+            "INSERT OR REPLACE INTO flags (movie_key, flag, until) VALUES (?, ?, ?)", (movie_key, flag, until)
+        )
+
+    def clear_flag(self, movie_key: str) -> None:
+        self._write("DELETE FROM flags WHERE movie_key = ?", (movie_key,))
+
+    def greyed_out_counts(self) -> dict[str, int]:
+        """How many films are greyed out: by the flag, and by a favorite with the status "watched"."""
+        flags = self._read("SELECT COUNT(*) FROM flags WHERE flag = 'watched'")[0][0]
+        favorites = self._read("SELECT COUNT(*) FROM favorites WHERE status = 'watched'")[0][0]
+        return {"flags": flags, "favorites": favorites}
+
+    def reset_greyed_out(self) -> dict[str, int]:
+        """Remove every grey-out; favorites stay, their status goes back to "plan". Returns the counts."""
+        with self._lock:
+            flags = self._db.execute("DELETE FROM flags WHERE flag = 'watched'").rowcount
+            favorites = self._db.execute(
+                "UPDATE favorites SET status = 'plan' WHERE status = 'watched'"
+            ).rowcount
+            self._db.commit()
+        return {"flags": flags, "favorites": favorites}
+
     def rekey_favorites(self, films: list[Film]) -> int:
         """Move favorites saved under `Title|Year` to the TMDB id of the same film."""
         moved = 0
@@ -555,6 +679,7 @@ class Store:
                 if key not in INTERNAL_SETTINGS
             },
             "favorites": self.list_favorites(),
+            "flags": self.list_flags(),
             "changes": [dict(zip(change_names, row, strict=True)) for row in changes],
             "scans": [self.get_scan(scan_id) for scan_id in latest_ids],
             "matches": [
@@ -579,7 +704,8 @@ class Store:
         changes = backup.get("changes") or []
         scans = backup.get("scans") or []
         matches = backup.get("matches") or []  # missing in backups made before match corrections
-        if not all(isinstance(part, list) for part in (favorites, changes, scans, matches)):
+        flags = backup.get("flags") or []  # missing in backups made before "watched" and "not now"
+        if not all(isinstance(part, list) for part in (favorites, changes, scans, matches, flags)):
             raise ValueError("The backup file is damaged.")
         now = time.time()
         skipped = 0
@@ -592,6 +718,13 @@ class Store:
                 continue
             self.add_favorite(favorite)
             imported_favorites += 1
+
+        for raw_flag in flags:
+            flag = validation.clean_flag(raw_flag, now)
+            if flag is None:
+                skipped += 1
+                continue
+            self.set_flag(flag["key"], flag["flag"], flag["until"])
 
         known = {
             tuple(row)

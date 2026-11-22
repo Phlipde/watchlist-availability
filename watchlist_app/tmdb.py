@@ -11,8 +11,9 @@ import time
 import requests
 
 _TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500"
+_TMDB_LOGO_BASE_URL = "https://image.tmdb.org/t/p/w92"
 _API_BASE_URL = "https://api.themoviedb.org/3"
-_MONETIZATION_TYPES = ("free", "ads", "flatrate", "rent")
+_MONETIZATION_TYPES = ("free", "ads", "flatrate", "rent", "buy")
 _MAX_ATTEMPTS = 3
 _LOCAL = threading.local()
 _COUNT_LOCK = threading.Lock()
@@ -53,17 +54,81 @@ def _details_from_movie(data: dict, tmdb_id: int) -> dict:
         (video for video in videos if video.get("site") == "YouTube" and video.get("type") == "Trailer"),
         None,
     )
+    credits = data.get("credits", {})
+    directors = [
+        p.get("name") for p in credits.get("crew", []) if p.get("job") == "Director" and p.get("name")
+    ]
+    cast = [p.get("name") for p in credits.get("cast", []) if p.get("name")][:5]
+    keywords = [
+        keyword.get("name") for keyword in data.get("keywords", {}).get("keywords", []) if keyword.get("name")
+    ]
     return {
         "tmdb_title": data.get("title") or "",
         "overview": data.get("overview", ""),
         "rating": data.get("vote_average"),
+        "popularity": data.get("popularity"),
+        "vote_count": data.get("vote_count"),
+        "director": directors[0] if directors else None,
+        "cast": cast,
+        "keywords": keywords,
         "backdrop_path": data.get("backdrop_path"),
         "runtime": data.get("runtime"),
         "genres": [genre.get("name") for genre in data.get("genres", [])],
         "release_date": data.get("release_date") or None,
         "tmdb_url": f"https://www.themoviedb.org/movie/{tmdb_id}",
         "trailer_url": f"https://www.youtube.com/watch?v={trailer['key']}" if trailer else None,
+        "collection": (data.get("belongs_to_collection") or {}).get("name") or None,
+        "similar_ids": _similar_ids(data, tmdb_id),
+        "release_dates": _release_dates(data),
+        "original_language": data.get("original_language") or None,
+        "original_title": data.get("original_title") or None,
+        "imdb_id": data.get("imdb_id") or None,
+        "origin_countries": [code for code in data.get("origin_country") or [] if isinstance(code, str)],
     }
+
+
+# Everything the scan needs about a film comes in this one request.
+_APPENDED = "videos,watch/providers,credits,keywords,recommendations,similar,release_dates"
+_CINEMA_TYPES = {2, 3}  # TMDB release types: limited and wide theatrical
+_HOME_TYPES = {4, 5}  # digital and physical
+
+
+def _release_dates(data: dict) -> dict[str, dict[str, str]]:
+    """Per country: the age rating and the first cinema and home release ("YYYY-MM-DD")."""
+    result: dict[str, dict[str, str]] = {}
+    for country in (data.get("release_dates") or {}).get("results", []):
+        code = country.get("iso_3166_1")
+        if not isinstance(code, str):
+            continue
+        info: dict[str, str] = {}
+        for release in sorted(country.get("release_dates", []), key=lambda item: item.get("type") != 3):
+            date = str(release.get("release_date") or "")[:10]
+            kind = (
+                "cinema"
+                if release.get("type") in _CINEMA_TYPES
+                else "home"
+                if release.get("type") in _HOME_TYPES
+                else None
+            )
+            if kind and date and (kind not in info or date < info[kind]):
+                info[kind] = date
+            # The rating of the wide cinema release first (sorted above), else the first one given.
+            if release.get("certification") and "certification" not in info:
+                info["certification"] = str(release["certification"]).strip()
+        if info:
+            result[code] = info
+    return result
+
+
+def _similar_ids(data: dict, tmdb_id: int) -> list[int]:
+    """TMDB's recommendations first, then its similar films; each id once, never the film itself."""
+    ids: list[int] = []
+    for part in ("recommendations", "similar"):
+        for item in (data.get(part) or {}).get("results", []):
+            film_id = item.get("id")
+            if isinstance(film_id, int) and film_id != tmdb_id and film_id not in ids:
+                ids.append(film_id)
+    return ids[:40]
 
 
 def _request_json(path: str, params: dict) -> dict | None:
@@ -147,6 +212,18 @@ def search_movie_id(
     return candidates[0]["tmdb_id"]
 
 
+def check_key(api_key: str | None) -> None:
+    """Ask TMDB for its configuration (the cheapest request that needs a key); TmdbError says why not."""
+    if not api_key:
+        raise TmdbError("No TMDB key is set.")
+    try:
+        _request_json("/configuration", {"api_key": api_key})
+    except TmdbError as exc:
+        if "401" in str(exc):
+            raise TmdbError("TMDB does not accept this key.") from None
+        raise
+
+
 def get_region_providers(country: str, api_key: str | None = None) -> list[dict]:
     """Every film provider TMDB knows in a country: [{"name", "logo_path", "priority"}]."""
     data = _request_json("/watch/providers/movie", {"api_key": api_key, "watch_region": country}) or {}
@@ -167,7 +244,10 @@ def get_movie_bundle(tmdb_id: int, api_key: str | None = None) -> dict | None:
     """
     data = _request_json(
         f"/movie/{tmdb_id}",
-        {"api_key": api_key, "append_to_response": "videos,watch/providers"},
+        {
+            "api_key": api_key,
+            "append_to_response": _APPENDED,
+        },
     )
     if data is None:
         return None

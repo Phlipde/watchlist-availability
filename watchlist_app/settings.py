@@ -7,6 +7,9 @@ from .store import Store
 
 # Shorter than a day would change nothing: a scan and its offers are reused for 24 hours.
 SCAN_INTERVALS_HOURS = (0, 24, 48, 168)
+DEFAULT_WEEKLY_HOURS = 5.0
+NOTIFY_KINDS = ("", "ntfy", "gotify", "webhook")
+DEFAULT_NOTIFY_EVENTS = {"favorite_gone": True, "deadline": True, "weekly": True, "new_available": False}
 
 
 class AppSettings:
@@ -48,6 +51,37 @@ class AppSettings:
         except (TypeError, ValueError):
             return 0
 
+    @property
+    def weekly_hours(self) -> float:
+        """Hours of films the user watches in a week (for "your pace" on the subscriptions page)."""
+        try:
+            hours = float(self._store.get_setting("weekly_hours") or DEFAULT_WEEKLY_HOURS)
+        except (TypeError, ValueError):
+            return DEFAULT_WEEKLY_HOURS
+        return hours if 0.5 <= hours <= 80 else DEFAULT_WEEKLY_HOURS
+
+    @property
+    def notify_kind(self) -> str:
+        kind = self._store.get_setting("notify_kind") or ""
+        return kind if kind in NOTIFY_KINDS else ""
+
+    @property
+    def notify_url(self) -> str:
+        return self._store.get_setting("notify_url") or ""
+
+    @property
+    def notify_token(self) -> str:
+        return self._store.get_setting("notify_token") or ""
+
+    @property
+    def notify_events(self) -> dict[str, bool]:
+        try:
+            stored = json.loads(self._store.get_setting("notify_events") or "{}")
+        except ValueError:
+            stored = {}
+        stored = stored if isinstance(stored, dict) else {}
+        return {name: bool(stored.get(name, default)) for name, default in DEFAULT_NOTIFY_EVENTS.items()}
+
     def loaded_providers(self) -> list[str]:
         """Display names of the providers loaded from TMDB, for all countries."""
         return sorted({providers.display_name(item["name"]) for item in self._store.provider_catalog()})
@@ -84,6 +118,11 @@ class AppSettings:
             "letterboxd_username": self.letterboxd_username or "",
             "country": self.country,
             "scan_interval_hours": self.scan_interval_hours,
+            "weekly_hours": self.weekly_hours,
+            "notify_kind": self.notify_kind,
+            "notify_url": self.notify_url,
+            "notify_token_set": bool(self.notify_token),
+            "notify_events": self.notify_events,
             "subscriptions": self.subscriptions(),
             "tmdb_api_key_set": bool(self.tmdb_api_key),
         }
@@ -99,7 +138,15 @@ class AppSettings:
         restored = skipped = 0
         for key, value in stored.items():
             try:
-                if key in {"letterboxd_username", "country", "scan_interval_hours"}:
+                if key in {
+                    "letterboxd_username",
+                    "country",
+                    "scan_interval_hours",
+                    "weekly_hours",
+                    "notify_kind",
+                    "notify_url",
+                    "notify_events",
+                }:
                     self.update({key: value})
                 elif isinstance(key, str) and key.startswith("subscriptions:"):
                     country = key.split(":", 1)[1]
@@ -141,15 +188,50 @@ class AppSettings:
             if interval not in SCAN_INTERVALS_HOURS:
                 raise ValueError("Unsupported scan interval.")
             validated["scan_interval_hours"] = str(interval)
+        if "notify_kind" in changes:
+            if changes["notify_kind"] not in NOTIFY_KINDS:
+                raise ValueError("The notification target must be ntfy, Gotify or a webhook.")
+            validated["notify_kind"] = changes["notify_kind"]
+        if "notify_url" in changes:
+            address = str(changes["notify_url"] or "").strip()
+            if address and not (
+                address.startswith(("https://", "http://")) and len(address) <= 300 and " " not in address
+            ):
+                raise ValueError("The notification address must be a web address (http or https).")
+            validated["notify_url"] = address
+        if "notify_token" in changes:
+            token = str(changes["notify_token"] or "").strip()
+            if len(token) > 200:
+                raise ValueError("The notification token is too long.")
+            # An empty field keeps the saved token; "-" removes it.
+            if token:
+                validated["notify_token"] = "" if token == "-" else token
+        if "notify_events" in changes:
+            events = changes["notify_events"]
+            if not isinstance(events, dict) or any(name not in DEFAULT_NOTIFY_EVENTS for name in events):
+                raise ValueError("Unknown notification type.")
+            validated["notify_events"] = json.dumps(
+                {name: bool(events.get(name, False)) for name in DEFAULT_NOTIFY_EVENTS}
+            )
+        if "weekly_hours" in changes:
+            try:
+                hours = float(changes["weekly_hours"])
+            except (TypeError, ValueError):
+                raise ValueError("The film time per week must be a number of hours.") from None
+            if not 0.5 <= hours <= 80:
+                raise ValueError("The film time per week must be between 0.5 and 80 hours.")
+            validated["weekly_hours"] = str(round(hours, 1))
+        # The subscriptions page edits any country without switching the app's country.
+        country = changes.get("subscriptions_country") or validated.get("country", self.country)
+        if country not in config.COUNTRIES:
+            raise ValueError("Unsupported country.")
         if "subscriptions" in changes:
             names = changes["subscriptions"]
             known = self.known_providers()
             if not isinstance(names, list) or any(name not in known for name in names):
                 raise ValueError("Unknown provider in the subscriptions.")
-            country = validated.get("country", self.country)
             validated[f"subscriptions:{country}"] = json.dumps(names)
         if "costs" in changes:
-            country = validated.get("country", self.country)
             own = changes.get("subscriptions", self.subscriptions(country))
             validated[f"subscription_costs:{country}"] = json.dumps(
                 costs.clean_costs(changes["costs"], set(own))

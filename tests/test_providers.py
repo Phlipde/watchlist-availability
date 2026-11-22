@@ -1,4 +1,4 @@
-from watchlist_app.providers import load_platforms_config
+from watchlist_app.providers import MOSTLY_FREE, load_platforms_config, mostly_free_from_scan
 
 
 class TestLoadPlatformsConfig:
@@ -67,3 +67,29 @@ def test_display_names_and_loaded_providers():
         for name in group
     ]
     assert names.count("Netflix") == 1
+
+
+def test_mostly_free_services_use_scan_data():
+    results = [
+        {"providers": {"BBC iPlayer": ["free"], "Molotov": ["free"]}},
+        {"providers": {"BBC iPlayer": ["ads"]}},
+        {"providers": {"Molotov": ["free"], "BBC iPlayer": ["free"]}},
+    ]
+    assert "BBC iPlayer" in mostly_free_from_scan(results, [])
+    assert "Molotov" in mostly_free_from_scan(results, [])
+    assert "Netflix" not in mostly_free_from_scan(results, [])
+
+
+def test_mostly_free_counts_each_service_against_its_own_films():
+    # A free service with few watchlist films is still free; a paid one with a few free films is not.
+    paid = [{"providers": {"Netflix": ["flatrate"]}} for _ in range(20)]
+    films = [*paid, {"providers": {"Joyn": ["free"], "Molotov": ["free"]}}]
+    films += [{"providers": {"Molotov": ["flatrate"]}}, {"providers": {"Molotov": ["flatrate"]}}]
+    free = mostly_free_from_scan(films, [])
+    assert "Joyn" in free
+    assert "Molotov" not in free
+    assert "Arte" in free  # not in the scan: the list decides
+
+
+def test_mostly_free_services_fall_back_without_scan():
+    assert mostly_free_from_scan([], []) == MOSTLY_FREE

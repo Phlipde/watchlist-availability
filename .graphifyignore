@@ -1,0 +1,7 @@
+# Tool files (ruflo, impeccable, graphify), not app code
+.claude/
+.claude-flow/
+.agents/
+.swarm/
+graphify-out/
+static/js/*.min.js

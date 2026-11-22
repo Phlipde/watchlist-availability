@@ -88,6 +88,14 @@ class TestPerformScan:
             with patch("watchlist_app.tmdb.get_movie_bundle", return_value=second):
                 outcome = perform_scan(store, ENTRIES, "src", "DE", "key")
         changes = outcome.results[0]["provider_changes"]
+        # MUBI is missing for the first time: "removed" waits for a second scan without it.
+        assert (changes["added"], changes["removed"]) == (["Arte"], [])
+        store._write("UPDATE films SET fetched_at = 0")
+        store._write("UPDATE scans SET watchlist_key = 'older list'")
+        with patch("watchlist_app.tmdb.search_movie_id", return_value=949):
+            with patch("watchlist_app.tmdb.get_movie_bundle", return_value=second):
+                outcome = perform_scan(store, ENTRIES, "src", "DE", "key")
+        changes = outcome.results[0]["provider_changes"]
         assert (changes["added"], changes["removed"]) == (["Arte"], ["MUBI"])
         reused = perform_scan(store, ENTRIES, "src", "DE", "key")
         assert reused.reused and reused.results[0]["provider_changes"]["added"] == ["Arte"]
@@ -188,7 +196,16 @@ class TestScanService:
         status = restarted.status(job_id)
         assert status["status"] == "complete"
         assert status["results"][0]["key"] == "949"
+        assert "only_on_my_services" in status["results"][0]  # for the page filter
         assert status["last_updated"] is not None
+
+    def test_a_running_scan_sends_only_new_films(self, store, settings):
+        service = ScanService(store, settings, thread_factory=IdleThread)
+        job_id, _ = service.start("DE", entries=ENTRIES)
+        service._live[job_id]["results"] = [{"key": "1", "providers": {}}, {"key": "2", "providers": {}}]
+        assert [film["key"] for film in service.status(job_id, start=1)["results"]] == ["2"]
+        service._live[job_id]["status"] = "complete"
+        assert len(service.status(job_id, start=1)["results"]) == 2  # finished: always everything
 
     def test_interrupted_scan_is_closed_and_started_again(self, store, settings):
         ScanService(store, settings, thread_factory=IdleThread).start("GB")
@@ -332,6 +349,14 @@ class TestProviderList:
             store._write("UPDATE scans SET stats = '{}'")
             assert not perform_scan(store, ENTRIES, "src", "DE", "key").reused
         assert bundle.call_count == 1  # the film data itself is still cached
+
+    def test_a_scan_in_an_older_film_format_is_not_reused(self, store):
+        search, fetched = tmdb_answers()
+        with search, fetched:
+            perform_scan(store, ENTRIES, "src", "DE", "key")
+            assert perform_scan(store, ENTRIES, "src", "DE", "key").reused
+            store._write("""UPDATE scans SET stats = '{"providers": "all", "film_format": 1}'""")
+            assert not perform_scan(store, ENTRIES, "src", "DE", "key").reused
 
     @pytest.mark.provider_catalog
     def test_catalog_is_loaded_once_a_week(self, store, monkeypatch):

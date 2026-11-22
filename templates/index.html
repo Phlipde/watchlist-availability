@@ -3,24 +3,35 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101412">
+  <link rel="icon" href="/static/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
   <title>Watchlist Availability</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261115-6') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261122-28') }}" rel="stylesheet">
 </head>
-<body>
+<body class="view-{{ view }}">
+  <a class="skip-link" href="#results">Skip to films</a>
 
-  {% include "partials/header.html" %}
   <main>
+  {% include "partials/header.html" %}
+  <h1 class="visually-hidden">{{ "Tonight" if view == "tonight" else "Watchlist" }}</h1>
+    <div class="state-banner" id="state-banner" role="alert" hidden><p id="state-text"></p><div class="banner-actions"><button class="film-link" id="state-retry" type="button">Try again</button><a class="film-link" id="state-link" href="/settings/data" hidden></a></div></div>
     <div class="workspace">
-      {% include "partials/provider-sidebar.html" %}
       <section>
-        {% include "partials/scan-status.html" %}
-        {% include "partials/statistics.html" %}
-        {% include "partials/result-tools.html" %}
+        {% if view == 'tonight' %}{% include "partials/tonight.html" %}{% endif %}
+        {# The watchlist's controls stay in the page on Tonight too (hidden): app.js wires them either way. #}
+        <div id="watchlist-view"{% if view == 'tonight' %} hidden{% endif %}>
+        <div class="phone-filters"><button class="btn btn-outline-secondary tools-toggle" id="tools-toggle" type="button" aria-controls="film-filters" aria-expanded="false"><i class="ti ti-adjustments-horizontal" aria-hidden="true"></i> Filters</button></div>
+        <div class="watch-bar">
         {% include "partials/film-filters.html" %}
+        {% include "partials/result-tools.html" %}
+        </div>
         {% include "partials/results.html" %}
+        {% include "partials/statistics.html" %}
+        </div>
       </section>
     </div>
   </main>
@@ -28,6 +39,6 @@
   <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/tabler.min.js') }}"></script>
   <script>window.WATCHLIST_CONFIG = {{ client_config|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/app.js', v='20261115-6') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/app.js', v='20261122-28') }}" type="module"></script>
 </body>
 </html>

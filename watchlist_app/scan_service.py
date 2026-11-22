@@ -6,6 +6,7 @@ state of every run in the database so it is still known after a restart.
 """
 
 import hashlib
+import logging
 import threading
 import time
 import uuid
@@ -13,7 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import partial
 
-from . import history, letterboxd, matches, providers, tmdb
+from . import costs, history, letterboxd, matches, providers, tmdb
 from .lookup import film_key, lookup_film
 from .models import Film, WatchlistEntry
 from .results import build_results
@@ -28,6 +29,9 @@ DB_UPDATE_SECONDS = 1.0
 PROVIDER_CATALOG_TTL_SECONDS = 7 * 24 * 60 * 60
 # Marks scans that keep every provider TMDB reports (stats["providers"]).
 ALL_PROVIDERS = "all"
+# Raise when films get new fields: a saved scan in an older format is not reused, so the new
+# fields arrive with the next scan instead of a day later.
+FILM_FORMAT = 4
 
 
 def refresh_provider_catalog(
@@ -84,6 +88,8 @@ def with_changes(store: Store, country: str, results: list[dict], unavailable: l
         "results": history.apply_changes(results, changes),
         "unavailable": history.apply_changes(unavailable, changes),
         "changes": changes,
+        # The page does not reload on a country switch, so the free list travels with the films.
+        "free_services": sorted(providers.mostly_free_from_scan(results, unavailable)),
     }
 
 
@@ -120,6 +126,7 @@ class ScanOutcome:
     reused: bool = False
     scan_id: int | None = None
     failed: list[dict] = field(default_factory=list)
+    free_services: list[str] = field(default_factory=list)
 
 
 def perform_scan(
@@ -150,6 +157,7 @@ def perform_scan(
     reusable = (
         recent is not None
         and recent["stats"].get("providers") == ALL_PROVIDERS
+        and recent["stats"].get("film_format") == FILM_FORMAT
         and not matches.changed_since(store, recent["created"])
     )
     if recent is not None and reusable:
@@ -201,14 +209,16 @@ def perform_scan(
     if is_cancelled and is_cancelled():
         return None
     results = [film.to_dict() for film in films]
-    previous = store.latest_scan(country, source_name=source_name)
+    earlier = store.recent_scans(country, source_name)
+    previous = earlier[0] if earlier else None
+    older = earlier[1] if len(earlier) > 1 else None
     # Scans before the provider list came from TMDB only knew the built-in providers;
     # comparing against them would report every newly known provider as "new on ...".
     compare_only = None
     if previous is not None and previous["stats"].get("providers") != ALL_PROVIDERS:
         compare_only = set(providers._ALL_PROVIDERS) - providers.MATCHING_CHANGED
     created = time.time()
-    stats = {**result_stats(results), "providers": ALL_PROVIDERS}
+    stats = {**result_stats(results), "providers": ALL_PROVIDERS, "film_format": FILM_FORMAT}
     scan_id = None
     # Nothing could be checked (TMDB down, wrong key): keep the previous scan on the page.
     if results or unavailable or not failed:
@@ -218,7 +228,9 @@ def perform_scan(
             country, source_name, saved_key, results, unavailable, stats, created=created
         )
         store.add_changes(
-            country, history.diff_scans(previous, results, unavailable, compare_only), created=created
+            country,
+            history.diff_scans(previous, results, unavailable, compare_only, older=older),
+            created=created,
         )
     store.touch_ids(seen, seen_at=created)
     store.rekey_favorites(films)
@@ -346,12 +358,20 @@ class ScanService:
 
     # ----- progress -----
 
-    def status(self, job_id: str) -> dict | None:
-        """The state of a scan for the browser, from memory or, after a restart, the database."""
+    def status(self, job_id: str, start: int = 0) -> dict | None:
+        """The state of a scan for the browser, from memory or, after a restart, the database.
+
+        While a scan runs, only the films found after the first `start` are sent; the
+        page already has those. A finished scan always sends every film.
+        """
         with self._lock:
             job = self._live.get(job_id)
             if job is not None:
-                return {key: value for key, value in job.items() if key != "entries"}
+                live = {key: value for key, value in job.items() if key != "entries"}
+                if live["status"] == "running":
+                    live["results"] = live["results"][max(start, 0) :]
+        if job is not None:
+            return self._mark_own_services(live)
         stored = self._store.get_job(job_id)
         if stored is None:
             return None
@@ -361,22 +381,28 @@ class ScanService:
             if scan
             else {"results": [], "unavailable": [], "changes": []}
         )
-        return {
-            "job_id": stored["id"],
-            "status": stored["status"],
-            "trigger": stored["trigger"],
-            "phase": stored["phase"],
-            "message": stored["message"],
-            "completed": stored["completed"],
-            "total": stored["total"],
-            "current_title": "",
-            **films,
-            "stats": result_stats(films["results"]),
-            "failed": stored["failed"],
-            "last_updated": scan["created"] if scan else None,
-            "country": stored["country"],
-            "source_name": stored["source_name"],
-        }
+        return self._mark_own_services(
+            {
+                "job_id": stored["id"],
+                "status": stored["status"],
+                "trigger": stored["trigger"],
+                "phase": stored["phase"],
+                "message": stored["message"],
+                "completed": stored["completed"],
+                "total": stored["total"],
+                "current_title": "",
+                **films,
+                "stats": result_stats(films["results"]),
+                "failed": stored["failed"],
+                "last_updated": scan["created"] if scan else None,
+                "country": stored["country"],
+                "source_name": stored["source_name"],
+            }
+        )
+
+    def _mark_own_services(self, status: dict) -> dict:
+        own = self._settings.subscriptions(status["country"])
+        return {**status, "results": costs.mark_only_on_my_services(status["results"], own)}
 
     # ----- the scan itself -----
 
@@ -473,13 +499,23 @@ class ScanService:
                 results=outcome.results,
                 unavailable=outcome.unavailable,
                 changes=outcome.changes,
+                free_services=outcome.free_services,
                 stats=result_stats(outcome.results),
                 completed=len(entries),
                 last_updated=outcome.created,
             )
             store.update_job(job_id, scan_id=outcome.scan_id, reused=outcome.reused)
+            try:  # the history is a bonus; a problem there must not fail a good scan
+                store.record_service_counts(
+                    job["country"],
+                    time.strftime("%Y-%m-%d", time.localtime(outcome.created)),
+                    costs.service_counts(outcome.results, self._settings.subscriptions(job["country"])),
+                )
+            except Exception:
+                logging.exception("Could not save the service history")
             finish("complete", "Complete", "Loaded from cache." if outcome.reused else "All films loaded.")
         except (FileNotFoundError, ValueError, letterboxd.LetterboxdError) as exc:
             finish("error", "Error", str(exc))
         except Exception:
+            logging.exception("Scan %s failed", job_id)
             finish("error", "Error", "The scan failed unexpectedly.")

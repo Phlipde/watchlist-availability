@@ -6,6 +6,7 @@ export function createAppState() {
     changes: [],
     lastScan: null,
     favorites: new Map(),
+    flags: new Map(),  // key -> {flag: 'watched' | 'not_now', until}
     favoritesOnly: false,
     compareKeys: new Set(),
     view: null,
@@ -16,9 +17,10 @@ export function createScanState() {
   return {
     currentJob: undefined,
     pollDelay: 350,
+    pollFailures: 0,
     lastPollSignature: '',
     rescanInProgress: false,
-    pendingResults: [],
+    resultsReceived: 0,
     pendingUnavailable: [],
   };
 }

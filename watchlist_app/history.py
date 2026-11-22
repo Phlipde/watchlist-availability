@@ -2,7 +2,8 @@
 
 from .models import legacy_key
 
-CHANGE_WINDOW_SECONDS = 14 * 24 * 60 * 60
+# "Recently gone" looks back 30 days; "new on" badges use the last 14 (static/js/events.js).
+CHANGE_WINDOW_SECONDS = 30 * 24 * 60 * 60
 
 
 def _provider_index(scan: dict) -> dict[str, set[str]]:
@@ -21,16 +22,23 @@ def diff_scans(
     results: list[dict],
     unavailable: list[dict],
     compare_only: set[str] | None = None,
+    older: dict | None = None,
 ) -> list[dict]:
     """Compare a new scan with the previous one of the same watchlist.
 
     Only films present in both scans count, so a film that was just added to or
     removed from the watchlist does not show up as a change. With `compare_only`,
     only these providers are compared (the previous scan knew no others).
+
+    Two-scan rule against TMDB hiccups: "removed" needs two scans in a row without the
+    provider (it was in `older`, the scan before `previous`), and a provider that only
+    dropped out of `previous` and is back now is not "added". Without `older` (only one
+    earlier scan) nothing is reported as removed yet.
     """
     if not previous:
         return []
     before = _provider_index(previous)
+    earlier = _provider_index(older) if older else {}
     changes = []
     for film in [*results, *unavailable]:
         key = film.get("key") or legacy_key(film.get("title"), film.get("year"))
@@ -40,9 +48,12 @@ def diff_scans(
         if old is None:
             continue
         new = set(film.get("providers") or {})
+        oldest = earlier.get(key, earlier.get(legacy_key(film.get("title"), film.get("year")), old))
         if compare_only is not None:
-            old, new = old & compare_only, new & compare_only
-        for change, providers in (("added", new - old), ("removed", old - new)):
+            old, new, oldest = old & compare_only, new & compare_only, oldest & compare_only
+        added = new - old - oldest if older else new - old
+        removed = (oldest - old) - new if older else set()
+        for change, providers in (("added", added), ("removed", removed)):
             for provider in sorted(providers):
                 changes.append(
                     {

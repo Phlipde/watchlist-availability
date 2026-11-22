@@ -79,6 +79,14 @@ class TestScans:
         rows = store._read("SELECT created FROM scans ORDER BY created")
         assert [row[0] for row in rows] == [2, 3, 4]
 
+    def test_scans_of_one_country_do_not_push_out_another(self, store, monkeypatch):
+        monkeypatch.setattr(store_module, "MAX_SCANS", 2)
+        self._save(store, "GB", created=0, title="British")
+        for created in range(1, 6):
+            self._save(store, "DE", created=created)
+        assert store.latest_scan("GB")["results"][0]["title"] == "British"
+        assert len(store._read("SELECT id FROM scans WHERE country = 'DE'")) == 2
+
 
 class TestFavorites:
     def test_add_update_remove(self, store):
@@ -413,3 +421,15 @@ class TestBackup:
         self._fill(store)
         counts = store.counts()
         assert (counts["favorites"], counts["scans"], counts["offers"]) == (1, 3, 2)
+
+
+def test_service_history_keeps_one_row_a_day_and_drops_a_year_old_one(store):
+    store.record_service_counts("DE", "2025-01-01", {"Netflix": (50, 10)})
+    store.record_service_counts("DE", "2026-11-17", {"Netflix": (60, 12)})
+    store.record_service_counts("DE", "2026-11-17", {"Netflix": (61, 13)})  # the same day: replaced
+    store.record_service_counts("GB", "2026-11-17", {"Netflix": (5, 1)})
+    history = store.service_history("DE")
+    assert history == {
+        "Netflix": [{"day": "2026-11-17", "films": 61, "only_here": 13}]
+    }  # the first day is over a year old
+    assert store.service_history("GB")["Netflix"][0]["films"] == 5

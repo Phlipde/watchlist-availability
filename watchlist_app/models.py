@@ -2,7 +2,7 @@
 
 from dataclasses import asdict, dataclass, field, fields
 
-OFFER_KINDS = ("free", "ads", "flatrate", "rent")
+OFFER_KINDS = ("free", "ads", "flatrate", "rent", "buy")
 
 
 def sort_kinds(kinds) -> list[str]:
@@ -35,12 +35,29 @@ class Film:
     poster_path: str | None = None
     overview: str = ""
     rating: float | None = None
+    popularity: float | None = None
+    vote_count: int | None = None
+    director: str | None = None
+    original_title: str | None = None  # shown under the title when it differs
+    imdb_id: str | None = None  # "tt0133093", for the IMDb link
+    cast: list[str] = field(default_factory=list)
+    keywords: list[str] = field(default_factory=list)
     backdrop_path: str | None = None
     runtime: int | None = None
     genres: list[str] = field(default_factory=list)
     release_date: str | None = None
     tmdb_url: str | None = None
     trailer_url: str | None = None
+    collection: str | None = None  # TMDB film series, e.g. "Alien Collection"
+    watchlist_position: int | None = None  # 0 = most recently added to the watchlist
+    similar_ids: list[int] = field(default_factory=list)  # TMDB ids TMDB recommends for this film
+    # For the scanned country: age rating ("12", "PG-13") and first cinema and home release dates.
+    letterboxd_rating: float | None = None  # Letterboxd average, 0-5
+    certification: str | None = None
+    original_language: str | None = None  # ISO 639-1, e.g. "ja"
+    origin_countries: list[str] = field(default_factory=list)  # ISO 3166-1, e.g. ["JP"]
+    cinema_date: str | None = None
+    home_date: str | None = None
     providers: dict[str, list[str]] = field(default_factory=dict)
 
     @property
@@ -61,4 +78,6 @@ class Film:
             provider: sort_kinds(kinds) for provider, kinds in (data.get("providers") or {}).items()
         }
         values["genres"] = list(data.get("genres") or [])
+        values["cast"] = list(data.get("cast") or [])
+        values["keywords"] = list(data.get("keywords") or [])
         return cls(**values)

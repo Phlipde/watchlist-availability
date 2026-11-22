@@ -12,21 +12,78 @@ class TestMovieBundle:
         with patch("watchlist_app.tmdb._http_get", return_value=response(MOVIE)) as get:
             bundle = tmdb.get_movie_bundle(27205, API_KEY)
         assert get.call_count == 1
-        assert get.call_args[1]["params"]["append_to_response"] == "videos,watch/providers"
+        assert (
+            get.call_args[1]["params"]["append_to_response"]
+            == "videos,watch/providers,credits,keywords,recommendations,similar,release_dates"
+        )
         assert bundle["poster_path"] == "/p.jpg"
         assert bundle["details"]["runtime"] == 148
         assert bundle["details"]["release_date"] == "2010-07-15"
+        assert bundle["details"]["popularity"] == 42.5
+        assert bundle["details"]["vote_count"] == 1234
+        assert bundle["details"]["director"] == "Christopher Nolan"
+        assert bundle["details"]["cast"] == ["Leonardo DiCaprio", "Joseph Gordon-Levitt"]
+        assert bundle["details"]["keywords"] == ["heist", "dream"]
         assert bundle["details"]["trailer_url"].endswith("v=abc")
+        assert bundle["details"]["collection"] is None
+        assert bundle["details"]["original_language"] == "en"
+        assert bundle["details"]["original_title"] == "Inception (original)"
+        assert bundle["details"]["imdb_id"] == "tt1375666"
+        assert bundle["details"]["origin_countries"] == ["US", "GB"]
         assert bundle["providers"]["DE"] == {
             "Netflix": ["flatrate", "rent"],
-            "Apple TV Store": ["rent"],
+            "Apple TV Store": ["rent", "buy"],
         }
         assert bundle["providers"]["US"] == {"Pluto TV": ["ads"]}
 
-    def test_buy_only_country_is_left_out(self):
+    def test_film_series_is_kept(self):
+        movie = {**MOVIE, "belongs_to_collection": {"id": 8091, "name": "Alien Collection"}}
+        with patch("watchlist_app.tmdb._http_get", return_value=response(movie)):
+            bundle = tmdb.get_movie_bundle(348, API_KEY)
+        assert bundle["details"]["collection"] == "Alien Collection"
+
+    def test_similar_films_recommendations_first_each_once(self):
+        movie = {
+            **MOVIE,
+            "recommendations": {"results": [{"id": 11}, {"id": 27205}, {"id": 12}]},
+            "similar": {"results": [{"id": 12}, {"id": 13}, {"id": "x"}]},
+        }
+        with patch("watchlist_app.tmdb._http_get", return_value=response(movie)):
+            bundle = tmdb.get_movie_bundle(27205, API_KEY)
+        assert bundle["details"]["similar_ids"] == [11, 12, 13]
+
+    def test_release_dates_and_age_rating_per_country(self):
+        movie = {
+            **MOVIE,
+            "release_dates": {
+                "results": [
+                    {
+                        "iso_3166_1": "DE",
+                        "release_dates": [
+                            {"type": 1, "release_date": "2026-01-10T00:00:00.000Z", "certification": "18"},
+                            {"type": 4, "release_date": "2026-06-01T00:00:00.000Z", "certification": ""},
+                            {"type": 3, "release_date": "2026-03-05T00:00:00.000Z", "certification": "12"},
+                            {"type": 2, "release_date": "2026-02-20T00:00:00.000Z", "certification": ""},
+                        ],
+                    },
+                    {
+                        "iso_3166_1": "US",
+                        "release_dates": [{"type": 6, "release_date": "", "certification": ""}],
+                    },
+                ]
+            },
+        }
+        with patch("watchlist_app.tmdb._http_get", return_value=response(movie)):
+            bundle = tmdb.get_movie_bundle(27205, API_KEY)
+        # Earliest cinema date, the rating of the wide release, nothing for empty countries.
+        assert bundle["details"]["release_dates"] == {
+            "DE": {"cinema": "2026-02-20", "home": "2026-06-01", "certification": "12"}
+        }
+
+    def test_buy_only_country_is_kept_for_the_details(self):
         with patch("watchlist_app.tmdb._http_get", return_value=response(MOVIE)):
             bundle = tmdb.get_movie_bundle(27205, API_KEY)
-        assert "FR" not in bundle["providers"]
+        assert bundle["providers"]["FR"] == {"Canal VOD": ["buy"]}
 
     def test_unknown_id_returns_none(self):
         with patch("watchlist_app.tmdb._http_get", return_value=response(status_code=404)):
@@ -165,3 +222,14 @@ class TestSessionReuse:
 )
 def test_clean_year(value, expected):
     assert tmdb.clean_year(value) == expected
+
+
+class TestCheckKey:
+    def test_a_working_key_passes_and_a_refused_one_says_so(self):
+        with patch("watchlist_app.tmdb._http_get", return_value=response({"images": {}})):
+            tmdb.check_key(API_KEY)
+        with patch("watchlist_app.tmdb._http_get", return_value=response(status_code=401)):
+            with pytest.raises(tmdb.TmdbError, match="does not accept this key"):
+                tmdb.check_key("wrong")
+        with pytest.raises(tmdb.TmdbError, match="No TMDB key"):
+            tmdb.check_key(None)
