@@ -1444,3 +1444,14 @@ def test_a_card_shows_only_the_logo_and_the_words_come_on_hover(app_server, page
     assert words.inner_text().strip()  # the words are there for screen readers all the time
     card.locator(".best-way-link").hover()
     expect(words).to_have_css("opacity", "1")
+
+
+def test_many_filter_chips_collapse_behind_a_more_button(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist?votes=1000&ages=16&max=120&rating=tmdb:7&cost=free")
+    chips = page.locator("#filter-chips .filter-chip:not(.chips-more):not(.filter-reset)")
+    expect(page.locator("#filter-chips .chips-more")).to_have_text(re.compile(r"^\+\d+ more$"), timeout=15000)
+    assert chips.count() == 3
+    page.locator("#filter-chips .chips-more").click()
+    assert chips.count() >= 5
+    expect(page.locator("#filter-chips .chips-more")).to_have_text("Fewer")

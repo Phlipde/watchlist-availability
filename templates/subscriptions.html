@@ -46,8 +46,8 @@
         {% endif %}
         {% if card.based_on == 'count' %}<p class="hint">Based on the film count only{% if card.type == 'cancel' %}: <button class="film-link add-price" type="button">add a price</button> for a better recommendation{% endif %}.</p>{% endif %}
         <div class="rec-actions">
-          {% if card.type == 'cancel' %}<button class="film-link set-reminder" type="button" data-service="{{ card.name }}">Set reminder</button><a class="film-link" href="/watchlist?providers={{ card.name|urlencode }}&only=1&cost=subscription">Show the {{ card.films }} film{{ '' if card.films == 1 else 's' }}</a>{% else %}<a class="film-link" href="/watchlist?providers={{ card.name|urlencode }}&cost=subscription">Show the films on {{ card.name }}</a>{% endif %}
-          <button class="film-link rec-hide" type="button">Not interested</button>
+          {% if card.type == 'cancel' %}<button class="btn btn-sm btn-outline-secondary set-reminder" type="button" data-service="{{ card.name }}">Set reminder</button><a class="btn btn-sm btn-outline-secondary" href="/watchlist?providers={{ card.name|urlencode }}&only=1&cost=subscription">Show the {{ card.films }} film{{ '' if card.films == 1 else 's' }}</a>{% else %}<a class="btn btn-sm btn-outline-secondary" href="/watchlist?providers={{ card.name|urlencode }}&cost=subscription">Show the films on {{ card.name }}</a>{% endif %}
+          <button class="btn btn-sm btn-outline-secondary rec-hide" type="button">Not interested</button>
         </div>
       </article>
       {% endfor %}

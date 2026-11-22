@@ -160,6 +160,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   const YEAR_MIN = 1920;
   const YEAR_MAX = new Date().getFullYear() + 1;
   let ratingSource = 'lb';
+  let chipsOpen = false;
   $('year-min').max = $('year-max').max = String(YEAR_MAX);
   $('year-max').value = String(YEAR_MAX);
   function setYears(from, to, notify = true) {
@@ -393,7 +394,11 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
       ...activeFilters(document).map(({id, label, text}) => chip(`data-filter-id="${id}"`, text ? `${label}: ${text}` : label, PANELS[id] || 'more-filters')),
     ];
     $('tools-count').textContent = chips.length ? ` · ${chips.length}` : '';
-    if (chips.length) chips.push('<button class="filter-chip filter-reset" type="button" data-reset-filters>Reset all</button>');
+    // From five chips on, only three show; the rest sit behind "+n more".
+    const total = chips.length;
+    if (total >= 5 && !chipsOpen) chips.splice(3, total - 3, `<button class="filter-chip chips-more" type="button" data-chips-more aria-expanded="false">+${total - 3} more</button>`);
+    else if (total >= 5) chips.push('<button class="filter-chip chips-more" type="button" data-chips-more aria-expanded="true">Fewer</button>');
+    if (total) chips.push('<button class="filter-chip filter-reset" type="button" data-reset-filters>Reset all</button>');
     $('filter-chips').innerHTML = chips.join('');
     $('filter-chips').hidden = !chips.length;
     // Set filters inside "Filters" must not be forgotten: count them on its button.
@@ -436,6 +441,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   $('filter-chips').addEventListener('click', event => {
     const open = event.target.closest('.chip-open');
     if (open) { event.stopPropagation(); openPanel(open.dataset.panel); return; }  // else the outside-click rule closes it again
+    if (event.target.closest('[data-chips-more]')) { chipsOpen = !chipsOpen; updateChips(); return; }
     if (event.target.closest('[data-reset-filters]')) { resetAll(); return; }
     const button = event.target.closest('.chip-remove')?.closest('.filter-chip');
     if (!button) return;
