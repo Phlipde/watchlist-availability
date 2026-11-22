@@ -58,15 +58,13 @@ def tmdb_answers(bundle=BUNDLE):
 
 
 class TestPerformScan:
-    def test_saves_scan_and_rekeys_favorites(self, store):
-        store.add_favorite({"key": "Heat|1995", "title": "Heat", "year": 1995})
+    def test_saves_the_scan(self, store):
         search, bundle = tmdb_answers()
         with search, bundle:
             outcome = perform_scan(store, ENTRIES, "src", "DE", "key")
         assert outcome.results[0]["key"] == "949"
         assert outcome.results[0]["providers"] == {"Netflix": ["flatrate"]}
         assert store.get_scan(outcome.scan_id)["results"][0]["key"] == "949"
-        assert [favorite["key"] for favorite in store.list_favorites()] == ["949"]
 
     def test_same_watchlist_within_a_day_is_reused(self, store):
         search, bundle = tmdb_answers()

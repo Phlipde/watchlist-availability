@@ -3,9 +3,6 @@
 import {escapeHtml, numberText} from './ui.js';
 import {selectedChanges} from './filtering.js';
 
-// Where "Report" opens a prefilled issue (nothing is sent until the user submits it there).
-export const ISSUES_URL = 'https://github.com/Phlipde/watchlist-availability/issues/new';
-
 const KIND_ORDER = ['free', 'ads', 'flatrate', 'rent', 'buy'];
 const KIND_LABEL = {free: 'Free', ads: 'With ads', flatrate: 'Subscription', rent: 'Rent', buy: 'Buy'};
 const WATCH = ['free', 'ads', 'flatrate'];
@@ -35,11 +32,14 @@ export function metaLine(film, country) {
     .filter(Boolean).join(' · ');
 }
 
-// Country and place names are where a film comes from, not what it is about: they leave the keyword chips.
-// `countryNames` is a Set of lower-case names (all ISO countries, from Intl.DisplayNames in the browser).
+// Country, place and origin words say where a film comes from or is set, not what it is about: they leave the
+// keyword chips. `countryNames` is a Set of lower-case names (all ISO countries, from Intl.DisplayNames in the browser).
 const PLACE_ALIASES = ['great britain', 'britain', 'england', 'scotland', 'wales', 'northern ireland', 'usa', 'u.s.', 'america', 'uk', 'soviet union', 'ussr'];
+const US_STATES = ['alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado', 'connecticut', 'delaware', 'florida', 'georgia', 'hawaii', 'idaho', 'illinois', 'indiana', 'iowa', 'kansas', 'kentucky', 'louisiana', 'maine', 'maryland', 'massachusetts', 'michigan', 'minnesota', 'mississippi', 'missouri', 'montana', 'nebraska', 'nevada', 'new hampshire', 'new jersey', 'new mexico', 'new york', 'north carolina', 'north dakota', 'ohio', 'oklahoma', 'oregon', 'pennsylvania', 'rhode island', 'south carolina', 'south dakota', 'tennessee', 'texas', 'utah', 'vermont', 'virginia', 'washington', 'west virginia', 'wisconsin', 'wyoming', 'washington d.c.', 'd.c.', 'ontario', 'quebec', 'british columbia'];
+const CITIES = ['los angeles', 'new york city', 'beverly hills', 'hollywood', 'brooklyn', 'manhattan', 'philadelphia', 'boston', 'chicago', 'san francisco', 'las vegas', 'miami', 'seattle', 'new orleans', 'houston', 'dallas', 'detroit', 'baltimore', 'atlanta', 'london', 'paris', 'berlin', 'rome', 'madrid', 'venice', 'vienna', 'tokyo', 'hong kong', 'moscow', 'amsterdam', 'dublin', 'sydney', 'toronto', 'vancouver'];
+const ORIGIN_AMERICAN = /^(italian|irish|german|chinese|japanese|korean|mexican|polish|greek|indian|cuban|jewish|french|russian|vietnamese|filipino|arab|lebanese|puerto rican) american$/;
 export function dedupeKeywords(keywords, countryNames = new Set()) {
-  countryNames = new Set([...countryNames, ...PLACE_ALIASES]);
+  const places = new Set([...countryNames, ...PLACE_ALIASES, ...US_STATES, ...CITIES]);
   const seen = new Set();
   const kept = [];
   for (const raw of keywords || []) {
@@ -47,10 +47,23 @@ export function dedupeKeywords(keywords, countryNames = new Set()) {
     const key = word.toLowerCase();
     if (!word || seen.has(key)) continue;
     seen.add(key);
-    if (key.split(',').some(part => countryNames.has(part.trim()))) continue;
+    if (key.split(',').some(part => places.has(part.trim())) || ORIGIN_AMERICAN.test(key)) continue;
     kept.push(word);
   }
   return kept;
+}
+
+// A part of a series is released once its release date (else its year) has come; one with neither is not.
+export function isReleased(item, today = new Date().toISOString().slice(0, 10)) {
+  if (item.release_date) return item.release_date <= today;
+  const year = Number(item.year);
+  return year > 0 && year <= Number(today.slice(0, 4));
+}
+
+// The films of a series, oldest first; parts with no date and no year come last.
+export function seriesOrder(items) {
+  const when = item => item.release_date || (Number(item.year) ? `${item.year}-12-31` : '9999');
+  return [...items].sort((a, b) => when(a).localeCompare(when(b)));
 }
 
 // {kind: [names]} → rows per offer type; "X" and "X Amazon Channel" are one row, the channel noted.
@@ -136,12 +149,6 @@ export function linkChips(film, country) {
   return `<p class="film-modal-links">${links.map(([name, href, tip]) => `<a class="link-chip" href="${escapeHtml(href)}" target="_blank" rel="noreferrer"${tip ? ` title="${escapeHtml(tip)}"` : ''}>${name} <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a>`).join('')}</p>`;
 }
 
-export function reportUrl(film, country, service = '') {
-  const title = `Wrong availability: ${film.title}${service ? ` on ${service}` : ''} (${country})`;
-  const body = `Film: ${film.title}${film.year ? ` (${film.year})` : ''}\nTMDB id: ${film.tmdb_id ?? 'unknown'}\nCountry: ${country}${service ? `\nService: ${service}` : ''}\n\nWhat is wrong:\n`;
-  return `${ISSUES_URL}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
-}
-
 // ---- HTML pieces ----
 
 const logoImg = (ctx, name, className = 'provider-logo') => {
@@ -183,7 +190,7 @@ function otherServicesHtml(film, ctx, action) {
     ? `<details class="offer-group offer-buy" data-offer="buy"><summary class="offer-heading">Buy (${group.rows.length})</summary><ul class="svc-list">${group.rows.map(chip).join('')}</ul></details>`
     : `<section class="offer-group" data-offer="${group.kind}"><h3 class="offer-heading">${group.label}</h3><ul class="svc-list">${group.rows.map(chip).join('')}</ul></section>`);
   const visible = groups.length && others.size;
-  return `<details class="other-services" id="film-more"${visible ? '' : ' hidden'}><summary><span>Other services</span> <span class="os-count">${others.size ? `(${others.size})` : ''}</span><span class="os-abroad"></span></summary>${groups.map(groupHtml).join('')}<div id="film-abroad" class="film-abroad" hidden></div><p class="report-line">${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">All offers <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a> · ` : ''}Something wrong? <a href="${escapeHtml(reportUrl(film, ctx.country, action.service || ''))}" target="_blank" rel="noreferrer">Report</a></p></details>`;
+  return `<details class="other-services" id="film-more"${visible ? '' : ' hidden'}><summary><span>Other services</span> <span class="os-count">${others.size ? `(${others.size})` : ''}</span><span class="os-abroad"></span></summary>${groups.map(groupHtml).join('')}<div id="film-abroad" class="film-abroad" hidden></div><p class="report-line">${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">All offers <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a>` : ''}</p></details>`;
 }
 
 // A row of mini posters: the series (`current` marked) or the similar films, the service logo under each.
@@ -192,9 +199,11 @@ function posterRow(items, ctx, currentKey = '') {
     const label = `${item.title}${item.year ? ` (${numberText(item.year)})` : ''}`;
     const service = ctx.serviceOf(item);
     const poster = item.poster_path ? `<img src="${ctx.imageBaseUrl}${escapeHtml(item.poster_path)}" alt="" loading="lazy">` : `<span class="no-poster" aria-hidden="true">${escapeHtml(item.title)}</span>`;
-    const under = service ? `<span class="mini-service">${logoImg(ctx, service, 'mini-logo') || escapeHtml(service)}</span>` : '<span class="mini-service"></span>';
+    const badge = service ? `<span class="mini-service">${logoImg(ctx, service, 'mini-logo') || escapeHtml(service.slice(0, 2))}</span>` : '';
+    const under = `${badge}<span class="mini-year">${item.year ? numberText(item.year) : ''}</span>`;
     const current = ctx.keyOf(item) === currentKey;
-    return `<li${current ? ' class="is-current"' : ''}><button class="series-pick" type="button" data-key="${escapeHtml(ctx.keyOf(item))}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}${service ? `, ${escapeHtml(service)}` : ''}"${current ? ' aria-current="true"' : ''}>${poster}${under}</button></li>`;
+    const unreleased = !isReleased(item, ctx.today);
+    return `<li class="${[current && 'is-current', unreleased && 'is-unreleased'].filter(Boolean).join(' ')}"><button class="series-pick" type="button" data-key="${escapeHtml(ctx.keyOf(item))}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}${service ? `, ${escapeHtml(service)}` : ''}"${current ? ' aria-current="true"' : ''}>${poster}${under}</button></li>`;
   }).join('')}</ul>`;
 }
 
@@ -260,6 +269,6 @@ const personLink = person => `<a class="person-link" href="/watchlist?q=${encode
 // "Start with The Matrix (1999)" when an earlier part of the series is on the watchlist and not watched yet.
 function firstUnseen(ctx, key) {
   const index = ctx.series.findIndex(item => ctx.keyOf(item) === key);
-  const earlier = ctx.series.slice(0, Math.max(index, 0)).find(item => !ctx.watched.has(ctx.keyOf(item)));
+  const earlier = ctx.series.slice(0, Math.max(index, 0)).find(item => isReleased(item, ctx.today) && !ctx.watched.has(ctx.keyOf(item)));
   return earlier ? ` · Start with ${escapeHtml(earlier.title)}${earlier.year ? ` (${numberText(earlier.year)})` : ''}` : '';
 }

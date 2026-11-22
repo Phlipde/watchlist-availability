@@ -30,7 +30,6 @@
     .sync-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .sync-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: oklch(58% 0.012 160); }
     .sync-toggle[data-state="ok"] { border-color: transparent; }
-    @media (max-width: 640px) { .sync-toggle[data-state="ok"] #sync-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } }
     .sync-toggle[data-state="stale"] .sync-dot { background: oklch(82% 0.130 85); }
     .sync-toggle[data-state="error"] { color: var(--ink); border-color: oklch(65% 0.170 28); }
     .sync-toggle[data-state="error"] .sync-dot { background: oklch(65% 0.170 28); }
@@ -357,7 +356,7 @@
       .view-watchlist .phone-filters { display: block; margin-bottom: 12px; }
       .phone-filters .btn { width: 100%; min-height: 44px; }
       .row-track.films { grid-auto-columns: 38%; gap: 12px; }  /* 2.5 cards: the cut card says "swipe" */
-      .filter-bar { position: static; padding: 0 0 8px; border: 0; }
+      .filter-bar { position: static; padding: 0 0 8px; border: 0; background: none; }
       .filter-bar > #film-search { flex: 1 1 100%; }
       body:not(.tools-open) .filter-bar > :not(#film-search) { display: none !important; }
       /* The sheet: a title row with close, the fields with labels, a foot with Reset and the result count. */
@@ -552,8 +551,11 @@ body:has(#film-details-modal.show) .modal-backdrop.show { opacity: .4; }
 .drawer-step:hover { background: rgb(255 255 255 / .08); }
 .drawer-step:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 800px) {
-  #film-details-modal .modal-dialog { top: auto; width: 100%; height: var(--sheet-h, 60dvh); transform: translateY(100%); transition: transform .22s ease, height .2s ease; }
-  #film-details-modal.is-full .modal-dialog { --sheet-h: 100dvh; }
+  #film-details-modal .modal-dialog { top: 0; width: 100%; height: 100dvh; transform: translateY(100%); transition: transform .3s cubic-bezier(.2, .8, .2, 1); will-change: transform; }
+  #film-details-modal.show .modal-dialog { transform: translateY(20dvh); }
+  #film-details-modal.show.is-full .modal-dialog { transform: none; }
+  /* The lower 20 % is off screen at first: pad the body so that scrolling is always possible (and expands the sheet). */
+  #film-details-modal:not(.is-full) .modal-body { padding-bottom: 20dvh; }
   #film-details-modal .modal-content { border-radius: 12px 12px 0 0; border-width: 1px 0 0; }
 }
 @media (prefers-reduced-motion: reduce) { #film-details-modal .modal-dialog { transition: none; } }
@@ -799,8 +801,11 @@ summary.offer-heading { cursor: pointer; }
 .mini-posters button { display: block; width: 72px; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
 .mini-posters img, .mini-posters .no-poster { display: block; width: 72px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .25rem; border: 1px solid var(--line-card); background: var(--panel); font-size: var(--fs-small); overflow: hidden; }
 .mini-posters li.is-current img { outline: 2px solid var(--accent); outline-offset: -2px; }
-.mini-service { display: block; min-height: 16px; margin-top: 3px; color: var(--muted); font-size: var(--fs-small); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mini-logo { display: block; width: 16px; height: 16px; border-radius: 3px; object-fit: cover; }
+.mini-posters button { position: relative; }
+.mini-service { position: absolute; top: 84px; right: 4px; display: grid; place-items: center; width: 20px; height: 20px; border: 1.5px solid var(--surface); border-radius: 50%; overflow: hidden; background: var(--surface-2); color: var(--ink); font: 600 9px/1 system-ui, sans-serif; }
+.mini-year { display: block; margin-top: 3px; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; }
+.mini-posters li.is-unreleased img, .mini-posters li.is-unreleased .no-poster { opacity: .45; }
+.mini-logo { display: block; width: 100%; height: 100%; object-fit: cover; }
 .film-modal-chips, .film-modal-links { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
 .chip-link, .link-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border: 1px solid var(--line-field); border-radius: 999px; background: transparent; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; text-decoration: none; cursor: pointer; }
 .chip-link:hover, .chip-link:focus-visible, .link-chip:hover, .link-chip:focus-visible { color: var(--ink); border-color: var(--line-strong); }
@@ -829,7 +834,7 @@ summary.offer-heading { cursor: pointer; }
 .flag-grid li { display: flex; align-items: center; gap: 8px; font: var(--fs-body) system-ui, sans-serif; }
 @media (pointer: coarse) { .flag-more { min-height: 44px; padding: 0 12px; } .other-services > summary { min-height: 44px; } }
 
-/* The phone sheet opens at 60 %; the grip pulls it to full height or down to close. */
+/* The phone sheet opens at 80 %; the grip pulls it to full height or down to close. */
 .sheet-grip { display: none; }
 @media (max-width: 800px) {
   .sheet-grip { display: block; position: relative; height: 32px; touch-action: none; cursor: grab; }
@@ -1022,10 +1027,10 @@ body:has(.more-filters[open])::after { content: ""; position: fixed; inset: 0; z
 .table-service { margin-right: 6px; color: var(--text-2); }
 .view-compact .film .poster-actions, .view-compact .film .card-foot { display: none; }
 .film > .poster { order: -1; }
-.watch-bar #abroad-toggle { min-height: var(--h-md); }
-#abroad-toggle .ti { margin-right: 4px; }
-#abroad-toggle[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
-#abroad-count { color: var(--text-2); font-variant-numeric: tabular-nums; }
+.watch-bar #abroad-toggle { min-height: var(--h-md); }
+#abroad-toggle .ti { margin-right: 4px; }
+#abroad-toggle[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
+#abroad-count { color: var(--text-2); font-variant-numeric: tabular-nums; }
 #abroad-toggle[aria-pressed="true"] #abroad-count { color: var(--text); }
 
 /* The card's line is only the logo; the words are a bubble on hover, focus or tap (the text stays for screen readers). */
@@ -1078,3 +1083,86 @@ body:has(.more-filters[open])::after { content: ""; position: fixed; inset: 0; z
 .chip-x:hover { color: var(--text); }
 .sub-lead { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 .small-dialog .menu-field { margin-top: 12px; }
+/* Phone watchlist head: search and Filters on one row, tabs and count on the next, posters right below. */
+.sheet-view { display: none; }
+@media (max-width: 800px) {
+  .view-watchlist main { padding-top: 8px; }
+  .view-watchlist .app-header { min-height: 44px; padding-block: 4px; }
+  .view-watchlist .brand-name { display: none; }
+  .view-watchlist .workspace { margin-top: 8px; }
+  .view-watchlist #watchlist-view { display: flex; flex-wrap: wrap; align-items: flex-start; column-gap: 8px; }
+  .view-watchlist #watchlist-view > * { order: 3; flex: 1 1 100%; min-width: 0; }
+  .view-watchlist #watchlist-view > .watch-bar { order: 1; flex: 1 1 0; }
+  .view-watchlist #watchlist-view > .phone-filters { order: 2; flex: 0 0 auto; margin: 0; }
+  .phone-filters .btn { width: auto; white-space: nowrap; }
+  .watch-bar > #result-tools { display: none; }
+  .meta-wide { display: none; }
+  .view-watchlist .active-filters:has(#filter-chips[hidden]) #saved-views { display: none; }
+  body.tools-open .sheet-view { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; }
+  body.tools-open .sheet-view > .sheet-label { grid-column: 1 / -1; margin: 4px 0 0; }
+  body.tools-open .sheet-view-slot { display: contents; }
+  body.tools-open .sheet-view .view-switch { width: auto; display: grid; grid-template-columns: repeat(3, 1fr); }
+  body.tools-open .sheet-view .btn { width: 44px; }
+}
+.runtime-slider { overflow-wrap: normal; }
+.runtime-slider output { white-space: nowrap; color: var(--ink); }
+/* Comparison bar: a small pill on wide screens, a full-width bar above the tab bar on phones. It gives way to any open sheet. */
+.compare-thumbs { display: flex; gap: 4px; }
+.compare-thumbs img { width: 32px; height: 48px; border-radius: 4px; object-fit: cover; }
+.compare-thumbs:empty { display: none; }
+#compare-count { white-space: nowrap; }
+body.modal-open .compare-bar, body.tools-open .compare-bar, body:has(dialog[open]) .compare-bar { display: none; }
+@media (max-width: 800px) {
+  .compare-bar { left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); max-width: none; min-height: 56px; transform: none; border-radius: 0; border-width: 1px 0 0; padding: 4px 12px; }
+  .compare-thumbs { flex: 1; min-width: 0; overflow: hidden; }
+  .compare-thumbs img { width: 32px; height: 44px; }
+  #compare-count[data-hint="false"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .compare-bar .btn { min-height: 40px; white-space: nowrap; }
+  body.compare-mode { padding-bottom: calc(64px + 56px + env(safe-area-inset-bottom)); }
+}
+
+/* Card way line: one logo, its type in a word, "+N" as small text. Titles are never underlined. */
+.way-row { align-items: center; gap: 8px; }
+.way-badge .ti { font-size: 10px; line-height: 1; }
+.way-badge-free { background: oklch(55% 0.13 151); border-color: var(--surface); color: #fff; }
+.view-compact .way-badge { display: none; }
+.film .film-open, .film .film-open:hover, .film .film-open:visited { text-decoration: none; }
+.film .best-way { margin-top: auto; }
+.best-more { padding: 0 4px; border: 0; background: none; }
+.way-badge-flag { background: var(--surface-2); overflow: hidden; }
+.way-badge-flag img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.best-way-link.is-abroad .way-logo, .best-way-link.is-abroad .way-name { outline: 1.5px dashed var(--text-2); outline-offset: 1px; }
+.abroad-service { position: relative; }
+.abroad-service .way-badge { width: 14px; height: 14px; right: -5px; bottom: -5px; }
+/* A6: Tonight chips in one scrolling row; table subscription actions as buttons. */
+.tonight-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.tonight-chips .quick-chip { flex: none; white-space: nowrap; }
+.rec-actions { gap: 8px; }
+.rec-actions .btn { min-height: 36px; display: inline-flex; align-items: center; }
+.filter-chip.chips-more { cursor: pointer; background: transparent; color: var(--muted); }
+.table-title { display: flex; align-items: center; gap: 10px; }
+.table-poster { flex: none; width: 28px; height: 42px; border-radius: 3px; object-fit: cover; background: var(--panel); }
+
+/* Phones: the view switch sits in the tab row, next to the count. */
+@media (max-width: 800px) {
+  .tabs-row { flex-wrap: nowrap; gap: 8px; align-items: flex-end; }
+  .tabs-row .view-tabs { flex: none; gap: 14px; }
+  .tabs-row #result-meta { flex: 0 1 auto; margin-left: auto; white-space: nowrap; font-size: var(--fs-small); }
+  .tabs-view-slot { flex: none; margin: 0 0 6px; }
+  .tabs-view-slot .view-switch { min-height: 36px; }
+}
+
+/* Phones: the filter sheet slides up and the backdrop fades in, instead of appearing at once. */
+@media (max-width: 800px) and (prefers-reduced-motion: no-preference) {
+  body.tools-open .filter-bar { animation: sheet-up .26s cubic-bezier(.2, .8, .2, 1); will-change: transform; }
+  body.tools-open::before { animation: backdrop-in .2s ease-out; }
+  body.tools-closing .filter-bar { animation: sheet-down .22s cubic-bezier(.4, 0, 1, 1) forwards; }
+  body.tools-closing::before { animation: backdrop-out .22s ease-in forwards; }
+}
+@keyframes sheet-up { from { transform: translateY(100%); } }
+@keyframes backdrop-in { from { opacity: 0; } }
+@keyframes sheet-down { to { transform: translateY(100%); } }
+@keyframes backdrop-out { to { opacity: 0; } }
+/* The detail sheet must stay in the DOM until its slide is over: Bootstrap waits for the modal's own transition. */
+#film-details-modal.fade { transition-duration: .3s; }
+@media (max-width: 800px) { body.tools-open .sheet-head { touch-action: none; } }

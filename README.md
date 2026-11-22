@@ -190,7 +190,7 @@ Once installed, a film link opened on the phone shows the details full screen at
 
 ### Security
 
-The app has no login. A restored backup is checked field by field; entries that do not fit are skipped and counted. On the first start, data from older versions (`.watchlist_favorites.sqlite3`, `.watchlist_latest.json`, `.watchlist_films.sqlite3`) is copied into the database once; the old files stay untouched and can be deleted afterwards.
+The app has no login. A restored backup is checked field by field; entries that do not fit are skipped and counted. The database layout is versioned (`PRAGMA user_version`); version 1 is the baseline of 2026-11-22, and later layout changes are numbered steps in `watchlist_app/store.py`. Databases from before that baseline are not migrated.
 
 ---
 

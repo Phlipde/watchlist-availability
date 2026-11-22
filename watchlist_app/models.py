@@ -11,8 +11,8 @@ def sort_kinds(kinds) -> list[str]:
     return [kind for kind in OFFER_KINDS if kind in unique] + sorted(unique - set(OFFER_KINDS))
 
 
-def legacy_key(title: str | None, year: int | None) -> str:
-    """The old `Title|Year` key, written the way the browser used to build it."""
+def title_year_key(title: str | None, year: int | None) -> str:
+    """The key of a film that has no TMDB id yet: `Title|Year`, written the way the browser builds it."""
     return f"{title}|{'null' if year is None else year}"
 
 
@@ -63,7 +63,7 @@ class Film:
     @property
     def key(self) -> str:
         """Stable identifier: the TMDB id, or `Title|Year` when the film is not on TMDB."""
-        return str(self.tmdb_id) if self.tmdb_id is not None else legacy_key(self.title, self.year)
+        return str(self.tmdb_id) if self.tmdb_id is not None else title_year_key(self.title, self.year)
 
     def to_dict(self) -> dict:
         data = asdict(self)

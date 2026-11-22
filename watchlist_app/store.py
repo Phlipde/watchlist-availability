@@ -7,7 +7,6 @@ import time
 from pathlib import Path
 
 from . import validation
-from .models import Film, legacy_key
 
 MAX_SCANS = 30  # per country
 MAX_JOBS = 100
@@ -15,7 +14,7 @@ BACKUP_VERSION = 1
 # Time of the last match correction; a recent scan is not reused after it.
 MATCHES_CHANGED_SETTING = "matches_changed_at"
 # Settings the app keeps for itself; they are not part of a backup.
-INTERNAL_SETTINGS = frozenset({"legacy_import_done", MATCHES_CHANGED_SETTING, "notify_token", "notify_state"})
+INTERNAL_SETTINGS = frozenset({MATCHES_CHANGED_SETTING, "notify_token", "notify_state"})
 # Fields that identify a stored change, used to skip duplicates when restoring a backup.
 CHANGE_IDENTITY = ("created", "country", "film_key", "provider", "change")
 
@@ -45,7 +44,12 @@ CREATE TABLE IF NOT EXISTS film_ids (
     film_key TEXT PRIMARY KEY,
     tmdb_id INTEGER,
     source TEXT,
-    checked_at REAL
+    checked_at REAL,
+    title TEXT,
+    year INTEGER,
+    last_seen REAL,
+    lb_rating REAL,
+    lb_checked_at REAL
 );
 CREATE TABLE IF NOT EXISTS films (
     tmdb_id INTEGER PRIMARY KEY,
@@ -139,16 +143,12 @@ CREATE TABLE IF NOT EXISTS provider_catalog (
 );
 """
 
-# Columns added after the first release; created on older databases at start.
-_ADDED_COLUMNS = {
-    "film_ids": (
-        ("title", "TEXT"),
-        ("year", "INTEGER"),
-        ("last_seen", "REAL"),
-        ("lb_rating", "REAL"),
-        ("lb_checked_at", "REAL"),
-    ),
-}
+# The database layout is versioned with SQLite's `user_version`. Version 1 is the layout of _SCHEMA above, the
+# baseline of 2026-11-22 (the production database already had it); layouts before it are not migrated.
+# A later change: put the SQL from version N-1 to N into _MIGRATIONS[N], raise SCHEMA_VERSION to N and put the
+# same change into _SCHEMA for new databases.
+SCHEMA_VERSION = 1
+_MIGRATIONS: dict[int, str] = {}
 
 MATCH_FIELDS = ("film_key", "title", "year", "tmdb_id", "source", "checked_at", "last_seen")
 
@@ -178,11 +178,13 @@ class Store:
         self._db = sqlite3.connect(str(path), check_same_thread=False)
         with self._lock:
             self._db.executescript(_SCHEMA)
-            for table, columns in _ADDED_COLUMNS.items():
-                existing = {row[1] for row in self._db.execute(f"PRAGMA table_info({table})")}
-                for name, kind in columns:
-                    if name not in existing:
-                        self._db.execute(f"ALTER TABLE {table} ADD COLUMN {name} {kind}")
+            version = self._db.execute("PRAGMA user_version").fetchone()[0]
+            if version > SCHEMA_VERSION:
+                raise RuntimeError(f"The database is from a newer version of the app (layout {version}).")
+            for step in range(version + 1, SCHEMA_VERSION + 1):
+                if step in _MIGRATIONS:
+                    self._db.executescript(_MIGRATIONS[step])
+            self._db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
             self._db.commit()
 
     def close(self) -> None:
@@ -640,23 +642,6 @@ class Store:
             ).rowcount
             self._db.commit()
         return {"flags": flags, "favorites": favorites}
-
-    def rekey_favorites(self, films: list[Film]) -> int:
-        """Move favorites saved under `Title|Year` to the TMDB id of the same film."""
-        moved = 0
-        with self._lock:
-            existing = {row[0] for row in self._db.execute("SELECT movie_key FROM favorites")}
-            for film in films:
-                if film.tmdb_id is None:
-                    continue
-                old, new = legacy_key(film.title, film.year), film.key
-                if old in existing and new not in existing:
-                    self._db.execute("UPDATE favorites SET movie_key = ? WHERE movie_key = ?", (new, old))
-                    existing.discard(old)
-                    existing.add(new)
-                    moved += 1
-            self._db.commit()
-        return moved
 
     # ----- backup -----
 

@@ -1,5 +1,6 @@
 // "Abroad on your services": where your own services have the film although they do not at home.
 // Pure functions (node tests them); app.js fetches the data and wires the clicks.
+import {TYPE_ICON} from './bestway.js';
 import {escapeHtml} from './ui.js';
 import {catalogName} from './catalog.js';
 
@@ -97,22 +98,26 @@ export function abroadHtml(rows, {nameOf, logoOf}) {
       ? `<div class="flag-grid" hidden>${groupByRegion(more).map(([group, codes]) => `<section><h4>${group}</h4><ul>${codes.map(code => `<li>${flag(code, nameOf(code), row.service, row.kinds[code])}<span>${escapeHtml(nameOf(code))}</span></li>`).join('')}</ul></section>`).join('')}</div>`
       : '';
     const logo = logoOf(row.service, 'provider-logo-sm');
-    return `<li class="abroad-row"><div class="abroad-line"><span class="abroad-service" title="${escapeHtml(row.service)}">${logo || escapeHtml(row.service)}</span><span class="abroad-flags">${shown.map(code => flag(code, nameOf(code), row.service, row.kinds[code])).join('')}${more.length ? `<button class="flag-more" type="button" aria-expanded="false">+${more.length} <i class="ti ti-chevron-right" aria-hidden="true"></i></button>` : ''}</span>${row.hint ? `<span class="abroad-hint">${row.hint}</span>` : ''}</div>${grid}</li>`;
+    const kind = ['free', 'flatrate', 'ads'].find(k => Object.values(row.kinds).includes(k));
+    const badge = kind ? `<span class="way-badge way-badge-${kind}" aria-hidden="true"><i class="ti ${TYPE_ICON[kind]}"></i></span>` : '';
+    return `<li class="abroad-row"><div class="abroad-line"><span class="abroad-service" title="${escapeHtml(row.service)}">${logo || escapeHtml(row.service)}${badge}</span><span class="abroad-flags">${shown.map(code => flag(code, nameOf(code), row.service, row.kinds[code])).join('')}${more.length ? `<button class="flag-more" type="button" aria-expanded="false">+${more.length} <i class="ti ti-chevron-right" aria-hidden="true"></i></button>` : ''}</span>${row.hint ? `<span class="abroad-hint">${row.hint}</span>` : ''}</div>${grid}</li>`;
   }).join('');
   return `<div class="abroad"><h3 class="offer-heading">Abroad on your services <span class="abroad-count">· ${total} ${total === 1 ? 'country' : 'countries'}</span></h3><p class="abroad-note">Needs a VPN or being in that country.</p><ul class="abroad-table">${table}</ul></div>`;
 }
 
-// The best country-and-service for one film, from the server's {service: {country: kind}}: the service with the
-// most countries, its countries best first (the same order as in the drawer). null when there is nothing.
-export function abroadForFilm(entry, region, nameOf = code => code, config = COUNTRY_CONFIG) {
+// Your services that have a film abroad, from the server's {service: {country: kind}}: the service with the most
+// countries first, each with its countries best first (the same order as in the drawer). [] when there is nothing.
+export function abroadServices(entry, region, nameOf = code => code, config = COUNTRY_CONFIG) {
   const rows = Object.entries(entry || {}).map(([service, byCountry]) => ({
     service,
     countries: rankCountries(Object.keys(byCountry), region, nameOf, config),
     kinds: byCountry,
   }));
-  rows.sort((a, b) => b.countries.length - a.countries.length || a.service.localeCompare(b.service));
-  return rows[0] || null;
+  return rows.sort((a, b) => b.countries.length - a.countries.length || a.service.localeCompare(b.service));
 }
+
+// The best one of them (null when there is none).
+export const abroadForFilm = (entry, region, nameOf, config) => abroadServices(entry, region, nameOf, config)[0] || null;
 
 // A copy of the film for the list when it is shown because of the abroad switch: only your services abroad count
 // as its offers (so the cost filters sort it as free or subscription), and `abroadOnly` tells the card.

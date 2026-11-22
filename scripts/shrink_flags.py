@@ -1,7 +1,7 @@
 """One-off tool: shrink the big flag files in static/flags/ (coats of arms made some 80 to 180 KB each).
 
-A flag over 5 KB is drawn once with the browser at 80x60 px (four times its shown size) and written back as a
-small SVG that wraps the PNG, so the file names and the code stay the same. Run it from the project root:
+A flag over 3 KB is drawn once with the browser at 40x30 px (twice its shown size, 20x15 or less) and
+written back as a small SVG that wraps the PNG, so names and code stay the same. Run it from the project root:
 
     .venv/Scripts/python.exe scripts/shrink_flags.py
 """
@@ -12,16 +12,12 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 FLAGS = Path(__file__).resolve().parent.parent / "static" / "flags"
-LIMIT = 5000  # bytes; smaller flags are already tiny and stay sharp as vectors
-WIDTH, HEIGHT = 80, 60
+LIMIT = 3000  # bytes; smaller flags are already tiny and stay sharp as vectors
+WIDTH, HEIGHT = 40, 30
 
 
 def main() -> None:
-    big = sorted(
-        path
-        for path in FLAGS.glob("??.svg")
-        if path.stat().st_size > LIMIT and b"<image" not in path.read_bytes()
-    )
+    big = sorted(path for path in FLAGS.glob("??.svg") if path.stat().st_size > LIMIT)
     before = sum(path.stat().st_size for path in big)
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()

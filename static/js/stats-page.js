@@ -32,7 +32,7 @@ function card(title, body, note = '') {
 
 function filmList(films, extra) {
   if (!films.length) return '<p class="empty">None.</p>';
-  return `<ol class="stats-films">${films.map(film => `<li><a href="/?film=${encodeURIComponent(film.key)}">${escapeHtml(film.title)}</a>${film.year ? ` <span class="muted">(${escapeHtml(String(film.year))})</span>` : ''} · ${escapeHtml(extra(film))}</li>`).join('')}</ol>`;
+  return `<ol class="stats-films">${films.map(film => `<li><a href="/watchlist?film=${encodeURIComponent(film.key)}">${escapeHtml(film.title)}</a>${film.year ? ` <span class="muted">(${escapeHtml(String(film.year))})</span>` : ''} · ${escapeHtml(extra(film))}</li>`).join('')}</ol>`;
 }
 
 function servicesTable(services, total) {
@@ -61,7 +61,7 @@ function render(stats, scan) {
     tile(one(o.averageLetterboxd, 2), 'average Letterboxd'),
     tile(one(o.averageTmdb), 'average TMDB'),
     tile(o.oldestYear && o.newestYear ? `${o.oldestYear}–${o.newestYear}` : '–', 'release years'),
-    tile(o.favorites, 'favorites', `${o.watched} greyed out`),
+    tile(o.favorites, 'favorites', `${o.watched} hidden away`),
     tile(stats.changes.added30, 'newly available', 'last 30 days'),
     tile(stats.changes.removed30, 'gone from a service', 'last 30 days'),
   ].join('');
@@ -100,7 +100,7 @@ async function load() {
       fetch('/api/favorites').then(response => (response.ok ? response.json() : [])),
     ]);
     if (!scan.available) {
-      root.innerHTML = '<p class="empty">No scan yet. Open the <a href="/">Watchlist</a> to run the first one.</p>';
+      root.innerHTML = '<p class="empty">No scan yet. Open the <a href="/watchlist">Watchlist</a> to run the first one.</p>';
       root.setAttribute('aria-busy', 'false');
       return;
     }

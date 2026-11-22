@@ -10,7 +10,7 @@
   <title>Subscriptions · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261122-33') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261122-36') }}" rel="stylesheet">
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -46,8 +46,8 @@
         {% endif %}
         {% if card.based_on == 'count' %}<p class="hint">Based on the film count only{% if card.type == 'cancel' %}: <button class="film-link add-price" type="button">add a price</button> for a better recommendation{% endif %}.</p>{% endif %}
         <div class="rec-actions">
-          {% if card.type == 'cancel' %}<button class="film-link set-reminder" type="button" data-service="{{ card.name }}">Set reminder</button><a class="film-link" href="/watchlist?providers={{ card.name|urlencode }}&only=1&cost=subscription">Show the {{ card.films }} film{{ '' if card.films == 1 else 's' }}</a>{% else %}<a class="film-link" href="/watchlist?providers={{ card.name|urlencode }}&cost=subscription">Show the films on {{ card.name }}</a>{% endif %}
-          <button class="film-link rec-hide" type="button">Not interested</button>
+          {% if card.type == 'cancel' %}<button class="btn btn-sm btn-outline-secondary set-reminder" type="button" data-service="{{ card.name }}">Set reminder</button><a class="btn btn-sm btn-outline-secondary" href="/watchlist?providers={{ card.name|urlencode }}&only=1&cost=subscription">Show the {{ card.films }} film{{ '' if card.films == 1 else 's' }}</a>{% else %}<a class="btn btn-sm btn-outline-secondary" href="/watchlist?providers={{ card.name|urlencode }}&cost=subscription">Show the films on {{ card.name }}</a>{% endif %}
+          <button class="btn btn-sm btn-outline-secondary rec-hide" type="button">Not interested</button>
         </div>
       </article>
       {% endfor %}
@@ -154,10 +154,10 @@
     <div class="dialog-actions"><button class="btn btn-sm btn-ghost" id="add-close" type="button">Close</button></div>
   </dialog>
   <dialog class="side-drawer" id="service-drawer" aria-labelledby="service-drawer-title"><div class="drawer-head"><h2 id="service-drawer-title"></h2><button class="sheet-close" id="service-drawer-close" type="button" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button></div><div class="drawer-body" id="service-drawer-body"></div></dialog>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261122-33') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261122-36') }}" type="module"></script>
   <script>window.PLAN_DATA = {{ costs.plan|tojson }};</script>
   <script>window.IMAGE_BASE_URL = {{ image_base_url|tojson }}; window.WEEKLY_HOURS = {{ weekly_hours|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/plan-page.js', v='20261122-33') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261122-33') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/plan-page.js', v='20261122-36') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261122-36') }}" type="module"></script>
 </body>
 </html>

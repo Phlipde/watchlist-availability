@@ -26,16 +26,6 @@ def database_path() -> Path:
     return Path(os.getenv("WATCHLIST_DB", data_dir() / ".watchlist.sqlite3"))
 
 
-def legacy_paths() -> dict[str, Path]:
-    """Files used by older versions; read once by watchlist_app.legacy_import."""
-    directory = data_dir()
-    return {
-        "favorites_db": Path(os.getenv("WATCHLIST_FAVORITES_DB", directory / ".watchlist_favorites.sqlite3")),
-        "latest_json": Path(os.getenv("WATCHLIST_LATEST_PATH", directory / ".watchlist_latest.json")),
-        "film_cache_db": Path(os.getenv("WATCHLIST_FILM_CACHE_DB", directory / ".watchlist_films.sqlite3")),
-    }
-
-
 @dataclass
 class Settings:
     """Values the web app needs; tests build their own instance."""

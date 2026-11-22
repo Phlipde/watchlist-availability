@@ -1,4 +1,4 @@
-from watchlist_app.models import Film, legacy_key, sort_kinds
+from watchlist_app.models import Film, sort_kinds, title_year_key
 
 
 class TestFilmKey:
@@ -9,7 +9,7 @@ class TestFilmKey:
         assert Film(title="Heat", year=1995).key == "Heat|1995"
 
     def test_missing_year_matches_old_browser_keys(self):
-        assert legacy_key("Ray Gunn", None) == "Ray Gunn|null"
+        assert title_year_key("Ray Gunn", None) == "Ray Gunn|null"
 
 
 class TestFilmDict:

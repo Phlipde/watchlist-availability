@@ -10,9 +10,9 @@ import {COST, readFilters} from './filters.js';
 import {createFilterBar, initPopovers} from './filterbar.js';
 import {bestRelaxation, comingSoon, elsewhereOnServices, filmKey, filterFilms, similarOnServices, sortFilms, sortRatings} from './filtering.js';
 import {updateScanFeedback} from './scans.js';
-import {abroadFilm, abroadForFilm, abroadHtml, abroadRows} from './abroad.js';
+import {abroadFilm, abroadForFilm, abroadHtml, abroadRows, abroadServices} from './abroad.js';
 import {NAV_KEYS, columnsFromTops, nextIndex, nextInRows} from './gridnav.js';
-import {drawerHtml, letterboxdUrl} from './drawer.js';
+import {drawerHtml, letterboxdUrl, seriesOrder} from './drawer.js';
 
 const imageBaseUrl = window.WATCHLIST_CONFIG.imageBaseUrl;
 const scanState = createScanState();
@@ -178,6 +178,8 @@ const state = createAppState();
     }
     const abroadOnFor = () => (VIEW === 'tonight' ? localStorage.getItem('abroadOn') === '1' : document.getElementById('where-filter').value !== 'all');
     const abroadFor = film => abroadForFilm(state.abroad?.[filmKey(film)], document.getElementById('country-select').value, code => regionLabel.of(code) || code);
+    // With the switch on, every card also shows your services that have the film abroad.
+    const abroadList = film => (abroadOnFor() ? abroadServices(state.abroad?.[filmKey(film)], document.getElementById('country-select').value, code => regionLabel.of(code) || code) : []);
     // Films with an abroad entry that are not already shown as films you can watch here (those count as "here").
     const abroadCandidates = shownKeys => (state.abroad ? [...state.films, ...state.unavailable].filter(film => state.abroad[filmKey(film)] && !shownKeys.has(filmKey(film))).map(film => abroadFilm(film, state.abroad[filmKey(film)])) : []);
     // Filter the state, then draw the cards from the result. Filters never read card attributes.
@@ -250,6 +252,7 @@ const state = createAppState();
         country: document.getElementById('country-select').value,
         countryName: code => regionLabel.of(code) || code,
         abroadFor,
+        abroadList,
       });
       const note = typed && results.querySelector(`.favorite-note[data-key="${CSS.escape(typed.key)}"]`);
       if (note) { note.value = typed.value; note.focus(); note.setSelectionRange(typed.start, typed.end); }
@@ -311,7 +314,7 @@ const state = createAppState();
     function populateGenres() {
       filterBar.buildGenreMenu([...new Set(state.films.flatMap(film => film.genres || []))].sort());
       fillSelect(document.getElementById('keyword-filter'), 'All keywords', [...new Set(state.films.flatMap(film => film.keywords || []))].sort());
-      filterBar.buildAgeChips(sortRatings([...state.films, ...state.unavailable].map(film => film.certification)), initialUrl.get('ages') ? null : initialUrl.get('age'));
+      filterBar.buildAgeChips(sortRatings([...state.films, ...state.unavailable].map(film => film.certification)));
       // Codes as values ("ja", "JP"), names as text ("Japanese", "Japan"), sorted by name.
       const all = [...state.films, ...state.unavailable];
       const named = (select, allText, codes, type) => {
@@ -400,7 +403,7 @@ const state = createAppState();
       }
       document.getElementById('context-text').innerHTML = `${available.length} films available on <a href="/subscriptions">${state.selected.size} services</a>${state.lastScan ? ` · synced ${ago(state.lastScan)}` : ''}`;
       document.querySelectorAll('.quick-chip').forEach(chip => chip.setAttribute('aria-pressed', String(tonightChips.has(chip.dataset.chip))));
-      const context = {imageBaseUrl, providerLogos: window.WATCHLIST_CONFIG.providerLogos, logoBaseUrl: window.WATCHLIST_CONFIG.logoBaseUrl, selected: state.selected, favorites: state.favorites, compareKeys: state.compareKeys, greyKeys: new Set(), favoritesOnly: false, pageHref: location.href, country: document.getElementById('country-select').value, countryName: code => regionLabel.of(code) || code, abroadFor};
+      const context = {imageBaseUrl, providerLogos: window.WATCHLIST_CONFIG.providerLogos, logoBaseUrl: window.WATCHLIST_CONFIG.logoBaseUrl, selected: state.selected, favorites: state.favorites, compareKeys: state.compareKeys, greyKeys: new Set(), favoritesOnly: false, pageHref: location.href, country: document.getElementById('country-select').value, countryName: code => regionLabel.of(code) || code, abroadFor, abroadList};
       const section = (row, film) => (row.id === 'free' || (row.id === 'new' && !Object.values(film.providers || {}).flat().includes('flatrate')) ? 'Free' : 'Paid');
       document.getElementById('tonight-rows').innerHTML = rows.map(row => `<section class="film-row" aria-labelledby="row-${escapeHtml(row.id)}"><div class="film-row-head"><h2 id="row-${escapeHtml(row.id)}">${escapeHtml(row.title)} <span class="row-count">${row.films.length}</span></h2><a class="film-link" href="${escapeHtml(row.href)}">See all <span aria-hidden="true">→</span></a></div><div class="row-scroller"><button class="row-arrow row-prev" type="button" aria-label="Scroll ${escapeHtml(row.title)} back" tabindex="-1"><i class="ti ti-chevron-left" aria-hidden="true"></i></button><div class="row-track films">${row.films.slice(0, 24).map(film => filmCard(film, section(row, film), context)).join('')}</div><button class="row-arrow row-next" type="button" aria-label="Scroll ${escapeHtml(row.title)} on" tabindex="-1"><i class="ti ti-chevron-right" aria-hidden="true"></i></button></div></section>`).join('')
         || '<p class="empty">No film fits. Tick more services or turn a quick filter off.</p>';
@@ -516,7 +519,10 @@ const state = createAppState();
       setCompareMode(count > 0);
       const bar = document.getElementById('compare-bar');
       bar.hidden = count === 0;
-      document.getElementById('compare-count').textContent = count === 1 ? '1 film chosen: pick one more' : count > 4 ? `${count} films chosen: at most 4` : `${count} to compare`;
+      const countText = document.getElementById('compare-count');
+      countText.textContent = count === 1 ? 'Pick one more' : count > 4 ? `${count} chosen: at most 4` : `${count} to compare`;
+      countText.dataset.hint = String(count < 2 || count > 4);
+      document.getElementById('compare-thumbs').innerHTML = state.films.filter(film => state.compareKeys.has(filmKey(film)) && film.poster_path).map(film => `<img src="${imageBaseUrl.replace("/w500", "/w92")}${escapeHtml(film.poster_path)}" alt="${escapeHtml(film.title)}">`).join('');
       document.getElementById('compare-go').disabled = count < 2 || count > 4;
     }
     function setCompared(key, checked) {
@@ -739,7 +745,7 @@ const state = createAppState();
       };
       if (!(await apply(turnOff ? null : flag))) return;
       const title = [...state.films, ...state.unavailable].find(film => filmKey(film) === key)?.title || 'Film';
-      const message = turnOff ? `${title}: back on the list` : flag === 'watched' ? `${title}: greyed out` : `${title}: set aside for 30 days`;
+      const message = turnOff ? `${title}: back on the list` : flag === 'watched' ? `${title}: hidden away` : `${title}: set aside for 30 days`;
       showToast(message, false, async () => { if (await apply(before?.flag ?? null)) renderFilms(); });
       renderFilms();
     }
@@ -846,6 +852,7 @@ const state = createAppState();
       more.hidden = false;
       const total = new Set(rows.flatMap(row => row.countries)).size;
       more.querySelector('.os-abroad').textContent = ` · ${total} abroad`;
+      revealMore();
     }
     // A tooltip must stay inside the drawer: near the right edge it grows to the left.
     const placeTip = event => {
@@ -907,7 +914,7 @@ const state = createAppState();
         isSeen: state.flags.get(key)?.flag === 'watched' || saved?.status === 'watched',
         isHidden: hiddenKeys().has(key),
         inCompare: state.compareKeys.has(key),
-        series: film.collection ? all.filter(item => item.collection === film.collection).sort((a, b) => (Number(a.year) || 0) - (Number(b.year) || 0)) : [],
+        series: film.collection ? seriesOrder(all.filter(item => item.collection === film.collection)) : [],
         similar: similarOnServices(film, state.films, own, watched),
         serviceOf: item => includedOn(item, own).split(', ')[0],
         keyOf: filmKey,
@@ -985,14 +992,36 @@ const state = createAppState();
       target.querySelector('.film-open')?.focus();
       target.scrollIntoView({block: 'nearest', inline: 'nearest'});
     });
+    // After "+N": scroll so "Other services" ends just above the bottom edge (or starts at the top when it is taller).
+    // Called again when the abroad block has loaded into it, which makes the section taller.
+    let pendingMore = false;
+    const detailsModal = document.getElementById('film-details-modal');
+    ['hidden.bs.modal', 'pointerdown'].forEach(type => detailsModal.addEventListener(type, () => { pendingMore = false; }));
+    function revealMore() {
+      const box = document.getElementById('film-more');
+      const body = document.querySelector('#film-details-modal .modal-body');
+      if (!pendingMore || !box || !body) return;
+      const section = box.getBoundingClientRect();
+      const view = body.getBoundingClientRect();
+      const toBottom = section.bottom - (view.bottom - 16);
+      const toTop = section.top - (view.top + 8);
+      const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+      body.scrollTo({top: body.scrollTop + Math.min(toBottom, toTop), behavior: smooth ? 'smooth' : 'auto'});
+    }
     // "+N" and "Abroad" on a card open the details at "Other services".
     document.addEventListener('click', event => {
       const more = event.target.closest('[data-open-more]');
       if (!more) return;
       event.preventDefault();
+      // On a phone "+N" goes straight to the full-screen sheet: the list of services needs the room.
+      document.getElementById('film-details-modal').classList.toggle('is-full', matchMedia('(max-width: 800px)').matches);
       showFilmDetails(more.dataset.key, more);
       const box = document.getElementById('film-more');
       if (box) box.open = true;
+      pendingMore = true;
+      const modal = document.getElementById('film-details-modal');
+      if (modal.classList.contains('show')) revealMore();
+      else modal.addEventListener('shown.bs.modal', revealMore, {once: true});
     });
     // Touch: the first tap on a card's logo shows what it is; a second tap goes to the service. A tap elsewhere closes it.
     document.addEventListener('click', event => {
@@ -1030,23 +1059,34 @@ const state = createAppState();
     document.addEventListener('pointerdown', event => {
       if (!event.target.closest('.show-actions')) results.querySelectorAll('.show-actions').forEach(card => card.classList.remove('show-actions'));
     });
-    // Phone sheet: opens at 60 %. Pulling the grip or the header up makes it full screen, pulling down shrinks it or
+    // Phone sheet: opens at 80 %. Pulling the grip or the header up makes it full screen, pulling down shrinks it or
     // closes it, a tap on the grip toggles, and scrolling the content makes it full screen too (like a native sheet).
     (() => {
       const modal = document.getElementById('film-details-modal');
       const handles = [document.getElementById('sheet-grip'), modal.querySelector('.modal-header')];
+      const dialog = modal.querySelector('.modal-dialog');
       let startY = null;
+      let baseOffset = 0;
       handles.forEach(handle => {
         handle.addEventListener('pointerdown', event => {
           if (event.target.closest('button, a')) return;  // the arrows and the close button stay buttons
           startY = event.clientY;
+          baseOffset = modal.classList.contains('is-full') ? 0 : innerHeight * 0.2;
           handle.setPointerCapture(event.pointerId);
         });
-        handle.addEventListener('pointercancel', () => { startY = null; });
+        // The sheet follows the finger (transform only); on release the classes decide where it settles.
+        handle.addEventListener('pointermove', event => {
+          if (startY === null) return;
+          dialog.style.transition = 'none';
+          dialog.style.transform = `translateY(${Math.max(0, baseOffset + event.clientY - startY)}px)`;
+        });
+        const release = () => { dialog.style.transition = ''; dialog.style.transform = ''; };
+        handle.addEventListener('pointercancel', () => { startY = null; release(); });
         handle.addEventListener('pointerup', event => {
           if (startY === null) return;
           const moved = event.clientY - startY;
           startY = null;
+          release();
           const full = modal.classList.contains('is-full');
           if (moved < -24) modal.classList.add('is-full');
           else if (moved > 48) { if (full) modal.classList.remove('is-full'); else modal.querySelector('.btn-close').click(); }
@@ -1354,11 +1394,29 @@ const state = createAppState();
     });
     document.getElementById('country-select').addEventListener('change', switchCountry);
     // Phones: "Filters" opens the bar as a sheet from the bottom, a modal dialog while open.
+    // Phones keep the heart and the link inside the sheet and the view switch in the tab row; wider screens keep them in the bar.
+    const phoneQuery = matchMedia('(max-width: 800px)');
+    const placeViewTools = () => {
+      const phone = phoneQuery.matches;
+      document.getElementById(phone ? 'tabs-view-slot' : 'result-tools').append(document.getElementById('view-switch'));
+      const home = document.getElementById(phone ? 'sheet-view-slot' : 'result-tools');
+      ['favorites-view', 'share-button'].forEach(id => home.append(document.getElementById(id)));
+    };
+    placeViewTools();
+    phoneQuery.addEventListener('change', placeViewTools);
     const toolsToggle = document.getElementById('tools-toggle');
     const filterSheet = document.getElementById('film-filters');
     const behindSheet = () => [document.getElementById('app-header'), document.querySelector('.skip-link'), ...document.querySelectorAll('#watchlist-view > :not(.watch-bar), .watch-bar > :not(#film-filters)')].filter(Boolean);
-    function setSheet(open) {
-      document.body.classList.toggle('tools-open', open);
+    let sheetTimer = null;
+    // Closing on a phone slides the sheet down first (`tools-closing`), then drops `tools-open`.
+    function setSheet(open, instant = false) {
+      clearTimeout(sheetTimer);
+      const body = document.body;
+      const slide = !open && !instant && body.classList.contains('tools-open') && phoneQuery.matches
+        && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+      body.classList.toggle('tools-closing', slide);
+      if (slide) sheetTimer = setTimeout(() => body.classList.remove('tools-open', 'tools-closing'), 230);
+      else body.classList.toggle('tools-open', open);
       toolsToggle?.setAttribute('aria-expanded', String(open));
       filterSheet.setAttribute('role', open ? 'dialog' : 'search');
       if (open) filterSheet.setAttribute('aria-modal', 'true'); else filterSheet.removeAttribute('aria-modal');
@@ -1367,6 +1425,34 @@ const state = createAppState();
       else toolsToggle?.focus();
     }
     toolsToggle?.addEventListener('click', () => setSheet(!document.body.classList.contains('tools-open')));
+    // Pulling the sheet's header down follows the finger; past 80 px it slides out and closes.
+    (() => {
+      const head = filterSheet.querySelector('.sheet-head');
+      let startY = null;
+      head.addEventListener('pointerdown', event => {
+        if (event.target.closest('button, a') || !phoneQuery.matches) return;
+        startY = event.clientY;
+        head.setPointerCapture(event.pointerId);
+      });
+      head.addEventListener('pointermove', event => {
+        if (startY === null) return;
+        filterSheet.style.transition = 'none';
+        filterSheet.style.transform = `translateY(${Math.max(0, event.clientY - startY)}px)`;
+      });
+      const end = event => {
+        if (startY === null) return;
+        const far = event.type === 'pointerup' && event.clientY - startY > 80;
+        startY = null;
+        filterSheet.style.transition = 'transform .22s cubic-bezier(.2, .8, .2, 1)';
+        filterSheet.style.transform = far ? 'translateY(100%)' : '';
+        setTimeout(() => {
+          filterSheet.style.transition = '';
+          if (far) { setSheet(false, true); filterSheet.style.transform = ''; }
+        }, 230);
+      };
+      head.addEventListener('pointerup', end);
+      head.addEventListener('pointercancel', end);
+    })();
     document.getElementById('filter-sheet-done').addEventListener('click', () => setSheet(false));
     document.getElementById('filter-sheet-close').addEventListener('click', () => setSheet(false));
     document.getElementById('filter-sheet-reset').addEventListener('click', () => filterBar.resetAll());

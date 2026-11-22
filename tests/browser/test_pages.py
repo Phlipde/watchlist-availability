@@ -240,9 +240,6 @@ def test_tonight_page_rows_chips_and_pick_for_me(app_server, page):
     expect(page.locator("#film-details-content .pick-reason")).to_contain_text("Picked for you")
     page.get_by_role("button", name="Pick another").click()
     expect(page.locator("#film-details-title")).to_have_text("Heat")  # the only film that fits
-    # An old watchlist link to "/" with filters goes to the watchlist page.
-    page.goto(app_server["url"] + "/?genre=Action")
-    expect(page).to_have_url(re.compile(r"/watchlist\?genre=Action"))
 
 
 def test_trailer_from_the_details_window_is_in_front(app_server, page):
@@ -329,14 +326,14 @@ def test_saved_results_show_the_tools(app_server, page):
     # A filter set from a link must show as a chip, also when its control sits in a closed panel.
     page.goto(app_server["url"] + "/watchlist?votes=1000")
     expect(page.locator("#filter-chips")).to_contain_text("Votes: 1k+")
-    page.goto(app_server["url"] + "/watchlist?age=16&ages=")
+    page.goto(app_server["url"] + "/watchlist?ages=16")
     expect(page.locator("#more-filters > summary")).to_have_text("More filters · 1")
 
 
 def test_filters_from_a_link_survive_the_scan(app_server, page):
     expect = playwright_api.expect
     # The genre list is filled only when films arrive; the genre from the link must wait for it.
-    page.goto(app_server["url"] + "/watchlist?genre=Action&rating=7&providers=Netflix,Arte")
+    page.goto(app_server["url"] + "/watchlist?genre=Action&rating=tmdb:7&providers=Netflix,Arte")
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     expect(page.locator('#genre-list input[value="Action"]')).to_be_checked()
     expect(page.locator("#visible-count")).to_have_text("1")
@@ -344,7 +341,7 @@ def test_filters_from_a_link_survive_the_scan(app_server, page):
     # The same link again, now from the saved scan.
     page.reload()
     expect(page.locator('#genre-list input[value="Action"]')).to_be_checked()
-    # An old link's rating=7 is the TMDB rating; its chip clears it.
+    # The rating from the link shows as a chip; the chip clears it.
     expect(page.locator("#rating-filter")).to_have_value("tmdb:7")
     page.locator('.filter-chip[data-filter-id="rating-filter"] .chip-remove').click()
     expect(page.locator("#rating-filter")).to_have_value("")
@@ -391,7 +388,7 @@ def test_phone_details_sheet_can_be_pulled_to_full_screen(app_server, page):
         "() => ['none', 'matrix(1, 0, 0, 1, 0, 0)'].includes(getComputedStyle(document.querySelector("
         "'#film-details-modal .modal-dialog')).transform)"
     )
-    # Opened by a link (a new tab), the sheet is full screen at once; opened by a tap on a card it is 60 %.
+    # Opened by a link (a new tab), the sheet is full screen at once; opened by a tap on a card it is 80 %.
     expect(modal).to_have_class(re.compile("is-full"))
     assert dialog.evaluate("el => el.getBoundingClientRect().height") > 700
 
@@ -404,10 +401,10 @@ def test_phone_details_sheet_can_be_pulled_to_full_screen(app_server, page):
         page.mouse.move(x, y + dy, steps=5)
         page.mouse.up()
 
-    drag("#sheet-grip", 80)  # pull the grip down: 60 %
+    drag("#sheet-grip", 80)  # pull the grip down: 80 %
     expect(modal).not_to_have_class(re.compile("is-full"))
     page.wait_for_timeout(450)
-    assert dialog.evaluate("el => el.getBoundingClientRect().height") < 600
+    assert dialog.evaluate("el => el.getBoundingClientRect().top") > 100  # 80 % shows
     drag("#sheet-grip", -80)  # pull the grip up
     expect(modal).to_have_class(re.compile("is-full"))
     drag("#sheet-grip", 80)  # and down again
@@ -419,9 +416,25 @@ def test_phone_details_sheet_can_be_pulled_to_full_screen(app_server, page):
     expect(modal).not_to_have_class(re.compile("is-full"))
     page.wait_for_timeout(450)
     page.locator("#film-details-modal .modal-body").evaluate(
-        "el => { el.scrollTop = 200; }"
-    )  # scrolling expands it
+        "el => { el.style.paddingBottom = '1500px'; el.scrollTop = 200; }"
+    )  # scrolling a long film expands it
     expect(modal).to_have_class(re.compile("is-full"))
+
+
+def test_plus_n_on_a_card_opens_the_phone_sheet_full_screen(app_server, page):
+    expect = playwright_api.expect
+    page.set_viewport_size({"width": 390, "height": 800})
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    # No card in the fixture has a "+N"; the click rule is on the document, so a button with its marks works.
+    button = (
+        '<button id="fake-more" data-open-more data-key="949" '
+        'style="position:fixed;top:0;left:0;z-index:9">+2</button>'
+    )
+    page.evaluate("html => document.body.insertAdjacentHTML('beforeend', html)", button)
+    page.locator("#fake-more").click()
+    expect(page.locator("#film-details-modal")).to_have_class(re.compile("is-full"))
+    expect(page.locator("#film-more")).to_have_attribute("open", "")
 
 
 def test_phone_filter_sheet_stays_open_while_choosing(app_server, page):
@@ -435,6 +448,7 @@ def test_phone_filter_sheet_stays_open_while_choosing(app_server, page):
     sheet = page.locator("#film-filters")
     expect(sheet).to_have_attribute("role", "dialog")
     expect(sheet).to_have_attribute("aria-modal", "true")
+    page.wait_for_timeout(450)  # it slides up first
     # The sheet reaches the bottom edge and has a way out and a Reset.
     assert page.evaluate("document.getElementById('film-filters').getBoundingClientRect().bottom") == 800
     expect(page.locator("#filter-sheet-close")).to_be_visible()
@@ -450,6 +464,54 @@ def test_phone_filter_sheet_stays_open_while_choosing(app_server, page):
     expect(page.locator("#tools-toggle")).to_be_focused()
     expect(sheet).to_have_attribute("role", "search")
     assert not page.evaluate("document.getElementById('app-header').inert")
+
+
+def test_phone_head_is_two_rows_and_the_posters_start_high(app_server, page):
+    expect = playwright_api.expect
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    # Row 1: search and Filters side by side; the first poster starts in the top quarter of the screen.
+    search = page.locator("#film-search").bounding_box()
+    filters = page.locator("#tools-toggle").bounding_box()
+    assert abs(search["y"] - filters["y"]) < 12 and search["x"] < filters["x"]
+    assert page.locator("article.film .poster").first.bounding_box()["y"] <= 844 * 0.25
+    # The source name and the Letterboxd account are not in the count line.
+    expect(page.locator("#source-name")).to_be_hidden()
+    # The view switch sits in the tab row; heart and link live in the filter sheet.
+    expect(page.locator("#tabs-view-slot #view-switch")).to_be_visible()
+    expect(page.locator("#favorites-view")).to_be_hidden()
+    page.locator("#tools-toggle").click()
+    expect(page.locator("#favorites-view")).to_be_visible()
+    expect(page.locator("#share-button")).to_be_visible()
+    page.locator("#film-search").fill("zzzz-no-film")
+    expect(page.locator("#tools-toggle")).to_contain_text("1")
+
+
+def test_runtime_and_rating_filters_show_unit_and_source(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    page.locator("#runtime-pop summary").click()
+    page.locator("#runtime-slider").evaluate(
+        "e => { e.value = 225; e.dispatchEvent(new Event('input', {bubbles: true})); }"
+    )
+    expect(page.locator("#runtime-slider-value")).to_have_text("Up to 3 h 45")
+    # The label is one line, not a column of letters.
+    assert page.locator("#runtime-slider-value").bounding_box()["height"] < 30
+    expect(page.locator("#runtime-summary")).to_have_text("≤ 3 h 45")
+    page.keyboard.press("Escape")
+    page.locator("#rating-pop summary").click()
+    page.locator('#rating-pop input[name="rating-source"][value="tmdb"]').check(force=True)
+    page.locator('[data-rating="tmdb:7"]').click()
+    expect(page.locator("#rating-summary")).to_have_text("TMDB 7+")
+    expect(page.locator('.filter-chip[data-filter-id="rating-filter"]')).to_have_text("Rating: TMDB 7+")
+    # Changing the source resets the minimum and says so.
+    letterboxd = page.locator('#rating-pop input[name="rating-source"][value="lb"]')
+    letterboxd.evaluate("e => { e.disabled = false; }")  # the fake data has no Letterboxd ratings
+    letterboxd.check(force=True)
+    expect(page.locator("#rating-summary")).to_have_text("")
+    expect(page.locator("#rating-note")).to_be_visible()
 
 
 def test_skip_link_and_three_stops_per_card(app_server, page):
@@ -783,7 +845,7 @@ def test_filter_bar_cost_genres_runtime_and_the_address(app_server, page):
     page.keyboard.press("Escape")
     assert visible_titles(page) == ["Heat"]
     runtime_chip = page.locator('.filter-chip[data-filter-id="runtime-filter"]')
-    expect(runtime_chip).to_have_text("Runtime: Up to 120 min")
+    expect(runtime_chip).to_have_text("Runtime: Up to 2 h")
 
 
 def test_filter_menus_stay_inside_the_window(app_server, page):
@@ -865,8 +927,8 @@ def test_card_menu_sets_a_film_aside_and_marks_it_watched_with_undo(app_server, 
     # Watched: the poster says so, the toast offers Undo.
     first.hover()  # the action bar shows while the pointer is on the card
     first.get_by_role("button", name="Grey out").click()
-    expect(page.locator("#toast-message")).to_contain_text("greyed out")
-    expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_text("Greyed out")
+    expect(page.locator("#toast-message")).to_contain_text("hidden away")
+    expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_text("Hidden away")
     assert any(item["flag"] == "watched" for item in app_server["store"].list_flags())
     page.locator("#toast-undo").click()
     expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_count(0)
@@ -913,7 +975,7 @@ def test_keyboard_shortcuts(app_server, page):
     # "s" marks the card in focus as watched; "g" then "s" goes to the subscriptions.
     page.locator("article.film .film-open").first.focus()
     page.keyboard.press("s")
-    expect(page.locator("article.film .poster-badge")).to_have_text("Greyed out")
+    expect(page.locator("article.film .poster-badge")).to_have_text("Hidden away")
     page.keyboard.press("g")
     page.keyboard.press("s")
     expect(page).to_have_url(re.compile(r"/subscriptions$"))
@@ -961,7 +1023,12 @@ def test_service_drawer_saves_notes_and_splits_the_price(app_server, page):
     page.locator("#drawer-note").fill("family account")
     page.locator("#drawer-note").blur()
     expect(page.locator("#save-state")).to_have_text("Saved")
-    saved = app_server["settings"].costs("DE")["Netflix"]
+    # "Saved" may still be showing from the price: wait until the note is really stored.
+    for _ in range(30):
+        saved = app_server["settings"].costs("DE")["Netflix"]
+        if saved.get("note") == "family account":
+            break
+        page.wait_for_timeout(100)
     assert (saved["price"], saved["shared"], saved["note"]) == (12.0, 3, "family account")
     page.keyboard.press("Escape")
     expect(page.locator("#service-drawer")).to_be_hidden()
@@ -1064,9 +1131,35 @@ def test_compare_bar_appears_with_the_first_film_and_marks_the_best_value(app_se
     page.locator("#compare-go").click()
     expect(page.locator("#compare-table")).to_be_visible()
     expect(page.locator("#compare-table th", has_text="Runtime")).to_be_visible()
+    expect(page.locator("#compare-bar")).to_be_hidden()  # the bar gives way to the open comparison
+    page.wait_for_function("document.getElementById('compare-modal').contains(document.activeElement)")
     page.keyboard.press("Escape")
+    expect(page.locator("#compare-modal")).to_be_hidden()
     page.locator("#compare-bar-clear").click()
     expect(page.locator("#compare-bar")).to_be_hidden()
+
+
+def test_phone_compare_bar_sits_above_the_tab_bar_and_gives_way_to_sheets(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    tick_all_services(page)
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.wait_for_timeout(500)
+    for index in (0, 1):
+        card = page.locator("article.film").nth(index)
+        card.hover()
+        card.get_by_role("button", name=re.compile("comparison")).click()
+    bar = page.locator("#compare-bar")
+    expect(bar).to_be_visible()
+    box, nav = bar.bounding_box(), page.locator(".page-nav").bounding_box()
+    assert box["x"] == 0 and box["width"] == 390 and box["height"] >= 56
+    assert box["y"] + box["height"] <= nav["y"] + 1
+    expect(page.locator("#compare-go")).to_be_enabled()
+    page.locator("#tools-toggle").click()
+    expect(bar).to_be_hidden()
+    page.locator("#filter-sheet-close").click()
+    expect(bar).to_be_visible()
 
 
 def test_a_failed_scan_says_what_is_wrong_and_offers_to_try_again(app_server, page):
@@ -1287,7 +1380,7 @@ def test_grey_outs_can_be_reset_on_the_data_page(app_server, page):
     expect = playwright_api.expect
     assert page.request.put(app_server["url"] + "/api/flags/348", data={"flag": "watched"}).ok
     page.goto(app_server["url"] + "/settings/data")
-    expect(page.locator("#greyouts-text")).to_contain_text("1 film is greyed out")
+    expect(page.locator("#greyouts-text")).to_contain_text("1 film is hidden away")
     page.get_by_role("button", name="Reset grey-outs").click()
     expect(page.locator("#greyouts-text")).to_contain_text("1 grey-outs removed")
     expect(page.get_by_role("button", name="Reset grey-outs")).to_be_disabled()
@@ -1330,10 +1423,9 @@ def test_the_abroad_switch_adds_films_your_services_have_in_other_countries(app_
     expect(toggle).to_contain_text("+1")  # one more film would come in
     toggle.click()
     expect(page.locator("article.film")).to_have_count(here + 1)
-    expect(page.locator("article.film .way-flag")).to_have_count(1)
-    expect(page.locator("article.film", has=page.locator(".way-flag")).locator(".best-way")).to_contain_text(
-        "Abroad"
-    )
+    expect(page.locator("article.film .way-badge-flag")).to_have_count(1)
+    abroad_card = page.locator("article.film", has=page.locator(".way-badge-flag"))
+    expect(abroad_card.locator(".best-way")).to_contain_text("Abroad")
     expect(page.locator("#result-meta")).to_contain_text("1 via VPN")
     assert "where=both" in page.url
     expect(page.locator("#filter-chips")).to_contain_text("Where: Here and abroad")
@@ -1358,3 +1450,14 @@ def test_a_card_shows_only_the_logo_and_the_words_come_on_hover(app_server, page
     assert words.inner_text().strip()  # the words are there for screen readers all the time
     card.locator(".best-way-link").hover()
     expect(words).to_have_css("opacity", "1")
+
+
+def test_many_filter_chips_collapse_behind_a_more_button(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist?votes=1000&ages=16&max=120&rating=tmdb:7&cost=free")
+    chips = page.locator("#filter-chips .filter-chip:not(.chips-more):not(.filter-reset)")
+    expect(page.locator("#filter-chips .chips-more")).to_have_text(re.compile(r"^\+\d+ more$"), timeout=15000)
+    assert chips.count() == 3
+    page.locator("#filter-chips .chips-more").click()
+    assert chips.count() >= 5
+    expect(page.locator("#filter-chips .chips-more")).to_have_text("Fewer")
