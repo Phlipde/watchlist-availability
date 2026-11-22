@@ -327,7 +327,7 @@ const state = createAppState();
       renderViews(document.getElementById('saved-views'), {canSave: true, search: location.search});
       renderViews(document.getElementById('tonight-views'));
     }
-    ['saved-views', 'tonight-views'].forEach(id => wireViews(document.getElementById(id), () => location.search, drawViews));
+    ['saved-views', 'tonight-views', 'views-menu'].forEach(id => wireViews(document.getElementById(id), () => location.search, drawViews));
     function renderTonightPage() {
       drawViews();
       showDeadlines(document.getElementById('deadline-banner'), window.WATCHLIST_CONFIG.deadlines, {link: true});
@@ -1175,16 +1175,19 @@ const state = createAppState();
     filterBar.buildServicesMenu();
     ['sort-order', 'favorite-status-filter'].forEach(id => document.getElementById(id).addEventListener('change', renderFilms));
     const favoritesButton = document.getElementById('favorites-view');
+    const showHeart = on => { favoritesButton.querySelector('i').className = on ? 'ti ti-heart-filled' : 'ti ti-heart'; };
     state.favoritesOnly = initialUrl.get('favorites') === '1';
     // The button keeps its name; whether the view is on is said by aria-pressed and the line above the films.
     function setFavoritesOnly(on) {
       state.favoritesOnly = on;
       favoritesButton.classList.toggle('active', on);
       favoritesButton.setAttribute('aria-pressed', String(on));
+      showHeart(on);
       renderFilms();
     }
     favoritesButton.classList.toggle('active', state.favoritesOnly);
     favoritesButton.setAttribute('aria-pressed', String(state.favoritesOnly));
+    showHeart(state.favoritesOnly);
     favoritesButton.addEventListener('click', () => setFavoritesOnly(!state.favoritesOnly));
     document.getElementById('compare-go').addEventListener('click', compareFilms);
     document.getElementById('compare-bar-clear').addEventListener('click', () => { [...state.compareKeys].forEach(key => setCompared(key, false)); renderFilms(); });
@@ -1213,7 +1216,7 @@ const state = createAppState();
     // Phones: "Filters" opens the bar as a sheet from the bottom, a modal dialog while open.
     const toolsToggle = document.getElementById('tools-toggle');
     const filterSheet = document.getElementById('film-filters');
-    const behindSheet = () => [document.getElementById('app-header'), document.querySelector('.skip-link'), ...document.querySelectorAll('#watchlist-view > :not(#film-filters)')].filter(Boolean);
+    const behindSheet = () => [document.getElementById('app-header'), document.querySelector('.skip-link'), ...document.querySelectorAll('#watchlist-view > :not(.watch-bar), .watch-bar > :not(#film-filters)')].filter(Boolean);
     function setSheet(open) {
       document.body.classList.toggle('tools-open', open);
       toolsToggle?.setAttribute('aria-expanded', String(open));
@@ -1249,43 +1252,6 @@ const state = createAppState();
         window.prompt('Copy this link:', location.href);
       }
     });
-    document.getElementById('export-json').addEventListener('click', () => download('watchlist.json', JSON.stringify(state.films, null, 2), 'application/json'));
-    document.getElementById('export-favorites').addEventListener('click', () => download('favorites.csv', ['Title,Year,Status,Notes', ...[...state.favorites.values()].map(film => [film.title, film.year, film.status || 'plan', film.notes || ''].map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))].join('\n'), 'text/csv'));
-    document.getElementById('export-favorites-json').addEventListener('click', () => download('favorites.json', JSON.stringify([...state.favorites.values()], null, 2), 'application/json'));
-    document.getElementById('import-favorites').addEventListener('change', async event => {
-      const file = event.target.files[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const records = file.name.toLowerCase().endsWith('.json') ? JSON.parse(text) : parseFavoriteCsv(text);
-        if (!Array.isArray(records)) throw new Error('The import must contain a list of favorites.');
-        const valid = records.filter(movie => movie && movie.title && movie.key);
-        if (!valid.length) throw new Error('No valid favorites found.');
-        for (const movie of valid) {
-          const response = await fetch('/api/favorites', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...movie, status: ['plan', 'watching', 'watched'].includes(movie.status) ? movie.status : 'plan', notes: String(movie.notes || '')})});
-          if (!response.ok) throw new Error(`Could not import “${movie.title}”.`);
-        }
-        await loadFavorites();
-        renderFilms();
-        showToast(`Imported ${valid.length} favorite${valid.length === 1 ? '' : 's'}.`);
-      } catch (error) {
-        showToast(error.message || 'Could not import favorites.', true);
-      } finally {
-        event.target.value = '';
-      }
-    });
-    function parseFavoriteCsv(text) {
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      if (lines.length < 2) return [];
-      const headers = lines.shift().split(',').map(value => value.trim().toLowerCase());
-      return lines.map(line => {
-        const values = line.match(/(?:"([^"]*(?:""[^"]*)*)"|([^,]*))(?:,|$)/g)?.map(value => value.replace(/,$/, '').replace(/^"|"$/g, '').replaceAll('""', '"')) || [];
-        const record = Object.fromEntries(headers.map((header, index) => [header, values[index] || '']));
-        return {key: record.key || `${record.title}|${record.year}`, title: record.title, year: record.year, status: record.status, notes: record.notes};
-      });
-    }
-    document.getElementById('export-csv').addEventListener('click', () => download('watchlist.csv', ['Title,Year,Services', ...state.films.map(film => [film.title, film.year, Object.keys(film.providers).join('; ')].map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))].join('\n'), 'text/csv'));
-    function download(name, data, type) { const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([data], {type})); link.download = name; link.click(); URL.revokeObjectURL(link.href); }
     loadFavorites().then(async () => {
       const snapshot = await loadLatestResult();
       const savedJob = new URL(location.href).searchParams.get('scan');

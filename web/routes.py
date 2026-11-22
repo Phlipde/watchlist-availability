@@ -527,6 +527,13 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         store.clear_flag(movie_key)
         return jsonify({"ok": True})
 
+    @app.get("/dev/ui")
+    def dev_ui():
+        """Every button variant in its states, to check them by eye; only in development."""
+        if not (app.debug or os.getenv("WATCHLIST_DEV") == "1"):
+            return jsonify({"error": "Not found."}), 404
+        return render_template("dev-ui.html")
+
     @app.get("/api/greyouts")
     def greyed_out():
         return jsonify(store.greyed_out_counts())

@@ -328,7 +328,7 @@ def test_saved_results_show_the_tools(app_server, page):
     page.goto(app_server["url"] + "/watchlist?votes=1000")
     expect(page.locator("#filter-chips")).to_contain_text("Votes: 1k+")
     page.goto(app_server["url"] + "/watchlist?age=16&ages=")
-    expect(page.locator("#more-filters summary")).to_have_text("Filters (1)")
+    expect(page.locator("#more-filters summary")).to_have_text("More filters (1)")
 
 
 def test_filters_from_a_link_survive_the_scan(app_server, page):
@@ -904,9 +904,10 @@ def test_a_saved_view_comes_back_as_a_chip_on_tonight(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"] + "/watchlist?max=150")
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    page.get_by_text("Save view", exact=True).click()  # the ghost button opens a small popover
     page.locator("#view-name").fill("Short before bed")
-    page.get_by_role("button", name="Save view").click()
-    expect(page.locator("#saved-views .saved-view")).to_have_count(1)
+    page.locator(".save-pop").get_by_role("button", name="Save", exact=True).click()
+    expect(page.locator("#views-menu .menu-item")).to_have_count(1)  # now it is in the Views dropdown
     page.goto(app_server["url"])
     link = page.locator("#tonight-views .saved-view a")
     expect(link).to_have_text("Short before bed")
@@ -1180,3 +1181,22 @@ def test_grey_outs_can_be_reset_on_the_data_page(app_server, page):
     expect(page.locator("#greyouts-text")).to_contain_text("1 grey-outs removed")
     expect(page.get_by_role("button", name="Reset grey-outs")).to_be_disabled()
     assert page.request.get(app_server["url"] + "/api/greyouts").json() == {"flags": 0, "favorites": 0}
+
+
+def test_data_page_exports_and_previews_an_import_before_changing_anything(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/settings/data")
+    with page.expect_download() as download:
+        page.locator('[data-export="favorites-json"]').click()
+    assert download.value.suggested_filename == "favorites.json"
+    records = (
+        '[{"key": "9001", "title": "Alien", "year": 1979}, {"key": "9002", "title": "Heat", "year": 1995}]'
+    )
+    page.locator("#import-favorites").set_input_files(
+        files=[{"name": "favorites.json", "mimeType": "application/json", "buffer": records.encode()}]
+    )
+    expect(page.locator("#import-preview")).to_have_text("2 favorites found · 0 already set · 2 new")
+    assert page.request.get(app_server["url"] + "/api/favorites").json() == []  # nothing changed yet
+    page.get_by_role("button", name="Import", exact=True).click()
+    expect(page.locator("#import-preview")).to_have_text("Imported 2 favorites.")
+    assert len(page.request.get(app_server["url"] + "/api/favorites").json()) == 2
