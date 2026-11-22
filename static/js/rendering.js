@@ -1,5 +1,7 @@
 import {dateTime, escapeHtml, numberText} from './ui.js';
 import {SECTION_KINDS, filmKey, sectionProviders, selectedChanges} from './filtering.js';
+import {bestWay, catalogues, wayText} from './bestway.js';
+import {watchUrl} from './drawer.js';
 
 // "Free" alone was read three ways; the section says what it holds.
 
@@ -57,27 +59,31 @@ function filmLink(film, key, pageHref, className = 'film-open') {
   return `<a class="${className}" href="${escapeHtml(filmHref(pageHref, key))}" data-key="${escapeHtml(key)}" title="${escapeHtml(film.title)}">${escapeHtml(film.title)}</a>`;
 }
 
-// Mark on a service logo for the offer type in the card's section; a subscription is the usual case and has none.
-const SERVICE_MARKS = {free: '<i class="ti ti-gift"></i>', ads: 'Ad', rent: '€'};
-
-// Every ticked service the film runs on in this section, sorted by name so a service keeps its place across cards.
-function serviceList(film, section, context) {
-  const sectionKinds = section === 'All' ? ['free', 'ads', 'flatrate', 'rent'] : SECTION_KINDS[section] || [];
+// The one line under a card: the logo of the best way and what it is in words, "+N" for the other services.
+// A click on the logo or the words goes to the service; "+N" opens the details at "Other services".
+function wayLine(film, key, context) {
   const logos = context.providerLogos || {};
-  const offered = section === 'All' ? Object.keys(film.providers || {}) : sectionProviders(film, section);
-  return offered.filter(provider => context.selected.has(provider))
-    .sort((a, b) => a.localeCompare(b, undefined, {sensitivity: 'base'}))
-    .map(provider => {
-      const kinds = film.providers[provider] || [];
-      const kind = sectionKinds.find(item => kinds.includes(item));
-      const offers = kinds.map(item => (OFFER_TYPES[item]?.[0] || item).toLowerCase()).join(', ');
-      const name = escapeHtml(provider);
-      const mark = SERVICE_MARKS[kind] ? `<span class="service-mark service-mark-${kind}" aria-hidden="true">${SERVICE_MARKS[kind]}</span>` : '';
-      const label = logos[provider]
-        ? `<img class="service-logo" src="${escapeHtml((context.logoBaseUrl || '') + logos[provider])}" alt="${name}, ${escapeHtml(offers)}" title="${name}, ${escapeHtml(offers)}" loading="lazy">`
-        : `<span class="pill pill-service" title="${name}, ${escapeHtml(offers)}">${name}<span class="visually-hidden">, ${escapeHtml(offers)}</span></span>`;
-      return `<li class="service" data-provider="${name}">${label}${mark}</li>`;
-    }).join('');
+  const logo = (name, className = 'way-logo') => (logos[name] ? `<img class="${className}" src="${escapeHtml((context.logoBaseUrl || '') + logos[name])}" alt="" loading="lazy">` : '');
+  // A film listed only because of the abroad switch has no way to watch it here: its best way is abroad.
+  const way = film.abroadOnly
+    ? bestWay({...film, providers: {}}, {own: context.selected, abroad: context.abroadFor ? context.abroadFor(film) : null})
+    : bestWay(film, {own: context.selected});
+  const text = escapeHtml(wayText(way));
+  const title = escapeHtml(film.title);
+  const named = way.service && !logos[way.service] && ['free', 'ads'].includes(way.kind) ? `${escapeHtml(way.service)} · ` : '';
+  const more = way.others > 0
+    ? `<button class="best-more" type="button" data-open-more data-key="${escapeHtml(key)}" aria-label="${way.others} more ${way.others === 1 ? 'way' : 'ways'} to watch ${title}">+${way.others}</button>`
+    : '';
+  if (way.kind === 'abroad') {
+    const country = way.countries[0];
+    const flag = country ? `<img class="way-flag" src="/static/flags/${escapeHtml(country.toLowerCase())}.svg" width="16" height="12" alt="">` : '';
+    const name = escapeHtml(context.countryName ? context.countryName(country) : country);
+    return `<div class="best-way"><button class="best-way-link" type="button" data-open-more data-key="${escapeHtml(key)}">${logo(way.service)}${flag}<span>Abroad<span class="visually-hidden"> in ${name}, on ${escapeHtml(way.service)}</span></span></button>${more}</div>`;
+  }
+  if (way.kind === 'none') return `<div class="best-way is-muted"><span class="best-way-text">${text}</span></div>`;
+  const href = watchUrl(film, context.country || 'DE');
+  const first = way.kind === 'rent' || way.kind === 'buy' ? logo(way.service) : way.kind === 'foreign' ? '' : logo(way.service);
+  return `<div class="best-way${way.muted ? ' is-muted' : ''}"><a class="best-way-link" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${first}<span>${named}${text}</span></a>${more}</div>`;
 }
 
 export function changeBadgesFor(film, selected) {
@@ -123,11 +129,12 @@ export function filmCard(film, section, context) {
     ? '<span class="poster-badge">Greyed out</span>'
     : added.length ? `<span class="poster-badge poster-badge-new" title="New on ${escapeHtml(added.join(', '))}">New<span class="visually-hidden"> on ${escapeHtml(added.join(', '))}</span></span>`
       : removed.length ? `<span class="poster-badge poster-badge-gone" title="Gone from ${escapeHtml(removed.join(', '))}">Gone<span class="visually-hidden"> from ${escapeHtml(removed.join(', '))}</span></span>` : '';
-  const services = serviceList(film, section, context);
-  // The "..." menu: watched, not now, compare. The summary is the third tab stop of a card, after the title and the heart.
-  const menu = `<details class="card-menu"><summary class="card-more" aria-label="More actions: ${title}"><i class="ti ti-dots" aria-hidden="true"></i></summary><div class="card-menu-items"><button type="button" data-flag="watched" data-key="${escapeHtml(key)}">${watched ? 'Remove grey-out' : 'Grey out'}</button><button type="button" data-flag="not_now" data-key="${escapeHtml(key)}">${hidden ? 'Bring back' : 'Not now (30 days)'}</button><button type="button" data-compare="${escapeHtml(key)}">${context.compareKeys.has(key) ? 'Remove from comparison' : 'Add to comparison'}</button></div></details>`;
-  // The title link covers the whole card (see .film-open::after); the star sits above it. Two tab stops per card.
-  return `<article class="film${grey}${watched ? ' is-watched' : ''}" data-key="${escapeHtml(key)}" data-section="${section}"><div class="poster"><label class="comparison-toggle"><input class="comparison-check" type="checkbox" aria-label="Compare ${title}" ${compareChecked}><span aria-hidden="true">Compare</span></label>${badge}${poster}</div><div class="film-info"><h3 class="film-title">${filmLink(film, key, pageHref)}</h3><p class="year">${meta}</p><div class="card-foot">${services ? `<ul class="services">${services}</ul>` : '<span></span>'}<span class="card-actions">${favoriteButton}${menu}</span></div>${favoriteControls}</div></article>`;
+  // Heart at the top right of the poster; compare, not now and grey out on a bar at its foot (hover, focus, long press).
+  const act = (extra, icon, name) => `<button class="card-action" type="button" ${extra} title="${name}" aria-label="${name}"><i class="ti ${icon}" aria-hidden="true"></i></button>`;
+  const bar = `<div class="poster-actions" role="group" aria-label="Actions: ${title}">${act(`data-compare="${escapeHtml(key)}"`, 'ti-layout-columns', context.compareKeys.has(key) ? 'Remove from comparison' : 'Add to comparison')}${act(`data-flag="not_now" data-key="${escapeHtml(key)}"`, 'ti-eye-off', hidden ? 'Bring back' : 'Not now (30 days)')}${act(`data-flag="watched" data-key="${escapeHtml(key)}"`, watched ? 'ti-circle-check-filled' : 'ti-circle-check', watched ? 'Remove grey-out' : 'Grey out')}</div>`;
+  // The title comes first in the source (and for the keyboard); the CSS draws the poster on top. The title link covers
+  // the whole card (see .film-open::after); the heart, the bar and the line sit above it.
+  return `<article class="film${grey}${watched ? ' is-watched' : ''}" data-key="${escapeHtml(key)}" data-section="${section}"><div class="film-info"><h3 class="film-title">${filmLink(film, key, pageHref)}</h3><p class="year">${meta}</p><div class="card-foot">${wayLine(film, key, context)}</div>${favoriteControls}</div><div class="poster"><label class="comparison-toggle"><input class="comparison-check" type="checkbox" aria-label="Compare ${title}" ${compareChecked}><span aria-hidden="true">Compare</span></label>${badge}${favoriteButton}${poster}${bar}</div></article>`;
 }
 
 export function unavailableCard(film, selected, pageHref = 'http://localhost/') {
@@ -142,11 +149,20 @@ export function filmTable(films, context) {
   const rows = films.map(film => {
     const key = filmKey(film);
     const rating = numberText(film.letterboxd_rating) ? `★ ${Number(film.letterboxd_rating).toFixed(1)}` : numberText(film.rating) ? `TMDB ${Number(film.rating).toFixed(1)}` : '';
-    const services = Object.entries(film.providers || {}).filter(([name]) => context.selected.has(name)).map(([name]) => name).sort((a, b) => a.localeCompare(b)).join(', ');
+    const logos = context.providerLogos || {};
+    const services = catalogues(film, context.selected)
+      .sort((a, b) => Number(b.own) - Number(a.own) || a.name.localeCompare(b.name))
+      .map(entry => {
+        const kinds = [...entry.kinds].map(kind => (OFFER_TYPES[kind]?.[0] || (kind === 'buy' ? 'Buy' : kind)).toLowerCase()).join(', ');
+        const tip = escapeHtml(`${entry.name}${entry.own ? ' (yours)' : ''}, ${kinds}`);
+        return logos[entry.name]
+          ? `<img class="table-logo${entry.own ? ' is-own' : ''}" src="${escapeHtml((context.logoBaseUrl || '') + logos[entry.name])}" alt="${tip}" title="${tip}" loading="lazy">`
+          : `<span class="table-service" title="${tip}">${escapeHtml(entry.name)}</span>`;
+      }).join('');
     const runtime = runtimeText(film.runtime);
-    return `<tr data-key="${escapeHtml(key)}"><th scope="row">${filmLink(film, key, pageHref)}</th><td>${numberText(film.year, '')}</td><td>${runtime ? `<span aria-hidden="true">${runtime}</span><span class="visually-hidden">${runtimeSpoken(film.runtime)}</span>` : ''}</td><td>${rating}</td><td>${escapeHtml(services)}</td></tr>`;
+    return `<tr data-key="${escapeHtml(key)}"><th scope="row">${filmLink(film, key, pageHref)}</th><td>${numberText(film.year, '')}</td><td>${runtime ? `<span aria-hidden="true">${runtime}</span><span class="visually-hidden">${runtimeSpoken(film.runtime)}</span>` : ''}</td><td>${rating}</td><td class="table-services">${services}</td></tr>`;
   }).join('');
-  return `<div class="table-scroll"><table class="status-table film-table"><thead><tr><th scope="col">Title</th><th scope="col">Year</th><th scope="col">Runtime</th><th scope="col">Rating</th><th scope="col">On your services</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `<div class="table-scroll"><table class="status-table film-table"><thead><tr><th scope="col">Title</th><th scope="col">Year</th><th scope="col">Runtime</th><th scope="col">Rating</th><th scope="col">Services</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 // Draws the films (as cards, compact cards or a table) and the unavailable list from the result of filterFilms().

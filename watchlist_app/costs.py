@@ -211,6 +211,42 @@ def other_countries(
     return sorted(found, key=lambda item: (-item["gain"], item["country"]))
 
 
+def abroad_map(
+    offers: dict[str, dict[int, dict[str, list[str]]]], own: set[str], region: str
+) -> dict[int, dict[str, dict[str, str]]]:
+    """Which films your services have abroad but not at home: {tmdb_id: {service: {country: kind}}}.
+
+    `offers` is {country: {tmdb_id: {provider: kinds}}} (display names). Only free, with-ads and subscription
+    offers count, and a service that carries the film in `region` itself is left out (that is not abroad).
+    "X Amazon Channel" counts as "X".
+    """
+
+    def watch_kind(kinds: list[str]) -> str | None:
+        return next((kind for kind in ("free", "ads", "flatrate") if kind in kinds), None)
+
+    mine = own | {catalog_name(name) for name in own}
+    at_home = {
+        tmdb_id: {catalog_name(name) for name, kinds in providers.items() if watch_kind(kinds)}
+        for tmdb_id, providers in offers.get(region, {}).items()
+    }
+    found: dict[int, dict[str, dict[str, str]]] = {}
+    for country, films in offers.items():
+        if country == region:
+            continue
+        for tmdb_id, providers in films.items():
+            for name, kinds in providers.items():
+                service = catalog_name(name)
+                kind = watch_kind(kinds)
+                if (
+                    not kind
+                    or (name not in mine and service not in mine)
+                    or service in at_home.get(tmdb_id, set())
+                ):
+                    continue
+                found.setdefault(tmdb_id, {}).setdefault(service, {})[country] = kind
+    return found
+
+
 def plan_data(
     films: list[dict],
     subscriptions: list[str],

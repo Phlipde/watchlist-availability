@@ -534,6 +534,42 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             return jsonify({"error": "Not found."}), 404
         return render_template("dev-ui.html")
 
+    abroad_cache: dict[tuple, dict] = {}
+
+    @app.get("/api/abroad")
+    def abroad():
+        """Films your services have abroad but not at home: {film key: {service: {country: kind}}}.
+
+        `services` are the ticked services (comma separated); the data is stored, there is no TMDB request.
+        """
+        country = request.args.get("country") or settings.country
+        if country not in COUNTRIES:
+            return jsonify({"error": "Unknown country."}), 400
+        own = {name for name in request.args.get("services", "").split(",") if name and len(name) < 80}
+        scan = store.latest_scan(country)
+        if not scan or not own:
+            return jsonify({})
+        # The same answer for the same scan and the same services: keep the last few (it reads every country).
+        cache_key = (country, scan["created"], store.offers_version, ",".join(sorted(own)))
+        if cache_key in abroad_cache:
+            return jsonify(abroad_cache[cache_key])
+        films = [*scan["results"], *scan["unavailable"]]
+        ids = [film["tmdb_id"] for film in films if isinstance(film.get("tmdb_id"), int)]
+        raw = store.offers_for(ids)
+        shown = {
+            code: {tmdb_id: providers.display_providers(offers) for tmdb_id, offers in by_film.items()}
+            for code, by_film in raw.items()
+        }
+        found = costs.abroad_map(shown, own, country)
+        key_of = {
+            film["tmdb_id"]: film.get("key") or str(film["tmdb_id"]) for film in films if film.get("tmdb_id")
+        }
+        answer = {key_of[tmdb_id]: services for tmdb_id, services in found.items() if tmdb_id in key_of}
+        if len(abroad_cache) >= 8:
+            abroad_cache.pop(next(iter(abroad_cache)))
+        abroad_cache[cache_key] = answer
+        return jsonify(answer)
+
     @app.get("/api/greyouts")
     def greyed_out():
         return jsonify(store.greyed_out_counts())

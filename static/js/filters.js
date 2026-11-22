@@ -6,6 +6,7 @@ export const FILTER_CONTROLS = [
   ['media-filter', 'Trailer'], ['change-filter', 'Changes'], ['provider-count-filter', 'Services'],
   ['age-filter', 'Age rating'],
   ['language-filter', 'Language'], ['origin-filter', 'Country'], ['show-unavailable', 'Also not available'], ['show-hidden', 'Set aside shown'],
+  ['where-filter', 'Where'],
 ];
 
 // A control is set when it differs from its default (data-default), first option, empty value or "unchecked".
@@ -69,6 +70,7 @@ export function readFilters(doc, favoritesOnly, genres = {include: [], exclude: 
     mode: value('match-mode') || 'any',
     yearFrom: years[0],
     yearTo: years[1],
+    where: value('where-filter') || 'all',
     media: value('media-filter') || 'all',
     change: value('change-filter') || 'all',
     minimumProviders: Number(value('provider-count-filter')) || 0,

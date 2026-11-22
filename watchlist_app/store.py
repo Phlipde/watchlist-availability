@@ -174,6 +174,7 @@ class Store:
             Path(path).parent.mkdir(parents=True, exist_ok=True)
         self.path = str(path)
         self._lock = threading.Lock()
+        self.offers_version = 0  # counts the saved offers, so answers built from them can be cached safely
         self._db = sqlite3.connect(str(path), check_same_thread=False)
         with self._lock:
             self._db.executescript(_SCHEMA)
@@ -316,6 +317,7 @@ class Store:
 
     def save_bundle(self, tmdb_id: int, bundle: dict, fetched_at=None) -> None:
         """Store details and the offers of every country from one TMDB response."""
+        self.offers_version += 1
         with self._lock:
             self._db.execute(
                 "INSERT INTO films (tmdb_id, poster_path, details, fetched_at) VALUES (?, ?, ?, ?) "

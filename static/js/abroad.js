@@ -1,7 +1,7 @@
 // "Abroad on your services": where your own services have the film although they do not at home.
 // Pure functions (node tests them); app.js fetches the data and wires the clicks.
 import {escapeHtml} from './ui.js';
-import {catalogName} from './drawer.js';
+import {catalogName} from './catalog.js';
 
 // Which countries to show first, with no setting: neighbours and the same language count, then the well-known
 // VPN countries; tiny states go last. Only the regions the app offers have entries.
@@ -100,4 +100,24 @@ export function abroadHtml(rows, {nameOf, logoOf}) {
     return `<li class="abroad-row"><div class="abroad-line"><span class="abroad-service" title="${escapeHtml(row.service)}">${logo || escapeHtml(row.service)}</span><span class="abroad-flags">${shown.map(code => flag(code, nameOf(code), row.service, row.kinds[code])).join('')}${more.length ? `<button class="flag-more" type="button" aria-expanded="false">+${more.length} <i class="ti ti-chevron-right" aria-hidden="true"></i></button>` : ''}</span>${row.hint ? `<span class="abroad-hint">${row.hint}</span>` : ''}</div>${grid}</li>`;
   }).join('');
   return `<div class="abroad"><h3 class="offer-heading">Abroad on your services <span class="abroad-count">· ${total} ${total === 1 ? 'country' : 'countries'}</span></h3><p class="abroad-note">Needs a VPN or being in that country.</p><ul class="abroad-table">${table}</ul></div>`;
+}
+
+// The best country-and-service for one film, from the server's {service: {country: kind}}: the service with the
+// most countries, its countries best first (the same order as in the drawer). null when there is nothing.
+export function abroadForFilm(entry, region, nameOf = code => code, config = COUNTRY_CONFIG) {
+  const rows = Object.entries(entry || {}).map(([service, byCountry]) => ({
+    service,
+    countries: rankCountries(Object.keys(byCountry), region, nameOf, config),
+    kinds: byCountry,
+  }));
+  rows.sort((a, b) => b.countries.length - a.countries.length || a.service.localeCompare(b.service));
+  return rows[0] || null;
+}
+
+// A copy of the film for the list when it is shown because of the abroad switch: only your services abroad count
+// as its offers (so the cost filters sort it as free or subscription), and `abroadOnly` tells the card.
+export function abroadFilm(film, entry) {
+  const providers = {};
+  for (const [service, byCountry] of Object.entries(entry || {})) providers[service] = [...new Set(Object.values(byCountry))];
+  return {...film, providers, abroadOnly: true};
 }

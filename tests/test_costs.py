@@ -262,3 +262,21 @@ def test_service_counts_leave_free_services_out():
         film("C", Arte=["free"]),
     ]
     assert costs.service_counts(films, ["Netflix", "MUBI", "Arte"]) == {"Netflix": (2, 1), "MUBI": (1, 0)}
+
+
+def test_abroad_map_finds_own_services_abroad_but_not_at_home():
+    offers = {
+        "DE": {1: {"Netflix": ["flatrate"]}, 2: {"Disney+": ["flatrate"]}, 3: {}},
+        "AT": {
+            1: {"Netflix": ["flatrate"]},
+            2: {"Netflix": ["flatrate"], "Disney+": ["rent"]},
+            3: {"Netflix": ["ads"]},
+        },
+        "IT": {2: {"Netflix Amazon Channel": ["flatrate"]}, 3: {"MUBI": ["flatrate"], "Netflix": ["rent"]}},
+    }
+    found = costs.abroad_map(offers, {"Netflix"}, "DE")
+    assert 1 not in found  # Netflix has film 1 at home, so it is not abroad
+    assert found[2] == {
+        "Netflix": {"AT": "flatrate", "IT": "flatrate"}
+    }  # the channel counts as Netflix; rent does not count
+    assert found[3] == {"Netflix": {"AT": "ads"}}  # MUBI is not yours

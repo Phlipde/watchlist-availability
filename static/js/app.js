@@ -6,11 +6,11 @@ import {scanProblem} from './problems.js';
 import {renderViews, wireViews} from './saved-views.js';
 import {showDeadlines} from './deadlines.js';
 import {TONIGHT_CHIPS, nowOnText, pickFilm, pickReason, recentlyGone, tonightRows} from './events.js';
-import {readFilters} from './filters.js';
+import {COST, readFilters} from './filters.js';
 import {createFilterBar, initPopovers} from './filterbar.js';
-import {bestRelaxation, comingSoon, elsewhereOnServices, filmKey, filterFilms, similarOnServices, sortRatings} from './filtering.js';
+import {bestRelaxation, comingSoon, elsewhereOnServices, filmKey, filterFilms, similarOnServices, sortFilms, sortRatings} from './filtering.js';
 import {updateScanFeedback} from './scans.js';
-import {abroadHtml, abroadRows} from './abroad.js';
+import {abroadFilm, abroadForFilm, abroadHtml, abroadRows} from './abroad.js';
 import {NAV_KEYS, columnsFromTops, nextIndex, nextInRows} from './gridnav.js';
 import {drawerHtml, letterboxdUrl} from './drawer.js';
 
@@ -163,8 +163,45 @@ const state = createAppState();
       if (!scanState.rescanInProgress || !document.getElementById('grey-unavailable').checked) return new Set();
       return new Set(scanState.pendingUnavailable.map(filmKey));
     }
+    // ---- Abroad: films your ticked services have in another country but not at home ----
+    state.abroad = null;
+    let abroadLoadedFor = '';
+    function ensureAbroad() {
+      const country = document.getElementById('country-select').value;
+      const services = [...state.selected].sort().join(',');
+      const wanted = `${country}|${services}`;
+      if (wanted === abroadLoadedFor || !services) return;
+      abroadLoadedFor = wanted;
+      fetch(`/api/abroad?country=${encodeURIComponent(country)}&services=${encodeURIComponent(services)}`)
+        .then(response => (response.ok ? response.json() : {}), () => ({}))
+        .then(data => { if (abroadLoadedFor === wanted) { state.abroad = data; renderFilms(); } });
+    }
+    const abroadOnFor = () => (VIEW === 'tonight' ? localStorage.getItem('abroadOn') === '1' : document.getElementById('where-filter').value !== 'all');
+    const abroadFor = film => abroadForFilm(state.abroad?.[filmKey(film)], document.getElementById('country-select').value, code => regionLabel.of(code) || code);
+    // Films with an abroad entry that are not already shown as films you can watch here (those count as "here").
+    const abroadCandidates = shownKeys => (state.abroad ? [...state.films, ...state.unavailable].filter(film => state.abroad[filmKey(film)] && !shownKeys.has(filmKey(film))).map(film => abroadFilm(film, state.abroad[filmKey(film)])) : []);
     // Filter the state, then draw the cards from the result. Filters never read card attributes.
     const VIEW = window.WATCHLIST_CONFIG.view;  // "tonight" (start page) or "watchlist"
+    // The switch shows how many films would come in; the cost segments show their abroad share while it is on.
+    function showAbroadControls(filters, context, candidates, count, where) {
+      const toggle = document.getElementById('abroad-toggle');
+      const on = where !== 'all';
+      toggle.setAttribute('aria-pressed', String(on));
+      document.getElementById('abroad-count').textContent = count ? `+${count}` : '';
+      toggle.setAttribute('aria-disabled', String(!count && !on));
+      toggle.title = !count && !on ? 'No extra films abroad on your services' : 'Also show films available on your services in other countries (needs a VPN)';
+      const note = document.getElementById('vpn-count');
+      note.hidden = !on;
+      document.getElementById('vpn-n').textContent = count;
+      document.querySelectorAll('[data-cost-count]').forEach(span => {
+        span.removeAttribute('data-abroad');
+        if (!on) return;
+        const [availability, kind] = COST[span.dataset.costCount] || COST.all;
+        const extra = filterFilms(candidates, [], {...filters, availability, kind}, context).films.length;
+        const base = Number(span.textContent.replace(/\D.*/, '')) || 0;
+        span.textContent = extra ? `${base + extra} (${extra} abroad)` : String(base);
+      });
+    }
     function renderFilms() {
       if (!state.films.length && !state.unavailable.length) return;
       if (VIEW === 'tonight') {
@@ -176,7 +213,22 @@ const state = createAppState();
       const selected = state.selected;
       const filters = {...readFilters(document, state.favoritesOnly, {include: [...state.genres.include], exclude: [...state.genres.exclude]}), mode: state.matchMode || 'any'};
       const filterContext = {selected, favorites: state.favorites, seed: state.seed, hiddenKeys: hiddenKeys()};
+      ensureAbroad();
       const view = filterFilms(state.films, state.unavailable, filters, filterContext);
+      // The abroad films, sorted and filtered like the others, listed after the films you can watch here.
+      const hereKeys = new Set(view.films.map(filmKey));
+      const abroadView = filterFilms(abroadCandidates(hereKeys), [], filters, filterContext);
+      const where = filters.where || 'all';
+      const abroadCount = abroadView.films.length;
+      if (where === 'both') {
+        abroadView.films.forEach(film => view.sectionOf.set(filmKey(film), 'All'));
+        view.films = [...view.films, ...abroadView.films];
+        view.visibleCount += abroadCount;
+      } else if (where === 'abroad') {
+        abroadView.films.forEach(film => view.sectionOf.set(filmKey(film), 'All'));
+        view.films = abroadView.films;
+        view.visibleCount = abroadCount;
+      }
       state.view = view;
       // A redraw (e.g. when a scan finishes) replaces the note field someone is typing in; carry the text and cursor over.
       const heldKey = document.activeElement?.closest?.('#results [data-key]')?.dataset.key;
@@ -195,6 +247,9 @@ const state = createAppState();
         favoritesOnly: state.favoritesOnly,
         viewMode: viewMode(),
         pageHref: location.href,
+        country: document.getElementById('country-select').value,
+        countryName: code => regionLabel.of(code) || code,
+        abroadFor,
       });
       const note = typed && results.querySelector(`.favorite-note[data-key="${CSS.escape(typed.key)}"]`);
       if (note) { note.value = typed.value; note.focus(); note.setSelectionRange(typed.start, typed.end); }
@@ -207,6 +262,7 @@ const state = createAppState();
       document.getElementById('film-total').textContent = state.films.length;
       document.querySelectorAll('.filter-sheet-done span').forEach(element => { element.textContent = view.visibleCount; });
       filterBar.updateCounts(state.films, filters, filterContext);
+      showAbroadControls(filters, filterContext, abroadCandidates(hereKeys), abroadCount, where);
       results.setAttribute('aria-busy', 'false');
       renderChanges();
       drawViews();
@@ -333,9 +389,17 @@ const state = createAppState();
       showDeadlines(document.getElementById('deadline-banner'), window.WATCHLIST_CONFIG.deadlines, {link: true});
       const {rows, available} = tonightRows(state.films, {services: state.selected, favorites: state.favorites, skip: new Set([...watchedKeys(), ...hiddenKeys()]), chips: tonightChips, now: Date.now() / 1000});
       tonightAvailable = available;
+      // With the abroad switch on (remembered in this browser) a last row lists what your services have abroad.
+      ensureAbroad();
+      if (abroadOnFor()) {
+        const shown = new Set([...available.map(filmKey), ...watchedKeys(), ...hiddenKeys()]);
+        const checks = TONIGHT_CHIPS.filter(([id, , check]) => tonightChips.has(id) && check).map(([, , check]) => check);
+        const list = sortFilms(abroadCandidates(shown).filter(film => checks.every(check => check(film))), 'priority', {favorites: state.favorites});
+        if (list.length) rows.push({id: 'abroad', title: 'On your services abroad', films: list, href: '/watchlist?where=abroad'});
+      }
       document.getElementById('context-text').innerHTML = `${available.length} films available on <a href="/subscriptions">${state.selected.size} services</a>${state.lastScan ? ` · synced ${ago(state.lastScan)}` : ''}`;
       document.querySelectorAll('.quick-chip').forEach(chip => chip.setAttribute('aria-pressed', String(tonightChips.has(chip.dataset.chip))));
-      const context = {imageBaseUrl, providerLogos: window.WATCHLIST_CONFIG.providerLogos, logoBaseUrl: window.WATCHLIST_CONFIG.logoBaseUrl, selected: state.selected, favorites: state.favorites, compareKeys: state.compareKeys, greyKeys: new Set(), favoritesOnly: false, pageHref: location.href};
+      const context = {imageBaseUrl, providerLogos: window.WATCHLIST_CONFIG.providerLogos, logoBaseUrl: window.WATCHLIST_CONFIG.logoBaseUrl, selected: state.selected, favorites: state.favorites, compareKeys: state.compareKeys, greyKeys: new Set(), favoritesOnly: false, pageHref: location.href, country: document.getElementById('country-select').value, countryName: code => regionLabel.of(code) || code, abroadFor};
       const section = (row, film) => (row.id === 'free' || (row.id === 'new' && !Object.values(film.providers || {}).flat().includes('flatrate')) ? 'Free' : 'Paid');
       document.getElementById('tonight-rows').innerHTML = rows.map(row => `<section class="film-row" aria-labelledby="row-${escapeHtml(row.id)}"><div class="film-row-head"><h2 id="row-${escapeHtml(row.id)}">${escapeHtml(row.title)} <span class="row-count">${row.films.length}</span></h2><a class="film-link" href="${escapeHtml(row.href)}">See all <span aria-hidden="true">→</span></a></div><div class="row-scroller"><button class="row-arrow row-prev" type="button" aria-label="Scroll ${escapeHtml(row.title)} back" tabindex="-1"><i class="ti ti-chevron-left" aria-hidden="true"></i></button><div class="row-track films">${row.films.slice(0, 24).map(film => filmCard(film, section(row, film), context)).join('')}</div><button class="row-arrow row-next" type="button" aria-label="Scroll ${escapeHtml(row.title)} on" tabindex="-1"><i class="ti ti-chevron-right" aria-hidden="true"></i></button></div></section>`).join('')
         || '<p class="empty">No film fits. Tick more services or turn a quick filter off.</p>';
@@ -798,6 +862,7 @@ const state = createAppState();
       grid.hidden = !grid.hidden;
       more.setAttribute('aria-expanded', String(!grid.hidden));
     });
+    const regionLabel = new Intl.DisplayNames(['en'], {type: 'region'});
     // Every ISO country name in lower case (from the browser), to keep places out of the keyword chips.
     let countryNameSet = null;
     function allCountryNames() {
@@ -856,6 +921,7 @@ const state = createAppState();
       setFilmAddress(key, !detailsOpen);
     }
     // ---- Arrow keys through the films: grid, compact grid and table share one navigation ----
+    const CARD_CONTROLS = '.film-open, .favorite, .card-action, .best-way-link, .best-more';
     let activeKey = null;  // the film that holds the tab stop (roving tabindex): one stop in the whole list
     const navItems = () => [...results.querySelectorAll('article.film[data-key], tr[data-key]')];
     function applyRoving() {
@@ -863,7 +929,7 @@ const state = createAppState();
       if (!items.length) return;
       // Until a film was chosen (focus or arrow keys) the first one holds the tab stop; a choice that was filtered away falls back to it.
       const current = items.find(item => item.dataset.key === activeKey) || items[0];
-      for (const item of items) item.querySelectorAll('.film-open, .favorite, .card-more').forEach(control => { control.tabIndex = item === current ? 0 : -1; });
+      for (const item of items) item.querySelectorAll(CARD_CONTROLS).forEach(control => { control.tabIndex = item === current ? 0 : -1; });
     }
     function focusItem(item) {
       activeKey = item.dataset.key;
@@ -895,7 +961,7 @@ const state = createAppState();
       if (!grid.length) return;
       const row = Math.min(tonightSpot[0], grid.length - 1);
       const col = Math.min(tonightSpot[1], Math.max(grid[row].length - 1, 0));
-      grid.forEach((cards, r) => cards.forEach((card, c) => card.querySelectorAll('.film-open, .favorite, .card-more').forEach(control => { control.tabIndex = r === row && c === col ? 0 : -1; })));
+      grid.forEach((cards, r) => cards.forEach((card, c) => card.querySelectorAll(CARD_CONTROLS).forEach(control => { control.tabIndex = r === row && c === col ? 0 : -1; })));
     }
     document.getElementById('tonight-rows')?.addEventListener('focusin', event => {
       const card = event.target.closest('article.film[data-key]');
@@ -917,6 +983,39 @@ const state = createAppState();
       const target = grid[next[0]][next[1]];
       target.querySelector('.film-open')?.focus();
       target.scrollIntoView({block: 'nearest', inline: 'nearest'});
+    });
+    // "+N" and "Abroad" on a card open the details at "Other services".
+    document.addEventListener('click', event => {
+      const more = event.target.closest('[data-open-more]');
+      if (!more) return;
+      event.preventDefault();
+      showFilmDetails(more.dataset.key, more);
+      const box = document.getElementById('film-more');
+      if (box) box.open = true;
+    });
+    // Touch: a long press on a card shows its action bar (compare, not now, grey out); a tap elsewhere hides it.
+    let pressTimer = null;
+    let swallowClick = false;
+    results.addEventListener('pointerdown', event => {
+      if (event.pointerType !== 'touch') return;
+      const card = event.target.closest('article.film');
+      if (!card || event.target.closest('button, a, input')) return;
+      pressTimer = setTimeout(() => {
+        results.querySelectorAll('.show-actions').forEach(other => other.classList.remove('show-actions'));
+        card.classList.add('show-actions');
+        swallowClick = true;
+        navigator.vibrate?.(10);
+      }, 500);
+    });
+    ['pointerup', 'pointercancel', 'pointermove'].forEach(type => results.addEventListener(type, () => clearTimeout(pressTimer)));
+    results.addEventListener('click', event => {
+      if (!swallowClick) return;
+      swallowClick = false;
+      event.stopImmediatePropagation();
+      event.preventDefault();
+    }, true);
+    document.addEventListener('pointerdown', event => {
+      if (!event.target.closest('.show-actions')) results.querySelectorAll('.show-actions').forEach(card => card.classList.remove('show-actions'));
     });
     // Phone sheet: opens at 60 %; pulling the grip up makes it full screen, pulling down shrinks it or closes it.
     (() => {
@@ -1007,7 +1106,7 @@ const state = createAppState();
       else bootstrap.Modal.getInstance(document.getElementById('film-details-modal'))?.hide();
     });
     document.addEventListener('click', event => {
-      const action = event.target.closest('.card-menu-items button, .modal-flag');
+      const action = event.target.closest('.poster-actions button, .modal-flag');
       if (!action) return;
       event.preventDefault();
       if (action.closest('details')) action.closest('details').open = false;
@@ -1043,7 +1142,7 @@ const state = createAppState();
       }
     }
     results.addEventListener('click', event => {
-      if (event.target.closest('button, a, input, select, textarea, label, summary, .card-menu-items')) return;
+      if (event.target.closest('button, a, input, select, textarea, label, summary, .poster-actions')) return;
       const card = event.target.closest('.film');
       if (card) showFilmDetails(card.dataset.key);
     });
@@ -1127,6 +1226,7 @@ const state = createAppState();
         providers: [...state.selected].sort().join(','),
         minproviders: document.getElementById('provider-count-filter').value,
         hidden: document.getElementById('show-hidden').checked ? '1' : '',
+        where: document.getElementById('where-filter').value,
         favoriteStatus: document.getElementById('favorite-status-filter').value,
         favorites: state.favoritesOnly ? '1' : '',
       };
@@ -1145,7 +1245,7 @@ const state = createAppState();
     // Typing in the search redraws only after a short pause, not on every key.
     let searchTimer;
     document.getElementById('film-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(renderFilms, 150); });
-    ['show-unavailable', 'show-hidden', 'keyword-filter', 'age-filter', 'language-filter', 'origin-filter', 'rating-filter', 'year-from', 'year-to', 'min-votes', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => document.getElementById(id).addEventListener('input', renderFilms));
+    ['where-filter', 'show-unavailable', 'show-hidden', 'keyword-filter', 'age-filter', 'language-filter', 'origin-filter', 'rating-filter', 'year-from', 'year-to', 'min-votes', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => document.getElementById(id).addEventListener('input', renderFilms));
     const initialUrl = new URL(location.href).searchParams;
     const setInitial = (id, parameter, fallback) => {
       const element = document.getElementById(id);
@@ -1170,6 +1270,7 @@ const state = createAppState();
     // Older links used only=1 or availability=exclusive for what is now "Number of services: Only 1".
     if (initialUrl.get('only') === '1' || initialUrl.get('availability') === 'exclusive') document.getElementById('provider-count-filter').value = 'only1';
     document.getElementById('show-hidden').checked = initialUrl.get('hidden') === '1';
+    setInitial('where-filter', 'where', initialUrl.get('abroad') === '1' ? 'both' : 'all');
     filterBar.readUrl(initialUrl);
     filterBar.buildServicesMenu();
     ['sort-order', 'favorite-status-filter'].forEach(id => document.getElementById(id).addEventListener('change', renderFilms));
@@ -1192,6 +1293,15 @@ const state = createAppState();
     showHeart(state.favoritesOnly);
     favoritesButton.addEventListener('click', () => setFavoritesOnly(!state.favoritesOnly));
     document.getElementById('favorites-panel').addEventListener('change', event => setFavoritesOnly(event.target.checked));
+    // The abroad switch and the "Where" field in the panel are one setting; Tonight remembers it in this browser.
+    document.getElementById('abroad-toggle').addEventListener('click', event => {
+      if (event.currentTarget.getAttribute('aria-disabled') === 'true') return;
+      const select = document.getElementById('where-filter');
+      select.value = select.value === 'all' ? 'both' : 'all';
+      localStorage.setItem('abroadOn', select.value === 'all' ? '' : '1');
+      renderFilms();
+    });
+    document.getElementById('where-filter').addEventListener('change', event => localStorage.setItem('abroadOn', event.target.value === 'all' ? '' : '1'));
     document.getElementById('compare-go').addEventListener('click', compareFilms);
     document.getElementById('compare-bar-clear').addEventListener('click', () => { [...state.compareKeys].forEach(key => setCompared(key, false)); renderFilms(); });
     updateCompareButton();
