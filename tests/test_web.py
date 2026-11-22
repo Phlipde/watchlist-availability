@@ -797,3 +797,15 @@ class TestAbroad:
         assert data == {"7": {"Netflix": {"AT": "flatrate"}}}
         assert client.get("/api/abroad?country=DE&services=MUBI").get_json() == {}
         assert client.get("/api/abroad?country=ZZ&services=Netflix").status_code == 400
+
+
+def test_a_service_cancelled_to_a_past_date_is_no_longer_yours(settings):
+    future = (datetime.date.today() + datetime.timedelta(days=10)).isoformat()
+    past = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+    settings.update(
+        {
+            "subscriptions": ["Netflix", "MUBI", "Disney+"],
+            "costs": {"Netflix": {"ends_on": future}, "MUBI": {"ends_on": past}},
+        }
+    )
+    assert settings.subscriptions() == ["Netflix", "Disney+"]  # Netflix runs to the end date, MUBI is over

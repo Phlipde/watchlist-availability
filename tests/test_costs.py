@@ -280,3 +280,17 @@ def test_abroad_map_finds_own_services_abroad_but_not_at_home():
         "Netflix": {"AT": "flatrate", "IT": "flatrate"}
     }  # the channel counts as Netflix; rent does not count
     assert found[3] == {"Netflix": {"AT": "ads"}}  # MUBI is not yours
+
+
+def test_a_service_cancelled_to_an_end_date_stays_until_that_day_is_over():
+    entries = {"Netflix": {"ends_on": "2026-12-01"}, "MUBI": {"price": 5}}
+    names = ["Netflix", "MUBI", "Disney+"]
+    assert costs.not_ended(names, entries, datetime.date(2026, 12, 1)) == names  # the end day still counts
+    assert costs.not_ended(names, entries, datetime.date(2026, 12, 2)) == ["MUBI", "Disney+"]
+
+
+def test_the_end_date_is_validated_and_kept():
+    cleaned = costs.clean_costs({"Netflix": {"price": "", "ends_on": "2026-12-01"}}, {"Netflix"})
+    assert cleaned["Netflix"]["ends_on"] == "2026-12-01"
+    with pytest.raises(ValueError, match="end date"):
+        costs.clean_costs({"Netflix": {"ends_on": "soon"}}, {"Netflix"})

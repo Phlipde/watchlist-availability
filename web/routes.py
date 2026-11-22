@@ -286,6 +286,15 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         }
         return costs.other_countries(by_country, own, country, len(ids))
 
+    def _service_candidates(own: list[str]) -> list[dict]:
+        """Services you could add: [{name, group}], the more usual groups first."""
+        mine = set(own)
+        found = []
+        for _title, subgroups in providers.provider_groups(settings.loaded_providers()):
+            for subgroup, names in subgroups:
+                found += [{"name": name, "group": subgroup} for name in names if name not in mine]
+        return found
+
     @app.get("/subscriptions")
     def subscriptions_page():
         # The country is the app's own (header); the services are chosen under Settings -> My services.
@@ -306,6 +315,8 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             ),
             weekly_hours=settings.weekly_hours,
             history=store.service_history(country),
+            own=own,
+            candidates=_service_candidates(own),
             other_countries=_other_countries(scan, own, country),
             image_base_url=_TMDB_IMAGE_BASE_URL,
             logos=provider_logos(),
