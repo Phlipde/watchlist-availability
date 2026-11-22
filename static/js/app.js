@@ -852,6 +852,7 @@ const state = createAppState();
       more.hidden = false;
       const total = new Set(rows.flatMap(row => row.countries)).size;
       more.querySelector('.os-abroad').textContent = ` · ${total} abroad`;
+      revealMore();
     }
     // A tooltip must stay inside the drawer: near the right edge it grows to the left.
     const placeTip = event => {
@@ -991,6 +992,22 @@ const state = createAppState();
       target.querySelector('.film-open')?.focus();
       target.scrollIntoView({block: 'nearest', inline: 'nearest'});
     });
+    // After "+N": scroll so "Other services" ends just above the bottom edge (or starts at the top when it is taller).
+    // Called again when the abroad block has loaded into it, which makes the section taller.
+    let pendingMore = false;
+    const detailsModal = document.getElementById('film-details-modal');
+    ['hidden.bs.modal', 'pointerdown'].forEach(type => detailsModal.addEventListener(type, () => { pendingMore = false; }));
+    function revealMore() {
+      const box = document.getElementById('film-more');
+      const body = document.querySelector('#film-details-modal .modal-body');
+      if (!pendingMore || !box || !body) return;
+      const section = box.getBoundingClientRect();
+      const view = body.getBoundingClientRect();
+      const toBottom = section.bottom - (view.bottom - 16);
+      const toTop = section.top - (view.top + 8);
+      const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+      body.scrollTo({top: body.scrollTop + Math.min(toBottom, toTop), behavior: smooth ? 'smooth' : 'auto'});
+    }
     // "+N" and "Abroad" on a card open the details at "Other services".
     document.addEventListener('click', event => {
       const more = event.target.closest('[data-open-more]');
@@ -1001,6 +1018,10 @@ const state = createAppState();
       showFilmDetails(more.dataset.key, more);
       const box = document.getElementById('film-more');
       if (box) box.open = true;
+      pendingMore = true;
+      const modal = document.getElementById('film-details-modal');
+      if (modal.classList.contains('show')) revealMore();
+      else modal.addEventListener('shown.bs.modal', revealMore, {once: true});
     });
     // Touch: the first tap on a card's logo shows what it is; a second tap goes to the service. A tap elsewhere closes it.
     document.addEventListener('click', event => {
