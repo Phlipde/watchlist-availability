@@ -250,3 +250,8 @@ Noch offen (zur Auswahl): 11 Meldung, wenn ein „Demnächst“-Film streambar w
 - **[OFFEN]** Nicht gebaut: das Verschieben von Year und Runtime in "More filters" bei schmalem Fenster (die Leiste bricht stattdessen um), ein kleines × je Feld im Panel, die Sortier-Option "Available here first" (Inlandsfilme stehen immer vor den Auslandsfilmen), Länder-Auswahl "Kleinststaaten" auf der Karte (gleiche Funktion wie im Fenster, aber nur an einem Beispiel geprüft), Marke "Watchlist availability" in Satzschreibung und das Land-Auswahlfeld als reiner Text, Tooltips "No rental shops selected" an "Rent 0".
 - **[FEHLER]** In `.env` (deine lokale Datei, nicht im Repository) steht `WATCHLIST_DEV=1`; das machte den Test für `/dev/ui` rot. Der Test löscht die Variable jetzt vorher. Wer die Zeile dort eingetragen hat, weiß ich nicht.
 - **[ERLEDIGT]** Python 353, JS 81, Browser 58, ruff und mypy sauber.
+
+### Karte: nur das Logo, der Text bei Hover oder Tippen (2026-11-22)
+- **[ERLEDIGT]** Die Anbieter-Zeile auf der Karte zeigt nur noch das Logo (ohne Logo den Namen als kleine Pille) und "+N"; der Text ("Free", "Netflix · Subscription", "Rent · 6 shops", "Abroad in Italy, on Prime Video" ...) kommt als Blase bei Hover und Tastaturfokus. Der Text bleibt für Screenreader immer im Dokument. "Not streaming" ist ein gedämpftes Symbol, "nur auf fremdem Abo" ein gedämpftes Logo.
+- **[ERLEDIGT]** Touch: Das erste Tippen auf das Logo zeigt die Blase, das zweite geht zum Dienst; ein Tippen daneben schließt sie. Auf dem echten Handy nicht getestet (nur die Logik und ein Browser-Test für Hover).
+- **[ERLEDIGT]** Python 353, JS 81, Browser 59, ruff und mypy sauber.

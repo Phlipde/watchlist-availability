@@ -68,6 +68,8 @@ function wayLine(film, key, context) {
   const way = film.abroadOnly
     ? bestWay({...film, providers: {}}, {own: context.selected, abroad: context.abroadFor ? context.abroadFor(film) : null})
     : bestWay(film, {own: context.selected});
+  // Only the logo shows (the service's name when it has none); the words come in a bubble on hover, focus or tap.
+  const logoOrName = name => logo(name) || `<span class="way-name">${escapeHtml(name || '')}</span>`;
   const text = escapeHtml(wayText(way));
   const title = escapeHtml(film.title);
   const named = way.service && !logos[way.service] && ['free', 'ads'].includes(way.kind) ? `${escapeHtml(way.service)} · ` : '';
@@ -78,12 +80,11 @@ function wayLine(film, key, context) {
     const country = way.countries[0];
     const flag = country ? `<img class="way-flag" src="/static/flags/${escapeHtml(country.toLowerCase())}.svg" width="16" height="12" alt="">` : '';
     const name = escapeHtml(context.countryName ? context.countryName(country) : country);
-    return `<div class="best-way"><button class="best-way-link" type="button" data-open-more data-key="${escapeHtml(key)}">${logo(way.service)}${flag}<span>Abroad<span class="visually-hidden"> in ${name}, on ${escapeHtml(way.service)}</span></span></button>${more}</div>`;
+    return `<div class="best-way"><button class="best-way-link" type="button" data-open-more data-key="${escapeHtml(key)}">${logoOrName(way.service)}${flag}<span class="way-text">Abroad in ${name}, on ${escapeHtml(way.service)}</span></button>${more}</div>`;
   }
-  if (way.kind === 'none') return `<div class="best-way is-muted"><span class="best-way-text">${text}</span></div>`;
+  if (way.kind === 'none') return `<div class="best-way is-muted"><span class="best-way-link is-static" tabindex="0"><i class="ti ti-ban way-none" aria-hidden="true"></i><span class="way-text">${text}</span></span></div>`;
   const href = watchUrl(film, context.country || 'DE');
-  const first = way.kind === 'rent' || way.kind === 'buy' ? logo(way.service) : way.kind === 'foreign' ? '' : logo(way.service);
-  return `<div class="best-way${way.muted ? ' is-muted' : ''}"><a class="best-way-link" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${first}<span>${named}${text}</span></a>${more}</div>`;
+  return `<div class="best-way${way.muted ? ' is-muted' : ''}"><a class="best-way-link" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${logoOrName(way.service)}<span class="way-text">${named}${text}</span></a>${more}</div>`;
 }
 
 export function changeBadgesFor(film, selected) {

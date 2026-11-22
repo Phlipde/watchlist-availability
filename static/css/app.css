@@ -1025,4 +1025,14 @@ body:has(.more-filters[open])::after { content: ""; position: fixed; inset: 0; z
 #abroad-toggle .ti { margin-right: 4px; }
 #abroad-toggle[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
 #abroad-count { color: var(--text-2); font-variant-numeric: tabular-nums; }
-#abroad-toggle[aria-pressed="true"] #abroad-count { color: var(--text); }
+#abroad-toggle[aria-pressed="true"] #abroad-count { color: var(--text); }
+
+/* The card's line is only the logo; the words are a bubble on hover, focus or tap (the text stays for screen readers). */
+.best-way-link .way-text { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 5; width: max-content; max-width: 100%; padding: 4px 8px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface-raised); color: var(--text); font: 12px/1.3 system-ui, sans-serif; white-space: normal; opacity: 0; pointer-events: none; transition: opacity .12s ease; }
+.best-way-link:hover .way-text, .best-way-link:focus-visible .way-text, .best-way.is-open .way-text { opacity: 1; }
+.best-way-link span.way-text { overflow: visible; text-overflow: clip; }
+.best-way-link .way-name { max-width: 9em; padding: 2px 8px; border: 1px solid var(--line-field); border-radius: 999px; color: var(--text-2); font-size: 12px; }
+.is-muted .way-logo { opacity: .5; }
+.way-none { color: var(--text-2); font-size: 18px; }
+.best-way-link.is-static { cursor: default; }
+@media (prefers-reduced-motion: reduce) { .best-way-link .way-text { transition: none; } }
