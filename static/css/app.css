@@ -30,7 +30,6 @@
     .sync-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .sync-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: oklch(58% 0.012 160); }
     .sync-toggle[data-state="ok"] { border-color: transparent; }
-    @media (max-width: 640px) { .sync-toggle[data-state="ok"] #sync-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } }
     .sync-toggle[data-state="stale"] .sync-dot { background: oklch(82% 0.130 85); }
     .sync-toggle[data-state="error"] { color: var(--ink); border-color: oklch(65% 0.170 28); }
     .sync-toggle[data-state="error"] .sync-dot { background: oklch(65% 0.170 28); }
@@ -357,7 +356,7 @@
       .view-watchlist .phone-filters { display: block; margin-bottom: 12px; }
       .phone-filters .btn { width: 100%; min-height: 44px; }
       .row-track.films { grid-auto-columns: 38%; gap: 12px; }  /* 2.5 cards: the cut card says "swipe" */
-      .filter-bar { position: static; padding: 0 0 8px; border: 0; }
+      .filter-bar { position: static; padding: 0 0 8px; border: 0; background: none; }
       .filter-bar > #film-search { flex: 1 1 100%; }
       body:not(.tools-open) .filter-bar > :not(#film-search) { display: none !important; }
       /* The sheet: a title row with close, the fields with labels, a foot with Reset and the result count. */
@@ -1140,3 +1139,12 @@ body.modal-open .compare-bar, body.tools-open .compare-bar, body:has(dialog[open
 .filter-chip.chips-more { cursor: pointer; background: transparent; color: var(--muted); }
 .table-title { display: flex; align-items: center; gap: 10px; }
 .table-poster { flex: none; width: 28px; height: 42px; border-radius: 3px; object-fit: cover; background: var(--panel); }
+
+/* Phones: the view switch sits in the tab row, next to the count. */
+@media (max-width: 800px) {
+  .tabs-row { flex-wrap: nowrap; gap: 8px; align-items: flex-end; }
+  .tabs-row .view-tabs { flex: none; gap: 14px; }
+  .tabs-row #result-meta { flex: 0 1 auto; margin-left: auto; white-space: nowrap; font-size: var(--fs-small); }
+  .tabs-view-slot { flex: none; margin: 0 0 6px; }
+  .tabs-view-slot .view-switch { min-height: 36px; }
+}

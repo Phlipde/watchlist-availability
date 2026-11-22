@@ -477,10 +477,10 @@ def test_phone_head_is_two_rows_and_the_posters_start_high(app_server, page):
     assert page.locator("article.film .poster").first.bounding_box()["y"] <= 844 * 0.25
     # The source name and the Letterboxd account are not in the count line.
     expect(page.locator("#source-name")).to_be_hidden()
-    # View switch, heart and link live in the filter sheet.
-    expect(page.locator("#view-switch")).to_be_hidden()
+    # The view switch sits in the tab row; heart and link live in the filter sheet.
+    expect(page.locator("#tabs-view-slot #view-switch")).to_be_visible()
+    expect(page.locator("#favorites-view")).to_be_hidden()
     page.locator("#tools-toggle").click()
-    expect(page.locator("#view-switch")).to_be_visible()
     expect(page.locator("#favorites-view")).to_be_visible()
     expect(page.locator("#share-button")).to_be_visible()
     page.locator("#film-search").fill("zzzz-no-film")

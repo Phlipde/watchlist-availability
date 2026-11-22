@@ -1362,11 +1362,13 @@ const state = createAppState();
     });
     document.getElementById('country-select').addEventListener('change', switchCountry);
     // Phones: "Filters" opens the bar as a sheet from the bottom, a modal dialog while open.
-    // Phones keep the view switch, the heart and the link inside the sheet; wider screens keep them in the bar.
+    // Phones keep the heart and the link inside the sheet and the view switch in the tab row; wider screens keep them in the bar.
     const phoneQuery = matchMedia('(max-width: 800px)');
     const placeViewTools = () => {
-      const home = document.getElementById(phoneQuery.matches ? 'sheet-view-slot' : 'result-tools');
-      ['view-switch', 'favorites-view', 'share-button'].forEach(id => home.append(document.getElementById(id)));
+      const phone = phoneQuery.matches;
+      document.getElementById(phone ? 'tabs-view-slot' : 'result-tools').append(document.getElementById('view-switch'));
+      const home = document.getElementById(phone ? 'sheet-view-slot' : 'result-tools');
+      ['favorites-view', 'share-button'].forEach(id => home.append(document.getElementById(id)));
     };
     placeViewTools();
     phoneQuery.addEventListener('change', placeViewTools);
