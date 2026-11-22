@@ -152,7 +152,7 @@ def browser():
 
 @pytest.fixture
 def page(browser):
-    # Wide, so that Year, Runtime and Rating stay in the filter bar; one test makes the window narrow on purpose.
+    # Wide, so Year, Runtime and Rating stay in the bar; one test narrows the window on purpose.
     context = browser.new_context(service_workers="block", viewport={"width": 2400, "height": 1000})
     page = context.new_page()
     errors: list[str] = []
@@ -736,15 +736,15 @@ def test_year_and_runtime_move_into_more_filters_when_the_bar_wraps(app_server, 
     page.locator("#moved-slot #year-chips .chip", has_text="Before 2000").click()
     assert page.locator("#year-to").input_value() == "1999"
     expect(page.locator("#more-filters-count")).to_have_text("· 1")  # a moved filter is counted on the button
-    expect(page.locator("#moved-slot > #rating-pop.is-moved")).to_have_count(1)  # Rating gives way after Year and Runtime
+    expect(page.locator("#moved-slot > #rating-pop.is-moved")).to_have_count(1)  # Rating gives way last
     page.locator("#moved-slot #rating-pop input[value=tmdb]").check(force=True)
     page.locator("#moved-slot #rating-chips-tmdb .chip", has_text="7+").first.click()
     expect(page.locator("#rating-filter")).to_have_value("tmdb:7")
     expect(page.locator("#more-filters-count")).to_have_text("· 2")
-    expect(page.locator("#more-filters")).to_have_attribute("open", "")  # clicking inside did not close the panel
+    expect(page.locator("#more-filters")).to_have_attribute("open", "")  # still open
     page.keyboard.press("Escape")
     page.set_viewport_size({"width": 2400, "height": 900})
-    expect(page.locator("#moved-slot > .filter-pop")).not_to_have_count(2)  # with room, at least one control moves back
+    expect(page.locator("#moved-slot > .filter-pop")).not_to_have_count(2)  # with room, one moves back
     expect(page.locator("#year-to")).to_have_value("1999")  # the value stays
 
 
