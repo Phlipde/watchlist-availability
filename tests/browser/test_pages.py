@@ -388,7 +388,7 @@ def test_phone_details_sheet_can_be_pulled_to_full_screen(app_server, page):
         "() => ['none', 'matrix(1, 0, 0, 1, 0, 0)'].includes(getComputedStyle(document.querySelector("
         "'#film-details-modal .modal-dialog')).transform)"
     )
-    # Opened by a link (a new tab), the sheet is full screen at once; opened by a tap on a card it is 60 %.
+    # Opened by a link (a new tab), the sheet is full screen at once; opened by a tap on a card it is 80 %.
     expect(modal).to_have_class(re.compile("is-full"))
     assert dialog.evaluate("el => el.getBoundingClientRect().height") > 700
 
@@ -401,10 +401,10 @@ def test_phone_details_sheet_can_be_pulled_to_full_screen(app_server, page):
         page.mouse.move(x, y + dy, steps=5)
         page.mouse.up()
 
-    drag("#sheet-grip", 80)  # pull the grip down: 60 %
+    drag("#sheet-grip", 80)  # pull the grip down: 80 %
     expect(modal).not_to_have_class(re.compile("is-full"))
     page.wait_for_timeout(450)
-    assert dialog.evaluate("el => el.getBoundingClientRect().top") > 200  # 60 % shows
+    assert dialog.evaluate("el => el.getBoundingClientRect().top") > 100  # 80 % shows
     drag("#sheet-grip", -80)  # pull the grip up
     expect(modal).to_have_class(re.compile("is-full"))
     drag("#sheet-grip", 80)  # and down again
@@ -416,8 +416,8 @@ def test_phone_details_sheet_can_be_pulled_to_full_screen(app_server, page):
     expect(modal).not_to_have_class(re.compile("is-full"))
     page.wait_for_timeout(450)
     page.locator("#film-details-modal .modal-body").evaluate(
-        "el => { el.scrollTop = 200; }"
-    )  # scrolling expands it
+        "el => { el.style.paddingBottom = '1500px'; el.scrollTop = 200; }"
+    )  # scrolling a long film expands it
     expect(modal).to_have_class(re.compile("is-full"))
 
 

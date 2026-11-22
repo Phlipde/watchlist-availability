@@ -552,10 +552,10 @@ body:has(#film-details-modal.show) .modal-backdrop.show { opacity: .4; }
 .drawer-step:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 800px) {
   #film-details-modal .modal-dialog { top: 0; width: 100%; height: 100dvh; transform: translateY(100%); transition: transform .3s cubic-bezier(.2, .8, .2, 1); will-change: transform; }
-  #film-details-modal.show .modal-dialog { transform: translateY(40dvh); }
+  #film-details-modal.show .modal-dialog { transform: translateY(20dvh); }
   #film-details-modal.show.is-full .modal-dialog { transform: none; }
-  /* The lower 40 % is off screen at first: pad the body so that scrolling is always possible (and expands the sheet). */
-  #film-details-modal:not(.is-full) .modal-body { padding-bottom: 40dvh; }
+  /* The lower 20 % is off screen at first: pad the body so that scrolling is always possible (and expands the sheet). */
+  #film-details-modal:not(.is-full) .modal-body { padding-bottom: 20dvh; }
   #film-details-modal .modal-content { border-radius: 12px 12px 0 0; border-width: 1px 0 0; }
 }
 @media (prefers-reduced-motion: reduce) { #film-details-modal .modal-dialog { transition: none; } }
@@ -834,7 +834,7 @@ summary.offer-heading { cursor: pointer; }
 .flag-grid li { display: flex; align-items: center; gap: 8px; font: var(--fs-body) system-ui, sans-serif; }
 @media (pointer: coarse) { .flag-more { min-height: 44px; padding: 0 12px; } .other-services > summary { min-height: 44px; } }
 
-/* The phone sheet opens at 60 %; the grip pulls it to full height or down to close. */
+/* The phone sheet opens at 80 %; the grip pulls it to full height or down to close. */
 .sheet-grip { display: none; }
 @media (max-width: 800px) {
   .sheet-grip { display: block; position: relative; height: 32px; touch-action: none; cursor: grab; }

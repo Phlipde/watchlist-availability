@@ -1059,7 +1059,7 @@ const state = createAppState();
     document.addEventListener('pointerdown', event => {
       if (!event.target.closest('.show-actions')) results.querySelectorAll('.show-actions').forEach(card => card.classList.remove('show-actions'));
     });
-    // Phone sheet: opens at 60 %. Pulling the grip or the header up makes it full screen, pulling down shrinks it or
+    // Phone sheet: opens at 80 %. Pulling the grip or the header up makes it full screen, pulling down shrinks it or
     // closes it, a tap on the grip toggles, and scrolling the content makes it full screen too (like a native sheet).
     (() => {
       const modal = document.getElementById('film-details-modal');
@@ -1071,7 +1071,7 @@ const state = createAppState();
         handle.addEventListener('pointerdown', event => {
           if (event.target.closest('button, a')) return;  // the arrows and the close button stay buttons
           startY = event.clientY;
-          baseOffset = modal.classList.contains('is-full') ? 0 : innerHeight * 0.4;
+          baseOffset = modal.classList.contains('is-full') ? 0 : innerHeight * 0.2;
           handle.setPointerCapture(event.pointerId);
         });
         // The sheet follows the finger (transform only); on release the classes decide where it settles.
