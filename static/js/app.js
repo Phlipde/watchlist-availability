@@ -522,7 +522,7 @@ const state = createAppState();
       const countText = document.getElementById('compare-count');
       countText.textContent = count === 1 ? 'Pick one more' : count > 4 ? `${count} chosen: at most 4` : `${count} to compare`;
       countText.dataset.hint = String(count < 2 || count > 4);
-      document.getElementById('compare-thumbs').innerHTML = state.films.filter(film => state.compareKeys.has(filmKey(film)) && film.poster_path).map(film => `<img src="${imageBaseUrl}${escapeHtml(film.poster_path)}" alt="${escapeHtml(film.title)}">`).join('');
+      document.getElementById('compare-thumbs').innerHTML = state.films.filter(film => state.compareKeys.has(filmKey(film)) && film.poster_path).map(film => `<img src="${imageBaseUrl.replace("/w500", "/w92")}${escapeHtml(film.poster_path)}" alt="${escapeHtml(film.title)}">`).join('');
       document.getElementById('compare-go').disabled = count < 2 || count > 4;
     }
     function setCompared(key, checked) {
