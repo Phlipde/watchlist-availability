@@ -1036,3 +1036,17 @@ body:has(.more-filters[open])::after { content: ""; position: fixed; inset: 0; z
 .way-none { color: var(--text-2); font-size: 18px; }
 .best-way-link.is-static { cursor: default; }
 @media (prefers-reduced-motion: reduce) { .best-way-link .way-text { transition: none; } }
+
+/* Provider tiles in one row: rounded logo, a small round badge in the corner for rent and buy. */
+.way-row { display: flex; flex-wrap: nowrap; gap: 6px; min-width: 0; }
+.way-row .best-way-link { position: relative; flex: none; }
+.way-row .way-logo { width: 32px; height: 32px; border-radius: 8px; }
+.way-row .way-name { display: grid; place-items: center; width: 32px; height: 32px; max-width: none; padding: 0; overflow: hidden; border-radius: 8px; font-size: 10px; line-height: 1; text-align: center; }
+.way-badge { position: absolute; right: -4px; bottom: -4px; display: grid; place-items: center; width: 16px; height: 16px; border: 1.5px solid var(--surface); border-radius: 50%; background: var(--surface-2); color: var(--text); font: 600 10px/1 system-ui, sans-serif; overflow: visible; }
+.way-row .best-way-link.is-dim .way-logo, .way-row .best-way-link.is-dim .way-name { opacity: .5; }
+.way-row .way-text { white-space: nowrap; max-width: none; }
+.way-row .best-way-link.is-open .way-text { opacity: 1; }
+.more-filters-grid .menu-field { position: relative; }
+.field-clear { position: absolute; right: 26px; bottom: 5px; display: grid; place-items: center; width: 24px; height: 26px; padding: 0; border: 0; background: transparent; color: var(--text-2); cursor: pointer; }
+.field-clear:hover { color: var(--text); }
+.field-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }

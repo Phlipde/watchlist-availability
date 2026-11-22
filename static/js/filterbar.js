@@ -344,7 +344,8 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
       const input = label.querySelector('input');
       // An option without films is switched off, except the one that is chosen (it must stay changeable).
       input.disabled = count === 0 && !input.checked;
-      label.title = input.disabled ? 'No films with the current filters' : '';
+      label.title = value === 'rent' && rentalShops.size === 0 ? 'No rental shops selected. Add them in Settings > Services.'
+        : input.disabled ? 'No films with the current filters' : value === 'all' ? 'Films can be in several groups' : '';
       label.classList.toggle('is-empty', count === 0);
     });
     const genres = facetCounts(films, filters, context, (f, c) => [{...f, genres: {include: [], exclude: []}}, c], film => film.genres || []);
@@ -395,7 +396,21 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     const inside = activeFilters(document).filter(({id}) => $(id).closest('#more-filters')).length;
     $('more-filters-count').textContent = inside ? `· ${inside}` : '';
     $('more-reset').hidden = !inside;
+    const setIds = new Set(activeFilters(document).map(({id}) => id));
+    document.querySelectorAll('.field-clear').forEach(button => { button.hidden = !setIds.has(button.dataset.clears); });
   }
+  // A small × beside each dropdown in the panel clears just that field.
+  document.querySelectorAll('.more-filters-grid select').forEach(select => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'field-clear';
+    button.hidden = true;
+    button.dataset.clears = select.id;
+    button.setAttribute('aria-label', `Clear ${select.getAttribute('aria-label') || 'field'}`);
+    button.innerHTML = '<i class="ti ti-x" aria-hidden="true"></i>';
+    button.addEventListener('click', () => { clearFilter(select); onChange(); });
+    select.closest('label').append(button);
+  });
   function resetAll() {
     resetFilters(document);
     state.genres = {include: new Set(), exclude: new Set()};

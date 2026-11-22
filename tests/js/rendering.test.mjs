@@ -85,15 +85,15 @@ test('availability is grouped by offer type, in a fixed order, with logos', () =
   assert.equal(availabilityByOffer({}), '');
 });
 
-test('a card has exactly one line about where to watch: the best way in words and +N for the rest', () => {
-  const film = {key: 'x', title: 'Film', providers: {Arte: ['free'], Netflix: ['flatrate'], Rakuten: ['rent'], MUBI: ['flatrate']}};
+test('a card has one row of tiles for your own services only; with none, the one best way; +N for the rest', () => {
+  const film = {key: 'x', title: 'Film', providers: {Arte: ['free'], Netflix: ['flatrate'], Rakuten: ['rent'], MUBI: ['flatrate'], Sky: ['buy'], WOW: ['flatrate']}};
   const base = {imageBaseUrl: '', favorites: new Map(), compareKeys: new Set(), greyKeys: new Set(), providerLogos: {Arte: '/a.png'}, logoBaseUrl: 'https://img/', country: 'DE'};
   const html = filmCard(film, 'All', {...base, selected: new Set(['Arte', 'Netflix'])});
   assert.equal((html.match(/class="best-way(?:"| )/g) || []).length, 1);
-  assert.match(html, /<a class="best-way-link" href="[^"]*"[^>]*><img class="way-logo" src="https:\/\/img\/\/a\.png" alt="" loading="lazy"><span class="way-text">Free<\/span><\/a>/);
-  assert.match(html, /data-open-more data-key="x" aria-label="3 more ways to watch Film">\+3<\/button>/);
+  assert.match(html, /<div class="way-row"><a class="best-way-link" href="[^"]*"[^>]*><img class="way-logo" src="https:\/\/img\/\/a\.png" alt="" loading="lazy"><span class="way-text">Arte · Free<\/span><\/a>/);
+  assert.equal((html.match(/class="best-way-link/g) || []).length, 2);  // Arte and Netflix; MUBI, Rakuten ... are not yours
+  assert.match(html, /data-open-more data-key="x" aria-label="4 more services for Film">\+4<\/button>/);
   assert.ok(!html.includes('data-provider='), 'no grid of logos');
-  assert.ok(!html.includes('€'), 'no prices');
 });
 
 test('without a logo the service is named; rent and buy count shops; nothing is said plainly', () => {
@@ -101,7 +101,8 @@ test('without a logo the service is named; rent and buy count shops; nothing is 
   const ads = filmCard({key: 'a', title: 'A', providers: {Netzkino: ['ads']}}, 'All', {...base, selected: new Set(['Netzkino'])});
   assert.match(ads, /<span class="way-name">Netzkino<\/span><span class="way-text">Netzkino · With ads<\/span>/);  // no logo: the name shows, the words come on hover
   const rent = filmCard({key: 'b', title: 'B', providers: {'Amazon VOD': ['rent'], 'Rakuten TV': ['rent']}}, 'All', {...base, selected: new Set()});
-  assert.match(rent, /<span class="way-text">Rent · 2 shops<\/span>/);
+  assert.equal((rent.match(/<span class="way-badge" aria-hidden="true">€<\/span>/g) || []).length, 1);  // none is yours: one tile, rent only gets the € badge
+  assert.ok(!ads.includes('way-badge'), 'streaming has no badge');
   const nothing = filmCard({key: 'c', title: 'C', providers: {}}, 'All', {...base, selected: new Set()});
   assert.match(nothing, /class="best-way is-muted"><span class="best-way-link is-static" tabindex="0"><i class="ti ti-ban way-none" aria-hidden="true"><\/i><span class="way-text">Not streaming<\/span>/);
 });
