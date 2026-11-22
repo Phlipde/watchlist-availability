@@ -424,6 +424,22 @@ def test_phone_details_sheet_can_be_pulled_to_full_screen(app_server, page):
     expect(modal).to_have_class(re.compile("is-full"))
 
 
+def test_plus_n_on_a_card_opens_the_phone_sheet_full_screen(app_server, page):
+    expect = playwright_api.expect
+    page.set_viewport_size({"width": 390, "height": 800})
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    # No card in the fixture has a "+N"; the click rule is on the document, so a button with its marks works.
+    button = (
+        '<button id="fake-more" data-open-more data-key="949" '
+        'style="position:fixed;top:0;left:0;z-index:9">+2</button>'
+    )
+    page.evaluate("html => document.body.insertAdjacentHTML('beforeend', html)", button)
+    page.locator("#fake-more").click()
+    expect(page.locator("#film-details-modal")).to_have_class(re.compile("is-full"))
+    expect(page.locator("#film-more")).to_have_attribute("open", "")
+
+
 def test_phone_filter_sheet_stays_open_while_choosing(app_server, page):
     expect = playwright_api.expect
     page.set_viewport_size({"width": 375, "height": 800})
