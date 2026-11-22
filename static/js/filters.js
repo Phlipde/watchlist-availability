@@ -4,7 +4,7 @@ export const FILTER_CONTROLS = [
   ['film-search', 'Search'], ['cost-filter', 'Cost'], ['runtime-filter', 'Runtime'], ['rating-filter', 'Rating'],
   ['year-from', 'From'], ['year-to', 'To'], ['min-votes', 'Votes'], ['keyword-filter', 'Keyword'],
   ['media-filter', 'Trailer'], ['change-filter', 'Changes'], ['provider-count-filter', 'Services'],
-  ['exclusive-filter', 'Only on one of my services'], ['age-filter', 'Age rating'],
+  ['age-filter', 'Age rating'],
   ['language-filter', 'Language'], ['origin-filter', 'Country'], ['show-unavailable', 'Also not available'], ['show-hidden', 'Set aside shown'],
 ];
 
@@ -54,7 +54,7 @@ export function readFilters(doc, favoritesOnly, genres = {include: [], exclude: 
     query: value('film-search').toLowerCase().trim(),
     // Films that are nowhere to stream only show on request, and only without a cost filter.
     availability: availability === 'available' && showUnavailable ? 'all' : availability,
-    exclusive: Boolean(doc.getElementById('exclusive-filter')?.checked),
+    exclusive: value('provider-count-filter') === 'only1',
     showHidden: Boolean(doc.getElementById('show-hidden')?.checked),
     kind,
     minRating: source === 'tmdb' ? Number(minimum) || 0 : 0,

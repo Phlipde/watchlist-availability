@@ -171,11 +171,10 @@ test('every set filter gets a chip and reset clears them all', async () => {
     'media-filter': select('trailer', ['all', 'trailer']),
     'provider-count-filter': select('2', ['0', '2']),
     'change-filter': select('all', ['all', 'added']),
-    'exclusive-filter': {type: 'checkbox', checked: true, dataset: {}},
   };
   const doc = {getElementById: id => controls[id] ?? null};
-  assert.equal(FILTER_CONTROLS.length, 17);
-  assert.deepEqual(activeFilters(doc).map(chip => chip.label), ['Search', 'Cost', 'Rating', 'Trailer', 'Services', 'Only on one of my services']);
+  assert.equal(FILTER_CONTROLS.length, 16);
+  assert.deepEqual(activeFilters(doc).map(chip => chip.label), ['Search', 'Cost', 'Rating', 'Trailer', 'Services']);
   assert.equal(activeFilters(doc).find(chip => chip.id === 'rating-filter').text, 'Label tmdb:7');
   // A hidden input behind a custom control carries its readable text and its default.
   assert.equal(activeFilters(doc).find(chip => chip.id === 'cost-filter').text, 'Free');
@@ -183,7 +182,6 @@ test('every set filter gets a chip and reset clears them all', async () => {
   assert.deepEqual(activeFilters(doc), []);
   assert.equal(controls['rating-filter'].value, '');
   assert.equal(controls['cost-filter'].value, 'all');
-  assert.equal(controls['exclusive-filter'].checked, false);
 });
 
 test('the best value of a comparison row is marked, ties and lone values are not', async () => {
@@ -271,4 +269,12 @@ test('the merged list holds each film once, in order, and marks films of both se
   const section = title => view.sectionOf.get(filmKey(view.films.find(film => film.title === title)));
   assert.equal(section('Beta'), 'All');  // free on Arte and on a paid service
   assert.equal(section('Alpha'), 'Paid');
+});
+
+test('"Number of services: Only 1" is the exclusive filter, the numbers are a minimum', async () => {
+  const {readFilters} = await import('../../static/js/filters.js');
+  const doc = value => ({getElementById: id => (id === 'provider-count-filter' ? {value} : null)});
+  assert.deepEqual([readFilters(doc('only1'), false).exclusive, readFilters(doc('only1'), false).minimumProviders], [true, 0]);
+  assert.deepEqual([readFilters(doc('3'), false).exclusive, readFilters(doc('3'), false).minimumProviders], [false, 3]);
+  assert.deepEqual([readFilters(doc('0'), false).exclusive, readFilters(doc('0'), false).minimumProviders], [false, 0]);
 });

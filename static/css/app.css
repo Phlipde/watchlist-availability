@@ -987,3 +987,18 @@ summary.offer-heading { cursor: pointer; }
 .save-pop .view-form input { width: auto; flex: 1; }
 .data-grid { display: grid; grid-template-columns: 8rem 1fr; gap: 8px 12px; align-items: center; font: var(--fs-body) system-ui, sans-serif; }
 .data-actions { display: inline-flex; gap: 8px; }
+
+/* ===== The "More filters" panel: three columns, sentence-case headings, readable counts, a dimmed page behind ===== */
+.menu-group { color: var(--text-2); font: 500 12px system-ui, sans-serif; letter-spacing: 0; text-transform: none; }
+.more-filters .filter-menu { left: auto; right: 0; width: min(720px, calc(100vw - 16px)); }
+.more-filters-menu .menu-head { display: flex; align-items: center; justify-content: space-between; margin: -4px 0 8px; }
+.more-filters-menu .menu-head .menu-group { margin: 0; color: var(--text); font-size: var(--fs-body); font-weight: 600; }
+.more-filters-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.more-filters-menu select.form-select-sm { min-height: var(--h-md); }
+/* A chip with a count: the value big, the count small and quiet after a dot ("12 · 80"), never glued to it */
+.chip .option-count, .segmented .option-count { margin-left: 6px; color: var(--text-2); font-size: 12px; font-variant-numeric: tabular-nums; }
+.chip .option-count:not(:empty)::before { content: "· "; }
+.chip[aria-pressed="true"] .option-count { color: var(--text); }
+.chip:has(.option-count[data-zero]), .chip.is-empty { opacity: .4; }
+/* The page behind an open panel goes dim (a tap on it still closes the panel through the outside-click rule). */
+body:has(.more-filters[open])::after { content: ""; position: fixed; inset: 0; z-index: 1035; background: rgb(0 0 0 / .3); pointer-events: none; }

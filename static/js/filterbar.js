@@ -393,7 +393,8 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     $('filter-chips').hidden = !chips.length;
     // Set filters inside "Filters" must not be forgotten: count them on its button.
     const inside = activeFilters(document).filter(({id}) => $(id).closest('#more-filters')).length;
-    $('more-filters-count').textContent = inside ? `(${inside})` : '';
+    $('more-filters-count').textContent = inside ? `· ${inside}` : '';
+    $('more-reset').hidden = !inside;
   }
   function resetAll() {
     resetFilters(document);
@@ -407,6 +408,12 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     buildGenreMenu([...document.querySelectorAll('#genre-list input')].map(input => input.value));
     onChange();
   }
+  // "Reset" in the panel clears only what is set inside it.
+  $('more-reset').addEventListener('click', () => {
+    activeFilters(document).filter(({id}) => $(id).closest('#more-filters')).forEach(({id}) => clearFilter($(id)));
+    setAges([], false);
+    onChange();
+  });
   $('filter-chips').addEventListener('click', event => {
     const open = event.target.closest('.chip-open');
     if (open) { event.stopPropagation(); openPanel(open.dataset.panel); return; }  // else the outside-click rule closes it again

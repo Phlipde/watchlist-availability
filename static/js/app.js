@@ -233,7 +233,7 @@ const state = createAppState();
         'runtime-filter': ['runtime', {maxRuntime: 0}], 'rating-filter': ['rating', {minRating: 0, minLetterboxd: 0}],
         'year-from': ['year', {yearFrom: 0}], 'year-to': ['year', {yearTo: 9999}], 'min-votes': ['votes', {minVotes: 0}],
         'keyword-filter': ['keyword', {keyword: 'all'}], 'media-filter': ['trailer', {media: 'all'}], 'change-filter': ['changes', {change: 'all'}],
-        'provider-count-filter': ['number of services', {minimumProviders: 0}], 'exclusive-filter': ['“only on one of my services”', {exclusive: false}],
+        'provider-count-filter': ['number of services', {minimumProviders: 0, exclusive: false}],
         'age-filter': ['age rating', {age: 'all'}], 'language-filter': ['language', {language: 'all'}], 'origin-filter': ['country', {origin: 'all'}],
       };
       const candidates = Object.entries(reset).filter(([id]) => {
@@ -1126,7 +1126,6 @@ const state = createAppState();
         changes: document.getElementById('change-filter').value,
         providers: [...state.selected].sort().join(','),
         minproviders: document.getElementById('provider-count-filter').value,
-        only: document.getElementById('exclusive-filter').checked ? '1' : '',
         hidden: document.getElementById('show-hidden').checked ? '1' : '',
         favoriteStatus: document.getElementById('favorite-status-filter').value,
         favorites: state.favoritesOnly ? '1' : '',
@@ -1146,7 +1145,7 @@ const state = createAppState();
     // Typing in the search redraws only after a short pause, not on every key.
     let searchTimer;
     document.getElementById('film-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(renderFilms, 150); });
-    ['exclusive-filter', 'show-unavailable', 'show-hidden', 'keyword-filter', 'age-filter', 'language-filter', 'origin-filter', 'rating-filter', 'year-from', 'year-to', 'min-votes', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => document.getElementById(id).addEventListener('input', renderFilms));
+    ['show-unavailable', 'show-hidden', 'keyword-filter', 'age-filter', 'language-filter', 'origin-filter', 'rating-filter', 'year-from', 'year-to', 'min-votes', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => document.getElementById(id).addEventListener('input', renderFilms));
     const initialUrl = new URL(location.href).searchParams;
     const setInitial = (id, parameter, fallback) => {
       const element = document.getElementById(id);
@@ -1168,14 +1167,17 @@ const state = createAppState();
     setInitial('change-filter', 'changes', 'all');
     setInitial('provider-count-filter', 'minproviders', '0');
     setInitial('favorite-status-filter', 'favoriteStatus', 'all');
-    // Older links used availability=exclusive for what is now its own checkbox.
-    document.getElementById('exclusive-filter').checked = initialUrl.get('only') === '1' || initialUrl.get('availability') === 'exclusive';
+    // Older links used only=1 or availability=exclusive for what is now "Number of services: Only 1".
+    if (initialUrl.get('only') === '1' || initialUrl.get('availability') === 'exclusive') document.getElementById('provider-count-filter').value = 'only1';
     document.getElementById('show-hidden').checked = initialUrl.get('hidden') === '1';
     filterBar.readUrl(initialUrl);
     filterBar.buildServicesMenu();
     ['sort-order', 'favorite-status-filter'].forEach(id => document.getElementById(id).addEventListener('change', renderFilms));
     const favoritesButton = document.getElementById('favorites-view');
-    const showHeart = on => { favoritesButton.querySelector('i').className = on ? 'ti ti-heart-filled' : 'ti ti-heart'; };
+    const showHeart = on => {
+      favoritesButton.querySelector('i').className = on ? 'ti ti-heart-filled' : 'ti ti-heart';
+      document.getElementById('favorites-panel').checked = on;
+    };
     state.favoritesOnly = initialUrl.get('favorites') === '1';
     // The button keeps its name; whether the view is on is said by aria-pressed and the line above the films.
     function setFavoritesOnly(on) {
@@ -1189,6 +1191,7 @@ const state = createAppState();
     favoritesButton.setAttribute('aria-pressed', String(state.favoritesOnly));
     showHeart(state.favoritesOnly);
     favoritesButton.addEventListener('click', () => setFavoritesOnly(!state.favoritesOnly));
+    document.getElementById('favorites-panel').addEventListener('change', event => setFavoritesOnly(event.target.checked));
     document.getElementById('compare-go').addEventListener('click', compareFilms);
     document.getElementById('compare-bar-clear').addEventListener('click', () => { [...state.compareKeys].forEach(key => setCompared(key, false)); renderFilms(); });
     updateCompareButton();
