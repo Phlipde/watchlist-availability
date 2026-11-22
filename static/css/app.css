@@ -1078,3 +1078,54 @@ body:has(.more-filters[open])::after { content: ""; position: fixed; inset: 0; z
 .chip-x:hover { color: var(--text); }
 .sub-lead { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 .small-dialog .menu-field { margin-top: 12px; }
+/* Phone watchlist head: search and Filters on one row, tabs and count on the next, posters right below. */
+.sheet-view { display: none; }
+@media (max-width: 800px) {
+  .view-watchlist main { padding-top: 8px; }
+  .view-watchlist .app-header { min-height: 44px; padding-block: 4px; }
+  .view-watchlist .brand-name { display: none; }
+  .view-watchlist .workspace { margin-top: 8px; }
+  .view-watchlist #watchlist-view { display: flex; flex-wrap: wrap; align-items: flex-start; column-gap: 8px; }
+  .view-watchlist #watchlist-view > * { order: 3; flex: 1 1 100%; min-width: 0; }
+  .view-watchlist #watchlist-view > .watch-bar { order: 1; flex: 1 1 0; }
+  .view-watchlist #watchlist-view > .phone-filters { order: 2; flex: 0 0 auto; margin: 0; }
+  .phone-filters .btn { width: auto; white-space: nowrap; }
+  .watch-bar > #result-tools { display: none; }
+  .meta-wide { display: none; }
+  .view-watchlist .active-filters:has(#filter-chips[hidden]) #saved-views { display: none; }
+  body.tools-open .sheet-view { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; }
+  body.tools-open .sheet-view > .sheet-label { grid-column: 1 / -1; margin: 4px 0 0; }
+  body.tools-open .sheet-view-slot { display: contents; }
+  body.tools-open .sheet-view .view-switch { width: auto; display: grid; grid-template-columns: repeat(3, 1fr); }
+  body.tools-open .sheet-view .btn { width: 44px; }
+}
+.runtime-slider { overflow-wrap: normal; }
+.runtime-slider output { white-space: nowrap; color: var(--ink); }
+/* Comparison bar: a small pill on wide screens, a full-width bar above the tab bar on phones. It gives way to any open sheet. */
+.compare-thumbs { display: flex; gap: 4px; }
+.compare-thumbs img { width: 32px; height: 48px; border-radius: 4px; object-fit: cover; }
+.compare-thumbs:empty { display: none; }
+#compare-count { white-space: nowrap; }
+body.modal-open .compare-bar, body.tools-open .compare-bar, body:has(dialog[open]) .compare-bar { display: none; }
+@media (max-width: 800px) {
+  .compare-bar { left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); max-width: none; min-height: 56px; transform: none; border-radius: 0; border-width: 1px 0 0; padding: 4px 12px; }
+  .compare-thumbs { flex: 1; min-width: 0; overflow: hidden; }
+  .compare-thumbs img { width: 32px; height: 44px; }
+  #compare-count[data-hint="false"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .compare-bar .btn { min-height: 40px; white-space: nowrap; }
+  body.compare-mode { padding-bottom: calc(64px + 56px + env(safe-area-inset-bottom)); }
+}
+
+/* Card way line: one logo, its type in a word, "+N" as small text. Titles are never underlined. */
+.way-row { align-items: center; gap: 8px; }
+.way-badge .ti { font-size: 10px; line-height: 1; }
+.way-badge-free { background: oklch(55% 0.13 151); border-color: var(--surface); color: #fff; }
+.view-compact .way-badge { display: none; }
+.film .film-open, .film .film-open:hover, .film .film-open:visited { text-decoration: none; }
+.film .best-way { margin-top: auto; }
+.best-more { padding: 0 4px; border: 0; background: none; }
+.way-badge-flag { background: var(--surface-2); overflow: hidden; }
+.way-badge-flag img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.best-way-link.is-abroad .way-logo, .best-way-link.is-abroad .way-name { outline: 1.5px dashed var(--text-2); outline-offset: 1px; }
+.abroad-service { position: relative; }
+.abroad-service .way-badge { width: 14px; height: 14px; right: -5px; bottom: -5px; }

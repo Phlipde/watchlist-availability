@@ -1,5 +1,5 @@
 <header class="app-header" id="app-header">
-      <p class="meta brand">Watchlist availability · <select class="form-select form-select-sm country-select" id="country-select" aria-label="Country">{% for code in header_countries %}<option value="{{ code }}" {% if header_country == code %}selected{% endif %}>{{ code }}</option>{% endfor %}</select></p>
+      <p class="meta brand"><span class="brand-name">Watchlist availability · </span><select class="form-select form-select-sm country-select" id="country-select" aria-label="Country">{% for code in header_countries %}<option value="{{ code }}" {% if header_country == code %}selected{% endif %}>{{ code }}</option>{% endfor %}</select></p>
       {% include "partials/page-nav.html" %}
       <div class="header-tools">{% if view is defined %}{% include "partials/scan-status.html" %}{% else %}<a class="sync-toggle" id="sync-toggle" href="/settings/data" data-state="{{ sync_state }}"><span class="sync-dot" aria-hidden="true"></span><span id="sync-label">{{ sync_text }}</span></a>{% endif %}</div>
     </header>

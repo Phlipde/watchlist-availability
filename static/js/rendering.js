@@ -1,6 +1,6 @@
 import {dateTime, escapeHtml, numberText} from './ui.js';
 import {SECTION_KINDS, filmKey, sectionProviders, selectedChanges} from './filtering.js';
-import {bestWay, catalogues, wayText} from './bestway.js';
+import {TYPE_ICON, bestWay, catalogues, wayText} from './bestway.js';
 import {watchUrl} from './drawer.js';
 
 // "Free" alone was read three ways; the section says what it holds.
@@ -72,36 +72,37 @@ function wayLine(film, key, context) {
   const logoOrName = name => logo(name) || `<span class="way-name">${escapeHtml(name || '')}</span>`;
   const text = escapeHtml(wayText(way));
   const title = escapeHtml(film.title);
-  const more = way.others > 0
-    ? `<button class="best-more" type="button" data-open-more data-key="${escapeHtml(key)}" aria-label="${way.others} more ${way.others === 1 ? 'way' : 'ways'} to watch ${title}">+${way.others}</button>`
-    : '';
-  if (way.kind === 'abroad') {
-    const country = way.countries[0];
-    const flag = country ? `<img class="way-flag" src="/static/flags/${escapeHtml(country.toLowerCase())}.svg" width="16" height="12" alt="">` : '';
-    const name = escapeHtml(context.countryName ? context.countryName(country) : country);
-    return `<div class="best-way"><button class="best-way-link" type="button" data-open-more data-key="${escapeHtml(key)}">${logoOrName(way.service)}${flag}<span class="way-text">Abroad in ${name}, on ${escapeHtml(way.service)}</span></button>${more}</div>`;
-  }
-  if (way.kind === 'none') return `<div class="best-way is-muted"><span class="best-way-link is-static" tabindex="0"><i class="ti ti-ban way-none" aria-hidden="true"></i><span class="way-text">${text}</span></span></div>`;
-  // One row of logo tiles (best first); a small round € marks a service that only rents or sells the film.
+  const none = `<div class="best-way is-muted"><span class="best-way-link is-static" tabindex="0"><i class="ti ti-ban way-none" aria-hidden="true"></i><span class="way-text">${text}</span></span></div>`;
+  // A row of logos for your own services (best first), each marked with a small icon for its type in the logo's corner;
+  // with the abroad switch on, your services abroad follow with the flag of their best country (dashed rim: needs a VPN).
+  // "+N" counts the rest. With none of your services here, the one best way (a shop, or a service that is not yours).
   const href = escapeHtml(watchUrl(film, context.country || 'DE'));
-  const LABEL = {free: 'Free', flatrate: 'Subscription', ads: 'With ads', rent: 'Rent', buy: 'Buy'};
+  const WORDS = {free: 'Free', flatrate: 'Subscription', ads: 'With ads', rent: 'Rent', buy: 'Buy'};
+  const rank = entry => (entry.name === way.service ? 0 : entry.own && ['free', 'flatrate', 'ads'].some(k => entry.kinds.has(k)) ? 1 : 2);
+  // A film listed only because of the abroad switch has nothing to watch here: its offers are the abroad ones.
+  const hereAll = film.abroadOnly ? [] : catalogues(film, context.selected).filter(entry => Object.keys(TYPE_ICON).some(k => entry.kinds.has(k))).sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+  const mine = hereAll.filter(entry => entry.own);
+  const hereShown = (mine.length ? mine : hereAll.slice(0, 1)).slice(0, 4);
+  const abroadRows = context.abroadList ? context.abroadList(film) : way.kind === 'abroad' ? [{service: way.service, countries: way.countries}] : [];
+  const abroadNew = abroadRows.filter(row => !hereShown.some(entry => entry.name === row.service));
+  const abroadShown = abroadNew.slice(0, 4 - hereShown.length);
+  if (!hereShown.length && !abroadShown.length) return none;
   const tile = entry => {
     const kind = ['free', 'flatrate', 'ads', 'rent', 'buy'].find(k => entry.kinds.has(k));
-    const paid = kind === 'rent' || kind === 'buy';
-    const badge = paid ? '<span class="way-badge" aria-hidden="true">€</span>' : '';
-    return `<a class="best-way-link${entry.own || paid ? '' : ' is-dim'}" href="${href}" target="_blank" rel="noreferrer">${logoOrName(entry.name)}${badge}<span class="way-text">${escapeHtml(entry.name)} · ${LABEL[kind]}</span></a>`;
+    const dim = entry.own || kind === 'rent' || kind === 'buy' ? '' : ' is-dim';
+    return `<a class="best-way-link${dim}" href="${href}" target="_blank" rel="noreferrer">${logoOrName(entry.name)}<span class="way-text">${escapeHtml(entry.name)} · ${WORDS[kind]}</span><span class="way-badge way-badge-${kind}" aria-hidden="true"><i class="ti ${TYPE_ICON[kind]}"></i></span></a>`;
   };
-  const rank = entry => (entry.name === way.service ? 0 : entry.own && ['free', 'flatrate', 'ads'].some(k => entry.kinds.has(k)) ? 1 : 2);
-  // Only your own services get a tile; with none of them, the one best way (a shop, or a service that is not yours).
-  const all = catalogues(film, context.selected).sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
-  const mine = all.filter(entry => entry.own);
-  const entries = mine.length ? mine : all.slice(0, 1);
-  const SHOWN = 4;
-  const rest = all.length - Math.min(entries.length, SHOWN);
+  const abroadTile = row => {
+    const code = row.countries[0];
+    const flag = code ? `<span class="way-badge way-badge-flag" aria-hidden="true"><img src="/static/flags/${escapeHtml(code.toLowerCase())}.svg" alt=""></span>` : '';
+    const names = row.countries.map(c => (context.countryName ? context.countryName(c) : c)).join(', ');
+    return `<button class="best-way-link is-abroad" type="button" data-open-more data-key="${escapeHtml(key)}">${logoOrName(row.service)}${flag}<span class="way-text">Abroad in ${escapeHtml(names)}, on ${escapeHtml(row.service)} · needs a VPN</span></button>`;
+  };
+  const rest = hereAll.length + abroadNew.length - hereShown.length - abroadShown.length;
   const extra = rest > 0
     ? `<button class="best-more" type="button" data-open-more data-key="${escapeHtml(key)}" aria-label="${rest} more ${rest === 1 ? 'service' : 'services'} for ${title}">+${rest}</button>`
     : '';
-  return `<div class="best-way${way.muted ? ' is-muted' : ''}"><div class="way-row">${entries.slice(0, SHOWN).map(tile).join('')}</div>${extra}</div>`;
+  return `<div class="best-way${way.muted ? ' is-muted' : ''}"><div class="way-row">${hereShown.map(tile).join('')}${abroadShown.map(abroadTile).join('')}</div>${extra}</div>`;
 }
 
 export function changeBadgesFor(film, selected) {

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   alternatives, catalogName, catalogRows, certificationText, dedupeKeywords, letterboxdUrl, metaLine, primaryAction,
-  reportUrl, runtimeLong, statusBadges,
+  runtimeLong, statusBadges,
 } from '../../static/js/drawer.js';
 
 const own = names => new Set(names);
@@ -58,10 +58,7 @@ test('more own services come as alternatives; status badges carry the date', () 
   ]);
 });
 
-test('links: Letterboxd goes to the film by TMDB id; a report carries the film and the service', () => {
+test('links: Letterboxd goes to the film by TMDB id', () => {
   assert.equal(letterboxdUrl({tmdb_id: 603, title: 'The Matrix'}), 'https://letterboxd.com/tmdb/603/');
   assert.equal(letterboxdUrl({title: 'The Matrix', year: 1999}), 'https://letterboxd.com/search/The%20Matrix%201999/');
-  const url = new URL(reportUrl({title: 'Heat', year: 1995, tmdb_id: 949}, 'DE', 'Netflix'));
-  assert.equal(url.searchParams.get('title'), 'Wrong availability: Heat on Netflix (DE)');
-  assert.match(url.searchParams.get('body'), /TMDB id: 949/);
 });

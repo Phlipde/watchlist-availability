@@ -41,6 +41,15 @@ export function resetFilters(doc) {
 }
 
 // Cost (the segmented control) as the sections and offer type filtering.js knows.
+// A runtime as people say it: 95 → "95 min", 120 → "2 h", 225 → "3 h 45".
+export function durationText(minutes) {
+  const total = Math.round(Number(minutes));
+  if (!Number.isFinite(total) || total <= 0) return '';
+  if (total < 120) return `${total} min`;
+  const rest = total % 60;
+  return `${Math.floor(total / 60)} h${rest ? ` ${String(rest).padStart(2, '0')}` : ''}`;
+}
+
 export const COST = {all: ['available', 'all'], free: ['Free', 'all'], subscription: ['Paid', 'flatrate'], rent: ['Paid', 'rent']};
 
 // Reads the filter controls into a plain object for filtering.js; genres come from the filter bar.
