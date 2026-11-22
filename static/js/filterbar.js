@@ -28,9 +28,10 @@ function keepInView(menu) {
 }
 
 export function initPopovers(doc = document) {
-  const popovers = () => [...doc.querySelectorAll('details.filter-pop, details.sync, details.export-menu, details.card-menu')];
+  // A control that moved into the "More filters" panel (.is-moved) stays open there and is left alone.
+  const popovers = () => [...doc.querySelectorAll('details.filter-pop:not(.is-moved), details.sync, details.export-menu, details.card-menu')];
   doc.addEventListener('toggle', event => {
-    if (!event.target.matches?.('details.filter-pop, details.sync, details.export-menu, details.card-menu') || !event.target.open) return;
+    if (!event.target.matches?.('details.filter-pop:not(.is-moved), details.sync, details.export-menu, details.card-menu') || !event.target.open) return;
     popovers().forEach(other => { if (other !== event.target) other.open = false; });
     keepInView(event.target.querySelector('.filter-menu, .sync-panel'));
   }, true);
@@ -38,7 +39,7 @@ export function initPopovers(doc = document) {
     popovers().forEach(popover => { if (popover.open && !popover.contains(event.target)) popover.open = false; });
   });
   doc.addEventListener('keydown', event => {
-    const popover = event.target.closest?.('details.filter-pop, details.sync, details.export-menu, details.card-menu');
+    const popover = event.target.closest?.('details.filter-pop:not(.is-moved), details.sync, details.export-menu, details.card-menu');
     if (!popover?.open) return;
     if (event.key === 'Escape') {
       popover.open = false;
@@ -373,8 +374,10 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   // ---- chips ------------------------------------------------------------------------------------
   // Which panel holds a filter; every other one sits behind "Filters".
   const PANELS = {'runtime-filter': 'runtime-pop', 'rating-filter': 'rating-pop', 'min-votes': 'rating-pop', 'year-from': 'year-pop', 'year-to': 'year-pop', 'film-search': 'film-search', 'cost-filter': 'cost-options'};
+  const insidePanel = id => Boolean($(id).closest('#more-filters') || $(PANELS[id])?.classList.contains('is-moved'));
   function openPanel(id) {
-    const element = $(id);
+    let element = $(id);
+    if (element.classList?.contains('is-moved')) element = $('more-filters');
     if (element.tagName === 'DETAILS') { element.open = true; element.querySelector('summary').focus(); return; }
     (element.querySelector?.('input:checked') || element).focus();
   }
@@ -393,7 +396,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     $('filter-chips').innerHTML = chips.join('');
     $('filter-chips').hidden = !chips.length;
     // Set filters inside "Filters" must not be forgotten: count them on its button.
-    const inside = activeFilters(document).filter(({id}) => $(id).closest('#more-filters')).length;
+    const inside = activeFilters(document).filter(({id}) => insidePanel(id)).length;
     $('more-filters-count').textContent = inside ? `· ${inside}` : '';
     $('more-reset').hidden = !inside;
     const setIds = new Set(activeFilters(document).map(({id}) => id));
@@ -425,7 +428,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   }
   // "Reset" in the panel clears only what is set inside it.
   $('more-reset').addEventListener('click', () => {
-    activeFilters(document).filter(({id}) => $(id).closest('#more-filters')).forEach(({id}) => clearFilter($(id)));
+    activeFilters(document).filter(({id}) => insidePanel(id)).forEach(({id}) => clearFilter($(id)));
     setAges([], false);
     onChange();
   });
@@ -473,6 +476,56 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     ['availability', 'kind', 'runtime', 'lb'].forEach(name => url.searchParams.delete(name));
   }
 
-  return {buildServicesMenu, buildGenreMenu, buildAgeChips, setAges, setRatingAvailability, updateServicesButton, updateCounts, updateChips, resetAll, setServices, readUrl, writeUrl};
+  // ---- a bar that does not fit one row gives Year, then Runtime, then Rating to the "More filters" panel ----------
+  // The same element moves (nothing is copied), so the filters, the chips and the URL keep working unchanged.
+  // To let another control give way too, add its pop's id to GIVE_WAY (first in the list goes first).
+  const GIVE_WAY = ['year-pop', 'runtime-pop', 'rating-pop'];
+  const markers = new Map();
+  function moveIn(pop) {
+    if (markers.has(pop)) return;
+    const marker = document.createComment(pop.id);
+    pop.before(marker);
+    markers.set(pop, marker);
+    $('moved-slot').append(pop);
+    pop.classList.add('is-moved');
+    pop.open = true;
+    pop.querySelector('summary').tabIndex = -1;
+    $('moved-section').hidden = false;
+  }
+  function moveBack(pop) {
+    const marker = markers.get(pop);
+    if (!marker) return;
+    pop.classList.remove('is-moved');
+    pop.open = false;
+    pop.querySelector('summary').removeAttribute('tabindex');
+    marker.replaceWith(pop);
+    markers.delete(pop);
+    $('moved-section').hidden = !markers.size;
+  }
+  // Closing a moved control (its summary is not clickable, but Enter on it would) opens it again.
+  document.addEventListener('toggle', event => { if (event.target.classList?.contains('is-moved') && !event.target.open) event.target.open = true; }, true);
+  // The bar and the page tools are one flex row (".watch-bar"; the bar itself is display: contents), so look at all of its items.
+  const wrapped = row => {
+    const search = $('film-search');
+    const floor = search.offsetTop + search.offsetHeight;
+    const items = [...row.children].flatMap(child => (getComputedStyle(child).display === 'contents' ? [...child.children] : [child]));
+    return items.some(item => item.offsetParent !== null && item.offsetTop >= floor);
+  };
+  function fitBar() {
+    const row = $('film-filters').parentElement;
+    const pops = GIVE_WAY.map($);
+    pops.forEach(moveBack);
+    if (matchMedia('(max-width: 800px)').matches || $('film-search').offsetParent === null) return;  // phones have their own sheet
+    for (const pop of pops) {
+      if (!wrapped(row)) break;
+      moveIn(pop);
+    }
+    updateChips();
+  }
+  // The row's own size does not change when a control gives way, so also look again after fonts load, on resize and after each draw.
+  new ResizeObserver(fitBar).observe($('film-filters').parentElement);
+  addEventListener('resize', fitBar);
+  document.fonts?.ready.then(fitBar);
+  return {fitBar, buildServicesMenu, buildGenreMenu, buildAgeChips, setAges, setRatingAvailability, updateServicesButton, updateCounts, updateChips, resetAll, setServices, readUrl, writeUrl};
 }
 

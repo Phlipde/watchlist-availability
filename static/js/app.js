@@ -263,6 +263,7 @@ const state = createAppState();
       document.querySelectorAll('.filter-sheet-done span').forEach(element => { element.textContent = view.visibleCount; });
       filterBar.updateCounts(state.films, filters, filterContext);
       showAbroadControls(filters, filterContext, abroadCandidates(hereKeys), abroadCount, where);
+      filterBar.fitBar();
       results.setAttribute('aria-busy', 'false');
       renderChanges();
       drawViews();

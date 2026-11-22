@@ -152,7 +152,8 @@ def browser():
 
 @pytest.fixture
 def page(browser):
-    context = browser.new_context(service_workers="block")
+    # Wide, so that Year, Runtime and Rating stay in the filter bar; one test makes the window narrow on purpose.
+    context = browser.new_context(service_workers="block", viewport={"width": 2400, "height": 1000})
     page = context.new_page()
     errors: list[str] = []
     page.on("pageerror", lambda error: errors.append(str(error)))
@@ -287,7 +288,7 @@ def test_coming_soon_and_age_rating(app_server, page):
     expect(page.locator("#film-details-content .film-modal-release")).to_contain_text("Coming at home")
     page.locator("#film-details-modal .btn-close").click()
     expect(page.locator("#film-details-modal")).to_be_hidden()
-    page.locator("#more-filters summary").click()
+    page.locator("#more-filters > summary").click()
     page.locator("#age-chips .chip[data-age='16']").click()
     expect(page.locator("#visible-count")).to_have_text("1")
     expect(page.locator("#age-filter")).to_have_value("16")
@@ -328,7 +329,7 @@ def test_saved_results_show_the_tools(app_server, page):
     page.goto(app_server["url"] + "/watchlist?votes=1000")
     expect(page.locator("#filter-chips")).to_contain_text("Votes: 1k+")
     page.goto(app_server["url"] + "/watchlist?age=16&ages=")
-    expect(page.locator("#more-filters summary")).to_have_text("More filters · 1")
+    expect(page.locator("#more-filters > summary")).to_have_text("More filters · 1")
 
 
 def test_filters_from_a_link_survive_the_scan(app_server, page):
@@ -715,10 +716,36 @@ def test_filter_menus_stay_inside_the_window(app_server, page):
     page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
     for name in ("services-pop", "genre-pop", "runtime-pop", "more-filters", "sort-pop"):
+        if page.locator(f"#{name}.is-moved").count():
+            continue  # it moved into the "More filters" panel (see the test below)
         page.locator(f"#{name} > summary").click()
         box = page.locator(f"#{name} > .filter-menu").bounding_box()
         assert box["x"] >= 0 and box["x"] + box["width"] <= 820, name
         page.locator(f"#{name} > summary").click()  # close it again: an open panel may cover the next button
+
+
+def test_year_and_runtime_move_into_more_filters_when_the_bar_wraps(app_server, page):
+    expect = playwright_api.expect
+    page.set_viewport_size({"width": 2400, "height": 900})
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("article.film").first).to_be_visible(timeout=15000)
+    page.set_viewport_size({"width": 830, "height": 900})
+    expect(page.locator("#moved-slot > #year-pop.is-moved")).to_have_count(1)
+    page.locator("#more-filters > summary").click()
+    expect(page.locator("#moved-slot #year-chips")).to_be_visible()  # shown inline in the panel
+    page.locator("#moved-slot #year-chips .chip", has_text="Before 2000").click()
+    assert page.locator("#year-to").input_value() == "1999"
+    expect(page.locator("#more-filters-count")).to_have_text("· 1")  # a moved filter is counted on the button
+    expect(page.locator("#moved-slot > #rating-pop.is-moved")).to_have_count(1)  # Rating gives way after Year and Runtime
+    page.locator("#moved-slot #rating-pop input[value=tmdb]").check(force=True)
+    page.locator("#moved-slot #rating-chips-tmdb .chip", has_text="7+").first.click()
+    expect(page.locator("#rating-filter")).to_have_value("tmdb:7")
+    expect(page.locator("#more-filters-count")).to_have_text("· 2")
+    expect(page.locator("#more-filters")).to_have_attribute("open", "")  # clicking inside did not close the panel
+    page.keyboard.press("Escape")
+    page.set_viewport_size({"width": 2400, "height": 900})
+    expect(page.locator("#moved-slot > .filter-pop")).not_to_have_count(2)  # with room, at least one control moves back
+    expect(page.locator("#year-to")).to_have_value("1999")  # the value stays
 
 
 def test_year_and_rating_panels_and_service_search(app_server, page):
@@ -773,7 +800,7 @@ def test_card_menu_sets_a_film_aside_and_marks_it_watched_with_undo(app_server, 
     first.hover()
     first.get_by_role("button", name="Not now (30 days)").click()
     expect(page.locator("article.film")).to_have_count(len(titles) - 1)
-    page.locator("#more-filters summary").click()
+    page.locator("#more-filters > summary").click()
     page.locator("#show-hidden").check()
     expect(page.locator("article.film")).to_have_count(len(titles))
     assert "hidden=1" in page.url
@@ -1235,7 +1262,7 @@ def test_the_abroad_switch_adds_films_your_services_have_in_other_countries(app_
     assert "where=both" in page.url
     expect(page.locator("#filter-chips")).to_contain_text("Where: Here and abroad")
     # "Only abroad" in the panel shows just that film; the switch and the field are one setting.
-    page.locator("#more-filters summary").click()
+    page.locator("#more-filters > summary").click()
     page.locator("#where-filter").select_option("abroad")
     expect(page.locator("article.film")).to_have_count(1)
     expect(toggle).to_have_attribute("aria-pressed", "true")
