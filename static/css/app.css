@@ -799,8 +799,11 @@ summary.offer-heading { cursor: pointer; }
 .mini-posters button { display: block; width: 72px; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
 .mini-posters img, .mini-posters .no-poster { display: block; width: 72px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .25rem; border: 1px solid var(--line-card); background: var(--panel); font-size: var(--fs-small); overflow: hidden; }
 .mini-posters li.is-current img { outline: 2px solid var(--accent); outline-offset: -2px; }
-.mini-service { display: block; min-height: 16px; margin-top: 3px; color: var(--muted); font-size: var(--fs-small); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mini-logo { display: block; width: 16px; height: 16px; border-radius: 3px; object-fit: cover; }
+.mini-posters button { position: relative; }
+.mini-service { position: absolute; top: 84px; right: 4px; display: grid; place-items: center; width: 20px; height: 20px; border: 1.5px solid var(--surface); border-radius: 50%; overflow: hidden; background: var(--surface-2); color: var(--ink); font: 600 9px/1 system-ui, sans-serif; }
+.mini-year { display: block; margin-top: 3px; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; }
+.mini-posters li.is-unreleased img, .mini-posters li.is-unreleased .no-poster { opacity: .45; }
+.mini-logo { display: block; width: 100%; height: 100%; object-fit: cover; }
 .film-modal-chips, .film-modal-links { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
 .chip-link, .link-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border: 1px solid var(--line-field); border-radius: 999px; background: transparent; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; text-decoration: none; cursor: pointer; }
 .chip-link:hover, .chip-link:focus-visible, .link-chip:hover, .link-chip:focus-visible { color: var(--ink); border-color: var(--line-strong); }

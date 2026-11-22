@@ -117,7 +117,7 @@ export function changeBadgesFor(film, selected) {
 export function favoriteFields(key, title, saved = {}) {
   const name = escapeHtml(title);
   const option = (value, label) => `<option value="${value}" ${saved.status === value ? 'selected' : ''}>${label}</option>`;
-  return `<div class="film-actions"><select class="favorite-status" data-key="${escapeHtml(key)}" aria-label="Favorite status for ${name}">${option('plan', 'Plan')}${option('watching', 'Watching')}${option('watched', 'Greyed out')}</select><input class="favorite-note" data-key="${escapeHtml(key)}" aria-label="Note for ${name}" placeholder="Note" value="${escapeHtml(saved.notes || '')}"></div>`;
+  return `<div class="film-actions"><select class="favorite-status" data-key="${escapeHtml(key)}" aria-label="Favorite status for ${name}">${option('plan', 'Plan')}${option('watching', 'Watching')}${option('watched', 'Hidden away')}</select><input class="favorite-note" data-key="${escapeHtml(key)}" aria-label="Note for ${name}" placeholder="Note" value="${escapeHtml(saved.notes || '')}"></div>`;
 }
 
 // context: {imageBaseUrl, selected: Set, favorites: Map, compareKeys: Set, greyKeys: Set, favoritesOnly, pageHref}
@@ -145,7 +145,7 @@ export function filmCard(film, section, context) {
   const watched = savedFavorite.status === 'watched' || Boolean(context.watched?.has(key));
   const hidden = Boolean(context.hiddenKeys?.has(key));
   const badge = watched
-    ? '<span class="poster-badge">Greyed out</span>'
+    ? '<span class="poster-badge">Hidden away</span>'
     : added.length ? `<span class="poster-badge poster-badge-new" title="New on ${escapeHtml(added.join(', '))}">New<span class="visually-hidden"> on ${escapeHtml(added.join(', '))}</span></span>`
       : removed.length ? `<span class="poster-badge poster-badge-gone" title="Gone from ${escapeHtml(removed.join(', '))}">Gone<span class="visually-hidden"> from ${escapeHtml(removed.join(', '))}</span></span>` : '';
   // Heart at the top right of the poster; compare, not now and grey out on a bar at its foot (hover, focus, long press).

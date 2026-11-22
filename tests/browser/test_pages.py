@@ -926,8 +926,8 @@ def test_card_menu_sets_a_film_aside_and_marks_it_watched_with_undo(app_server, 
     # Watched: the poster says so, the toast offers Undo.
     first.hover()  # the action bar shows while the pointer is on the card
     first.get_by_role("button", name="Grey out").click()
-    expect(page.locator("#toast-message")).to_contain_text("greyed out")
-    expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_text("Greyed out")
+    expect(page.locator("#toast-message")).to_contain_text("hidden away")
+    expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_text("Hidden away")
     assert any(item["flag"] == "watched" for item in app_server["store"].list_flags())
     page.locator("#toast-undo").click()
     expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_count(0)
@@ -974,7 +974,7 @@ def test_keyboard_shortcuts(app_server, page):
     # "s" marks the card in focus as watched; "g" then "s" goes to the subscriptions.
     page.locator("article.film .film-open").first.focus()
     page.keyboard.press("s")
-    expect(page.locator("article.film .poster-badge")).to_have_text("Greyed out")
+    expect(page.locator("article.film .poster-badge")).to_have_text("Hidden away")
     page.keyboard.press("g")
     page.keyboard.press("s")
     expect(page).to_have_url(re.compile(r"/subscriptions$"))
@@ -1374,7 +1374,7 @@ def test_grey_outs_can_be_reset_on_the_data_page(app_server, page):
     expect = playwright_api.expect
     assert page.request.put(app_server["url"] + "/api/flags/348", data={"flag": "watched"}).ok
     page.goto(app_server["url"] + "/settings/data")
-    expect(page.locator("#greyouts-text")).to_contain_text("1 film is greyed out")
+    expect(page.locator("#greyouts-text")).to_contain_text("1 film is hidden away")
     page.get_by_role("button", name="Reset grey-outs").click()
     expect(page.locator("#greyouts-text")).to_contain_text("1 grey-outs removed")
     expect(page.get_by_role("button", name="Reset grey-outs")).to_be_disabled()

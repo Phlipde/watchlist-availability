@@ -83,8 +83,8 @@ async function refresh() {
   const total = flags + favorites;
   button.disabled = total === 0;
   text.textContent = total
-    ? `${total} ${total === 1 ? 'film is' : 'films are'} greyed out${favorites ? ` (${favorites} as favorites)` : ''}. They stay in the list, only paler.`
-    : 'No film is greyed out. Letterboxd is where you log what you watched.';
+    ? `${total} ${total === 1 ? 'film is' : 'films are'} hidden away${favorites ? ` (${favorites} as favorites)` : ''}. They stay in the list, only paler.`
+    : 'No film is hidden away. Letterboxd is where you log what you watched.';
 }
 
 button?.addEventListener('click', async () => {
