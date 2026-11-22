@@ -2,11 +2,19 @@
   "name": "Watchlist Availability",
   "short_name": "Watchlist",
   "description": "Which films of your Letterboxd watchlist you can stream on your services.",
+  "id": "/",
+  "lang": "en",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#101412",
   "theme_color": "#101412",
+  "categories": ["entertainment", "lifestyle"],
+  "shortcuts": [
+    {"name": "Tonight", "url": "/"},
+    {"name": "Watchlist", "url": "/watchlist"},
+    {"name": "Subscriptions", "url": "/subscriptions"}
+  ],
   "icons": [
     {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
     {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png"},

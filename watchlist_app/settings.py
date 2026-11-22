@@ -93,13 +93,14 @@ class AppSettings:
         """The user's own services for a country (display names)."""
         country = country or self.country
         stored = self._store.get_setting(f"subscriptions:{country}")
+        names = list(providers.load_platforms_config(country))
         if stored is not None:
             try:
                 known = self.known_providers()
-                return [name for name in json.loads(stored) if name in known]
+                names = [name for name in json.loads(stored) if name in known]
             except (ValueError, TypeError):
                 pass
-        return list(providers.load_platforms_config(country))
+        return costs.not_ended(names, self.costs(country))
 
     def costs(self, country: str | None = None) -> dict[str, dict]:
         """Monthly price and reminder date per own service: {name: {"price", "remind_on"}}."""

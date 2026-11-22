@@ -1030,19 +1030,31 @@ const state = createAppState();
     document.addEventListener('pointerdown', event => {
       if (!event.target.closest('.show-actions')) results.querySelectorAll('.show-actions').forEach(card => card.classList.remove('show-actions'));
     });
-    // Phone sheet: opens at 60 %; pulling the grip up makes it full screen, pulling down shrinks it or closes it.
+    // Phone sheet: opens at 60 %. Pulling the grip or the header up makes it full screen, pulling down shrinks it or
+    // closes it, a tap on the grip toggles, and scrolling the content makes it full screen too (like a native sheet).
     (() => {
       const modal = document.getElementById('film-details-modal');
-      const grip = document.getElementById('sheet-grip');
+      const handles = [document.getElementById('sheet-grip'), modal.querySelector('.modal-header')];
       let startY = null;
-      grip.addEventListener('pointerdown', event => { startY = event.clientY; grip.setPointerCapture(event.pointerId); });
-      grip.addEventListener('pointercancel', () => { startY = null; });
-      grip.addEventListener('pointerup', event => {
-        if (startY === null) return;
-        const moved = event.clientY - startY;
-        startY = null;
-        if (moved < -40) modal.classList.add('is-full');
-        else if (moved > 60) { if (modal.classList.contains('is-full')) modal.classList.remove('is-full'); else modal.querySelector('.btn-close').click(); }
+      handles.forEach(handle => {
+        handle.addEventListener('pointerdown', event => {
+          if (event.target.closest('button, a')) return;  // the arrows and the close button stay buttons
+          startY = event.clientY;
+          handle.setPointerCapture(event.pointerId);
+        });
+        handle.addEventListener('pointercancel', () => { startY = null; });
+        handle.addEventListener('pointerup', event => {
+          if (startY === null) return;
+          const moved = event.clientY - startY;
+          startY = null;
+          const full = modal.classList.contains('is-full');
+          if (moved < -24) modal.classList.add('is-full');
+          else if (moved > 48) { if (full) modal.classList.remove('is-full'); else modal.querySelector('.btn-close').click(); }
+          else if (Math.abs(moved) < 8 && handle.id === 'sheet-grip') modal.classList.toggle('is-full', !full);
+        });
+      });
+      modal.querySelector('.modal-body').addEventListener('scroll', event => {
+        if (matchMedia('(max-width: 800px)').matches && event.target.scrollTop > 24) modal.classList.add('is-full');
       });
       modal.addEventListener('hidden.bs.modal', () => modal.classList.remove('is-full'));
     })();
@@ -1147,6 +1159,8 @@ const state = createAppState();
       const key = pendingFilm;
       if ([...state.films, ...state.unavailable].some(film => filmKey(film) === key)) {
         pendingFilm = null;
+        // A link opened in a new tab (or the installed app) goes straight to the full-screen sheet on a phone.
+        document.getElementById('film-details-modal').classList.toggle('is-full', matchMedia('(max-width: 800px)').matches);
         showFilmDetails(key, results);
       } else if (final) {
         pendingFilm = null;

@@ -7,6 +7,7 @@ Run with `pytest -m browser`. Needs `pip install -r requirements-dev.txt` and a
 browser: `playwright install chromium`, or an installed Chrome or Edge.
 """
 
+import datetime as dt
 import json
 import re
 import threading
@@ -378,6 +379,51 @@ def test_keyboard_keeps_its_place(app_server, page):
     expect(details).to_be_focused()
 
 
+def test_phone_details_sheet_can_be_pulled_to_full_screen(app_server, page):
+    expect = playwright_api.expect
+    page.set_viewport_size({"width": 390, "height": 800})
+    page.goto(f"{app_server['url']}/watchlist?film=949")
+    modal = page.locator("#film-details-modal")
+    expect(modal).to_be_visible(timeout=15000)
+    dialog = page.locator("#film-details-modal .modal-dialog")
+    # The slide-in must be over: dragging a moving sheet would hit the wrong spot.
+    page.wait_for_function(
+        "() => ['none', 'matrix(1, 0, 0, 1, 0, 0)'].includes(getComputedStyle(document.querySelector("
+        "'#film-details-modal .modal-dialog')).transform)"
+    )
+    # Opened by a link (a new tab), the sheet is full screen at once; opened by a tap on a card it is 60 %.
+    expect(modal).to_have_class(re.compile("is-full"))
+    assert dialog.evaluate("el => el.getBoundingClientRect().height") > 700
+
+    def drag(selector, dy):
+        page.wait_for_timeout(450)  # the height change takes 0.2 s; the grip moves while it runs
+        box = page.locator(selector).bounding_box()
+        x, y = box["x"] + 30, box["y"] + box["height"] / 2
+        page.mouse.move(x, y)
+        page.mouse.down()
+        page.mouse.move(x, y + dy, steps=5)
+        page.mouse.up()
+
+    drag("#sheet-grip", 80)  # pull the grip down: 60 %
+    expect(modal).not_to_have_class(re.compile("is-full"))
+    page.wait_for_timeout(450)
+    assert dialog.evaluate("el => el.getBoundingClientRect().height") < 600
+    drag("#sheet-grip", -80)  # pull the grip up
+    expect(modal).to_have_class(re.compile("is-full"))
+    drag("#sheet-grip", 80)  # and down again
+    expect(modal).not_to_have_class(re.compile("is-full"))
+    drag("#film-details-modal .modal-header", -80)  # the header works too, not only the thin grip
+    expect(modal).to_have_class(re.compile("is-full"))
+    page.wait_for_timeout(450)
+    page.locator("#sheet-grip").click()  # a tap toggles
+    expect(modal).not_to_have_class(re.compile("is-full"))
+    page.wait_for_timeout(450)
+    page.locator("#film-details-modal .modal-body").evaluate(
+        "el => { el.scrollTop = 200; }"
+    )  # scrolling expands it
+    expect(modal).to_have_class(re.compile("is-full"))
+
+
 def test_phone_filter_sheet_stays_open_while_choosing(app_server, page):
     expect = playwright_api.expect
     page.set_viewport_size({"width": 375, "height": 800})
@@ -531,6 +577,36 @@ def test_price_is_saved_when_you_leave_the_field(app_server, page):
     expect(page.locator("#total-month")).to_contain_text(re.compile(r"10[.,]50"))
     page.reload()
     expect(netflix.locator('[name="price"]')).to_have_value("10.5")
+
+
+def test_subscriptions_page_adds_a_service_and_cancels_it_to_an_end_date(app_server, page):
+    expect = playwright_api.expect
+    settings = app_server["settings"]
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    page.goto(f"{app_server['url']}/subscriptions")
+    # Add: search, pick; the page reloads with the service saved.
+    page.locator("#add-service").click()
+    page.locator("#add-search").fill("MUBI")
+    page.locator('#add-list .add-item[data-name="MUBI"]').click()
+    expect(page.locator("#add-dialog")).to_be_hidden()
+    assert sorted(settings.subscriptions("DE")) == ["MUBI", "Netflix"]
+    # Cancel Netflix to a date: it stays on the list until then.
+    netflix = page.locator('tr[data-service="Netflix"]')
+    netflix.get_by_role("button", name="Cancel", exact=True).click()
+    future = (dt.date.today() + dt.timedelta(days=20)).isoformat()
+    page.locator("#cancel-date").fill(future)
+    page.get_by_role("button", name="Cancel subscription").click()
+    expect(netflix.locator(".pill-warn")).to_contain_text("Ends")
+    expect(page.locator("#save-state")).to_have_text("Saved")
+    assert settings.costs("DE")["Netflix"]["ends_on"] == future
+    assert "Netflix" in settings.subscriptions("DE")  # runs to the end date
+    page.reload()
+    expect(netflix.locator(".pill-warn")).to_contain_text("Ends")
+    # Undo takes the end date away again.
+    netflix.get_by_role("button", name="Undo").click()
+    expect(page.locator("#save-state")).to_have_text("Saved")
+    assert "ends_on" not in settings.costs("DE").get("Netflix", {})
 
 
 def test_services_are_saved_as_you_tick_and_can_be_undone(app_server, page):

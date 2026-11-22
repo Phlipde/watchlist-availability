@@ -10,14 +10,14 @@
   <title>Subscriptions · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261122-28') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261122-33') }}" rel="stylesheet">
 </head>
 <body>
   {% include "partials/header.html" %}
-  <main class="page" id="subscriptions-page" data-country="{{ country }}">
+  <main class="page" id="subscriptions-page" data-country="{{ country }}" data-own="{{ own|tojson|forceescape }}">
     <h1 class="page-title">Subscriptions</h1>
     {% macro info(text) %}<span class="info" tabindex="0" role="note" aria-label="{{ text }}" title="{{ text }}"><i class="ti ti-info-circle" aria-hidden="true"></i></span>{% endmacro %}
-    <p class="meta">Which subscriptions are worth it for your watchlist in {{ country }}. <a href="/settings/services">Choose your services</a></p>
+    <p class="meta sub-lead">Which subscriptions are worth it for your watchlist in {{ country }}. <button class="btn btn-sm btn-outline-secondary add-service" id="add-service" type="button"><i class="ti ti-plus" aria-hidden="true"></i> Add service</button> <a href="/settings/services">All services</a></p>
     <div class="deadline-banner" id="deadline-banner" role="status" hidden data-deadlines="{{ deadlines|tojson|forceescape }}"></div>
     {% if not last_scan_at %}<p class="meta">No scan for {{ country }} yet; the film counts appear after the first scan.</p>{% endif %}
 
@@ -77,7 +77,7 @@
           <tr data-service="{{ service.name }}" data-only="{{ service.only_here|length }}" data-films="{{ service.films }}" data-hours="{{ service.hours }}" data-value="{{ service.value }}" data-detail="{{ service|tojson|forceescape }}" data-history="{{ (history.get(service.name) or [])|tojson|forceescape }}">
             <td class="service-name" data-label="Service"><button class="service-open" type="button" data-service="{{ service.name }}" aria-haspopup="dialog">{% if logos.get(service.name) %}<img class="provider-logo" src="{{ logo_base_url }}{{ logos[service.name] }}" alt="" loading="lazy">{% endif %}<span>{{ service.name }}</span></button></td>
             <td class="num" data-label="Price / month"><input class="form-control form-control-sm price-input" name="price" inputmode="decimal" autocomplete="off" placeholder="€ / month" value="{{ service.price if service.price is not none else '' }}" aria-label="Price per month for {{ service.name }}"></td>
-            <td data-label="Renews / cancel by"><button class="date-button" type="button" data-for="{{ service.name }}">{% if service.remind_on %}{{ service.remind_on }}{% else %}Set date{% endif %}</button><input class="visually-hidden date-input" type="date" name="remind_on" value="{{ service.remind_on or '' }}" tabindex="-1" aria-label="Renewal or cancellation date for {{ service.name }}"></td>
+            <td data-label="Renews / cancel by"><button class="date-button" type="button" data-for="{{ service.name }}">{% if service.remind_on %}{{ service.remind_on }}{% else %}Set date{% endif %}</button><input class="visually-hidden date-input" type="date" name="remind_on" value="{{ service.remind_on or '' }}" tabindex="-1" aria-label="Renewal or cancellation date for {{ service.name }}"><span class="cancel-state">{% if service.ends_on %}<span class="pill pill-warn" data-ends="{{ service.ends_on }}"></span> <button class="film-link cancel-sub" type="button" data-undo>Undo</button>{% else %}<button class="film-link cancel-sub" type="button">Cancel</button>{% endif %}</span></td>
             <td class="num" data-label="Watchlist">{{ service.films }}</td>
             <td class="num" data-label="Only here">{% if service.only_here %}{% if service.favorites %}<span class="fav-count" title="{{ service.favorites }} of them are favorites"><i class="ti ti-heart-filled" aria-hidden="true"></i> {{ service.favorites }}</span> {% endif %}<details class="only-here"><summary>{{ service.only_here|length }}</summary><ul>{% for film in service.only_here %}<li>{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</li>{% endfor %}</ul></details>{% else %}0{% endif %}</td>
             <td class="num" data-label="Value">{{ service.value }}</td>
@@ -97,7 +97,7 @@
     {% if costs.free_block or costs.free_empty %}
     <section class="free-block" aria-labelledby="free-heading">
       <h2 class="h4" id="free-heading">Free services <span class="pill pill-ok">{{ costs.free_films }} films free</span></h2>
-      <ul class="chip-list">{% for item in costs.free_block %}<li class="static-chip">{% if logos.get(item.name) %}<img class="provider-logo-sm" src="{{ logo_base_url }}{{ logos[item.name] }}" alt="" loading="lazy">{% endif %}{{ item.name }} <span class="option-count">{{ item.films }}</span></li>{% endfor %}{% if costs.free_empty %}<li class="hint">+{{ costs.free_empty }} with no films</li>{% endif %}</ul>
+      <ul class="chip-list">{% for item in costs.free_block %}<li class="static-chip">{% if logos.get(item.name) %}<img class="provider-logo-sm" src="{{ logo_base_url }}{{ logos[item.name] }}" alt="" loading="lazy">{% endif %}{{ item.name }} <span class="option-count">{{ item.films }}</span> <button class="chip-x" type="button" data-remove="{{ item.name }}" aria-label="Remove {{ item.name }} from your services"><i class="ti ti-x" aria-hidden="true"></i></button></li>{% endfor %}{% if costs.free_empty %}<li class="hint">+{{ costs.free_empty }} with no films</li>{% endif %}</ul>
     </section>
     {% endif %}
     {% else %}
@@ -139,11 +139,25 @@
       {% else %}<p class="meta">No film is only available to rent.</p>{% endif %}
     </section>
   </main>
+  <dialog class="small-dialog" id="cancel-dialog" aria-labelledby="cancel-title">
+    <form method="dialog">
+      <h2 class="h5" id="cancel-title">Cancel</h2>
+      <p class="hint">It stays on your services until this day is over, then it drops out of your lists and counts.</p>
+      <label class="menu-field"><span>Last day</span><input class="form-control form-control-sm" type="date" id="cancel-date" required></label>
+      <div class="dialog-actions"><button class="btn btn-sm btn-ghost" value="no" formnovalidate>Keep it</button><button class="btn btn-sm btn-accent" id="cancel-confirm" value="yes">Cancel subscription</button></div>
+    </form>
+  </dialog>
+  <dialog class="small-dialog" id="add-dialog" aria-labelledby="add-title">
+    <h2 class="h5" id="add-title">Add a service</h2>
+    <input class="form-control form-control-sm" id="add-search" type="search" placeholder="Find a service…" aria-label="Find a service">
+    <ul class="add-list" id="add-list">{% for item in candidates %}<li><button type="button" class="add-item" data-name="{{ item.name }}">{% if logos.get(item.name) %}<img class="provider-logo-sm" src="{{ logo_base_url }}{{ logos[item.name] }}" alt="" loading="lazy">{% endif %}<span>{{ item.name }}</span><span class="option-count">{{ item.group }}</span></button></li>{% endfor %}</ul>
+    <div class="dialog-actions"><button class="btn btn-sm btn-ghost" id="add-close" type="button">Close</button></div>
+  </dialog>
   <dialog class="side-drawer" id="service-drawer" aria-labelledby="service-drawer-title"><div class="drawer-head"><h2 id="service-drawer-title"></h2><button class="sheet-close" id="service-drawer-close" type="button" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button></div><div class="drawer-body" id="service-drawer-body"></div></dialog>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261122-28') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261122-33') }}" type="module"></script>
   <script>window.PLAN_DATA = {{ costs.plan|tojson }};</script>
   <script>window.IMAGE_BASE_URL = {{ image_base_url|tojson }}; window.WEEKLY_HOURS = {{ weekly_hours|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/plan-page.js', v='20261122-28') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261122-28') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/plan-page.js', v='20261122-33') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261122-33') }}" type="module"></script>
 </body>
 </html>

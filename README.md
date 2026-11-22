@@ -94,7 +94,7 @@ The **Abroad** chip adds films that your ticked services carry in another countr
 - `GET /feed.xml` — RSS of films that became watchable on your services (30 days).
 - `GET /calendar.ics` — your renewal dates as a calendar feed.
 - `GET /api/sensors` — numbers for a Home Assistant REST sensor (`new_on_my_services`, `gone_from_my_services`, `next_subscription_deadline`, `watchlist_coverage`, `films_available`).
-- PWA: installable over https or on localhost; opens offline with the data it saved last.
+- PWA: installable over https or on localhost; opens offline with the data it saved last (films, favorites, marks, abroad).
 
 ---
 
@@ -173,6 +173,16 @@ The container starts as root only to set up `/data`, then runs as `PUID`/`PGID` 
 | `WATCHLIST_DISABLE_SCHEDULER` | not set | `1` switches off automatic scans in this process |
 | `WATCHLIST_DEV` | not set | `1` opens `/dev/ui`, a page with every button, menu and chip in every state (also open in debug mode) |
 | `WATCHLIST_TRUSTED_HOSTS` | not set | Host names you reach the app under behind a proxy that changes `Host`, comma-separated |
+
+### Install on Android
+
+Chrome only offers a real *Install app* (with its own icon and no address bar) on **https** pages. A plain `http://192.168.x.x:5000` address only gets a shortcut. Pick one:
+
+- **Tailscale** (easiest at home and away): `tailscale serve --bg 5000` on the server gives you `https://<server>.<tailnet>.ts.net`; open it on the phone and choose *Install app*.
+- **A reverse proxy with a certificate** (Nginx Proxy Manager, Caddy, Traefik) in front of port 5000. It can ask for a login too, which the app does not.
+- **Only to try it:** in Chrome on the phone open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`, add your `http://…:5000` address, enable it and restart Chrome.
+
+Once installed, a film link opened on the phone shows the details full screen at once, and the app opens offline with the data it saved last.
 
 ### HTTP endpoints
 

@@ -70,7 +70,7 @@ function recalc() {
 // What the drawer edits per service (shared with n people, notice days, trial date, note, cancellation link).
 const extraOf = name => {
   const detail = details.get(name) || {};
-  return {shared: detail.shared > 1 ? detail.shared : '', notice_days: detail.notice_days ?? '', trial_on: detail.trial_on || '', note: detail.note || '', cancel_url: detail.cancel_url || ''};
+  return {shared: detail.shared > 1 ? detail.shared : '', notice_days: detail.notice_days ?? '', trial_on: detail.trial_on || '', ends_on: detail.ends_on || '', note: detail.note || '', cancel_url: detail.cancel_url || ''};
 };
 
 async function save() {
@@ -207,3 +207,77 @@ drawer?.addEventListener('change', event => {
   recalc();
   save();
 });
+
+// ---- Cancelling to the end date, adding and removing services (the same list as Settings -> My services) ----
+const ownNow = JSON.parse(page.dataset.own || '[]');
+async function putOwn(names) {
+  const response = await fetch('/api/settings', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({subscriptions_country: country, subscriptions: names})});
+  if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Could not save.');
+}
+const fail = error => { state.textContent = error instanceof TypeError ? 'Could not reach the app.' : error.message; state.classList.add('text-danger'); };
+function showCancelState(row) {
+  const ends = details.get(row.dataset.service)?.ends_on || '';
+  row.querySelector('.cancel-state').innerHTML = ends
+    ? `<span class="pill pill-warn">Ends ${dayText(ends)}</span> <button class="film-link cancel-sub" type="button" data-undo>Undo</button>`
+    : '<button class="film-link cancel-sub" type="button">Cancel</button>';
+}
+document.querySelectorAll('.cancel-state [data-ends]').forEach(pill => { pill.textContent = `Ends ${dayText(pill.dataset.ends)}`; });
+
+const cancelDialog = document.getElementById('cancel-dialog');
+let cancelling = null;
+if (table) {
+  table.addEventListener('click', event => {
+    const button = event.target.closest('.cancel-sub');
+    if (!button) return;
+    const row = button.closest('tr');
+    const name = row.dataset.service;
+    if (button.hasAttribute('data-undo')) {
+      details.get(name).ends_on = '';
+      showCancelState(row);
+      save();
+      return;
+    }
+    cancelling = row;
+    const today = new Date().toLocaleDateString('en-CA');
+    const renews = row.querySelector('[name=remind_on]').value;
+    const input = document.getElementById('cancel-date');
+    input.min = today;
+    input.value = renews >= today ? renews : '';
+    document.getElementById('cancel-title').textContent = `Cancel ${name}`;
+    cancelDialog.showModal();
+  });
+  cancelDialog.addEventListener('close', () => {
+    if (cancelDialog.returnValue !== 'yes' || !cancelling) return;
+    const row = cancelling;
+    details.get(row.dataset.service).ends_on = document.getElementById('cancel-date').value;
+    showCancelState(row);
+    save();
+  });
+}
+
+const addDialog = document.getElementById('add-dialog');
+document.getElementById('add-service').addEventListener('click', () => { addDialog.showModal(); document.getElementById('add-search').focus(); });
+document.getElementById('add-close').addEventListener('click', () => addDialog.close());
+document.getElementById('add-search').addEventListener('input', event => {
+  const query = event.target.value.trim().toLowerCase();
+  document.querySelectorAll('#add-list li').forEach(item => { item.hidden = Boolean(query) && !item.textContent.toLowerCase().includes(query); });
+});
+document.getElementById('add-list').addEventListener('click', async event => {
+  const item = event.target.closest('.add-item');
+  if (!item) return;
+  try {
+    await putOwn([...ownNow, item.dataset.name]);
+    sessionStorage.setItem('focusPrice', item.dataset.name);  // after the reload the price field of the new row gets the focus
+    location.reload();
+  } catch (error) { addDialog.close(); fail(error); }
+});
+document.querySelector('.free-block')?.addEventListener('click', async event => {
+  const button = event.target.closest('.chip-x');
+  if (!button) return;
+  try { await putOwn(ownNow.filter(name => name !== button.dataset.remove)); location.reload(); } catch (error) { fail(error); }
+});
+const added = sessionStorage.getItem('focusPrice');
+if (added) {
+  sessionStorage.removeItem('focusPrice');
+  rows().find(row => row.dataset.service === added)?.querySelector('[name=price]').focus();
+}

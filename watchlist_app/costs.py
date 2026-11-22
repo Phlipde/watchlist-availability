@@ -105,6 +105,7 @@ def overview(
                 "trial_on": entry.get("trial_on"),
                 "note": entry.get("note") or "",
                 "cancel_url": entry.get("cancel_url") or "",
+                "ends_on": entry.get("ends_on"),
                 "remind_on": entry.get("remind_on"),
                 "films": len(on),
                 "value": value,
@@ -402,8 +403,15 @@ def clean_costs(raw: object, allowed: set[str]) -> dict[str, dict]:
     return clean
 
 
+def not_ended(names: list[str], entries: dict[str, dict], today: datetime.date | None = None) -> list[str]:
+    """The services that are still yours: one cancelled "to the end date" stays until that day is over."""
+    today = today or datetime.date.today()
+    last_day = {name: (entries.get(name) or {}).get("ends_on") or "9999-12-31" for name in names}
+    return [name for name in names if last_day[name] >= today.isoformat()]
+
+
 def _clean_management(name: str, entry: dict) -> dict:
-    """The optional fields of a service: shared with n people, notice days, trial date, note, link."""
+    """The optional fields of a service: shared, notice days, trial date, end date, note, link."""
     extra: dict[str, Any] = {}
     shared = entry.get("shared")
     if shared not in (None, "", 1, "1"):
@@ -429,6 +437,12 @@ def _clean_management(name: str, entry: dict) -> dict:
             extra["trial_on"] = datetime.date.fromisoformat(str(trial)).isoformat()
         except ValueError:
             raise ValueError(f"The trial date for {name} must be a date.") from None
+    ends = entry.get("ends_on")
+    if ends not in (None, ""):
+        try:
+            extra["ends_on"] = datetime.date.fromisoformat(str(ends)).isoformat()
+        except ValueError:
+            raise ValueError(f"The end date for {name} must be a date.") from None
     note = str(entry.get("note") or "").strip()
     if note:
         extra["note"] = note[:300]
