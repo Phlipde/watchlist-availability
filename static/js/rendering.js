@@ -72,7 +72,6 @@ function wayLine(film, key, context) {
   const logoOrName = name => logo(name) || `<span class="way-name">${escapeHtml(name || '')}</span>`;
   const text = escapeHtml(wayText(way));
   const title = escapeHtml(film.title);
-  const named = way.service && !logos[way.service] && ['free', 'ads'].includes(way.kind) ? `${escapeHtml(way.service)} · ` : '';
   const more = way.others > 0
     ? `<button class="best-more" type="button" data-open-more data-key="${escapeHtml(key)}" aria-label="${way.others} more ${way.others === 1 ? 'way' : 'ways'} to watch ${title}">+${way.others}</button>`
     : '';
@@ -83,8 +82,26 @@ function wayLine(film, key, context) {
     return `<div class="best-way"><button class="best-way-link" type="button" data-open-more data-key="${escapeHtml(key)}">${logoOrName(way.service)}${flag}<span class="way-text">Abroad in ${name}, on ${escapeHtml(way.service)}</span></button>${more}</div>`;
   }
   if (way.kind === 'none') return `<div class="best-way is-muted"><span class="best-way-link is-static" tabindex="0"><i class="ti ti-ban way-none" aria-hidden="true"></i><span class="way-text">${text}</span></span></div>`;
-  const href = watchUrl(film, context.country || 'DE');
-  return `<div class="best-way${way.muted ? ' is-muted' : ''}"><a class="best-way-link" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${logoOrName(way.service)}<span class="way-text">${named}${text}</span></a>${more}</div>`;
+  // One row of logo tiles (best first); a small round € marks a service that only rents or sells the film.
+  const href = escapeHtml(watchUrl(film, context.country || 'DE'));
+  const LABEL = {free: 'Free', flatrate: 'Subscription', ads: 'With ads', rent: 'Rent', buy: 'Buy'};
+  const tile = entry => {
+    const kind = ['free', 'flatrate', 'ads', 'rent', 'buy'].find(k => entry.kinds.has(k));
+    const paid = kind === 'rent' || kind === 'buy';
+    const badge = paid ? '<span class="way-badge" aria-hidden="true">€</span>' : '';
+    return `<a class="best-way-link${entry.own || paid ? '' : ' is-dim'}" href="${href}" target="_blank" rel="noreferrer">${logoOrName(entry.name)}${badge}<span class="way-text">${escapeHtml(entry.name)} · ${LABEL[kind]}</span></a>`;
+  };
+  const rank = entry => (entry.name === way.service ? 0 : entry.own && ['free', 'flatrate', 'ads'].some(k => entry.kinds.has(k)) ? 1 : 2);
+  // Only your own services get a tile; with none of them, the one best way (a shop, or a service that is not yours).
+  const all = catalogues(film, context.selected).sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+  const mine = all.filter(entry => entry.own);
+  const entries = mine.length ? mine : all.slice(0, 1);
+  const SHOWN = 4;
+  const rest = all.length - Math.min(entries.length, SHOWN);
+  const extra = rest > 0
+    ? `<button class="best-more" type="button" data-open-more data-key="${escapeHtml(key)}" aria-label="${rest} more ${rest === 1 ? 'service' : 'services'} for ${title}">+${rest}</button>`
+    : '';
+  return `<div class="best-way${way.muted ? ' is-muted' : ''}"><div class="way-row">${entries.slice(0, SHOWN).map(tile).join('')}</div>${extra}</div>`;
 }
 
 export function changeBadgesFor(film, selected) {
