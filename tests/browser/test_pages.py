@@ -378,6 +378,51 @@ def test_keyboard_keeps_its_place(app_server, page):
     expect(details).to_be_focused()
 
 
+def test_phone_details_sheet_can_be_pulled_to_full_screen(app_server, page):
+    expect = playwright_api.expect
+    page.set_viewport_size({"width": 390, "height": 800})
+    page.goto(f"{app_server['url']}/watchlist?film=949")
+    modal = page.locator("#film-details-modal")
+    expect(modal).to_be_visible(timeout=15000)
+    dialog = page.locator("#film-details-modal .modal-dialog")
+    # The slide-in must be over: dragging a moving sheet would hit the wrong spot.
+    page.wait_for_function(
+        "() => ['none', 'matrix(1, 0, 0, 1, 0, 0)'].includes(getComputedStyle(document.querySelector("
+        "'#film-details-modal .modal-dialog')).transform)"
+    )
+    # Opened by a link (a new tab), the sheet is full screen at once; opened by a tap on a card it is 60 %.
+    expect(modal).to_have_class(re.compile("is-full"))
+    assert dialog.evaluate("el => el.getBoundingClientRect().height") > 700
+
+    def drag(selector, dy):
+        page.wait_for_timeout(450)  # the height change takes 0.2 s; the grip moves while it runs
+        box = page.locator(selector).bounding_box()
+        x, y = box["x"] + 30, box["y"] + box["height"] / 2
+        page.mouse.move(x, y)
+        page.mouse.down()
+        page.mouse.move(x, y + dy, steps=5)
+        page.mouse.up()
+
+    drag("#sheet-grip", 80)  # pull the grip down: 60 %
+    expect(modal).not_to_have_class(re.compile("is-full"))
+    page.wait_for_timeout(450)
+    assert dialog.evaluate("el => el.getBoundingClientRect().height") < 600
+    drag("#sheet-grip", -80)  # pull the grip up
+    expect(modal).to_have_class(re.compile("is-full"))
+    drag("#sheet-grip", 80)  # and down again
+    expect(modal).not_to_have_class(re.compile("is-full"))
+    drag("#film-details-modal .modal-header", -80)  # the header works too, not only the thin grip
+    expect(modal).to_have_class(re.compile("is-full"))
+    page.wait_for_timeout(450)
+    page.locator("#sheet-grip").click()  # a tap toggles
+    expect(modal).not_to_have_class(re.compile("is-full"))
+    page.wait_for_timeout(450)
+    page.locator("#film-details-modal .modal-body").evaluate(
+        "el => { el.scrollTop = 200; }"
+    )  # scrolling expands it
+    expect(modal).to_have_class(re.compile("is-full"))
+
+
 def test_phone_filter_sheet_stays_open_while_choosing(app_server, page):
     expect = playwright_api.expect
     page.set_viewport_size({"width": 375, "height": 800})
