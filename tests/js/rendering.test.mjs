@@ -145,7 +145,7 @@ test('the table lists title link, year, runtime, rating and every service as a s
   const films = [{key: '1', title: 'Heat', year: 1995, runtime: 170, letterboxd_rating: 4.1, providers: {Netflix: ['flatrate'], MUBI: ['flatrate'], 'Amazon VOD': ['rent', 'buy']}}];
   const context = {selected: new Set(['Netflix']), providerLogos: {Netflix: '/n.png', MUBI: '/m.png'}, logoBaseUrl: 'https://img/'};
   const html = filmTable(films, context);
-  assert.match(html, /<th scope="row"><a class="[^"]*film-open" href="[^"]*film=1"[^>]*>Heat<\/a>/);
+  assert.match(html, /<th scope="row"><span class="table-title"><span class="table-poster" aria-hidden="true"><\/span><a class="[^"]*film-open" href="[^"]*film=1"[^>]*>Heat<\/a>/);
   assert.match(html, /<td>1995<\/td>/);
   assert.match(html, /★ 4\.1/);
   assert.match(html, /<th scope="col">Services<\/th>/);

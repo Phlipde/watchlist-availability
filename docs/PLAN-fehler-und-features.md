@@ -87,7 +87,7 @@ Heute: „Filters“ (volle Breite) → Suche (volle Breite) → Ansicht-Icons +
 - [x] Grid-Kacheln: auf Wunsch alle eigenen Dienste (max. 4) mit Typ-Icon in der Ecke statt ein Logo + Wort; kein Anbieter-Name, keine unterstrichenen Titel.
 - [x] Keine Orte in Schlagwörtern; „Start with“ nur für erschienene Teile.
 - [x] „Grey out“ bleibt als Aktion; die Markierung heißt „Hidden away“ (so entschieden).
-- [~] Tabellentitel bleibt sichtbar (CSS, nicht im Browser angesehen), Mini-Poster fehlt; doppelter Toast nicht reproduzierbar.
+- [x] Tabellentitel bleibt sichtbar, mit Mini-Poster; doppelter Toast nicht reproduzierbar.
 - [x] Neue Unit-Tests grün (Bewertungsfilter, Filmreihe, Schlagwort-Filter, bester Weg).
 
 ---
