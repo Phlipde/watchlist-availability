@@ -1301,3 +1301,36 @@ a.stat-tile:focus-visible, .avail-seg:focus-visible, .avail-legend a:focus-visib
   .stat-tile strong { font-size: 1.75rem; }
   .stat-tiles-two { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* LogoStack: first logo free, up to three overlap it by ~40 %, "+N"; a click fans them out in place (150 ms). */
+.lstack { position: relative; display: inline-flex; max-width: 100%; }
+.lstack-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; min-width: 0; }
+.lstack-item { position: relative; display: inline-flex; flex: none; z-index: 1; transition: margin-left .15s ease; }
+.lstack-item + .lstack-item { margin-left: -9px; }
+.lstack-item + .lstack-item.is-wide { margin-left: 6px; }
+.lstack-item.is-extra { display: none; }
+.lstack-logo { display: block; width: 24px; height: 24px; border-radius: 6px; object-fit: cover; }
+.lstack-item + .lstack-item:not(.is-wide) .lstack-logo { box-shadow: 0 0 0 2px var(--surface); }
+.lstack-name { display: grid; place-items: center; width: 24px; height: 24px; overflow: hidden; border: 1px solid var(--line-field); color: var(--text-2); font-size: 10px; line-height: 1; text-align: center; }
+.lstack-more { margin-left: 6px; color: var(--text-2); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.lstack-item .way-badge { width: 14px; height: 14px; right: -4px; bottom: -4px; }
+.lstack-item .way-badge .ti { font-size: 9px; }
+.lstack-toggle { position: absolute; inset: -4px; z-index: 0; border: 0; background: none; cursor: pointer; border-radius: 8px; }
+.lstack-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+.lstack:not(.is-multi) .lstack-item { cursor: default; }
+.lstack.is-open[data-mode="fan"] .lstack-item { margin-left: 4px; }
+.lstack.is-open[data-mode="fan"] .lstack-item:first-child { margin-left: 0; }
+.lstack.is-open[data-mode="fan"] .lstack-item.is-extra { display: inline-flex; }
+.lstack.is-open[data-mode="fan"] .lstack-logo { box-shadow: none; }
+.lstack.is-open[data-mode="fan"] .lstack-more { display: none; }
+.lstack-item::after { content: attr(data-tip); position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 6; width: max-content; max-width: 220px; padding: 4px 8px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface-raised); color: var(--text); font-size: var(--fs-small); white-space: normal; opacity: 0; pointer-events: none; transition: opacity .12s; }
+.lstack-item.is-tip::after, .lstack.is-open .lstack-item:focus-visible::after { opacity: 1; }
+/* Mouse: hovering the closed stack shows every name once (native title); no fan-out. */
+.lstack-list { position: absolute; left: 0; top: calc(100% + 6px); z-index: 20; min-width: 240px; max-height: 50dvh; margin: 0; padding: 6px; overflow-y: auto; list-style: none; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface-raised); }
+.lstack-list li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; }
+.lstack-list li > span:nth-child(2) { flex: 1; min-width: 0; }
+.lstack-list .lstack-logo { width: 22px; height: 22px; }
+.lstack-list .way-badge { position: static; }
+@media (max-width: 800px) { .lstack-list { position: fixed; left: 0; right: 0; top: auto; bottom: 0; z-index: 1060; max-height: 60dvh; border-radius: 16px 16px 0 0; padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); } }
+@media (pointer: coarse) { .lstack-toggle { inset: -10px -6px; } }
+@media (prefers-reduced-motion: reduce) { .lstack-item { transition: none; } }

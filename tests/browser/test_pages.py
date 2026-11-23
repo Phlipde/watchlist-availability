@@ -517,7 +517,9 @@ def test_runtime_and_rating_filters_show_unit_and_source(app_server, page):
 def test_skip_link_and_three_stops_per_card(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"] + "/watchlist")
-    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)  # a redraw after the scan would drop the focus
+    expect(page.locator("#progress-count")).to_have_text(
+        "Complete", timeout=15000
+    )  # a redraw after the scan would drop the focus
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
     # The first Tab reaches the skip link; it jumps past header and services to the films.
     page.keyboard.press("Tab")
@@ -535,7 +537,8 @@ def test_skip_link_and_three_stops_per_card(app_server, page):
             break
         stops.append(page.evaluate("document.activeElement.className.split(' ')[0]"))
     assert stops[0] == "film-open"
-    assert "favorite" in stops and "best-way-link" in stops and stops.count("card-action") == 3
+    assert "favorite" in stops and stops.count("card-action") == 3
+    assert "lstack-toggle" in stops or "lstack-item" in stops
     # After the skip link, closing the details returns the focus to the title (no #results to go back to).
     first.locator(".film-open").focus()
     page.keyboard.press("Enter")
@@ -1476,7 +1479,9 @@ def test_the_abroad_switch_adds_films_your_services_have_in_other_countries(app_
     expect(page.locator("article.film")).to_have_count(here + 1)
     expect(page.locator("article.film .way-badge-flag")).to_have_count(1)
     abroad_card = page.locator("article.film", has=page.locator(".way-badge-flag"))
-    expect(abroad_card.locator(".best-way")).to_contain_text("Abroad")
+    expect(abroad_card.locator(".lstack-item").first).to_have_attribute(
+        "data-tip", re.compile(r"Subscription · ")
+    )
     expect(page.locator("#result-meta")).to_contain_text("1 via VPN")
     assert "where=both" in page.url
     expect(page.locator("#filter-chips")).to_contain_text("Where: Here and abroad")
@@ -1496,11 +1501,23 @@ def test_a_card_shows_only_the_logo_and_the_words_come_on_hover(app_server, page
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
     tick_all_services(page)
     card = page.locator("article.film").first
-    words = card.locator(".best-way-link .way-text")
-    expect(words).to_have_css("opacity", "0")  # only the logo (or the name) shows
-    assert words.inner_text().strip()  # the words are there for screen readers all the time
-    card.locator(".best-way-link").hover()
-    expect(words).to_have_css("opacity", "1")
+    stack = card.locator(".lstack")
+    assert stack.get_attribute("title").strip()  # hovering the closed stack names every service
+    toggle = card.locator(".lstack-toggle")
+    label = (
+        toggle.get_attribute("aria-label")
+        if toggle.count()
+        else stack.locator(".lstack-item").first.get_attribute("data-tip")
+    )
+    assert label.strip()  # the words are there for screen readers all the time
+    first = card.locator(".lstack-item").first
+    expect(first).to_have_css("margin-left", "0px")  # the best logo is never overlapped
+    if card.locator(".lstack-toggle").count():
+        card.locator(".lstack-toggle").click()
+        expect(stack).to_have_class(re.compile(r"is-open"))
+        expect(card.locator(".lstack-toggle")).to_have_attribute("aria-expanded", "true")
+        page.keyboard.press("Escape")
+        expect(stack).not_to_have_class(re.compile(r"is-open"))
 
 
 def test_many_filter_chips_collapse_behind_a_more_button(app_server, page):

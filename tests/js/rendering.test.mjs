@@ -85,37 +85,38 @@ test('availability is grouped by offer type, in a fixed order, with logos', () =
   assert.equal(availabilityByOffer({}), '');
 });
 
-test('a card has a logo for each of your services, marked with its type in a word, and +N for the rest', () => {
+test('a card has one stack of your free, subscription and ads services, no rent or buy; the best logo carries its type icon', () => {
   const film = {key: 'x', title: 'Film', providers: {Arte: ['free'], Netflix: ['flatrate'], Rakuten: ['rent'], MUBI: ['flatrate'], Sky: ['buy'], WOW: ['flatrate']}};
   const base = {imageBaseUrl: '', favorites: new Map(), compareKeys: new Set(), greyKeys: new Set(), providerLogos: {Arte: '/a.png'}, logoBaseUrl: 'https://img/', country: 'DE'};
   const html = filmCard(film, 'All', {...base, selected: new Set(['Arte', 'Netflix'])});
   assert.equal((html.match(/class="best-way(?:"| )/g) || []).length, 1);
-  assert.match(html, /<div class="way-row"><span class="best-way-link" tabindex="0"><img class="way-logo" src="https:\/\/img\/\/a\.png" alt="" loading="lazy"><span class="way-text">Arte · Free<\/span><span class="way-badge way-badge-free" aria-hidden="true"><i class="ti ti-gift"><\/i><\/span><\/span>/);
-  assert.equal((html.match(/class="best-way-link/g) || []).length, 2);  // Arte and Netflix; the others are not yours
-  assert.match(html, /data-open-more data-key="x" title="4 more services" aria-label="4 more services for Film">\+4<\/button>/);
+  assert.match(html, /lstack-item is-first is-wide" data-tip="Arte · Free"><img class="lstack-logo" src="https:\/\/img\/\/a\.png"[^>]*><span class="way-badge way-badge-free"/);
+  assert.match(html, /aria-expanded="false" aria-label="2 services: Arte, Netflix"/);
+  assert.ok(!html.includes('Rakuten') && !html.includes('lstack-more'));
   assert.ok(!html.includes('data-provider='), 'no grid of logos');
 });
 
 test('the corner icon tells free, sub, ads, rent or buy; without a logo the name shows; nothing is said plainly', () => {
   const base = {imageBaseUrl: '', favorites: new Map(), compareKeys: new Set(), greyKeys: new Set(), providerLogos: {}, country: 'DE'};
   const ads = filmCard({key: 'a', title: 'A', providers: {Netzkino: ['ads']}}, 'All', {...base, selected: new Set(['Netzkino'])});
-  assert.match(ads, /<span class="way-name">Netzkino<\/span><span class="way-text">Netzkino · With ads<\/span><span class="way-badge way-badge-ads" aria-hidden="true"><i class="ti ti-ad"><\/i>/);
+  assert.match(ads, /lstack-name">Netzkino<\/span><span class="way-badge way-badge-ads" aria-hidden="true"><i class="ti ti-ad"><\/i>/);
   const sub = filmCard({key: 's', title: 'S', providers: {Netflix: ['flatrate']}}, 'All', {...base, selected: new Set(['Netflix'])});
   assert.match(sub, /way-badge-flatrate" aria-hidden="true"><i class="ti ti-repeat"><\/i>/);
   const rent = filmCard({key: 'b', title: 'B', providers: {'Amazon VOD': ['rent'], 'Rakuten TV': ['rent']}}, 'All', {...base, selected: new Set()});
-  assert.match(rent, /way-badge-rent" aria-hidden="true"><i class="ti ti-clock"><\/i>/);
-  assert.match(rent, /\+1<\/button>/);
+  assert.ok(!rent.includes('lstack'), 'rent is not on the card');
+  assert.match(rent, /Rent · 2 shops/);
   const nothing = filmCard({key: 'c', title: 'C', providers: {}}, 'All', {...base, selected: new Set()});
   assert.match(nothing, /class="best-way is-muted"><span class="best-way-link is-static" tabindex="0"><i class="ti ti-ban way-none" aria-hidden="true"><\/i><span class="way-text">Not streaming<\/span>/);
 });
 
-test('a film that is only available abroad shows the logo with the flag of its best country, and opens the details', () => {
+test('a film that is only available abroad shows the logo with the flag of its best country', () => {
   const film = {key: 'x', title: 'Film', providers: {'Prime Video': ['flatrate']}, abroadOnly: true};  // listed because of the switch
   const context = {imageBaseUrl: '', selected: new Set(['Prime Video']), favorites: new Map(), compareKeys: new Set(), greyKeys: new Set(),
     providerLogos: {'Prime Video': '/p.png'}, logoBaseUrl: 'https://img/', country: 'DE', countryName: code => ({IT: 'Italy'}[code] || code),
     abroadFor: () => ({service: 'Prime Video', countries: ['IT', 'ES', 'US']})};
   const html = filmCard(film, 'All', context);
-  assert.match(html, /<button class="best-way-link is-abroad" type="button" data-open-more data-key="x"><img class="way-logo"[^>]*><span class="way-badge way-badge-flag" aria-hidden="true"><img src="\/static\/flags\/it\.svg" alt=""><\/span><span class="way-text">Abroad in Italy, ES, US, on Prime Video · needs a VPN<\/span><\/button>/);
+  assert.match(html, /<span class="way-badge way-badge-flag" aria-hidden="true"><img src="\/static\/flags\/it\.svg" alt=""><\/span>/);
+  assert.match(html, /data-tip="Prime Video · Subscription · Italy, ES, US"/);
 });
 
 test('with the switch on, your services abroad follow the ones you can use here; the same service is not shown twice', () => {
@@ -124,9 +125,8 @@ test('with the switch on, your services abroad follow the ones you can use here;
   const context = {imageBaseUrl: '', selected: new Set(['Netflix', 'Disney+']), favorites: new Map(), compareKeys: new Set(), greyKeys: new Set(),
     providerLogos: {}, country: 'DE', countryName: code => code, abroadList};
   const html = filmCard(film, 'All', context);
-  assert.equal((html.match(/class="best-way-link/g) || []).length, 2);  // Netflix here, Disney+ abroad
-  assert.match(html, /is-abroad[^>]*>.*Disney\+<\/span>.*way-badge-flag/s);
-  assert.ok(!html.includes('best-more'), 'nothing left over');
+  assert.match(html, /aria-label="2 services: Netflix, Disney\+"/);  // Netflix here, Disney+ abroad
+  assert.match(html, /data-tip="Disney\+ · Subscription · IT, ES"/);
 });
 
 test('the card has a small heart on the poster and an action bar, no "..." menu', () => {

@@ -11,6 +11,7 @@ import {showDeadlines} from './deadlines.js';
 import {TONIGHT_CHIPS, nowOnText, pickFilm, pickReason, recentlyGone, tonightRows} from './events.js';
 import {COST, readFilters} from './filters.js';
 import {createFilterBar, initPopovers} from './filterbar.js';
+import {initLogoStacks} from './logo-stack.js';
 import {bestRelaxation, comingSoon, elsewhereOnServices, filmKey, filterFilms, similarOnServices, sortFilms, sortRatings} from './filtering.js';
 import {updateScanFeedback} from './scans.js';
 import {abroadFilm, abroadForFilm, abroadHtml, abroadRows, abroadServices} from './abroad.js';
@@ -31,6 +32,7 @@ const state = createAppState();
     state.seed = Math.floor(Math.random() * 2 ** 31);  // "Random" keeps one order per visit
     const filterBar = createFilterBar({state, config: window.WATCHLIST_CONFIG, mySubscriptions, freeServices, rentalShops, onChange: () => renderFilms()});
     initPopovers(document);
+    initLogoStacks(document);
     const results = document.getElementById('results');
     const seen = new Set();
     const toastElement = document.getElementById('app-toast');
@@ -938,7 +940,7 @@ const state = createAppState();
       setFilmAddress(key, !detailsOpen);
     }
     // ---- Arrow keys through the films: grid, compact grid and table share one navigation ----
-    const CARD_CONTROLS = '.film-open, .favorite, .card-action, .best-way-link, .best-more';
+    const CARD_CONTROLS = '.film-open, .favorite, .card-action, .best-way-link, .best-more, .lstack';
     let activeKey = null;  // the film that holds the tab stop (roving tabindex): one stop in the whole list
     const navItems = () => [...results.querySelectorAll('article.film[data-key], tr[data-key]')];
     function applyRoving() {

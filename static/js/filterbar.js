@@ -1,6 +1,7 @@
 // The filter bar of the watchlist page: services menu, cost, genres, runtime, rating, chips and counts.
 // Pure counting lives in filtering.js; this module only reads and writes the bar's DOM.
 import {escapeHtml} from './ui.js';
+import {logoStackHtml} from './logo-stack.js';
 import {COST, FILTER_CONTROLS, activeFilters, clearFilter, durationText, resetFilters} from './filters.js';
 import {SECTION_KINDS, countVisible, facetCounts} from './filtering.js';
 import {clearLink, emptyLink, linkChips, needsUnavailable, parseLink, writeLink} from './link-filters.js';
@@ -102,9 +103,9 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   $('services-only-mine').addEventListener('change', applyServicesView);
   function updateServicesButton() {
     const chosen = [...state.selected].sort((a, b) => Number(Boolean(logos[b])) - Number(Boolean(logos[a])) || a.localeCompare(b));
-    const shown = chosen.filter(name => logos[name]).slice(0, 4);
-    $('services-logos').innerHTML = shown.map(logo).join('') + (chosen.length > shown.length ? `<span class="logo-more">+${chosen.length - shown.length}</span>` : '');
-    $('services-label').textContent = chosen.length ? (shown.length ? '' : `${chosen.length} services`) : 'No services';
+    const withLogo = chosen.filter(name => logos[name]);
+    $('services-logos').innerHTML = logoStackHtml(withLogo.map(name => ({name, kind: '', logo: (config.logoBaseUrl || '') + logos[name]})), {interactive: false});
+    $('services-label').textContent = chosen.length ? (withLogo.length ? '' : `${chosen.length} services`) : 'No services';
     $('services-button').setAttribute('aria-label', `Services: ${chosen.length} ticked`);
   }
   $('services-menu').addEventListener('change', event => {

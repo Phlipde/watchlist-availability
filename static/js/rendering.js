@@ -1,6 +1,7 @@
 import {dateTime, escapeHtml, numberText} from './ui.js';
 import {SECTION_KINDS, filmKey, sectionProviders, selectedChanges} from './filtering.js';
 import {TYPE_ICON, bestWay, catalogues, wayText} from './bestway.js';
+import {logoStackHtml} from './logo-stack.js';
 
 // "Free" alone was read three ways; the section says what it holds.
 
@@ -62,45 +63,32 @@ function filmLink(film, key, pageHref, className = 'film-open') {
 // The logos are no links (tap shows the name); "+N" opens the details at "Other services".
 function wayLine(film, key, context) {
   const logos = context.providerLogos || {};
-  const logo = (name, className = 'way-logo') => (logos[name] ? `<img class="${className}" src="${escapeHtml((context.logoBaseUrl || '') + logos[name])}" alt="" loading="lazy">` : '');
   // A film listed only because of the abroad switch has no way to watch it here: its best way is abroad.
   const way = film.abroadOnly
     ? bestWay({...film, providers: {}}, {own: context.selected, abroad: context.abroadFor ? context.abroadFor(film) : null})
     : bestWay(film, {own: context.selected});
-  // Only the logo shows (the service's name when it has none); the words come in a bubble on hover, focus or tap.
-  const logoOrName = name => logo(name) || `<span class="way-name">${escapeHtml(name || '')}</span>`;
   const text = escapeHtml(wayText(way));
-  const title = escapeHtml(film.title);
   const none = `<div class="best-way is-muted"><span class="best-way-link is-static" tabindex="0"><i class="ti ti-ban way-none" aria-hidden="true"></i><span class="way-text">${text}</span></span></div>`;
   // A row of logos for your own services (best first), each marked with a small icon for its type in the logo's corner;
   // with the abroad switch on, your services abroad follow with the flag of their best country (dashed rim: needs a VPN).
   // "+N" counts the rest. With none of your services here, the one best way (a shop, or a service that is not yours).
-  const WORDS = {free: 'Free', flatrate: 'Subscription', ads: 'With ads', rent: 'Rent', buy: 'Buy'};
   const rank = entry => (entry.name === way.service ? 0 : entry.own && ['free', 'flatrate', 'ads'].some(k => entry.kinds.has(k)) ? 1 : 2);
   // A film listed only because of the abroad switch has nothing to watch here: its offers are the abroad ones.
   const hereAll = film.abroadOnly ? [] : catalogues(film, context.selected).filter(entry => Object.keys(TYPE_ICON).some(k => entry.kinds.has(k))).sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
-  const mine = hereAll.filter(entry => entry.own);
-  const hereShown = (mine.length ? mine : hereAll.slice(0, 1)).slice(0, 4);
+  // Rent and buy are not on the card (they live in the details); only free, subscription and ads are.
+  const streaming = hereAll.filter(entry => ['free', 'flatrate', 'ads'].some(k => entry.kinds.has(k)) && entry.own);
   const abroadRows = context.abroadList ? context.abroadList(film) : way.kind === 'abroad' ? [{service: way.service, countries: way.countries}] : [];
-  const abroadNew = abroadRows.filter(row => !hereShown.some(entry => entry.name === row.service));
-  const abroadShown = abroadNew.slice(0, 4 - hereShown.length);
-  if (!hereShown.length && !abroadShown.length) return none;
-  const tile = entry => {
-    const kind = ['free', 'flatrate', 'ads', 'rent', 'buy'].find(k => entry.kinds.has(k));
-    const dim = entry.own || kind === 'rent' || kind === 'buy' ? '' : ' is-dim';
-    return `<span class="best-way-link${dim}" tabindex="0">${logoOrName(entry.name)}<span class="way-text">${escapeHtml(entry.name)} · ${WORDS[kind]}</span><span class="way-badge way-badge-${kind}" aria-hidden="true"><i class="ti ${TYPE_ICON[kind]}"></i></span></span>`;
-  };
-  const abroadTile = row => {
-    const code = row.countries[0];
-    const flag = code ? `<span class="way-badge way-badge-flag" aria-hidden="true"><img src="/static/flags/${escapeHtml(code.toLowerCase())}.svg" alt=""></span>` : '';
-    const names = row.countries.map(c => (context.countryName ? context.countryName(c) : c)).join(', ');
-    return `<button class="best-way-link is-abroad" type="button" data-open-more data-key="${escapeHtml(key)}">${logoOrName(row.service)}${flag}<span class="way-text">Abroad in ${escapeHtml(names)}, on ${escapeHtml(row.service)} · needs a VPN</span></button>`;
-  };
-  const rest = hereAll.length + abroadNew.length - hereShown.length - abroadShown.length;
-  const extra = rest > 0
-    ? `<button class="best-more" type="button" data-open-more data-key="${escapeHtml(key)}" title="${rest} more ${rest === 1 ? 'service' : 'services'}" aria-label="${rest} more ${rest === 1 ? 'service' : 'services'} for ${title}">+${rest}</button>`
-    : '';
-  return `<div class="best-way${way.muted ? ' is-muted' : ''}"><div class="way-row">${hereShown.map(tile).join('')}${abroadShown.map(abroadTile).join('')}</div>${extra}</div>`;
+  const abroadNew = abroadRows.filter(row => !streaming.some(entry => entry.name === row.service));
+  const url = name => (logos[name] ? (context.logoBaseUrl || '') + logos[name] : '');
+  const items = [
+    ...streaming.map(entry => {
+      const kind = ['free', 'flatrate', 'ads'].find(k => entry.kinds.has(k));
+      return {name: entry.name, kind, logo: url(entry.name), badge: `<span class="way-badge way-badge-${kind}" aria-hidden="true"><i class="ti ${TYPE_ICON[kind]}"></i></span>`};
+    }),
+    ...abroadNew.map(row => ({name: row.service, kind: 'abroad', logo: url(row.service), flag: row.countries[0], country: row.countries.map(c => (context.countryName ? context.countryName(c) : c)).join(', ')})),
+  ];
+  if (!items.length) return none;
+  return `<div class="best-way${way.muted ? ' is-muted' : ''}">${logoStackHtml(items)}</div>`;
 }
 
 export function changeBadgesFor(film, selected) {
