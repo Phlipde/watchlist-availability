@@ -1,5 +1,6 @@
 // The sections of the stats page, one function each. They only draw what computeStats returned; nothing is calculated here.
 import {escapeHtml as esc} from './ui.js';
+import {AVAILABILITY_LABEL} from './statistics.js';
 
 const number = value => Number(value).toLocaleString('en');
 const percent = (part, whole) => (whole ? Math.round(part / whole * 100) : 0);
@@ -14,11 +15,6 @@ function tile(value, label, {sub = '', href = ''} = {}) {
   const inner = `<strong>${esc(String(value))}</strong><span>${esc(label)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}`;
   return href ? `<a class="stat-tile" href="${esc(href)}">${inner}</a>` : `<div class="stat-tile">${inner}</div>`;
 }
-
-const AVAILABILITY_LABEL = {
-  own_subscription: 'On your subscriptions', free: 'Free', ads: 'Free with ads', other_subscription: 'In a subscription you do not have',
-  rent_buy: 'Rent or buy only', coming_soon: 'Coming soon', unavailable: 'Not available',
-};
 
 export function head(stats) {
   const o = stats.overview;
@@ -92,9 +88,9 @@ export function nextUp(stats, {imageBaseUrl}) {
   const list = (title, body, href) => `<div class="stats-list"><h3 class="stats-sub">${esc(title)}</h3>${body}${href ? `<a class="stats-all" href="${esc(href)}">Show all</a>` : ''}</div>`;
   return section('What is worth watching next?', '',
     `<div class="stats-lists">
-      ${list('Best rated on your subscriptions', filmRows(stats.bestOnOwnSubs, ratingNote, imageBaseUrl), watchlistHref({availability: 'own_subscription', sort: 'rating:desc'}))}
-      ${list('Waiting the longest', filmRows(stats.waitingLongest, film => `#${film.watchlist_position} on the watchlist`, imageBaseUrl), watchlistHref({availability: 'own_subscription', sort: 'added:asc'}))}
-      ${list('Worth renting', filmRows(stats.worthRenting, ratingNote, imageBaseUrl), watchlistHref({availability: 'rent_buy', ratingMin: 4, sort: 'rating:desc'}))}
+      ${list('Best rated on your subscriptions', filmRows(stats.bestOnOwnSubs, ratingNote, imageBaseUrl), watchlistHref({availability: 'own_subscription', sort: 'letterboxd'}))}
+      ${list('Waiting the longest', filmRows(stats.waitingLongest, film => `#${film.watchlist_position} on the watchlist`, imageBaseUrl), watchlistHref({availability: 'own_subscription', sort: 'oldest'}))}
+      ${list('Worth renting', filmRows(stats.worthRenting, ratingNote, imageBaseUrl), watchlistHref({availability: 'rent_buy', rating: 'lb:4', sort: 'letterboxd'}))}
       ${list('Film series', series ? `<ol class="film-rows">${series}</ol>` : '<p class="empty">No series with two films.</p>', '')}
     </div>`);
 }
@@ -138,10 +134,10 @@ export function distribution(stats, {nameOfLanguage, nameOfCountry, ageNote}) {
   return section('What does my list look like?', 'Click a bar to open those films.',
     `<div class="stats-grid">
       ${card('Genres', bars(stats.genres.map(genre => [genre.name, genre.total]), o.total, {hrefOf: name => watchlistHref({genre: name})}), 'A film can have several genres.')}
-      ${card('Decades', bars(stats.decades, o.total, {limit: 20, hrefOf: name => watchlistHref({decade: String(name).slice(0, 4)})}), decadeNote)}
-      ${card('Runtime', histogram(stats.runtimeHistogram, {unit: value => `${Math.round(value)} min`, hrefOf: bin => watchlistHref({runtimeMin: bin.from, ...(Number.isFinite(bin.to) ? {runtimeMax: bin.to - 1} : {})})}))}
-      ${card('Letterboxd rating', histogram(stats.ratingHistogram, {unit: value => value.toFixed(2), hrefOf: bin => watchlistHref({ratingMin: bin.from})}))}
-      ${card('Age rating', bars(stats.ageRatings, o.total, {hrefOf: name => watchlistHref({ageRating: name})}), ageNote)}
+      ${card('Decades', bars(stats.decades, o.total, {limit: 20, hrefOf: name => watchlistHref({from: String(name).slice(0, 4), to: Number(String(name).slice(0, 4)) + 9})}), decadeNote)}
+      ${card('Runtime', histogram(stats.runtimeHistogram, {unit: value => `${Math.round(value)} min`, hrefOf: bin => watchlistHref({...(bin.from ? {runtimeMin: bin.from} : {}), ...(Number.isFinite(bin.to) ? {max: bin.to - 1} : {})})}))}
+      ${card('Letterboxd rating', histogram(stats.ratingHistogram, {unit: value => value.toFixed(2), hrefOf: bin => watchlistHref({rating: `lb:${bin.from}`})}))}
+      ${card('Age rating', bars(stats.ageRatings, o.total, {hrefOf: name => watchlistHref({ages: name})}), ageNote)}
       ${card('Language and country', `${sentence(stats.languages, o.total, nameOfLanguage)}${sentence(stats.countries, o.total, nameOfCountry)}`)}
       ${card('Critics against crowd', `<p class="hint">Letterboxd compared with TMDB, both out of 10.</p><h4 class="stats-sub">Letterboxd likes more</h4><ul class="plain-list">${gaps(stats.ratingGap.positive)}</ul><h4 class="stats-sub">TMDB likes more</h4><ul class="plain-list">${gaps(stats.ratingGap.negative)}</ul>`)}
     </div>
@@ -193,7 +189,7 @@ export function changes(stats, now) {
   const weeks = [...c.weeks].reverse().map(week => `<li title="Week from ${day(week.start)}: ${week.added} new, ${week.removed} gone"><span class="wk-up" style="height:${week.added / peak * 100}%"></span><span class="wk-down" style="height:${week.removed / peak * 100}%"></span><span class="visually-hidden">Week from ${day(week.start)}: ${week.added} new, ${week.removed} gone</span></li>`).join('');
   const events = stats.recentChanges.map(change => `<li><a href="/watchlist?film=${encodeURIComponent(change.film_key)}">${esc(change.title || change.film_key)}</a> <span class="muted">${change.change === 'added' ? 'new on' : 'gone from'} ${esc(change.provider)} · ${day(change.created)}</span></li>`).join('');
   return section('What has changed?', 'The last 30 days.',
-    `<div class="stat-tiles stat-tiles-two">${tile(number(c.added30), 'new on a service', {href: watchlistHref({change: 'added'})})}${tile(number(c.removed30), 'gone from a service', {href: watchlistHref({change: 'removed'})})}</div>
+    `<div class="stat-tiles stat-tiles-two">${tile(number(c.added30), 'new on a service', {href: watchlistHref({changes: 'added'})})}${tile(number(c.removed30), 'gone from a service', {href: watchlistHref({changes: 'removed'})})}</div>
     <ol class="weeks" aria-label="New above, gone below, per week">${weeks}</ol>
     ${events ? `<ul class="plain-list">${events}</ul>` : ''}`, 'changes');
 }

@@ -23,6 +23,11 @@ export const AVAILABILITY = ['own_subscription', 'free', 'ads', 'other_subscript
 
 // own_subscription: free, ad-supported or subscription on a service you have; then free, ads, a subscription you
 // do not have, rent or buy; no offer at all: coming soon (future release date) or unavailable.
+export const AVAILABILITY_LABEL = {
+  own_subscription: 'On your subscriptions', free: 'Free', ads: 'Free with ads', other_subscription: 'In a subscription you do not have',
+  rent_buy: 'Rent or buy only', coming_soon: 'Coming soon', unavailable: 'Not available',
+};
+
 // `own` holds service groups (a Netflix subscription covers every Netflix plan).
 export function bestAvailability(film, own, today) {
   const offers = Object.entries(film.providers || {});

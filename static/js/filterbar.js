@@ -3,6 +3,7 @@
 import {escapeHtml} from './ui.js';
 import {COST, FILTER_CONTROLS, activeFilters, clearFilter, durationText, resetFilters} from './filters.js';
 import {SECTION_KINDS, countVisible, facetCounts} from './filtering.js';
+import {clearLink, emptyLink, linkChips, needsUnavailable, parseLink, writeLink} from './link-filters.js';
 
 const ALL_KINDS = ['free', 'ads', 'flatrate', 'rent'];
 const RUNTIME_STEPS = [90, 120, 150];
@@ -392,6 +393,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
       ...[...state.genres.include].map(genre => chip(`data-genre-include="${escapeHtml(genre)}"`, genre, 'genre-pop')),
       ...[...state.genres.exclude].map(genre => chip(`data-genre-exclude="${escapeHtml(genre)}"`, `No ${genre}`, 'genre-pop')),
       ...activeFilters(document).map(({id, label, text}) => chip(`data-filter-id="${id}"`, text ? `${label}: ${text}` : label, PANELS[id] || 'more-filters')),
+      ...linkChips(state.link).map(({key, text}) => chip(`data-link="${key}"`, text, 'more-filters')),
     ];
     $('tools-count').textContent = chips.length ? ` · ${chips.length}` : '';
     // From five chips on, only three show; the rest sit behind "+n more".
@@ -423,6 +425,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   function resetAll() {
     resetFilters(document);
     state.genres = {include: new Set(), exclude: new Set()};
+    state.link = emptyLink();
     state.selected = new Set(mySubscriptions());
     setCost('all', false);
     setRuntime(0, false);
@@ -446,6 +449,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     const button = event.target.closest('.chip-remove')?.closest('.filter-chip');
     if (!button) return;
     if (button.hasAttribute('data-services')) { setServices(mySubscriptions()); return; }
+    if (button.dataset.link) { state.link = clearLink(state.link, button.dataset.link); onChange(); return; }
     if (button.dataset.genreInclude || button.dataset.genreExclude) { setGenre(button.dataset.genreInclude || button.dataset.genreExclude, null); return; }
     const input = $(button.dataset.filterId);
     clearFilter(input);
@@ -464,6 +468,9 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     const list = name => (params.get(name) || '').split(',').filter(value => value && value !== 'all');
     state.genres = {include: new Set(list('genre')), exclude: new Set(list('nogenre'))};
     state.matchMode = params.get('match') === 'all' ? 'all' : 'any';
+    state.link = parseLink(params);
+    // Films that are nowhere to watch show only on request.
+    if (needsUnavailable(state.link)) $('show-unavailable').checked = true;
   }
   function writeUrl(url) {
     const set = (name, value) => (value ? url.searchParams.set(name, value) : url.searchParams.delete(name));
@@ -474,6 +481,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     set('nogenre', [...state.genres.exclude].join(','));
     set('unavailable', $('show-unavailable').checked ? '1' : '');
     set('match', state.matchMode === 'all' ? 'all' : '');
+    writeLink(state.link, url.searchParams);
   }
 
   // ---- a bar that does not fit one row gives Year, then Runtime, then Rating to the "More filters" panel ----------

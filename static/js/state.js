@@ -8,6 +8,7 @@ export function createAppState() {
     favorites: new Map(),
     flags: new Map(),  // key -> {flag: 'watched' | 'not_now', until}
     favoritesOnly: false,
+    link: {availability: [], person: '', collection: '', runtimeMin: 0},  // filters only links set, see link-filters.js
     compareKeys: new Set(),
     view: null,
   };

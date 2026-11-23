@@ -38,6 +38,7 @@ SORTS = [
     ("runtime", "Shortest first", "By film", "Shortest runtime first."),
     ("year-desc", "Newest first", "By film", "Latest release year first."),
     ("recent", "Recently added", "By availability", "Last added to your Letterboxd watchlist first."),
+    ("oldest", "Longest on the list", "By availability", "First added to your Letterboxd watchlist first."),
     ("new", "Newly available", "By availability", "Most recently added by a service first."),
     ("random", "Random", "Other", "Shuffled; the order stays while you browse."),
 ]

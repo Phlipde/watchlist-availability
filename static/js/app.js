@@ -1,5 +1,8 @@
 import {dateTime, escapeHtml, numberText} from './ui.js';
 import {createAppState, createScanState} from './state.js';
+import {bestAvailability} from './statistics.js';
+import {serviceGroup} from './catalog.js';
+import {emptyLink} from './link-filters.js';
 import {bestIndexes, favoriteFields, filmCard, filmHref, renderResults, runtimeText} from './rendering.js';
 import './register-sw.js';
 import {scanProblem} from './problems.js';
@@ -212,9 +215,13 @@ const state = createAppState();
         openPendingFilm();
         return;
       }
-      const selected = state.selected;
-      const filters = {...readFilters(document, state.favoritesOnly, {include: [...state.genres.include], exclude: [...state.genres.exclude]}), mode: state.matchMode || 'any'};
-      const filterContext = {selected, favorites: state.favorites, seed: state.seed, hiddenKeys: hiddenKeys()};
+      // A "best way to watch" link looks at every service, not only the ticked ones (rent or buy is rarely on yours).
+      const selected = state.link.availability.length ? new Set(state.films.flatMap(film => Object.keys(film.providers || {}))) : state.selected;
+      const filters = {...readFilters(document, state.favoritesOnly, {include: [...state.genres.include], exclude: [...state.genres.exclude]}), mode: state.matchMode || 'any', link: state.link};
+      // Best way to watch, for the links from the stats page.
+      const ownGroups = new Set([...mySubscriptions()].map(serviceGroup));
+      const today = new Date().toISOString().slice(0, 10);
+      const filterContext = {selected, favorites: state.favorites, seed: state.seed, hiddenKeys: hiddenKeys(), availabilityOf: film => bestAvailability(film, ownGroups, today)};
       ensureAbroad();
       const view = filterFilms(state.films, state.unavailable, filters, filterContext);
       // The abroad films, sorted and filtered like the others, listed after the films you can watch here.
@@ -301,6 +308,7 @@ const state = createAppState();
         return input && (input.type === 'checkbox' ? input.checked : input.dataset.default !== undefined ? input.value !== input.dataset.default : input.options ? input.value !== input.options[0].value : Boolean(input.value));
       }).map(([id, [label, values]]) => ({id, label, open: (f, c) => [{...f, ...values}, c]}));
       if (state.genres.include.size || state.genres.exclude.size) candidates.push({id: 'genres', label: 'genre', open: (f, c) => [{...f, genres: {include: [], exclude: []}}, c]});
+      if (JSON.stringify(state.link) !== JSON.stringify(emptyLink())) candidates.push({id: 'link', label: 'link filter', open: (f, c) => [{...f, link: emptyLink()}, c]});
       return candidates;
     }
     // Films that just left one of the user's services, from the stored changes of the last 14 days.

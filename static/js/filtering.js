@@ -1,4 +1,5 @@
 // Pure filtering over the film data. No DOM access, so it can be tested with `node --test`.
+import {linkMatches} from './link-filters.js';
 
 export const SECTION_KINDS = {
   Free: ['free', 'ads'],
@@ -56,6 +57,7 @@ function genresMatch(genres, filmGenres = []) {
 // Filters that apply the same way to available and unavailable films.
 function commonMatches(film, filters, context) {
   const key = filmKey(film);
+  if (!linkMatches(film, filters.link, context.availabilityOf)) return false;
   // Films set aside with "Not now" stay away until their date, unless asked for.
   if (!filters.showHidden && context.hiddenKeys?.has(key)) return false;
   const year = Number(film.year) || 0;
@@ -144,7 +146,7 @@ function shuffleRank(key, seed) {
   return hash >>> 0;
 }
 
-// The eight sorts of the filter bar (names in web/routes.py SORTS). context: favorites (Map, for
+// The nine sorts of the filter bar (names in web/routes.py SORTS). context: favorites (Map, for
 // "priority") and seed (number, for "random").
 export function sortFilms(films, order, context = {}) {
   const byTitle = (a, b) => String(a.title).toLowerCase().localeCompare(String(b.title).toLowerCase());
@@ -161,6 +163,8 @@ export function sortFilms(films, order, context = {}) {
     'year-desc': (a, b) => (Number(b.year) || 0) - (Number(a.year) || 0),
     // Position 0 is the film added last.
     recent: (a, b) => (numberOrNull(a.watchlist_position) ?? Infinity) - (numberOrNull(b.watchlist_position) ?? Infinity),
+    // The film that has waited longest (highest position) first.
+    oldest: (a, b) => (numberOrNull(b.watchlist_position) ?? -Infinity) - (numberOrNull(a.watchlist_position) ?? -Infinity),
     new: (a, b) => added(b) - added(a) || letterboxd(a, b),
     random: (a, b) => shuffleRank(filmKey(a), context.seed || 0) - shuffleRank(filmKey(b), context.seed || 0),
   }[order] || (() => 0);

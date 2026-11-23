@@ -844,6 +844,22 @@ def test_stats_service_table_filters_sorts_and_keeps_its_state_in_the_address(ap
     expect(page.locator("#svc-table .svc-row").first).to_be_visible()
 
 
+def test_links_from_the_stats_page_filter_the_watchlist_and_show_removable_chips(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    page.goto(app_server["url"] + "/watchlist?availability=rent_buy&runtimeMin=60&sort=oldest")
+    chip = page.locator("#filter-chips .filter-chip", has_text="Best way: Rent or buy only")
+    expect(chip).to_be_visible()
+    expect(page.locator("#filter-chips .filter-chip", has_text="Runtime: 60 min and longer")).to_be_visible()
+    assert "availability=rent_buy" in page.url
+    chip.locator(".chip-remove").click()
+    expect(chip).to_have_count(0)
+    assert "availability=" not in page.url
+    page.get_by_role("button", name="Reset all").click()
+    assert "runtimeMin" not in page.url
+
+
 def test_filter_bar_cost_genres_runtime_and_the_address(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"] + "/watchlist")

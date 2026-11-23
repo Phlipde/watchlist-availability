@@ -508,7 +508,7 @@ class TestHeader:
 
     def test_sort_menu_groups_the_sorts_with_a_line_each(self, client):
         html = client.get("/watchlist").get_data(as_text=True)
-        assert html.count('class="sort-option"') == 8
+        assert html.count('class="sort-option"') == 9
         assert "Favorites first, then the Letterboxd rating." in html
         assert 'id="sort-order" value="priority"' in html
 
