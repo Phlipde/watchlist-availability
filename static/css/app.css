@@ -944,7 +944,7 @@ summary.offer-heading { cursor: pointer; }
   .watch-bar .filter-bar > .sheet-head, .watch-bar .filter-bar > .sheet-label, .watch-bar .filter-sheet-done { display: none; }
   /* the order of row 1: search, services, cost, genre, runtime, year, rating, heart, (abroad), more filters, sort, link, view */
   .watch-bar #views-pop { order: 0; }
-  .watch-bar #film-search { order: 1; flex: 0 1 220px; min-width: 150px; }
+  .watch-bar #film-search { order: 1; flex: 0 1 190px; min-width: 150px; }
   .watch-bar #services-pop { order: 2; }
   .watch-bar #cost-options { order: 3; }
   .watch-bar #genre-pop { order: 4; }
@@ -1143,6 +1143,9 @@ body.modal-open .compare-bar, body.tools-open .compare-bar, body:has(dialog[open
 .table-title { display: flex; align-items: center; gap: 10px; }
 .table-poster { flex: none; width: 28px; height: 42px; border-radius: 3px; object-fit: cover; background: var(--panel); }
 
+/* Wide screens: heart, link and view switch sit right in the tab row, which keeps the filter bar one row. */
+.tabs-view-slot { display: flex; align-items: center; gap: 8px; flex: none; margin: 0 0 6px; }
+
 /* Phones: the view switch sits in the tab row, next to the count. */
 @media (max-width: 800px) {
   .tabs-row { flex-wrap: nowrap; gap: 8px; align-items: flex-end; }
@@ -1166,3 +1169,6 @@ body.modal-open .compare-bar, body.tools-open .compare-bar, body:has(dialog[open
 /* The detail sheet must stay in the DOM until its slide is over: Bootstrap waits for the modal's own transition. */
 #film-details-modal.fade { transition-duration: .3s; }
 @media (max-width: 800px) { body.tools-open .sheet-head { touch-action: none; } }
+
+/* Phone sheet: the count sits centred under its label, not pushed right by the desktop margin. */
+body.tools-open .segmented .option-count { margin-left: 0; }

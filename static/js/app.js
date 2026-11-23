@@ -645,7 +645,8 @@ const state = createAppState();
       if (job.status === 'error') { scanState.rescanInProgress = false; scanState.pendingUnavailable = []; applyRescanUnavailableState(); showScanError(job.message, 'Scan failed. The reason is shown above the films.'); return; }
       setTimeout(() => pollScan(jobId), scanState.pollDelay);
     }
-    async function startScan() {
+    // quiet: the page started it by itself because the data is old, so no toast over the films.
+    async function startScan(quiet = false) {
       scanState.rescanInProgress = state.films.length > 0;
       scanState.pendingUnavailable = [];
       if (!scanState.rescanInProgress) {
@@ -654,7 +655,7 @@ const state = createAppState();
         results.setAttribute('aria-busy', 'true');
         results.innerHTML = '<div class="skeleton-grid" role="status" aria-label="Loading films"><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div></div>';
       }
-      showToast(scanState.rescanInProgress ? 'Updating availability. Previous results remain visible.' : 'Starting watchlist scan...');
+      if (!quiet) showToast(scanState.rescanInProgress ? 'Updating availability. Previous results remain visible.' : 'Starting watchlist scan...');
       showScanRunning(); document.getElementById('error-message').hidden = true;
       document.getElementById('progress-bar').classList.remove('cancelled');
       state.unavailable = [];
@@ -1394,13 +1395,14 @@ const state = createAppState();
     });
     document.getElementById('country-select').addEventListener('change', switchCountry);
     // Phones: "Filters" opens the bar as a sheet from the bottom, a modal dialog while open.
-    // Phones keep the heart and the link inside the sheet and the view switch in the tab row; wider screens keep them in the bar.
+    // Phones keep the heart and the link inside the sheet; wider screens put them with the view switch in the tab row, so the bar stays one row.
     const phoneQuery = matchMedia('(max-width: 800px)');
     const placeViewTools = () => {
       const phone = phoneQuery.matches;
-      document.getElementById(phone ? 'tabs-view-slot' : 'result-tools').append(document.getElementById('view-switch'));
-      const home = document.getElementById(phone ? 'sheet-view-slot' : 'result-tools');
+      const tabs = document.getElementById('tabs-view-slot');
+      const home = document.getElementById(phone ? 'sheet-view-slot' : 'tabs-view-slot');
       ['favorites-view', 'share-button'].forEach(id => home.append(document.getElementById(id)));
+      tabs.append(document.getElementById('view-switch'));
     };
     placeViewTools();
     phoneQuery.addEventListener('change', placeViewTools);
@@ -1421,7 +1423,8 @@ const state = createAppState();
       filterSheet.setAttribute('role', open ? 'dialog' : 'search');
       if (open) filterSheet.setAttribute('aria-modal', 'true'); else filterSheet.removeAttribute('aria-modal');
       behindSheet().forEach(element => { element.inert = open; });
-      if (open) document.getElementById('film-search').focus();
+      // On a touch screen the search would raise the keyboard before anything is chosen: focus the close button instead.
+      if (open) document.getElementById(matchMedia('(pointer: coarse)').matches ? 'filter-sheet-close' : 'film-search').focus();
       else toolsToggle?.focus();
     }
     toolsToggle?.addEventListener('click', () => setSheet(!document.body.classList.contains('tools-open')));
@@ -1484,7 +1487,7 @@ const state = createAppState();
       if (savedJob) {
         resumeScan(savedJob);
       } else if (!snapshot || snapshot.stale) {
-        startScan();
+        startScan(true);
       } else {
         showSavedPanel();
         openPendingFilm(true);

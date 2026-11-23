@@ -92,7 +92,7 @@ test('a card has a logo for each of your services, marked with its type in a wor
   assert.equal((html.match(/class="best-way(?:"| )/g) || []).length, 1);
   assert.match(html, /<div class="way-row"><span class="best-way-link" tabindex="0"><img class="way-logo" src="https:\/\/img\/\/a\.png" alt="" loading="lazy"><span class="way-text">Arte · Free<\/span><span class="way-badge way-badge-free" aria-hidden="true"><i class="ti ti-gift"><\/i><\/span><\/span>/);
   assert.equal((html.match(/class="best-way-link/g) || []).length, 2);  // Arte and Netflix; the others are not yours
-  assert.match(html, /data-open-more data-key="x" aria-label="4 more services for Film">\+4<\/button>/);
+  assert.match(html, /data-open-more data-key="x" title="4 more services" aria-label="4 more services for Film">\+4<\/button>/);
   assert.ok(!html.includes('data-provider='), 'no grid of logos');
 });
 

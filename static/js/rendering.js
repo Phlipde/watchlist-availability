@@ -98,7 +98,7 @@ function wayLine(film, key, context) {
   };
   const rest = hereAll.length + abroadNew.length - hereShown.length - abroadShown.length;
   const extra = rest > 0
-    ? `<button class="best-more" type="button" data-open-more data-key="${escapeHtml(key)}" aria-label="${rest} more ${rest === 1 ? 'service' : 'services'} for ${title}">+${rest}</button>`
+    ? `<button class="best-more" type="button" data-open-more data-key="${escapeHtml(key)}" title="${rest} more ${rest === 1 ? 'service' : 'services'}" aria-label="${rest} more ${rest === 1 ? 'service' : 'services'} for ${title}">+${rest}</button>`
     : '';
   return `<div class="best-way${way.muted ? ' is-muted' : ''}"><div class="way-row">${hereShown.map(tile).join('')}${abroadShown.map(abroadTile).join('')}</div>${extra}</div>`;
 }
