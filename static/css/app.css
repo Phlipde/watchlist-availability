@@ -1334,3 +1334,7 @@ a.stat-tile:focus-visible, .avail-seg:focus-visible, .avail-legend a:focus-visib
 @media (max-width: 800px) { .lstack-list { position: fixed; left: 0; right: 0; top: auto; bottom: 0; z-index: 1060; max-height: 60dvh; border-radius: 16px 16px 0 0; padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); } }
 @media (pointer: coarse) { .lstack-toggle { inset: -10px -6px; } }
 @media (prefers-reduced-motion: reduce) { .lstack-item { transition: none; } }
+/* A fanned-out stack floats over the card instead of making it taller (all cards in a row stay equal). */
+.best-way { min-height: 28px; }
+.lstack { min-height: 24px; }
+.lstack.is-open[data-mode="fan"] .lstack-row { position: absolute; left: -4px; bottom: -4px; z-index: 7; width: max-content; max-width: calc(100vw - 32px); padding: 4px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface-raised); }
