@@ -221,7 +221,15 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
     def stats_page():
         return page(
             "stats.html",
-            client_config={"country": settings.country, "subscriptions": settings.subscriptions()},
+            client_config={
+                "country": settings.country,
+                "subscriptions": settings.subscriptions(),
+                "prices": {
+                    name: entry["price"]
+                    for name, entry in settings.costs().items()
+                    if entry.get("price") is not None
+                },
+            },
         )
 
     @app.get("/settings/data")

@@ -1,7 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
-import {countBy, watchlistStats} from '../../static/js/statistics.js';
+import {AVAILABILITY, bestAvailability, countBy, plausibleYear, watchlistStats} from '../../static/js/statistics.js';
+import {serviceGroup} from '../../static/js/catalog.js';
 
 const NOW = Date.UTC(2026, 10, 17) / 1000;
 const DAY = 24 * 3600;
@@ -74,4 +75,49 @@ test('film lists: waiting longest and best rated on own subscriptions', () => {
   const stats = watchlistStats(scan, {subscriptions: ['Netflix', 'Arte'], now: NOW});
   assert.deepEqual(stats.longestWaiting.map(film => film.title), ['Heat', 'Shoplifters', 'Thief']);
   assert.deepEqual(stats.bestOnSubscriptions.map(film => film.title), ['Heat', 'Shoplifters', 'Thief']);
+});
+
+test('availability: every film has exactly one best way, so the counts add up to the watchlist', () => {
+  const stats = watchlistStats(scan, {subscriptions: ['Netflix'], now: NOW});
+  const counts = stats.overview.availability;
+  assert.deepEqual(Object.keys(counts), AVAILABILITY);
+  assert.equal(Object.values(counts).reduce((sum, count) => sum + count, 0), stats.overview.total);
+  // Heat and Thief are on your Netflix, Shoplifters is free on Arte, Rental only rent, Gone has a future date.
+  assert.deepEqual(counts, {own_subscription: 2, free: 1, ads: 0, other_subscription: 0, rent_buy: 1, coming_soon: 1, unavailable: 0});
+});
+
+test('bestAvailability: own subscription beats free, free beats ads, ads beat a subscription you do not have', () => {
+  const own = new Set(['Netflix']);
+  const of = providers => bestAvailability({providers}, own, '2026-11-17');
+  assert.equal(of({Netflix: ['flatrate'], Arte: ['free']}), 'own_subscription');
+  assert.equal(of({Arte: ['free'], MUBI: ['flatrate']}), 'free');
+  assert.equal(of({Joyn: ['ads'], MUBI: ['flatrate']}), 'ads');
+  assert.equal(of({MUBI: ['flatrate'], Apple: ['rent']}), 'other_subscription');
+  assert.equal(of({Apple: ['buy']}), 'rent_buy');
+  assert.equal(of({}), 'unavailable');
+});
+
+test('years: a placeholder date far in the future is unknown and stays out of range and decades', () => {
+  assert.equal(plausibleYear(2031, NOW), null);
+  assert.equal(plausibleYear(2029, NOW), 2029);
+  const stats = watchlistStats({results: [{key: 'a', year: 1990, providers: {}}, {key: 'b', year: 2031, providers: {}}], unavailable: []}, {now: NOW});
+  assert.equal(stats.overview.newestYear, 1990);
+  assert.equal(stats.overview.unknownYears, 1);
+  assert.deepEqual(stats.decades, [['1990s', 1]]);
+});
+
+test('keywords: technical tags are dropped', () => {
+  const stats = watchlistStats({results: [{key: 'a', keywords: ['heist', 'aftercreditsstinger', 'amused']}], unavailable: []}, {now: NOW});
+  assert.deepEqual(stats.keywords, [['heist', 1]]);
+});
+
+test('serviceGroup: plans of one provider are one service, stores and tiers stay apart', () => {
+  assert.equal(serviceGroup('Netflix Standard with Ads'), 'Netflix');
+  assert.equal(serviceGroup('Netflix'), 'Netflix');
+  assert.equal(serviceGroup('Amazon Prime Video with Ads'), 'Prime Video');
+  assert.equal(serviceGroup('HBO Max Amazon Channel'), 'HBO Max');
+  assert.equal(serviceGroup('ARD Plus Apple TV Channel'), 'ARD Plus');
+  assert.equal(serviceGroup('MagentaTV'), 'MagentaTV');
+  assert.equal(serviceGroup('Magenta TV+'), 'Magenta TV+');
+  assert.equal(serviceGroup('Amazon Prime Video Free with Ads'), 'Amazon Prime Video Free with Ads');
 });

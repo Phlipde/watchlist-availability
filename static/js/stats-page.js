@@ -1,5 +1,5 @@
 import {escapeHtml} from './ui.js';
-import {watchlistStats} from './statistics.js';
+import {computeStats} from './stats-compute.js';
 
 const config = window.STATS_PAGE;
 const root = document.getElementById('stats-root');
@@ -104,7 +104,7 @@ async function load() {
       root.setAttribute('aria-busy', 'false');
       return;
     }
-    render(watchlistStats(scan, {subscriptions: config.subscriptions, favorites}), scan);
+    render(computeStats(scan, {subscriptions: config.subscriptions, prices: config.prices, favorites}), scan);
   } catch {
     root.innerHTML = '<p class="error">The statistics could not be loaded. Reload the page to try again.</p>';
     root.setAttribute('aria-busy', 'false');
