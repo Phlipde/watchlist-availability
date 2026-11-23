@@ -64,3 +64,18 @@ test('a rent store with a few ad-supported films is still a store', () => {
   assert.equal(rakuten.status, 'store');
   assert.equal(rakuten.rent, 2);
 });
+
+test('histograms: runtime in 15-minute steps, rating in 0.25 steps, with the average', () => {
+  const sample = {results: [film('r1', {runtime: 70, letterboxd_rating: 2.0}), film('r2', {runtime: 95, letterboxd_rating: 3.6}), film('r3', {runtime: 100, letterboxd_rating: 3.7}), film('r4', {runtime: 200, letterboxd_rating: 5})], unavailable: []};
+  const {runtimeHistogram, ratingHistogram} = computeStats(sample, {now: NOW});
+  assert.deepEqual(runtimeHistogram.bins.filter(bin => bin.count).map(bin => [bin.label, bin.count]), [['Under 75 min', 1], ['90–104', 2], ['165 min +', 1]]);
+  assert.equal(runtimeHistogram.average, 116.25);
+  assert.deepEqual(ratingHistogram.bins.filter(bin => bin.count).map(bin => [bin.label, bin.count]), [['Under 2.25', 1], ['3.50', 2], ['5', 1]]);
+});
+
+test('recent changes: newest first, at most ten', () => {
+  const many = {results: [], unavailable: [], changes: Array.from({length: 12}, (_, index) => ({film_key: `k${index}`, provider: 'Netflix', change: 'added', created: index}))};
+  const recent = computeStats(many, {now: NOW}).recentChanges;
+  assert.equal(recent.length, 10);
+  assert.equal(recent[0].created, 11);
+});

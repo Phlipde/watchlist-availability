@@ -82,8 +82,18 @@ export function computeStats(scan, {subscriptions = [], prices = {}, favorites =
   const gaps = films.filter(film => ratingOf(film) > 0 && Number(film.rating) > 0)
     .map(film => ({film, gap: ratingOf(film) * 2 - Number(film.rating)})).sort((a, b) => b.gap - a.gap);
 
+  // Histograms for the distribution charts: runtime in 15-minute steps, Letterboxd rating in 0.25 steps.
+  const runtimes = films.map(film => Number(film.runtime)).filter(value => value > 0);
+  const runtimeBins = [[0, 75, 'Under 75 min'], ...[75, 90, 105, 120, 135, 150].map(from => [from, from + 15, `${from}–${from + 14}`]), [165, Infinity, '165 min +']];
+  const ratings = films.map(ratingOf).filter(value => value > 0);
+  const ratingBins = [[0, 2.25, 'Under 2.25'], ...Array.from({length: 11}, (_, index) => [2.25 + index * 0.25, 2.5 + index * 0.25, (2.25 + index * 0.25).toFixed(2)]), [5, Infinity, '5']];
+  const histogram = (values, bins) => bins.map(([from, to, label]) => ({label, from, to, count: values.filter(value => value >= from && value < to).length}));
+
   return {
     ...base,
+    runtimeHistogram: {bins: histogram(runtimes, runtimeBins), average: average(runtimes)},
+    ratingHistogram: {bins: histogram(ratings, ratingBins), average: average(ratings)},
+    recentChanges: [...(scan.changes || [])].sort((a, b) => b.created - a.created).slice(0, 10),
     availabilityBreakdown,
     hoursAvailableNow,
     serviceValue,
