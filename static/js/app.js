@@ -199,12 +199,14 @@ const state = createAppState();
       note.hidden = !on;
       document.getElementById('vpn-n').textContent = count;
       document.querySelectorAll('[data-cost-count]').forEach(span => {
-        span.removeAttribute('data-abroad');
+        const note = document.querySelector(`[data-cost-abroad="${span.dataset.costCount}"]`);
+        if (note) note.hidden = true;
         if (!on) return;
         const [availability, kind] = COST[span.dataset.costCount] || COST.all;
         const extra = filterFilms(candidates, [], {...filters, availability, kind}, context).films.length;
         const base = Number(span.textContent.replace(/\D.*/, '')) || 0;
-        span.textContent = extra ? `${base + extra} (${extra} abroad)` : String(base);
+        span.textContent = String(base + extra);
+        if (note && extra) { note.textContent = `incl. ${extra} abroad`; note.hidden = false; }
       });
     }
     function renderFilms() {

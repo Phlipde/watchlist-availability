@@ -1321,3 +1321,15 @@ a.stat-tile:focus-visible, .avail-seg:focus-visible, .avail-legend a:focus-visib
 @media (pointer: coarse) { .lstack-toggle { inset: -10px -6px; } }
 @media (prefers-reduced-motion: reduce) { .lstack-item::after { transition: none; } }
 .best-way { min-height: 28px; }
+/* Cost segments: label over number, a third small line only with the abroad switch on. */
+.segmented .seg-text { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 3px 0; line-height: 1.25; text-align: center; }
+.segmented .option-count { font-variant-numeric: tabular-nums; }
+.segmented .cost-abroad { color: var(--text-2); font-size: var(--fs-small); white-space: nowrap; }
+/* Table view: the title column sticks to the left while the rest scrolls; the title takes at most two lines. */
+.film-table th[scope=row] { position: sticky; left: 0; z-index: 2; min-width: 160px; max-width: 240px; background: var(--surface); }
+.film-table .table-title a { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.film-table .table-services { padding-right: 12px; }
+@media (max-width: 800px) { .film-table .col-year { display: none; } .film-table th[scope=row] { min-width: 140px; max-width: 170px; } }
+.film-table th[scope=row] { white-space: normal; }
+.film-table .table-title > a { min-width: 0; }
+@media (max-width: 800px) { .film-table th[scope=row] { min-width: 0; width: 150px; max-width: 150px; } .film-table td, .film-table th { padding-left: 8px; padding-right: 8px; } }

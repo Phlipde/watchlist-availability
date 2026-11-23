@@ -140,18 +140,17 @@ test('the card has a small heart on the poster and an action bar, no "..." menu'
   assert.ok(!html.includes('card-menu') && !html.includes('card-more'));
 });
 
-test('the table lists title link, year, runtime, rating and every service as a small logo, yours first', async () => {
+test('the table lists title link, year, runtime, rating and a stack of every service, yours first', async () => {
   const {filmTable, renderResults} = await import('../../static/js/rendering.js');
   const films = [{key: '1', title: 'Heat', year: 1995, runtime: 170, letterboxd_rating: 4.1, providers: {Netflix: ['flatrate'], MUBI: ['flatrate'], 'Amazon VOD': ['rent', 'buy']}}];
   const context = {selected: new Set(['Netflix']), providerLogos: {Netflix: '/n.png', MUBI: '/m.png'}, logoBaseUrl: 'https://img/'};
   const html = filmTable(films, context);
   assert.match(html, /<th scope="row"><span class="table-title"><span class="table-poster" aria-hidden="true"><\/span><a class="[^"]*film-open" href="[^"]*film=1"[^>]*>Heat<\/a>/);
-  assert.match(html, /<td>1995<\/td>/);
+  assert.match(html, /<td class="col-year">1995<\/td>/);
   assert.match(html, /★ 4\.1/);
   assert.match(html, /<th scope="col">Services<\/th>/);
-  assert.match(html, /class="table-logo is-own" src="https:\/\/img\/\/n\.png" alt="Netflix \(yours\), subscription"/);
-  assert.ok(html.indexOf('Netflix (yours)') < html.indexOf('alt="MUBI'), 'your service first');
-  assert.match(html, /<span class="table-service" title="Amazon VOD, rent, buy">Amazon VOD<\/span>/);  // no logo: the name
+  assert.match(html, /aria-label="3 services: Netflix, Amazon VOD, MUBI · details"/);  // yours first, one stack
+  assert.match(html, /data-tip="Netflix · Subscription"/);
   const containers = {results: {dataset: {}}, unavailableResults: {}};
   renderResults({films, sectionOf: new Map(), unavailable: []}, containers, {...context, viewMode: 'table'});
   assert.equal(containers.results.dataset.mode, 'table');

@@ -158,19 +158,16 @@ export function filmTable(films, context) {
     const key = filmKey(film);
     const rating = numberText(film.letterboxd_rating) ? `★ ${Number(film.letterboxd_rating).toFixed(1)}` : numberText(film.rating) ? `TMDB ${Number(film.rating).toFixed(1)}` : '';
     const logos = context.providerLogos || {};
-    const services = catalogues(film, context.selected)
+    const url = name => (logos[name] ? (context.logoBaseUrl || '') + logos[name] : '');
+    const items = catalogues(film, context.selected)
       .sort((a, b) => Number(b.own) - Number(a.own) || a.name.localeCompare(b.name))
-      .map(entry => {
-        const kinds = [...entry.kinds].map(kind => (OFFER_TYPES[kind]?.[0] || (kind === 'buy' ? 'Buy' : kind)).toLowerCase()).join(', ');
-        const tip = escapeHtml(`${entry.name}${entry.own ? ' (yours)' : ''}, ${kinds}`);
-        return logos[entry.name]
-          ? `<img class="table-logo${entry.own ? ' is-own' : ''}" src="${escapeHtml((context.logoBaseUrl || '') + logos[entry.name])}" alt="${tip}" title="${tip}" loading="lazy">`
-          : `<span class="table-service" title="${tip}">${escapeHtml(entry.name)}</span>`;
-      }).join('');
+      .map(entry => ({name: entry.name, kind: ['free', 'flatrate', 'ads', 'rent', 'buy'].find(k => entry.kinds.has(k)), logo: url(entry.name)}))
+      .filter(item => item.kind);
+    const services = logoStackHtml(items, {key});
     const runtime = runtimeText(film.runtime);
-    return `<tr data-key="${escapeHtml(key)}"><th scope="row"><span class="table-title">${film.poster_path ? `<img class="table-poster" src="${sized(context.imageBaseUrl, 'w92')}${escapeHtml(film.poster_path)}" alt="" loading="lazy" width="28" height="42">` : '<span class="table-poster" aria-hidden="true"></span>'}${filmLink(film, key, pageHref)}</span></th><td>${numberText(film.year, '')}</td><td>${runtime ? `<span aria-hidden="true">${runtime}</span><span class="visually-hidden">${runtimeSpoken(film.runtime)}</span>` : ''}</td><td>${rating}</td><td class="table-services">${services}</td></tr>`;
+    return `<tr data-key="${escapeHtml(key)}"><th scope="row"><span class="table-title">${film.poster_path ? `<img class="table-poster" src="${sized(context.imageBaseUrl, 'w92')}${escapeHtml(film.poster_path)}" alt="" loading="lazy" width="28" height="42">` : '<span class="table-poster" aria-hidden="true"></span>'}${filmLink(film, key, pageHref)}</span></th><td class="col-year">${numberText(film.year, '')}</td><td>${runtime ? `<span aria-hidden="true">${runtime}</span><span class="visually-hidden">${runtimeSpoken(film.runtime)}</span>` : ''}</td><td>${rating}</td><td class="table-services">${services}</td></tr>`;
   }).join('');
-  return `<div class="table-scroll"><table class="status-table film-table"><thead><tr><th scope="col">Title</th><th scope="col">Year</th><th scope="col">Runtime</th><th scope="col">Rating</th><th scope="col">Services</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `<div class="table-scroll"><table class="status-table film-table"><thead><tr><th scope="col">Title</th><th scope="col" class="col-year">Year</th><th scope="col">Runtime</th><th scope="col">Rating</th><th scope="col">Services</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 // Draws the films (as cards, compact cards or a table) and the unavailable list from the result of filterFilms().
