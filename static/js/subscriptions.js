@@ -174,7 +174,8 @@ function openDrawer(name, opener) {
     ${only.length ? `<ul class="poster-grid">${filmLinks(only.slice(0, 36))}</ul>${only.length > 36 ? `<p class="hint">and ${only.length - 36} more: <a href="/watchlist?providers=${encodeURIComponent(name)}&only=1&cost=subscription">see them all</a></p>` : ''}` : '<p class="hint">Nothing: cancelling loses no film you cannot watch elsewhere.</p>'}
     ${history.length > 1 ? `<h3>Only here over time</h3>${sparkline(history)}` : ''}
     <h3>Also elsewhere <span class="row-count">${elsewhere.length}</span></h3>
-    <p class="hint">${elsewhere.length ? `These stay available on another service of yours or for free when you cancel: ${elsewhere.slice(0, 8).map(film => escape(film.title)).join(', ')}${elsewhere.length > 8 ? ' …' : ''}.` : 'Every film here is only on this service.'}</p>
+    <p class="hint">${elsewhere.length ? 'These stay available on another service of yours or for free when you cancel.' : 'Every film here is only on this service.'}</p>
+    ${elsewhere.length ? `<ul class="poster-grid" id="elsewhere-list">${filmLinks(elsewhere.slice(0, 6))}</ul>${elsewhere.length > 6 ? `<button class="btn btn-sm btn-outline-secondary" id="elsewhere-all" type="button">Show all ${elsewhere.length}</button>` : ''}` : ''}
     <h3>Your notes</h3>
     <div class="drawer-fields">
       ${field('shared', 'Shared with (people, splits the price)', 'number', detail.shared > 1 ? detail.shared : '', 'min="1" max="20" step="1" placeholder="1"')}
@@ -196,6 +197,12 @@ table?.addEventListener('click', openFrom);
 document.getElementById('service-drawer-close')?.addEventListener('click', () => drawer.close());
 drawer?.addEventListener('click', event => { if (event.target === drawer) drawer.close(); });  // a click on the dimmed page closes it
 drawer?.addEventListener('close', () => drawer.opener?.focus());
+drawer?.addEventListener('click', event => {
+  const all = event.target.closest('#elsewhere-all');
+  if (!all) return;
+  document.getElementById('elsewhere-list').innerHTML = filmLinks(details.get(drawer.dataset.service).elsewhere);
+  all.remove();
+});
 drawer?.addEventListener('change', event => {
   const name = drawer.dataset.service;
   const detail = details.get(name);

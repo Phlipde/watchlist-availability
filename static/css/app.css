@@ -1333,3 +1333,6 @@ a.stat-tile:focus-visible, .avail-seg:focus-visible, .avail-legend a:focus-visib
 .film-table th[scope=row] { white-space: normal; }
 .film-table .table-title > a { min-width: 0; }
 @media (max-width: 800px) { .film-table th[scope=row] { min-width: 0; width: 150px; max-width: 150px; } .film-table td, .film-table th { padding-left: 8px; padding-right: 8px; } }
+
+.worth-actions { white-space: nowrap; }
+.worth-actions .btn { margin-left: 4px; }
