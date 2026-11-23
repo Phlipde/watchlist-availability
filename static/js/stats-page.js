@@ -1,5 +1,6 @@
 import {escapeHtml} from './ui.js';
 import {computeStats} from './stats-compute.js';
+import {mountServiceTable} from './service-table-view.js';
 
 const config = window.STATS_PAGE;
 const root = document.getElementById('stats-root');
@@ -33,14 +34,6 @@ function card(title, body, note = '') {
 function filmList(films, extra) {
   if (!films.length) return '<p class="empty">None.</p>';
   return `<ol class="stats-films">${films.map(film => `<li><a href="/watchlist?film=${encodeURIComponent(film.key)}">${escapeHtml(film.title)}</a>${film.year ? ` <span class="muted">(${escapeHtml(String(film.year))})</span>` : ''} · ${escapeHtml(extra(film))}</li>`).join('')}</ol>`;
-}
-
-function servicesTable(services, total) {
-  const max = Math.max(...services.map(service => service.films), 1);
-  const row = service => `<tr${service.own ? ' class="own-service"' : ''}><th scope="row">${escapeHtml(service.name)}${service.own ? ' <span class="pill pill-ok">Yours</span>' : ''}</th><td class="num"><span class="bar-track inline" aria-hidden="true"><span class="bar" style="width:${service.films / max * 100}%"></span></span>${service.films} <span class="muted">(${percent(service.films, total)}%)</span></td><td class="num">${service.exclusive}</td><td class="num">${service.hours}</td><td class="num">${service.free}</td><td class="num">${service.ads}</td><td class="num">${service.subscription}</td><td class="num">${service.rent}</td></tr>`;
-  const head = '<thead><tr><th scope="col">Service</th><th scope="col">Films</th><th scope="col" title="Films no other service shows without paying per film">Only here</th><th scope="col">Hours</th><th scope="col">Free</th><th scope="col">Ads</th><th scope="col">Subscr.</th><th scope="col">Rent</th></tr></thead>';
-  const table = list => `<div class="table-scroll"><table class="status-table stats-table">${head}<tbody>${list.map(row).join('')}</tbody></table></div>`;
-  return table(services.slice(0, 15)) + (services.length > 15 ? `<details class="bars-more"><summary>Show all ${services.length} services</summary>${table(services.slice(15))}</details>` : '');
 }
 
 function render(stats, scan) {
@@ -87,9 +80,8 @@ function render(stats, scan) {
       ${card('Waiting longest', filmList(stats.longestWaiting, film => `#${film.watchlist_position} on the watchlist`), 'On your subscriptions, longest on the watchlist.')}
       ${card('Best rated on your subscriptions', filmList(stats.bestOnSubscriptions, film => (film.letterboxd_rating ? `★ ${Number(film.letterboxd_rating).toFixed(1)}` : `TMDB ${Number(film.rating || 0).toFixed(1)}`)))}
     </div>
-    <h2 class="h4 mt-4">Services</h2>
-    <p class="hint">Every service with at least one film from the watchlist. “Only here” counts films no other service shows without paying per film.</p>
-    ${servicesTable(stats.services, o.available)}`;
+    <section id="services-section"></section>`;
+  mountServiceTable(document.getElementById('services-section'), stats.serviceValue, {total: o.total, imageBaseUrl: config.imageBaseUrl});
   root.setAttribute('aria-busy', 'false');
 }
 

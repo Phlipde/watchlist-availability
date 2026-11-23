@@ -57,3 +57,10 @@ test('footnotes: films without runtime or rating', () => {
   assert.equal(stats.withoutRuntime, 1);
   assert.equal(stats.withoutRating, 2);  // d and g
 });
+
+test('a rent store with a few ad-supported films is still a store', () => {
+  const mixed = {results: [film('x', {providers: {Rakuten: ['rent']}}), film('y', {providers: {Rakuten: ['rent']}}), film('z', {providers: {Rakuten: ['ads']}})], unavailable: []};
+  const rakuten = computeStats(mixed, {now: NOW}).serviceValue.find(item => item.group === 'Rakuten');
+  assert.equal(rakuten.status, 'store');
+  assert.equal(rakuten.rent, 2);
+});

@@ -50,16 +50,18 @@ export function computeStats(scan, {subscriptions = [], prices = {}, favorites =
     const priced = mine.filter(plan => prices[plan] > 0);
     const price = priced.length ? priced.reduce((sum, plan) => sum + prices[plan], 0) : null;
     const has = kind => entries.filter(entry => entry.kinds.has(kind)).length;
-    const kinds = new Set(entries.flatMap(entry => [...entry.kinds]));
     const isOwn = ownGroups.has(group);
-    const status = isOwn ? 'own' : kinds.has('flatrate') ? 'other' : kinds.has('free') || kinds.has('ads') ? 'free' : 'store';
+    // A rent store with three ad-supported films (Rakuten TV) is still a store: it counts by what most of its films are.
+    const rentFilms = has('rent') + has('buy') - entries.filter(entry => entry.kinds.has('rent') && entry.kinds.has('buy')).length;
+    const status = isOwn ? 'own' : rentFilms > has('flatrate') + has('free') + has('ads') ? 'store' : has('flatrate') ? 'other' : 'free';
     return {
       group, plans, status, own: isOwn,
       films: on.length, watchable: watchable.length, exclusive: exclusive.length,
       hours: hoursOf(on), exclusiveHours: hoursOf(exclusive),
-      free: has('free'), ads: has('ads'), subscription: has('flatrate'), rent: has('rent') || has('buy'),
+      free: has('free'), ads: has('ads'), subscription: has('flatrate'), rent: rentFilms,
       averageRating: average(on.map(ratingOf).filter(value => value > 0)),
       price, costPerExclusiveFilm: price && exclusive.length ? price / exclusive.length : null,
+      topFilms: [...watchable].sort((a, b) => ratingOf(b) - ratingOf(a)).slice(0, 5),
     };
   }).sort((a, b) => b.films - a.films || a.group.localeCompare(b.group));
 

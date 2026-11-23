@@ -1172,3 +1172,44 @@ body.modal-open .compare-bar, body.tools-open .compare-bar, body:has(dialog[open
 
 /* Phone sheet: the count sits centred under its label, not pushed right by the desktop margin. */
 body.tools-open .segmented .option-count { margin-left: 0; }
+
+/* ===== Stats: the service table ===== */
+.svc-filters { margin: 0 0 8px; }
+.svc-filters > summary { color: var(--accent); font: var(--fs-body) system-ui, sans-serif; cursor: pointer; padding-block: 6px; }
+.svc-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 0; }
+.svc-bar #svc-q { flex: 0 1 220px; min-height: 36px; }
+.svc-field, .svc-switch { display: inline-flex; align-items: center; gap: 8px; color: var(--text-2); font: var(--fs-body) system-ui, sans-serif; }
+.svc-field input[type=number] { width: 4.5rem; min-height: 36px; }
+.svc-field select { width: auto; }
+.svc-wrap { overflow: visible; }
+.svc-table thead th { position: sticky; top: 48px; z-index: 2; background: var(--bg); }
+.svc-sort, .svc-name { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: inherit; cursor: pointer; }
+.svc-sort .ti { margin-left: 4px; }
+.svc-name:focus-visible, .svc-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.svc-row { cursor: pointer; }
+.svc-row:hover { background: var(--surface-2); }
+.svc-detail td { padding: 12px 10px 16px; background: var(--surface); }
+.svc-top { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 10px; padding: 0; list-style: none; }
+.svc-top a { display: flex; align-items: center; gap: 8px; color: var(--text); }
+.svc-top img, .svc-no-poster { width: 40px; height: 60px; border-radius: 3px; object-fit: cover; background: var(--panel); }
+.svc-empty { padding: 24px 10px; text-align: center; color: var(--muted); }
+.svc-table td.svc-status { text-align: left; }
+@media (max-width: 800px) {
+  .svc-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .svc-table tbody, .svc-table tr { display: block; }
+  .svc-table .svc-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 12px; margin: 0 0 8px; padding: 10px 12px; border: 1px solid var(--line-card); border-radius: .5rem; background: var(--surface); }
+  .svc-row th, .svc-row td { display: block; padding: 0; border: 0; text-align: left; }
+  .svc-row th, .svc-row td.svc-status { grid-column: 1 / -1; }
+  .svc-row th { font-size: var(--fs-text); color: var(--ink); }
+  .svc-row td { text-align: left !important; }
+  .svc-row .bar-track.inline { display: none; }
+  .svc-row td.num { white-space: normal; }
+  .svc-row td::before { content: attr(data-label); display: block; color: var(--muted); font-size: var(--fs-small); }
+  .svc-row td.svc-status::before { content: none; }
+  .svc-row td:not(.svc-status):not([data-label="Films"]):not([data-label="Only here"]):not([data-label="Hours"]) { display: none; }
+  .svc-table .svc-row.open td { display: block !important; }
+  .svc-name { min-height: 44px; font-weight: 600; }
+  .svc-detail td { display: block; margin: -4px 0 8px; border: 1px solid var(--line-card); border-radius: .5rem; }
+  .svc-bar #svc-q { flex: 1 1 100%; }
+}
+@media (prefers-reduced-motion: no-preference) { .bar { transition: width .3s ease; } }

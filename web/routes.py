@@ -223,6 +223,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             "stats.html",
             client_config={
                 "country": settings.country,
+                "imageBaseUrl": _TMDB_IMAGE_BASE_URL,
                 "subscriptions": settings.subscriptions(),
                 "prices": {
                     name: entry["price"]

@@ -814,6 +814,30 @@ def test_stats_page_shows_the_numbers_of_the_last_scan(app_server, page):
     expect(page.locator(".stats-table").last).to_contain_text("Netflix")
 
 
+def test_stats_service_table_filters_sorts_and_keeps_its_state_in_the_address(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    page.goto(app_server["url"] + "/stats")
+    expect(page.locator("#svc-table .svc-row").first).to_be_visible()
+    expect(page.locator("#svc-count")).to_contain_text("services")
+    page.locator("#svc-q").fill("netflix")
+    expect(page.locator("#svc-table .svc-row")).to_have_count(1)
+    page.locator("[data-sort=films]").click()
+    assert "svcq=netflix" in page.url
+    assert "sort=films%3Aasc" in page.url
+    page.reload()
+    expect(page.locator("#svc-q")).to_have_value("netflix")
+    expect(page.locator("#svc-table .svc-row")).to_have_count(1)
+    expect(page.locator("th[aria-sort=ascending]")).to_have_count(1)
+    page.locator("#svc-table .svc-name").click()
+    expect(page.locator("#svc-table .svc-detail")).to_be_visible()
+    page.locator("#svc-q").fill("zzzz")
+    expect(page.locator(".svc-empty")).to_contain_text("No service matches")
+    page.get_by_role("button", name="Reset filters").last.click()
+    expect(page.locator("#svc-table .svc-row").first).to_be_visible()
+
+
 def test_filter_bar_cost_genres_runtime_and_the_address(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"] + "/watchlist")
