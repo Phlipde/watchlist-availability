@@ -88,7 +88,7 @@ function wayLine(film, key, context) {
     ...abroadNew.map(row => ({name: row.service, kind: 'abroad', logo: url(row.service), flag: row.countries[0], country: row.countries.map(c => (context.countryName ? context.countryName(c) : c)).join(', ')})),
   ];
   if (!items.length) return none;
-  return `<div class="best-way${way.muted ? ' is-muted' : ''}">${logoStackHtml(items)}</div>`;
+  return `<div class="best-way${way.muted ? ' is-muted' : ''}">${logoStackHtml(items, {key})}</div>`;
 }
 
 export function changeBadgesFor(film, selected) {

@@ -90,8 +90,8 @@ test('a card has one stack of your free, subscription and ads services, no rent 
   const base = {imageBaseUrl: '', favorites: new Map(), compareKeys: new Set(), greyKeys: new Set(), providerLogos: {Arte: '/a.png'}, logoBaseUrl: 'https://img/', country: 'DE'};
   const html = filmCard(film, 'All', {...base, selected: new Set(['Arte', 'Netflix'])});
   assert.equal((html.match(/class="best-way(?:"| )/g) || []).length, 1);
-  assert.match(html, /lstack-item is-first is-wide" data-tip="Arte · Free"><img class="lstack-logo" src="https:\/\/img\/\/a\.png"[^>]*><span class="way-badge way-badge-free"/);
-  assert.match(html, /aria-expanded="false" aria-label="2 services: Arte, Netflix"/);
+  assert.match(html, /lstack-item is-wide" data-tip="Arte · Free"><img class="lstack-logo" src="https:\/\/img\/\/a\.png"[^>]*><span class="way-badge way-badge-free"/);
+  assert.match(html, /aria-label="2 services: Arte, Netflix · details"/);
   assert.ok(!html.includes('Rakuten') && !html.includes('lstack-more'));
   assert.ok(!html.includes('data-provider='), 'no grid of logos');
 });
@@ -125,7 +125,7 @@ test('with the switch on, your services abroad follow the ones you can use here;
   const context = {imageBaseUrl: '', selected: new Set(['Netflix', 'Disney+']), favorites: new Map(), compareKeys: new Set(), greyKeys: new Set(),
     providerLogos: {}, country: 'DE', countryName: code => code, abroadList};
   const html = filmCard(film, 'All', context);
-  assert.match(html, /aria-label="2 services: Netflix, Disney\+"/);  // Netflix here, Disney+ abroad
+  assert.match(html, /aria-label="2 services: Netflix, Disney\+ · details"/);  // Netflix here, Disney+ abroad
   assert.match(html, /data-tip="Disney\+ · Subscription · IT, ES"/);
 });
 

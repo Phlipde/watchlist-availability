@@ -104,7 +104,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   function updateServicesButton() {
     const chosen = [...state.selected].sort((a, b) => Number(Boolean(logos[b])) - Number(Boolean(logos[a])) || a.localeCompare(b));
     const withLogo = chosen.filter(name => logos[name]);
-    $('services-logos').innerHTML = logoStackHtml(withLogo.map(name => ({name, kind: '', logo: (config.logoBaseUrl || '') + logos[name]})), {interactive: false});
+    $('services-logos').innerHTML = logoStackHtml(withLogo.map(name => ({name, kind: '', logo: (config.logoBaseUrl || '') + logos[name]})));
     $('services-label').textContent = chosen.length ? (withLogo.length ? '' : `${chosen.length} services`) : 'No services';
     $('services-button').setAttribute('aria-label', `Services: ${chosen.length} ticked`);
   }

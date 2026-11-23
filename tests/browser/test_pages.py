@@ -1502,22 +1502,15 @@ def test_a_card_shows_only_the_logo_and_the_words_come_on_hover(app_server, page
     tick_all_services(page)
     card = page.locator("article.film").first
     stack = card.locator(".lstack")
-    assert stack.get_attribute("title").strip()  # hovering the closed stack names every service
-    toggle = card.locator(".lstack-toggle")
-    label = (
-        toggle.get_attribute("aria-label")
-        if toggle.count()
-        else stack.locator(".lstack-item").first.get_attribute("data-tip")
-    )
-    assert label.strip()  # the words are there for screen readers all the time
+    assert "service" in stack.locator(".lstack-toggle").get_attribute("aria-label")
     first = card.locator(".lstack-item").first
+    assert first.get_attribute("data-tip").strip()  # the words come as a bubble
     expect(first).to_have_css("margin-left", "0px")  # the best logo is never overlapped
-    if card.locator(".lstack-toggle").count():
-        card.locator(".lstack-toggle").click()
-        expect(stack).to_have_class(re.compile(r"is-open"))
-        expect(card.locator(".lstack-toggle")).to_have_attribute("aria-expanded", "true")
-        page.keyboard.press("Escape")
-        expect(stack).not_to_have_class(re.compile(r"is-open"))
+    assert (
+        card.locator(".lstack-item .way-badge").count() == card.locator(".lstack-item").count()
+    )  # a type icon on each
+    stack.locator(".lstack-item").first.click()  # a click opens the details
+    expect(page.locator("#film-details-modal")).to_be_visible(timeout=5000)
 
 
 def test_many_filter_chips_collapse_behind_a_more_button(app_server, page):
