@@ -28,7 +28,7 @@ export function head(stats) {
     tile(number(o.total), 'films on the watchlist', {sub: `${number(stats.availabilityBreakdown.reduce((sum, item) => sum + item.hours, 0))} h in total`, href: '/watchlist'}),
   ].join('');
   const rows = stats.availabilityBreakdown.filter(item => item.films);
-  const segments = rows.map(item => `<a class="avail-seg avail-${item.kind}" style="flex:${item.films}" href="${esc(watchlistHref({availability: item.kind}))}" title="${esc(AVAILABILITY_LABEL[item.kind])}: ${item.films} films (${percent(item.films, o.total)}%)"></a>`).join('');
+  const segments = rows.map(item => `<a class="avail-seg avail-${item.kind}" style="flex:${item.films}" href="${esc(watchlistHref({availability: item.kind}))}" title="${esc(AVAILABILITY_LABEL[item.kind])}: ${item.films} films (${percent(item.films, o.total)}%)" aria-label="${esc(AVAILABILITY_LABEL[item.kind])}: ${item.films} films"></a>`).join('');
   const legend = rows.map(item => `<li><a href="${esc(watchlistHref({availability: item.kind}))}"><i class="swatch avail-${item.kind}" aria-hidden="true"></i>${esc(AVAILABILITY_LABEL[item.kind])} <strong>${number(item.films)}</strong> <span class="muted">${percent(item.films, o.total)}%</span></a></li>`).join('');
   const foot = stats.withoutRuntime ? `<p class="hint">${plural(stats.withoutRuntime, 'film')} without a runtime are counted, but not in the hours.</p>` : '';
   return `<div class="stat-tiles">${tiles}</div>
@@ -136,7 +136,7 @@ export function distribution(stats, {nameOfLanguage, nameOfCountry, ageNote}) {
       ${card('Genres', bars(stats.genres.map(genre => [genre.name, genre.total]), o.total, {hrefOf: name => watchlistHref({genre: name})}), 'A film can have several genres.')}
       ${card('Decades', bars(stats.decades, o.total, {limit: 20, hrefOf: name => watchlistHref({from: String(name).slice(0, 4), to: Number(String(name).slice(0, 4)) + 9})}), decadeNote)}
       ${card('Runtime', histogram(stats.runtimeHistogram, {unit: value => `${Math.round(value)} min`, hrefOf: bin => watchlistHref({...(bin.from ? {runtimeMin: bin.from} : {}), ...(Number.isFinite(bin.to) ? {max: bin.to - 1} : {})})}))}
-      ${card('Letterboxd rating', histogram(stats.ratingHistogram, {unit: value => value.toFixed(2), hrefOf: bin => watchlistHref({rating: `lb:${bin.from}`})}))}
+      ${card('Letterboxd rating', histogram(stats.ratingHistogram, {unit: value => value.toFixed(2), hrefOf: bin => watchlistHref({rating: `lb:${bin.from}`})}), stats.withoutRating ? `${plural(stats.withoutRating, 'film')} without a rating are not counted.` : '')}
       ${card('Age rating', bars(stats.ageRatings, o.total, {hrefOf: name => watchlistHref({ages: name})}), ageNote)}
       ${card('Language and country', `${sentence(stats.languages, o.total, nameOfLanguage)}${sentence(stats.countries, o.total, nameOfCountry)}`)}
       ${card('Critics against crowd', `<p class="hint">Letterboxd compared with TMDB, both out of 10.</p><h4 class="stats-sub">Letterboxd likes more</h4><ul class="plain-list">${gaps(stats.ratingGap.positive)}</ul><h4 class="stats-sub">TMDB likes more</h4><ul class="plain-list">${gaps(stats.ratingGap.negative)}</ul>`)}
@@ -150,9 +150,9 @@ const PEOPLE = [['directors', 'Directors', 'person'], ['actors', 'Actors', 'pers
 
 export function people(stats) {
   return section('Who and what?', 'Only names with more than one film on the watchlist.',
-    `<div class="tabs-small" role="tablist" aria-label="People and series">${PEOPLE.map(([key, label], index) => `<button type="button" role="tab" id="people-tab-${key}" aria-selected="${index === 0}" data-people="${key}">${label}</button>`).join('')}</div>
+    `<div class="tabs-small" role="tablist" aria-label="People and series">${PEOPLE.map(([key, label], index) => `<button type="button" role="tab" id="people-tab-${key}" aria-selected="${index === 0}" aria-controls="people-list" tabindex="${index === 0 ? 0 : -1}" data-people="${key}">${label}</button>`).join('')}</div>
     <input class="form-control" id="people-q" type="search" placeholder="Search in this list…" aria-label="Search in this list">
-    <div id="people-list" role="tabpanel"></div><button class="btn btn-sm btn-outline-secondary" id="people-more" type="button" hidden>Show 20 more</button>`, 'people');
+    <div id="people-list" role="tabpanel" aria-live="polite"></div><button class="btn btn-sm btn-outline-secondary" id="people-more" type="button" hidden>Show 20 more</button>`, 'people');
 }
 
 // Tabs, search and "show more" of the people section. Returns nothing; it only wires the elements above.
@@ -166,11 +166,26 @@ export function wirePeople(stats, root) {
       ? `<ol class="bars">${found.slice(0, state.shown).map(([name, count]) => `<li><a href="${esc(watchlistHref({[param]: name}))}"><span class="bar-label">${esc(name)}</span><span class="bar-track" aria-hidden="true"><span class="bar" style="width:${count / found[0][1] * 100}%"></span></span><span class="bar-value">${count}</span></a></li>`).join('')}</ol>`
       : '<p class="empty">No name matches.</p>';
     root.querySelector('#people-more').hidden = found.length <= state.shown;
-    root.querySelectorAll('[data-people]').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.people === state.key)));
+    root.querySelectorAll('[data-people]').forEach(tab => {
+      tab.setAttribute('aria-selected', String(tab.dataset.people === state.key));
+      tab.tabIndex = tab.dataset.people === state.key ? 0 : -1;
+    });
+    root.querySelector('#people-list').setAttribute('aria-labelledby', `people-tab-${state.key}`);
   };
   root.querySelector('.tabs-small').addEventListener('click', event => {
     const tab = event.target.closest('[data-people]');
     if (tab) { Object.assign(state, {key: tab.dataset.people, shown: 10}); draw(); }
+  });
+  // Arrow keys move between the tabs, as in any tab list.
+  root.querySelector('.tabs-small').addEventListener('keydown', event => {
+    const step = {ArrowRight: 1, ArrowLeft: -1}[event.key];
+    if (!step) return;
+    const tabs = [...root.querySelectorAll('[data-people]')];
+    const next = tabs[(tabs.findIndex(tab => tab.dataset.people === state.key) + step + tabs.length) % tabs.length];
+    Object.assign(state, {key: next.dataset.people, shown: 10});
+    draw();
+    next.focus();
+    event.preventDefault();
   });
   root.querySelector('#people-q').addEventListener('input', event => { Object.assign(state, {q: event.target.value, shown: 10}); draw(); });
   root.querySelector('#people-more').addEventListener('click', () => { state.shown += 20; draw(); });

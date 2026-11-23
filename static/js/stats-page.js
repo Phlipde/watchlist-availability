@@ -26,8 +26,12 @@ function render(stats, scan) {
   wirePeople(stats, root.querySelector('#people'));
   mountServiceTable(document.getElementById('services-section'), stats.serviceValue, {total: stats.overview.total, imageBaseUrl: config.imageBaseUrl});
   root.setAttribute('aria-busy', 'false');
-  // A link like ?svcq=Disney%2B#services-section scrolls once the table exists.
-  if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
+  // A link like ?svcq=Disney%2B#services-section scrolls once the table exists; Back from the watchlist returns to where you were.
+  const back = performance.getEntriesByType('navigation')[0]?.type === 'back_forward';
+  const saved = Number(sessionStorage.getItem('stats-scroll'));
+  if (back && saved) scrollTo(0, saved);
+  else if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
+  addEventListener('pagehide', () => sessionStorage.setItem('stats-scroll', String(scrollY)));
 }
 
 async function load() {

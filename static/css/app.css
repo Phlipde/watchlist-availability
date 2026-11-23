@@ -1212,7 +1212,18 @@ body.tools-open .segmented .option-count { margin-left: 0; }
   .svc-detail td { display: block; margin: -4px 0 8px; border: 1px solid var(--line-card); border-radius: .5rem; }
   .svc-bar #svc-q { flex: 1 1 100%; }
 }
-@media (prefers-reduced-motion: no-preference) { .bar { transition: width .3s ease; } }
+/* Bars grow in once, unless motion is reduced. */
+@keyframes bar-grow { from { transform: scaleX(0); } }
+@keyframes column-grow { from { transform: scaleY(0); } }
+@media (prefers-reduced-motion: no-preference) {
+  .stats-page .bar, .val-own, .val-other { transform-origin: left; animation: bar-grow .3s ease-out; }
+  .histo-bar { transform-origin: bottom; animation: column-grow .3s ease-out; }
+}
+.stats-skeleton { display: grid; gap: 12px; }
+.stats-skeleton .sk-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.stats-skeleton .sk-tile { height: 92px; border-radius: .5rem; background: oklch(28.8% 0.013 164); }
+.stats-skeleton .sk-bar { height: 28px; border-radius: 6px; background: oklch(33.7% 0.017 159); }
+@media (max-width: 800px) { .stats-skeleton .sk-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ===== Stats page: sections ===== */
 .stats-section { margin: 0 0 40px; }
@@ -1266,7 +1277,7 @@ a.stat-tile:focus-visible, .avail-seg:focus-visible, .avail-legend a:focus-visib
 .histo a { position: relative; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; color: var(--muted); text-decoration: none; }
 .histo-bar { display: block; min-height: 2px; border-radius: 3px 3px 0 0; background: oklch(72% 0.090 165 / .7); }
 .histo li.is-average .histo-bar { background: var(--accent); }
-.histo-label { display: block; margin-top: 4px; font-size: 11px; text-align: center; overflow: hidden; white-space: nowrap; }
+.histo-label { display: block; margin-top: 4px; font-size: var(--fs-small); text-align: center; overflow: hidden; white-space: nowrap; }
 .stats-sentence { margin: 0 0 8px; font: var(--fs-body) system-ui, sans-serif; }
 .plain-list { margin: 0; padding: 0; list-style: none; font: var(--fs-body) system-ui, sans-serif; }
 .plain-list li + li { margin-top: 4px; }

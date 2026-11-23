@@ -517,6 +517,7 @@ def test_runtime_and_rating_filters_show_unit_and_source(app_server, page):
 def test_skip_link_and_three_stops_per_card(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)  # a redraw after the scan would drop the focus
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
     # The first Tab reaches the skip link; it jumps past header and services to the films.
     page.keyboard.press("Tab")
@@ -816,6 +817,10 @@ def test_stats_page_shows_the_numbers_of_the_last_scan(app_server, page):
     expect(page.locator("#people-list")).to_be_visible()
     page.get_by_role("tab", name="Series").click()
     expect(page.locator("#people-tab-collections")).to_have_attribute("aria-selected", "true")
+    page.locator("#people-tab-collections").press("ArrowRight")
+    expect(page.locator("#people-tab-directors")).to_have_attribute("aria-selected", "true")
+    expect(page.locator("#people-tab-directors")).to_be_focused()
+    expect(page.locator(".avail-seg").first).to_have_attribute("aria-label", re.compile("films"))
     expect(page.locator(".stats-table").last).to_contain_text("Netflix")
     expect(page.locator(".stats-card a[href^='/watchlist?genre=']").first).to_be_visible()
 
