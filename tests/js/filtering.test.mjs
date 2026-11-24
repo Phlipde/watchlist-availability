@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
-import {baseCounts, filmKey, bestRelaxation, countVisible, facetCounts, filterFilms, matchesSection, selectedChanges, selectedKinds, similarOnServices, sortFilms, ageMatches, sortRatings, comingSoon, elsewhereOnServices} from '../../static/js/filtering.js';
+import {baseCounts, filmKey, bestRelaxation, countVisible, facetCounts, filterFilms, matchesSection, selectedChanges, selectedKinds, sortFilms, ageMatches, sortRatings, comingSoon, elsewhereOnServices} from '../../static/js/filtering.js';
 
 const baseFilters = {
   query: '', availability: 'all', kind: 'all', minRating: 0, minVotes: 0, genres: {include: [], exclude: []}, keyword: 'all', maxRuntime: 0, mode: 'any',
@@ -191,21 +191,6 @@ test('the best value of a comparison row is marked, ties and lone values are not
   assert.deepEqual(bestIndexes([120, 95, 95], 'low'), [1, 2]);
   assert.deepEqual(bestIndexes([2, 2]), []);  // a tie of all: no winner
   assert.deepEqual(bestIndexes([4.1, null]), []);  // one value alone proves nothing
-});
-
-test('similar films: only watchlist films on own services, in TMDB order, not watched', () => {
-  const heat = {key: '949', title: 'Heat', similar_ids: [3, 2, 1, 4, 949], providers: {}};
-  const films = [
-    heat,
-    {key: '1', title: 'One', providers: {Netflix: ['flatrate']}},
-    {key: '2', title: 'Two', providers: {Netflix: ['rent']}},
-    {key: '3', title: 'Three', providers: {Arte: ['free']}},
-    {key: '4', title: 'Four', providers: {Netflix: ['flatrate']}},
-  ];
-  const titles = list => list.map(film => film.title);
-  assert.deepEqual(titles(similarOnServices(heat, films, new Set(['Netflix', 'Arte']))), ['Three', 'One', 'Four']);
-  assert.deepEqual(titles(similarOnServices(heat, films, new Set(['Netflix']), new Set(['1']))), ['Four']);
-  assert.deepEqual(similarOnServices({key: 'x', title: 'Old scan'}, films, new Set(['Netflix'])), []);
 });
 
 test('age rating: up to a number, exact for other systems, unrated films out', () => {

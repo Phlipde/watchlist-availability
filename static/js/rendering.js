@@ -103,7 +103,7 @@ export function changeBadgesFor(film, selected) {
 export function favoriteFields(key, title, saved = {}) {
   const name = escapeHtml(title);
   const option = (value, label) => `<option value="${value}" ${saved.status === value ? 'selected' : ''}>${label}</option>`;
-  return `<div class="film-actions"><select class="favorite-status" data-key="${escapeHtml(key)}" aria-label="Favorite status for ${name}">${option('plan', 'Plan')}${option('watching', 'Watching')}${option('watched', 'Hidden away')}</select><input class="favorite-note" data-key="${escapeHtml(key)}" aria-label="Note for ${name}" placeholder="Note" value="${escapeHtml(saved.notes || '')}"></div>`;
+  return `<div class="film-actions"><select class="favorite-status" data-key="${escapeHtml(key)}" aria-label="Favorite status for ${name}">${option('plan', 'Plan')}${option('watching', 'Watching')}${option('watched', 'Hidden')}</select><input class="favorite-note" data-key="${escapeHtml(key)}" aria-label="Note for ${name}" placeholder="Note" value="${escapeHtml(saved.notes || '')}"></div>`;
 }
 
 // TMDB serves a poster in several widths; the base url is w500 (the drawer's size).
@@ -118,7 +118,7 @@ export function filmCard(film, section, context) {
   // Letterboxd first (the community the watchlist comes from), TMDB when Letterboxd has no value yet.
   const rating = numberText(film.letterboxd_rating)
     ? `<span aria-hidden="true">★</span><span class="visually-hidden">Letterboxd</span> ${Number(film.letterboxd_rating).toFixed(1)}`
-    : numberText(film.rating) ? `TMDB ${Number(film.rating).toFixed(1)}` : '';
+    : Number(film.rating) > 0 ? `TMDB ${Number(film.rating).toFixed(1)}` : '';
   const runtime = runtimeText(film.runtime) && `<span aria-hidden="true">${runtimeText(film.runtime)}</span><span class="visually-hidden">${runtimeSpoken(film.runtime)}</span>`;
   const meta = [numberText(film.year, 'Year unknown'), runtime, rating].filter(Boolean).join(' · ');
   const favorite = context.favorites.has(key);
@@ -134,12 +134,12 @@ export function filmCard(film, section, context) {
   const watched = savedFavorite.status === 'watched' || Boolean(context.watched?.has(key));
   const hidden = Boolean(context.hiddenKeys?.has(key));
   const badge = watched
-    ? '<span class="poster-badge">Hidden away</span>'
+    ? '<span class="poster-badge">Hidden</span>'
     : added.length ? `<span class="poster-badge poster-badge-new" title="New on ${escapeHtml(added.join(', '))}">New<span class="visually-hidden"> on ${escapeHtml(added.join(', '))}</span></span>`
       : removed.length ? `<span class="poster-badge poster-badge-gone" title="Gone from ${escapeHtml(removed.join(', '))}">Gone<span class="visually-hidden"> from ${escapeHtml(removed.join(', '))}</span></span>` : '';
-  // Heart at the top right of the poster; compare, not now and grey out on a bar at its foot (hover, focus, long press).
+  // Heart at the top right of the poster; compare, not now and hide on a bar at its foot (hover, focus, long press).
   const act = (extra, icon, name) => `<button class="card-action" type="button" ${extra} title="${name}" aria-label="${name}"><i class="ti ${icon}" aria-hidden="true"></i></button>`;
-  const bar = `<div class="poster-actions" role="group" aria-label="Actions: ${title}">${act(`data-compare="${escapeHtml(key)}"`, 'ti-layout-columns', context.compareKeys.has(key) ? 'Remove from comparison' : 'Add to comparison')}${act(`data-flag="not_now" data-key="${escapeHtml(key)}"`, 'ti-eye-off', hidden ? 'Bring back' : 'Not now (30 days)')}${act(`data-flag="watched" data-key="${escapeHtml(key)}"`, watched ? 'ti-circle-check-filled' : 'ti-circle-check', watched ? 'Remove grey-out' : 'Grey out')}</div>`;
+  const bar = `<div class="poster-actions" role="group" aria-label="Actions: ${title}">${act(`data-compare="${escapeHtml(key)}"`, 'ti-layout-columns', context.compareKeys.has(key) ? 'Remove from comparison' : 'Add to comparison')}${act(`data-flag="not_now" data-key="${escapeHtml(key)}"`, 'ti-eye-off', hidden ? 'Bring back' : 'Not now: off Tonight and suggestions for 30 days')}${act(`data-flag="watched" data-key="${escapeHtml(key)}"`, 'ti-archive', watched ? 'Unhide' : 'Hide: stays hidden until you unhide it')}</div>`;
   // The title comes first in the source (and for the keyboard); the CSS draws the poster on top. The title link covers
   // the whole card (see .film-open::after); the heart, the bar and the line sit above it.
   return `<article class="film${grey}${watched ? ' is-watched' : ''}" data-key="${escapeHtml(key)}" data-section="${section}"><div class="film-info"><h3 class="film-title">${filmLink(film, key, pageHref)}</h3><p class="year">${meta}</p><div class="card-foot">${wayLine(film, key, context)}</div>${favoriteControls}</div><div class="poster"><label class="comparison-toggle"><input class="comparison-check" type="checkbox" aria-label="Compare ${title}" ${compareChecked}><span aria-hidden="true">Compare</span></label>${badge}${favoriteButton}${poster}${bar}</div></article>`;

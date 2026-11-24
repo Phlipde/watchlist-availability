@@ -43,7 +43,7 @@ BUNDLES = {
             "overview": "A thief.",
             "rating": 8.0,
             "runtime": 120,
-            "genres": ["Action"],
+            "genres": ["Action", "Thriller", "Sci-Fi"],
             "trailer_url": "https://www.youtube.com/watch?v=abc",
             "release_dates": {"DE": {"certification": "16", "home": "2099-03-01"}},
         },
@@ -56,6 +56,7 @@ BUNDLES = {
             "release_date": "1979-05-25",
             "overview": "In space.",
             "rating": 8.1,
+            "genres": ["Thriller", "Sci-Fi"],
             "similar_ids": [949, 111],
         },
         "providers": {"DE": {"Arte": ["free"]}, "GB": {"Arte": ["flatrate"]}},
@@ -982,9 +983,9 @@ def test_card_menu_sets_a_film_aside_and_marks_it_watched_with_undo(app_server, 
     name = first.locator(".film-title").inner_text()
     # Watched: the poster says so, the toast offers Undo.
     first.hover()  # the action bar shows while the pointer is on the card
-    first.get_by_role("button", name="Grey out").click()
+    first.get_by_role("button", name="Hide: stays hidden until you unhide it").click()
     expect(page.locator("#toast-message")).to_contain_text("hidden away")
-    expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_text("Hidden away")
+    expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_text("Hidden")
     assert any(item["flag"] == "watched" for item in app_server["store"].list_flags())
     page.locator("#toast-undo").click()
     expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_count(0)
@@ -992,7 +993,7 @@ def test_card_menu_sets_a_film_aside_and_marks_it_watched_with_undo(app_server, 
     # Not now: the film leaves the list until the filter asks for it.
     first = page.locator("article.film").first
     first.hover()
-    first.get_by_role("button", name="Not now (30 days)").click()
+    first.get_by_role("button", name="Not now: off Tonight and suggestions for 30 days").click()
     expect(page.locator("article.film")).to_have_count(len(titles) - 1)
     page.locator("#more-filters > summary").click()
     page.locator("#show-hidden").check()
@@ -1031,7 +1032,7 @@ def test_keyboard_shortcuts(app_server, page):
     # "s" marks the card in focus as watched; "g" then "s" goes to the subscriptions.
     page.locator("article.film .film-open").first.focus()
     page.keyboard.press("s")
-    expect(page.locator("article.film .poster-badge")).to_have_text("Hidden away")
+    expect(page.locator("article.film .poster-badge")).to_have_text("Hidden")
     page.keyboard.press("g")
     page.keyboard.press("s")
     expect(page).to_have_url(re.compile(r"/subscriptions$"))
@@ -1249,7 +1250,9 @@ def test_details_actions_sit_in_one_row_with_a_clear_main_button(app_server, pag
     expect(toolbar).to_have_count(5)
     tops = toolbar.evaluate_all("buttons => buttons.map(b => Math.round(b.getBoundingClientRect().top))")
     assert len(set(tops)) == 1  # one row, nothing wraps
-    expect(page.get_by_role("button", name="Grey out this film")).to_be_visible()
+    expect(
+        page.get_by_role("button", name="Hide this film: stays hidden until you unhide it")
+    ).to_be_visible()
 
 
 def test_header_says_synced_in_words_right_after_a_scan(app_server, page):
@@ -1436,10 +1439,10 @@ def test_grey_outs_can_be_reset_on_the_data_page(app_server, page):
     expect = playwright_api.expect
     assert page.request.put(app_server["url"] + "/api/flags/348", data={"flag": "watched"}).ok
     page.goto(app_server["url"] + "/settings/data")
-    expect(page.locator("#greyouts-text")).to_contain_text("1 film is hidden away")
-    page.get_by_role("button", name="Reset grey-outs").click()
-    expect(page.locator("#greyouts-text")).to_contain_text("1 grey-outs removed")
-    expect(page.get_by_role("button", name="Reset grey-outs")).to_be_disabled()
+    expect(page.locator("#greyouts-text")).to_contain_text("1 film is hidden")
+    page.get_by_role("button", name="Unhide all").click()
+    expect(page.locator("#greyouts-text")).to_contain_text("1 films unhidden")
+    expect(page.get_by_role("button", name="Unhide all")).to_be_disabled()
     assert page.request.get(app_server["url"] + "/api/greyouts").json() == {"flags": 0, "favorites": 0}
 
 

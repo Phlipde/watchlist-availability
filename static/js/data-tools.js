@@ -1,5 +1,6 @@
-// Settings -> Data: export, import with a preview, and the grey-outs (count and reset).
+// Settings -> Data: export, import with a preview, and the hidden films (count and unhide all).
 import {favoritesCsv, filmsCsv, importLine, importPreview, parseFavorites} from './exports.js';
+import {escapeHtml} from './ui.js';
 
 function download(name, data, type) {
   const link = document.createElement('a');
@@ -83,16 +84,32 @@ async function refresh() {
   const total = flags + favorites;
   button.disabled = total === 0;
   text.textContent = total
-    ? `${total} ${total === 1 ? 'film is' : 'films are'} hidden away${favorites ? ` (${favorites} as favorites)` : ''}. They stay in the list, only paler.`
-    : 'No film is hidden away. Letterboxd is where you log what you watched.';
+    ? `${total} ${total === 1 ? 'film is' : 'films are'} hidden${favorites ? ` (${favorites} as favorites)` : ''}. They stay in the list, only paler.`
+    : 'No film is hidden. Letterboxd is where you log what you watched.';
+  await showList();
 }
+
+// The hidden films one by one, each with its own Unhide.
+const list = document.getElementById('hidden-list');
+async function showList() {
+  const flags = (await (await fetch('/api/flags')).json()).filter(item => item.flag === 'watched');
+  const titles = new Map(((await (await fetch('/api/latest')).json()).results || []).map(film => [film.key, film.title]));
+  list.innerHTML = flags.map(item => `<li><span>${escapeHtml(titles.get(item.key) || item.key)}</span> <button class="btn btn-sm btn-outline-secondary" type="button" data-unhide="${escapeHtml(item.key)}">Unhide</button></li>`).join('');
+}
+list?.addEventListener('click', async event => {
+  const unhide = event.target.closest('[data-unhide]');
+  if (!unhide) return;
+  const response = await fetch(`/api/flags/${encodeURIComponent(unhide.dataset.unhide)}`, {method: 'DELETE'});
+  if (response.ok) refresh();
+});
 
 button?.addEventListener('click', async () => {
   const response = await fetch('/api/greyouts/reset', {method: 'POST'});
   if (response.ok) {
     const done = await response.json();
-    text.textContent = `Reset: ${done.flags} grey-outs removed${done.favorites ? `, ${done.favorites} favorites set back to Plan` : ''}.`;
+    text.textContent = `Reset: ${done.flags} films unhidden${done.favorites ? `, ${done.favorites} favorites set back to Plan` : ''}.`;
     button.disabled = true;
+    showList();
   }
 });
 

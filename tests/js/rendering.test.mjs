@@ -62,7 +62,7 @@ test('a new film gets one badge on the poster, a hidden-away favorite says so in
   const fresh = filmCard(film, 'Paid', {...base, favorites: new Map()});
   assert.match(fresh, /class="poster-badge poster-badge-new"/);
   const watched = filmCard(film, 'Paid', {...base, favorites: new Map([['x', {status: 'watched'}]])});
-  assert.match(watched, /<span class="poster-badge">Hidden away<\/span>/);
+  assert.match(watched, /<span class="poster-badge">Hidden<\/span>/);
   assert.match(watched, /<article class="film is-watched"/);  // dimmed in the grid
   assert.ok(!fresh.includes('is-watched'));
   assert.ok(!watched.includes('poster-badge-new'));
@@ -135,8 +135,8 @@ test('the card has a small heart on the poster and an action bar, no "..." menu'
   assert.ok(html.indexOf('film-title') < html.indexOf('class="poster"'), 'the title comes first for the keyboard');
   assert.match(html, /<div class="poster-actions" role="group" aria-label="Actions: Film">/);
   assert.match(html, /title="Add to comparison"/);
-  assert.match(html, /title="Not now \(30 days\)"/);
-  assert.match(html, /title="Grey out"/);
+  assert.match(html, /title="Not now: off Tonight and suggestions for 30 days"/);
+  assert.match(html, /title="Hide: stays hidden until you unhide it"/);
   assert.ok(!html.includes('card-menu') && !html.includes('card-more'));
 });
 

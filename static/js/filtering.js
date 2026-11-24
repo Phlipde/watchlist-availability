@@ -219,18 +219,6 @@ export function filterFilms(films, unavailable, filters, context) {
   return {sections, films: sortFilms([...merged.values()], filters.sort, context), sectionOf, unavailable: unavailableMatches, visibleCount: visibleKeys.size};
 }
 
-// Watchlist films TMDB recommends for `film` that run on an own service without extra cost,
-// in TMDB's order. Watched films (`skip`) are left out.
-export function similarOnServices(film, films, subscriptions, skip = new Set(), limit = 5) {
-  const byKey = new Map(films.map(item => [filmKey(item), item]));
-  return [...new Set(film.similar_ids || [])]
-    .map(id => byKey.get(String(id)))
-    .filter(item => item && item !== film && !skip.has(filmKey(item))
-      && Object.entries(item.providers || {}).some(([provider, kinds]) =>
-        subscriptions.has(provider) && kinds.some(kind => ['free', 'ads', 'flatrate'].includes(kind))))
-    .slice(0, limit);
-}
-
 // Other countries where the film runs on one of the user's services without extra cost:
 // [[country, [services]]], the current country left out, sorted by country code.
 export function elsewhereOnServices(byCountry, subscriptions, current) {

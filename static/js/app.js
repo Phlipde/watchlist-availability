@@ -3,6 +3,7 @@ import {createAppState, createScanState} from './state.js';
 import {bestAvailability} from './statistics.js';
 import {serviceGroup} from './catalog.js';
 import {emptyLink} from './link-filters.js';
+import {similarOnServices} from './similar.js';
 import {bestIndexes, favoriteFields, filmCard, filmHref, renderResults, runtimeText} from './rendering.js';
 import './register-sw.js';
 import {scanProblem} from './problems.js';
@@ -11,7 +12,7 @@ import {showDeadlines} from './deadlines.js';
 import {TONIGHT_CHIPS, nowOnText, pickFilm, pickReason, recentlyGone, tonightRows} from './events.js';
 import {COST, readFilters} from './filters.js';
 import {createFilterBar, initPopovers} from './filterbar.js';
-import {baseCounts, bestRelaxation, comingSoon, elsewhereOnServices, filmKey, filterFilms, similarOnServices, sortFilms, sortRatings} from './filtering.js';
+import {baseCounts, bestRelaxation, comingSoon, elsewhereOnServices, filmKey, filterFilms, sortFilms, sortRatings} from './filtering.js';
 import {updateScanFeedback} from './scans.js';
 import {abroadFilm, abroadForFilm, abroadHtml, abroadRows, abroadServices} from './abroad.js';
 import {NAV_KEYS, columnsFromTops, nextIndex, nextInRows} from './gridnav.js';
@@ -933,6 +934,7 @@ const state = createAppState();
         serviceOf: item => includedOn(item, own).split(', ')[0],
         keyOf: filmKey,
         releaseText: upcomingText(film),
+        scanAt: state.lastScan,
         favoriteFields: saved ? favoriteFields(key, film.title, saved) : '',
       };
       document.getElementById('film-details-content').innerHTML = drawerHtml(film, ctx);
@@ -1049,7 +1051,7 @@ const state = createAppState();
         link.classList.add('is-open');
       }
     }, true);
-    // Touch: a long press on a card shows its action bar (compare, not now, grey out); a tap elsewhere hides it.
+    // Touch: a long press on a card shows its action bar (compare, not now, hide); a tap elsewhere hides it.
     let pressTimer = null;
     let swallowClick = false;
     results.addEventListener('pointerdown', event => {

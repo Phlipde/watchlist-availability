@@ -8,7 +8,7 @@ const KIND_LABEL = {free: 'Free', ads: 'With ads', flatrate: 'Subscription', ren
 const WATCH = ['free', 'ads', 'flatrate'];
 const PAY = ['rent', 'buy'];
 
-import {catalogName} from './catalog.js';
+import {catalogName, serviceGroup} from './catalog.js';
 import {bestWay} from './bestway.js';
 export {catalogName};
 const isChannel = name => catalogName(name) !== name;
@@ -74,9 +74,9 @@ export function catalogRows(providers, own) {
     const byCatalog = new Map();
     for (const [name, kinds] of entries) {
       if (!kinds.includes(kind)) continue;
-      const catalog = catalogName(name);
+      const catalog = serviceGroup(name);
       const row = byCatalog.get(catalog) || {name: catalog, own: false, via: []};
-      row.own = row.own || own.has(name) || own.has(catalog);
+      row.own = row.own || own.has(name) || own.has(catalog) || own.has(catalogName(name));
       if (isChannel(name)) row.via.push('Amazon Channel');
       byCatalog.set(catalog, row);
     }
@@ -93,7 +93,7 @@ const justWatchSearch = (film, country) => `https://www.justwatch.com/${encodeUR
 
 // The main button: the best way (bestWay, the same as on the card) in words, or why there is none. `primary` is
 // true only for something watchable on an own service (the only gold button).
-export function primaryAction(film, own, country, regionName = country) {
+export function primaryAction(film, own, country, regionName = country, today = new Date().toISOString().slice(0, 10)) {
   const href = watchUrl(film, country);
   const way = bestWay(film, {own});
   const label = {free: 'Free', flatrate: 'Subscription', ads: 'With ads'};
@@ -104,7 +104,12 @@ export function primaryAction(film, own, country, regionName = country) {
     case 'rent': return {primary: false, text: `Rent on ${way.service}`, service: way.service, href};
     case 'buy': return {primary: false, text: `Buy on ${way.service}`, service: way.service, href};
     case 'foreign': return {primary: false, text: `On ${way.service} (not your service)`, service: way.service, href};
-    default: return {primary: false, text: `Not streaming in ${regionName}`, service: null, href: '', disabled: true};
+    default: {
+      // A film still in the cinema or not out yet has nothing to stream: say when it comes instead.
+      const cinema = film.cinema_date && film.cinema_date >= today ? film.cinema_date : '';
+      const text = cinema ? `In cinemas ${cinema.split('-').reverse().join('.')}` : `Not streaming in ${regionName}`;
+      return {primary: false, text, service: null, href: '', disabled: true};
+    }
   }
 }
 
@@ -157,14 +162,22 @@ const logoImg = (ctx, name, className = 'provider-logo') => {
 };
 
 function ratingsHtml(film) {
-  const lb = numberText(film.letterboxd_rating) ? Number(film.letterboxd_rating).toFixed(1) : '';
-  const tmdb = numberText(film.rating) ? Number(film.rating).toFixed(1) : '';
+  const lb = Number(film.letterboxd_rating) > 0 ? Number(film.letterboxd_rating).toFixed(1) : '';
+  const tmdb = Number(film.rating) > 0 ? Number(film.rating).toFixed(1) : '';  // TMDB gives unreleased films 0.0
   if (!lb && !tmdb) return '';
   // Tap or focus shows the vote count (a native title does not appear on a phone).
   const votes = film.vote_count ? `${Number(film.vote_count).toLocaleString()} votes` : '';
   const letterboxd = lb ? `<span class="rating"><svg class="rating-logo" viewBox="0 0 30 16" role="img" aria-label="Letterboxd"><circle cx="8" cy="8" r="6" fill="#00e054"/><circle cx="15" cy="8" r="6" fill="#ff8000" fill-opacity=".9"/><circle cx="22" cy="8" r="6" fill="#40bcf4" fill-opacity=".9"/></svg>★ ${lb}</span>` : '';
   const tmdbHtml = tmdb ? `<button class="rating" type="button" data-tip="${escapeHtml(votes)}" aria-label="TMDB ${tmdb}${votes ? `, ${escapeHtml(votes)}` : ''}"><span class="rating-logo rating-tmdb" aria-hidden="true">TMDB</span>${tmdb}</button>` : '';
   return `<p class="film-modal-ratings">${letterboxd}${tmdbHtml}</p>`;
+}
+
+// "Source: TMDB (JustWatch data), DE, as of 22.11.2026 23:40"; the date is that of the last scan.
+export function sourceText(country, seconds) {
+  const when = seconds ? new Date(seconds * 1000) : null;
+  const two = number => String(number).padStart(2, '0');
+  const stamp = when ? `, as of ${two(when.getDate())}.${two(when.getMonth() + 1)}.${when.getFullYear()} ${two(when.getHours())}:${two(when.getMinutes())}` : '';
+  return `Source: TMDB (JustWatch data), ${country}${stamp}`;
 }
 
 function mainButton(action) {
@@ -186,7 +199,14 @@ function otherServicesHtml(film, ctx, action) {
     const logo = logoImg(ctx, row.name, 'svc-logo');
     return `<li class="svc${row.own ? ' is-own' : ''}${logo ? '' : ' no-logo'}" tabindex="0" role="img" aria-label="${escapeHtml(tip)}" data-tip="${escapeHtml(tip)}">${logo || `<span class="svc-name">${escapeHtml(row.name)}</span>`}${row.own ? '<i class="ti ti-check own-badge" aria-hidden="true"></i>' : ''}</li>`;
   };
-  const groupHtml = group => (group.kind === 'buy'
+  // Free, with ads and subscription: a list with logo, name, type and a tick for your own services.
+  const rowHtml = (row, group) => {
+    const via = row.via.length ? ` <span class="muted">also via ${escapeHtml([...new Set(row.via)].join(', '))}</span>` : '';
+    return `<li class="svc-row${row.own ? ' is-own' : ''}">${logoImg(ctx, row.name, 'svc-logo') || '<span class="svc-logo no-logo" aria-hidden="true"></span>'}<span class="svc-row-name">${escapeHtml(row.name)}${via}</span><span class="svc-row-kind">${escapeHtml(group.label)}</span>${row.own ? '<i class="ti ti-check svc-row-own" role="img" aria-label="your service"></i>' : ''}</li>`;
+  };
+  const groupHtml = group => (WATCH.includes(group.kind)
+    ? `<section class="offer-group" data-offer="${group.kind}"><h3 class="offer-heading">${group.label}</h3><ul class="svc-rows">${group.rows.map(row => rowHtml(row, group)).join('')}</ul></section>`
+    : group.kind === 'buy'
     ? `<details class="offer-group offer-buy" data-offer="buy"><summary class="offer-heading">Buy (${group.rows.length})</summary><ul class="svc-list">${group.rows.map(chip).join('')}</ul></details>`
     : `<section class="offer-group" data-offer="${group.kind}"><h3 class="offer-heading">${group.label}</h3><ul class="svc-list">${group.rows.map(chip).join('')}</ul></section>`);
   const visible = groups.length && others.size;
@@ -198,7 +218,7 @@ function posterRow(items, ctx, currentKey = '') {
   return `<ul class="mini-posters">${items.map(item => {
     const label = `${item.title}${item.year ? ` (${numberText(item.year)})` : ''}`;
     const service = ctx.serviceOf(item);
-    const poster = item.poster_path ? `<img src="${ctx.imageBaseUrl}${escapeHtml(item.poster_path)}" alt="" loading="lazy">` : `<span class="no-poster" aria-hidden="true">${escapeHtml(item.title)}</span>`;
+    const poster = item.poster_path ? `<img src="${ctx.imageBaseUrl}${escapeHtml(item.poster_path)}" alt="">` : `<span class="no-poster" aria-hidden="true">${escapeHtml(item.title)}</span>`;
     const badge = service ? `<span class="mini-service">${logoImg(ctx, service, 'mini-logo') || escapeHtml(service.slice(0, 2))}</span>` : '';
     const under = `${badge}<span class="mini-year">${item.year ? numberText(item.year) : ''}</span>`;
     const current = ctx.keyOf(item) === currentKey;
@@ -219,7 +239,7 @@ export function drawerHtml(film, ctx) {
   const key = ctx.key;
   const name = escapeHtml(film.title);
   const long = film.title.length > 30;
-  const action = primaryAction(film, ctx.own, ctx.country, ctx.regionName);
+  const action = primaryAction(film, ctx.own, ctx.country, ctx.regionName, ctx.today);
   const badges = statusBadges(film, ctx.own).map(badge => `<p class="status-badge is-${badge.tone}">${escapeHtml(badge.text)}</p>`).join('');
   const alt = alternatives(film, ctx.own, action.service);
   const altKinds = alt.every(item => item.kind !== 'flatrate');
@@ -234,14 +254,14 @@ export function drawerHtml(film, ctx) {
   const original = film.original_title && film.original_title !== film.title ? `<p class="film-original-title">${escapeHtml(film.original_title)}</p>` : '';
   const hero = `<div class="film-hero${backdrop ? '' : ' no-backdrop'}">${backdrop}${play}</div><div class="film-hero-head">${poster}<div class="film-hero-text"><h2 class="film-hero-title${long ? ' is-long' : ''}" id="film-hero-title" title="${name}">${name}</h2>${original}<p class="film-modal-meta">${escapeHtml(metaLine(film, ctx.country))}</p></div></div>`;
 
-  const seenName = ctx.isSeen ? 'Remove grey-out' : 'Grey out this film';
-  const hideName = ctx.isHidden ? 'Bring back' : 'Not now (30 days)';
+  const seenName = ctx.isSeen ? 'Unhide this film' : 'Hide this film: stays hidden until you unhide it';
+  const hideName = ctx.isHidden ? 'Bring back' : 'Not now: off Tonight and suggestions for 30 days';
   const compareName = ctx.inCompare ? 'Remove from comparison' : 'Add to comparison';
   const favName = ctx.isFavorite ? 'Remove favorite' : 'Add to favorites';
   const tools = `<div class="film-modal-toolbar" role="group" aria-label="Actions">${[
     toolButton('modal-favorite', `data-key="${escapeHtml(key)}"`, ctx.isFavorite ? 'ti-heart-filled' : 'ti-heart', 'Favorite', favName, String(ctx.isFavorite)),
     toolButton('modal-compare', `data-key="${escapeHtml(key)}"`, 'ti-layout-columns', 'Compare', compareName, String(ctx.inCompare)),
-    toolButton('modal-flag', `data-flag="watched" data-key="${escapeHtml(key)}"`, ctx.isSeen ? 'ti-circle-check-filled' : 'ti-circle-check', 'Grey out', seenName, String(ctx.isSeen)),
+    toolButton('modal-flag', `data-flag="watched" data-key="${escapeHtml(key)}"`, 'ti-archive', 'Hide', seenName, String(ctx.isSeen)),
     toolButton('modal-flag', `data-flag="not_now" data-key="${escapeHtml(key)}"`, 'ti-eye-off', 'Not now', hideName, String(ctx.isHidden)),
     toolButton('modal-share', '', 'ti-share', 'Share', 'Copy the link to this film'),
   ].join('')}</div>`;
@@ -261,7 +281,7 @@ export function drawerHtml(film, ctx) {
     ? `<p class="film-modal-chips">${words.slice(0, 8).map(chip).join('')}${words.slice(8).map(word => chip(word).replace('class="chip-link"', 'class="chip-link is-extra" hidden')).join('')}${words.length > 8 ? `<button class="chip-link chip-more" type="button" aria-expanded="false">+${words.length - 8}</button>` : ''}</p>` : '';
   const release = ctx.releaseText ? `<p class="film-modal-release">Coming ${escapeHtml(ctx.releaseText)}</p>` : '';
 
-  return `${hero}<div class="film-modal-body">${ratingsHtml(film)}${badges}${mainButton(action)}${altLine}${otherServicesHtml(film, ctx, action)}${tools}${trailerFallback}<div class="film-modal-about"><div class="overview-box${clamp ? ' clamped' : ''}"><p class="film-modal-overview" id="film-overview">${escapeHtml(overview)}</p>${clamp ? '<button class="overview-more" type="button" aria-expanded="false" aria-controls="film-overview">more</button>' : ''}</div>${release}${credits}${collection}${similar}${keywords}${linkChips(film, ctx.country)}</div><div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${ctx.favoriteFields}</div></div>`;
+  return `${hero}<div class="film-modal-body">${ratingsHtml(film)}${badges}${mainButton(action)}<span class="info source-info" tabindex="0" role="note" data-tip="${escapeHtml(sourceText(ctx.country, ctx.scanAt))}" aria-label="${escapeHtml(sourceText(ctx.country, ctx.scanAt))}"><i class="ti ti-info-circle" aria-hidden="true"></i></span>${altLine}${otherServicesHtml(film, ctx, action)}${tools}${trailerFallback}<div class="film-modal-about"><div class="overview-box${clamp ? ' clamped' : ''}"><p class="film-modal-overview" id="film-overview">${escapeHtml(overview)}</p>${clamp ? '<button class="overview-more" type="button" aria-expanded="false" aria-controls="film-overview">more</button>' : ''}</div>${release}${credits}${collection}${similar}${keywords}${linkChips(film, ctx.country)}</div><div id="modal-favorite-fields" data-key="${escapeHtml(key)}">${ctx.favoriteFields}</div></div>`;
 }
 
 const personLink = person => `<a class="person-link" href="/watchlist?q=${encodeURIComponent(person)}">${escapeHtml(person)}</a>`;
