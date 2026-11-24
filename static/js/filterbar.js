@@ -2,7 +2,7 @@
 // Pure counting lives in filtering.js; this module only reads and writes the bar's DOM.
 import {escapeHtml} from './ui.js';
 import {logoStackHtml} from './logo-stack.js';
-import {COST, FILTER_CONTROLS, activeFilters, clearFilter, durationText, resetFilters} from './filters.js';
+import {COST, FILTER_CONTROLS, activeFilters, clearFilter, durationText, ratingFromParams, ratingSummary, resetFilters} from './filters.js';
 import {SECTION_KINDS, countVisible, facetCounts} from './filtering.js';
 import {clearLink, emptyLink, linkChips, needsUnavailable, parseLink, writeLink} from './link-filters.js';
 
@@ -161,7 +161,6 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   // ---- year, rating and votes: quick chips plus a slider; hidden inputs hold the values ------------------------
   const YEAR_MIN = 1920;
   const YEAR_MAX = new Date().getFullYear() + 1;
-  let ratingSource = 'lb';
   let chipsOpen = false;
   $('year-min').max = $('year-max').max = String(YEAR_MAX);
   $('year-max').value = String(YEAR_MAX);
@@ -170,12 +169,12 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     $('year-to').value = to ? String(to) : '';
     if (notify) onChange();
   }
-  function setRating(value, notify = true) {
-    const input = $('rating-filter');
+  // Two independent minimums, Letterboxd and TMDB; a film must pass every one that is set.
+  const RATING_SOURCES = ['lb', 'tmdb'];
+  function setRating(source, value, notify = true) {
+    const input = $(`${source}-filter`);
     input.value = value;
-    const [source, minimum] = value.split(':');
-    input.dataset.text = value ? `${source === 'lb' ? 'Letterboxd' : 'TMDB'} ${minimum}+` : '';
-    if (value) ratingSource = source;
+    input.dataset.text = value ? `${value}+` : '';
     if (notify) onChange();
   }
   function setVotes(value, notify = true) {
@@ -195,22 +194,19 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     $('year-summary').textContent = from || to ? `${from || ''}–${to || ''}` : '';
     $('year-reset').hidden = !(from || to);
     document.querySelectorAll('#year-chips .chip').forEach(chip => chip.setAttribute('aria-pressed', String((Number(chip.dataset.from) || 0) === from && Number(chip.dataset.to) === to)));
-    const [source, minimum] = $('rating-filter').value.split(':');
-    const active = source || ratingSource;
-    document.querySelector(`input[name=rating-source][value="${active}"]`).checked = true;
-    $('rating-chips-lb').hidden = active !== 'lb';
-    $('rating-chips-tmdb').hidden = active !== 'tmdb';
-    document.querySelectorAll('[data-rating]').forEach(chip => chip.setAttribute('aria-pressed', String(chip.dataset.rating === $('rating-filter').value)));
-    $('rating-slider').max = active === 'lb' ? '5' : '10';
-    $('rating-slider').value = minimum || '0';
-    $('rating-slider-value').textContent = Number(minimum) ? `${minimum}+` : 'any';
+    RATING_SOURCES.forEach(source => {
+      const value = $(`${source}-filter`).value;
+      document.querySelectorAll(`#rating-chips-${source} [data-rating]`).forEach(chip => chip.setAttribute('aria-pressed', String(chip.dataset.rating === `${source}:${value}`)));
+      $(`rating-slider-${source}`).value = value || '0';
+      $(`rating-slider-value-${source}`).textContent = Number(value) ? `${value}+` : 'any';
+      $(`${source}-reset`).hidden = !value;
+    });
+    $('tmdb-note').hidden = !Number($('tmdb-filter').value);
     const votes = $('min-votes').value;
     const votesChip = document.querySelector(`#votes-chips [data-votes="${votes}"]`);
     $('min-votes').dataset.text = votes === '0' ? '' : votesChip ? votesChip.textContent.trim() : `${votes}+`;
-    $('rating-filter').dataset.text = minimum ? `${source === 'lb' ? 'Letterboxd' : 'TMDB'} ${minimum}+` : '';
     document.querySelectorAll('#votes-chips .chip').forEach(chip => chip.setAttribute('aria-pressed', String(chip.dataset.votes === votes)));
-    $('rating-summary').textContent = minimum ? `${source === 'lb' ? 'Letterboxd' : 'TMDB'} ${minimum}+` : '';
-    $('rating-reset').hidden = !minimum && votes === '0';
+    $('rating-summary').textContent = ratingSummary($('lb-filter').value, $('tmdb-filter').value, votes === '0' ? '' : $('min-votes').dataset.text);
   }
   $('year-chips').addEventListener('click', event => {
     const chip = event.target.closest('.chip');
@@ -226,27 +222,21 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     setYears(low > YEAR_MIN ? low : '', high < YEAR_MAX ? high : '');
   }));
   $('year-reset').addEventListener('click', () => setYears('', ''));
-  $('rating-pop').addEventListener('change', event => {
-    if (event.target.name !== 'rating-source') return;
-    ratingSource = event.target.value;
-    const hadValue = Boolean($('rating-filter').value);
-    setRating('');  // the two scales differ: a number from one is no limit on the other
-    $('rating-note').hidden = !hadValue;
-  });
   $('rating-pop').addEventListener('click', event => {
     const chip = event.target.closest('.chip');
     if (!chip) return;
-    if (chip.dataset.votes !== undefined) setVotes(chip.dataset.votes);
-    else setRating(chip.getAttribute('aria-pressed') === 'true' ? '' : chip.dataset.rating);
-    $('rating-note').hidden = true;
+    if (chip.dataset.votes !== undefined) { setVotes(chip.dataset.votes); return; }
+    const [source, value] = chip.dataset.rating.split(':');
+    setRating(source, chip.getAttribute('aria-pressed') === 'true' ? '' : value);
   });
-  $('rating-slider').addEventListener('input', event => setRating(Number(event.target.value) ? `${ratingSource}:${event.target.value}` : ''));
-  $('rating-reset').addEventListener('click', () => { setRating('', false); setVotes('0'); });
+  RATING_SOURCES.forEach(source => {
+    $(`rating-slider-${source}`).addEventListener('input', event => setRating(source, Number(event.target.value) ? event.target.value : ''));
+    $(`${source}-reset`).addEventListener('click', () => setRating(source, ''));
+  });
   // Letterboxd ratings arrive with the first scan after an update; until then only TMDB can be used.
   function setRatingAvailability(rated) {
-    document.querySelector('input[name=rating-source][value="lb"]').disabled = !rated;
-    document.querySelectorAll('#rating-chips-lb .chip').forEach(chip => { chip.disabled = !rated; });
-    if (!rated) { ratingSource = 'tmdb'; if ($('rating-filter').value.startsWith('lb:')) setRating('', false); }
+    document.querySelectorAll('#rating-chips-lb .chip, #rating-slider-lb').forEach(item => { item.disabled = !rated; });
+    if (!rated && $('lb-filter').value) setRating('lb', '', false);
   }
 
   // ---- sort: a menu of radios with one line of explanation each; the hidden #sort-order holds the value ---------
@@ -367,16 +357,20 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
       element.textContent = count;
       element.closest('label').classList.toggle('is-empty', count === 0);
     });
-    const ratingKeys = [...document.querySelectorAll('[data-rating]')].map(chip => chip.dataset.rating);
-    const ratings = facetCounts(films, filters, context, (f, c) => [{...f, minRating: 0, minLetterboxd: 0}, c], film => ratingKeys
-      .filter(key => { const [source, minimum] = key.split(':'); return source === 'lb' ? Number(film.letterboxd_rating) >= Number(minimum) : Number(film.rating) >= Number(minimum); }));
-    document.querySelectorAll('[data-rating-count]').forEach(element => { element.textContent = ratings.get(element.dataset.ratingCount) || 0; });
+    // Each source's chips count with the other source's minimum applied, and without its own.
+    RATING_SOURCES.forEach(source => {
+      const keys = [...document.querySelectorAll(`#rating-chips-${source} [data-rating]`)].map(chip => chip.dataset.rating);
+      const own = source === 'lb' ? {minLetterboxd: 0} : {minRating: 0};
+      const counts = facetCounts(films, filters, context, (f, c) => [{...f, ...own}, c], film => keys
+        .filter(key => Number(source === 'lb' ? film.letterboxd_rating : film.rating) >= Number(key.split(':')[1])));
+      document.querySelectorAll(`[data-rating-count^="${source}:"]`).forEach(element => { element.textContent = counts.get(element.dataset.ratingCount) || 0; });
+    });
     syncRanges();
   }
 
   // ---- chips ------------------------------------------------------------------------------------
   // Which panel holds a filter; every other one sits behind "Filters".
-  const PANELS = {'runtime-filter': 'runtime-pop', 'rating-filter': 'rating-pop', 'min-votes': 'rating-pop', 'year-from': 'year-pop', 'year-to': 'year-pop', 'film-search': 'film-search', 'cost-filter': 'cost-options'};
+  const PANELS = {'runtime-filter': 'runtime-pop', 'lb-filter': 'rating-pop', 'tmdb-filter': 'rating-pop', 'min-votes': 'rating-pop', 'year-from': 'year-pop', 'year-to': 'year-pop', 'film-search': 'film-search', 'cost-filter': 'cost-options'};
   const insidePanel = id => Boolean($(id).closest('#more-filters') || $(PANELS[id])?.classList.contains('is-moved'));
   function openPanel(id) {
     let element = $(id);
@@ -430,7 +424,8 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     state.selected = new Set(mySubscriptions());
     setCost('all', false);
     setRuntime(0, false);
-    setRating('', false);
+    setRating('lb', '', false);
+    setRating('tmdb', '', false);
     setVotes('0', false);
     buildServicesMenu();
     buildGenreMenu([...document.querySelectorAll('#genre-list input')].map(input => input.value));
@@ -464,8 +459,9 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     setCost(params.get('cost') || 'all', false);
     if (params.get('unavailable') === '1') $('show-unavailable').checked = true;
     setRuntime(params.get('max') || 0, false);
-    const rating = params.get('rating') || '';
-    setRating(/^(lb|tmdb):\d+(\.\d+)?$/.test(rating) ? rating : '', false);
+    const {lb, tmdb} = ratingFromParams(params);
+    setRating('lb', lb, false);
+    setRating('tmdb', tmdb, false);
     const list = name => (params.get(name) || '').split(',').filter(value => value && value !== 'all');
     state.genres = {include: new Set(list('genre')), exclude: new Set(list('nogenre'))};
     state.matchMode = params.get('match') === 'all' ? 'all' : 'any';
@@ -477,7 +473,9 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     const set = (name, value) => (value ? url.searchParams.set(name, value) : url.searchParams.delete(name));
     set('cost', $('cost-filter').value === 'all' ? '' : $('cost-filter').value);
     set('max', $('runtime-filter').value === '0' ? '' : $('runtime-filter').value);
-    set('rating', $('rating-filter').value);
+    set('lb', $('lb-filter').value);
+    set('tmdb', $('tmdb-filter').value);
+    url.searchParams.delete('rating');
     set('genre', [...state.genres.include].join(','));
     set('nogenre', [...state.genres.exclude].join(','));
     set('unavailable', $('show-unavailable').checked ? '1' : '');

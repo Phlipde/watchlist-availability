@@ -166,21 +166,22 @@ test('every set filter gets a chip and reset clears them all', async () => {
   const select = (value, values) => ({value, options: values.map(item => ({value: item, text: `Label ${item}`})), get selectedIndex() { return values.indexOf(this.value); }, dataset: {}});
   const controls = {
     'film-search': {value: 'heat', dataset: {}},
-    'rating-filter': select('tmdb:7', ['', 'tmdb:7']),
+    'tmdb-filter': {value: '7', dataset: {default: '', text: '7+'}},
+    'lb-filter': {value: '', dataset: {default: ''}},
     'cost-filter': {value: 'free', dataset: {default: 'all', text: 'Free'}},
     'media-filter': select('trailer', ['all', 'trailer']),
     'provider-count-filter': select('2', ['0', '2']),
     'change-filter': select('all', ['all', 'added']),
   };
   const doc = {getElementById: id => controls[id] ?? null};
-  assert.equal(FILTER_CONTROLS.length, 17);
-  assert.deepEqual(activeFilters(doc).map(chip => chip.label), ['Search', 'Cost', 'Rating', 'Trailer', 'Services']);
-  assert.equal(activeFilters(doc).find(chip => chip.id === 'rating-filter').text, 'Label tmdb:7');
+  assert.equal(FILTER_CONTROLS.length, 18);
+  assert.deepEqual(activeFilters(doc).map(chip => chip.label), ['Search', 'Cost', 'TMDB', 'Trailer', 'Services']);
+  assert.equal(activeFilters(doc).find(chip => chip.id === 'tmdb-filter').text, '7+');
   // A hidden input behind a custom control carries its readable text and its default.
   assert.equal(activeFilters(doc).find(chip => chip.id === 'cost-filter').text, 'Free');
   resetFilters(doc);
   assert.deepEqual(activeFilters(doc), []);
-  assert.equal(controls['rating-filter'].value, '');
+  assert.equal(controls['tmdb-filter'].value, '');
   assert.equal(controls['cost-filter'].value, 'all');
 });
 
@@ -277,4 +278,37 @@ test('"Number of services: Only 1" is the exclusive filter, the numbers are a mi
   assert.deepEqual([readFilters(doc('only1'), false).exclusive, readFilters(doc('only1'), false).minimumProviders], [true, 0]);
   assert.deepEqual([readFilters(doc('3'), false).exclusive, readFilters(doc('3'), false).minimumProviders], [false, 3]);
   assert.deepEqual([readFilters(doc('0'), false).exclusive, readFilters(doc('0'), false).minimumProviders], [false, 0]);
+});
+
+test('Letterboxd and TMDB minimums work together (AND); a film without a value in a set source drops out', async () => {
+  const {readFilters, ratingFromParams, ratingSummary} = await import('../../static/js/filters.js');
+  const rated = [
+    {key: '1', title: 'Both', letterboxd_rating: 4.2, rating: 7.8, vote_count: 20000, providers: {Netflix: ['flatrate']}},
+    {key: '2', title: 'OnlyLB', letterboxd_rating: 4.0, providers: {Netflix: ['flatrate']}},
+    {key: '3', title: 'OnlyTMDB', rating: 8.1, vote_count: 500, providers: {Netflix: ['flatrate']}},
+    {key: '4', title: 'LowLB', letterboxd_rating: 3.0, rating: 8.0, vote_count: 30000, providers: {Netflix: ['flatrate']}},
+  ];
+  const pick = extra => filterFilms(rated, [], {...baseFilters, ...extra}, {selected: new Set(['Netflix']), favorites: new Map()}).sections.Paid.map(film => film.title).sort();
+  assert.deepEqual(pick({minLetterboxd: 3.5}), ['Both', 'OnlyLB']);                      // only Letterboxd
+  assert.deepEqual(pick({minRating: 7}), ['Both', 'LowLB', 'OnlyTMDB']);                 // only TMDB
+  assert.deepEqual(pick({minLetterboxd: 3.5, minRating: 7}), ['Both']);                  // both: AND
+  assert.deepEqual(pick({minRating: 7, minVotes: 10000}), ['Both', 'LowLB']);            // votes threshold; no TMDB rating = out
+  assert.ok(!pick({minRating: 1}).includes('OnlyLB'), 'a film without a TMDB rating is hidden while a TMDB minimum is set');
+  const value = {'lb-filter': '3.5', 'tmdb-filter': '7'};
+  const doc = {getElementById: id => (id in value ? {value: value[id]} : null)};
+  assert.deepEqual([readFilters(doc, false).minLetterboxd, readFilters(doc, false).minRating], [3.5, 7]);
+  assert.equal(ratingSummary('3.5', '7', '10k+'), 'LB 3.5+ · TMDB 7+ · 10k+ votes');
+  assert.equal(ratingSummary('', '7'), 'TMDB 7+');
+  assert.equal(ratingSummary('3.5', ''), 'LB 3.5+');
+  assert.equal(ratingSummary('', ''), '');
+});
+
+test('the new address ?lb=&tmdb= is read, and the old ?rating=lb:3.8 turns into the matching one', async () => {
+  const {ratingFromParams} = await import('../../static/js/filters.js');
+  const p = query => ratingFromParams(new URLSearchParams(query));
+  assert.deepEqual(p('lb=3.5&tmdb=7'), {lb: '3.5', tmdb: '7'});
+  assert.deepEqual(p('rating=lb:3.8'), {lb: '3.8', tmdb: ''});
+  assert.deepEqual(p('rating=tmdb:7'), {lb: '', tmdb: '7'});
+  assert.deepEqual(p('rating=tmdb:7&tmdb=8'), {lb: '', tmdb: '8'});  // the new value wins
+  assert.deepEqual(p('lb=abc&rating=nonsense'), {lb: '', tmdb: ''});
 });

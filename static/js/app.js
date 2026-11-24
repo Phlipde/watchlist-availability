@@ -299,7 +299,7 @@ const state = createAppState();
     function relaxations() {
       const reset = {
         'film-search': ['search', {query: ''}], 'cost-filter': ['cost', {availability: 'available', kind: 'all'}],
-        'runtime-filter': ['runtime', {maxRuntime: 0}], 'rating-filter': ['rating', {minRating: 0, minLetterboxd: 0}],
+        'runtime-filter': ['runtime', {maxRuntime: 0}], 'lb-filter': ['Letterboxd rating', {minLetterboxd: 0}], 'tmdb-filter': ['TMDB rating', {minRating: 0}],
         'year-from': ['year', {yearFrom: 0}], 'year-to': ['year', {yearTo: 9999}], 'min-votes': ['votes', {minVotes: 0}],
         'keyword-filter': ['keyword', {keyword: 'all'}], 'media-filter': ['trailer', {media: 'all'}], 'change-filter': ['changes', {change: 'all'}],
         'provider-count-filter': ['number of services', {minimumProviders: 0, exclusive: false}],
@@ -1323,7 +1323,7 @@ const state = createAppState();
     // Typing in the search redraws only after a short pause, not on every key.
     let searchTimer;
     document.getElementById('film-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(renderFilms, 150); });
-    ['where-filter', 'show-unavailable', 'show-hidden', 'keyword-filter', 'age-filter', 'language-filter', 'origin-filter', 'rating-filter', 'year-from', 'year-to', 'min-votes', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => document.getElementById(id).addEventListener('input', renderFilms));
+    ['where-filter', 'show-unavailable', 'show-hidden', 'keyword-filter', 'age-filter', 'language-filter', 'origin-filter', 'lb-filter', 'tmdb-filter', 'year-from', 'year-to', 'min-votes', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => document.getElementById(id).addEventListener('input', renderFilms));
     const initialUrl = new URL(location.href).searchParams;
     const setInitial = (id, parameter, fallback) => {
       const element = document.getElementById(id);

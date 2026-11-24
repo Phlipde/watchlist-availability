@@ -1,8 +1,8 @@
 // Every filter control and the label of its chip, in the order of the chips.
 // Genres and services are not single controls; the filter bar makes their chips (filterbar.js).
 export const FILTER_CONTROLS = [
-  ['film-search', 'Search'], ['cost-filter', 'Cost'], ['runtime-filter', 'Runtime'], ['rating-filter', 'Rating'],
-  ['year-from', 'From'], ['year-to', 'To'], ['min-votes', 'Votes'], ['keyword-filter', 'Keyword'],
+  ['film-search', 'Search'], ['cost-filter', 'Cost'], ['runtime-filter', 'Runtime'], ['lb-filter', 'Letterboxd'], ['tmdb-filter', 'TMDB'],
+  ['year-from', 'From'], ['year-to', 'To'], ['min-votes', 'TMDB votes'], ['keyword-filter', 'Keyword'],
   ['media-filter', 'Trailer'], ['change-filter', 'Changes'], ['provider-count-filter', 'Services'],
   ['age-filter', 'Age rating'],
   ['language-filter', 'Language'], ['origin-filter', 'Country'], ['show-unavailable', 'Also not available'], ['show-hidden', 'Set aside shown'],
@@ -52,6 +52,22 @@ export function durationText(minutes) {
 
 export const COST = {all: ['available', 'all'], free: ['Free', 'all'], subscription: ['Paid', 'flatrate'], rent: ['Paid', 'rent']};
 
+// ?lb=3.5&tmdb=7; the old ?rating=lb:3.8 (one source) becomes the matching new value.
+export function ratingFromParams(params) {
+  const number = text => (/^\d+(\.\d+)?$/.test(text || '') ? text : '');
+  let lb = number(params.get('lb'));
+  let tmdb = number(params.get('tmdb'));
+  const old = (params.get('rating') || '').match(/^(lb|tmdb):(\d+(?:\.\d+)?)$/);
+  if (old && old[1] === 'lb' && !lb) lb = old[2];
+  if (old && old[1] === 'tmdb' && !tmdb) tmdb = old[2];
+  return {lb, tmdb};
+}
+
+// The trigger's text: "LB 3.5+", "TMDB 7+", "LB 3.5+ · TMDB 7+", with "· 10k+ votes" when set.
+export function ratingSummary(lb, tmdb, votesText = '') {
+  return [lb ? `LB ${lb}+` : '', tmdb ? `TMDB ${tmdb}+` : '', votesText ? `${votesText} votes` : ''].filter(Boolean).join(' · ');
+}
+
 // Reads the filter controls into a plain object for filtering.js; genres come from the filter bar.
 export function readFilters(doc, favoritesOnly, genres = {include: [], exclude: []}) {
   const value = id => doc.getElementById(id)?.value ?? '';
@@ -59,7 +75,6 @@ export function readFilters(doc, favoritesOnly, genres = {include: [], exclude: 
   const years = [Number(value('year-from')) || 0, Number(value('year-to')) || 9999].sort((a, b) => a - b);
   const [availability, kind] = COST[value('cost-filter')] || COST.all;
   const showUnavailable = Boolean(doc.getElementById('show-unavailable')?.checked);
-  const [source, minimum] = value('rating-filter').split(':');
   return {
     query: value('film-search').toLowerCase().trim(),
     // Films that are nowhere to stream only show on request, and only without a cost filter.
@@ -67,14 +82,14 @@ export function readFilters(doc, favoritesOnly, genres = {include: [], exclude: 
     exclusive: value('provider-count-filter') === 'only1',
     showHidden: Boolean(doc.getElementById('show-hidden')?.checked),
     kind,
-    minRating: source === 'tmdb' ? Number(minimum) || 0 : 0,
+    minRating: Number(value('tmdb-filter')) || 0,
     minVotes: Number(value('min-votes')) || 0,
     genres,
     keyword: value('keyword-filter') || 'all',
     age: doc.getElementById('age-filter')?.value ?? 'all',
     language: doc.getElementById('language-filter')?.value ?? 'all',
     origin: doc.getElementById('origin-filter')?.value ?? 'all',
-    minLetterboxd: source === 'lb' ? Number(minimum) || 0 : 0,
+    minLetterboxd: Number(value('lb-filter')) || 0,
     maxRuntime: Number(value('runtime-filter')) || 0,
     mode: value('match-mode') || 'any',
     yearFrom: years[0],

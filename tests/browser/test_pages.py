@@ -325,7 +325,7 @@ def test_saved_results_show_the_tools(app_server, page):
     expect(page.locator("#retry-scan")).to_have_text("Scan now")
     # A filter set from a link must show as a chip, also when its control sits in a closed panel.
     page.goto(app_server["url"] + "/watchlist?votes=1000")
-    expect(page.locator("#filter-chips")).to_contain_text("Votes: 1k+")
+    expect(page.locator("#filter-chips")).to_contain_text("TMDB votes: 1k+")
     page.goto(app_server["url"] + "/watchlist?ages=16")
     expect(page.locator("#more-filters > summary")).to_have_text("More filters · 1")
 
@@ -342,9 +342,9 @@ def test_filters_from_a_link_survive_the_scan(app_server, page):
     page.reload()
     expect(page.locator('#genre-list input[value="Action"]')).to_be_checked()
     # The rating from the link shows as a chip; the chip clears it.
-    expect(page.locator("#rating-filter")).to_have_value("tmdb:7")
-    page.locator('.filter-chip[data-filter-id="rating-filter"] .chip-remove').click()
-    expect(page.locator("#rating-filter")).to_have_value("")
+    expect(page.locator("#tmdb-filter")).to_have_value("7")  # the old ?rating=tmdb:7 link still works
+    page.locator('.filter-chip[data-filter-id="tmdb-filter"] .chip-remove').click()
+    expect(page.locator("#tmdb-filter")).to_have_value("")
     # The genre chip clears the genre.
     page.locator('.filter-chip[data-genre-include="Action"] .chip-remove').click()
     expect(page.locator('#genre-list input[value="Action"]')).not_to_be_checked()
@@ -502,16 +502,20 @@ def test_runtime_and_rating_filters_show_unit_and_source(app_server, page):
     expect(page.locator("#runtime-summary")).to_have_text("≤ 3 h 45")
     page.keyboard.press("Escape")
     page.locator("#rating-pop summary").click()
-    page.locator('#rating-pop input[name="rating-source"][value="tmdb"]').check(force=True)
     page.locator('[data-rating="tmdb:7"]').click()
     expect(page.locator("#rating-summary")).to_have_text("TMDB 7+")
-    expect(page.locator('.filter-chip[data-filter-id="rating-filter"]')).to_have_text("Rating: TMDB 7+")
-    # Changing the source resets the minimum and says so.
-    letterboxd = page.locator('#rating-pop input[name="rating-source"][value="lb"]')
-    letterboxd.evaluate("e => { e.disabled = false; }")  # the fake data has no Letterboxd ratings
-    letterboxd.check(force=True)
-    expect(page.locator("#rating-summary")).to_have_text("")
-    expect(page.locator("#rating-note")).to_be_visible()
+    expect(page.locator('.filter-chip[data-filter-id="tmdb-filter"]')).to_have_text("TMDB: 7+")
+    expect(page.locator("#tmdb-note")).to_be_visible()
+    # The two minimums are independent: setting Letterboxd keeps TMDB.
+    page.evaluate(
+        "document.querySelectorAll('#rating-chips-lb .chip, #rating-slider-lb')"
+        ".forEach(e => { e.disabled = false; })"
+    )
+    page.locator('[data-rating="lb:3.5"]').click()
+    expect(page.locator("#rating-summary")).to_have_text("LB 3.5+ · TMDB 7+")
+    assert "lb=3.5" in page.url and "tmdb=7" in page.url
+    page.locator("#tmdb-reset").click()
+    expect(page.locator("#rating-summary")).to_have_text("LB 3.5+")
 
 
 def test_skip_link_and_three_stops_per_card(app_server, page):
@@ -929,9 +933,8 @@ def test_year_and_runtime_move_into_more_filters_when_the_bar_wraps(app_server, 
     assert page.locator("#year-to").input_value() == "1999"
     expect(page.locator("#more-filters-count")).to_have_text("· 1")  # a moved filter is counted on the button
     expect(page.locator("#moved-slot > #rating-pop.is-moved")).to_have_count(1)  # Rating gives way last
-    page.locator("#moved-slot #rating-pop input[value=tmdb]").check(force=True)
     page.locator("#moved-slot #rating-chips-tmdb .chip", has_text="7+").first.click()
-    expect(page.locator("#rating-filter")).to_have_value("tmdb:7")
+    expect(page.locator("#tmdb-filter")).to_have_value("7")
     expect(page.locator("#more-filters-count")).to_have_text("· 2")
     expect(page.locator("#more-filters")).to_have_attribute("open", "")  # still open
     page.keyboard.press("Escape")
@@ -959,12 +962,11 @@ def test_year_and_rating_panels_and_service_search(app_server, page):
     page.locator("#filter-chips .filter-chip[data-filter-id='year-to'] .chip-remove").click()
     expect(page.locator("#year-to")).to_have_value("")
     page.locator("#rating-pop > summary").click()
-    page.locator("#rating-pop input[value=tmdb]").check(force=True)
     page.locator("#rating-chips-tmdb .chip", has_text="7+").first.click()
-    expect(page.locator("#rating-filter")).to_have_value("tmdb:7")
-    assert "rating=tmdb%3A7" in page.url or "rating=tmdb:7" in page.url
-    page.locator("#rating-reset").click()
-    expect(page.locator("#rating-filter")).to_have_value("")
+    expect(page.locator("#tmdb-filter")).to_have_value("7")
+    assert "tmdb=7" in page.url and "rating=" not in page.url
+    page.locator("#tmdb-reset").click()
+    expect(page.locator("#tmdb-filter")).to_have_value("")
     # The services menu finds a service that is not one of the own ones.
     page.locator("#services-button").click()
     page.locator("#services-search").fill("zzzz")
