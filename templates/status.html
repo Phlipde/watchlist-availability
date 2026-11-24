@@ -24,7 +24,7 @@
       <div class="analysis-item">Automatic scan: <strong>{% if status.scan_interval_hours %}every {{ status.scan_interval_hours }} h{% else %}off{% endif %}</strong></div>
       <div class="analysis-item">Next automatic scan: <strong class="time" data-time="{{ status.next_scan_at or '' }}" data-past="due now">–</strong></div>
       <div class="analysis-item">Right now: <strong>{% if status.running %}a scan is running{% else %}idle{% endif %}</strong></div>
-      <div class="analysis-item">Films known: <strong>{{ status.counts.films }}</strong></div>
+      <div class="analysis-item">Films known: <strong>{{ status.counts.films }}</strong> · {{ status.base.watchlist }} on the watchlist (released) · {{ status.base.coming_soon }} coming soon · <a href="/settings/matches">{{ status.base.to_check }} to check</a></div>
       <div class="analysis-item">Favorites: <strong>{{ status.counts.favorites }}</strong></div>
       <div class="analysis-item">Stored changes: <strong>{{ status.counts.changes }}</strong></div>
       <div class="analysis-item">Matches to check: <strong><a href="/settings/matches">{{ status.uncertain_matches }}</a></strong></div>

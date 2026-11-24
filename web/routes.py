@@ -10,6 +10,7 @@ import requests
 from flask import Flask, Response, jsonify, make_response, render_template, request, send_file
 
 from watchlist_app import (
+    base,
     calendar,
     costs,
     feed,
@@ -73,6 +74,7 @@ def status_overview(store: Store, settings: AppSettings, service: ScanService) -
     catalog = store.provider_catalog(settings.country)
     return {
         "uncertain_matches": len(matches.list_matches(store)),
+        "base": base.base_counts(latest, len(matches.list_matches(store))),
         "provider_catalog": {
             "count": len(catalog),
             "fetched_at": max((item["fetched_at"] for item in catalog), default=None),
@@ -206,6 +208,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
                 "logoBaseUrl": _TMDB_LOGO_BASE_URL,
                 # Logos of the providers loaded from TMDB, for the services menu and the details.
                 "providerLogos": provider_logos(),
+                "toCheck": len(matches.list_matches(store)),
             },
         )
 
@@ -274,7 +277,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
                 scan["results"] if scan else [],
                 own,
                 settings.costs(country),
-                len(scan["unavailable"]) if scan else 0,
+                base.base_counts(scan)["not_available"],
                 frozenset(favorite["key"] for favorite in store.list_favorites()),
             ),
             weekly_hours=settings.weekly_hours,
@@ -622,7 +625,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             scan["results"] if scan else [],
             settings.subscriptions(),
             settings.costs(),
-            len(scan["unavailable"]) if scan else 0,
+            base.base_counts(scan)["not_available"],
         )
         return jsonify(
             {

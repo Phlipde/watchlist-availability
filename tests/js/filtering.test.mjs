@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
-import {filmKey, bestRelaxation, countVisible, facetCounts, filterFilms, matchesSection, selectedChanges, selectedKinds, similarOnServices, sortFilms, ageMatches, sortRatings, comingSoon, elsewhereOnServices} from '../../static/js/filtering.js';
+import {baseCounts, filmKey, bestRelaxation, countVisible, facetCounts, filterFilms, matchesSection, selectedChanges, selectedKinds, similarOnServices, sortFilms, ageMatches, sortRatings, comingSoon, elsewhereOnServices} from '../../static/js/filtering.js';
 
 const baseFilters = {
   query: '', availability: 'all', kind: 'all', minRating: 0, minVotes: 0, genres: {include: [], exclude: []}, keyword: 'all', maxRuntime: 0, mode: 'any',
@@ -311,4 +311,10 @@ test('the new address ?lb=&tmdb= is read, and the old ?rating=lb:3.8 turns into 
   assert.deepEqual(p('rating=tmdb:7'), {lb: '', tmdb: '7'});
   assert.deepEqual(p('rating=tmdb:7&tmdb=8'), {lb: '', tmdb: '8'});  // the new value wins
   assert.deepEqual(p('lb=abc&rating=nonsense'), {lb: '', tmdb: ''});
+});
+
+test('one base set: released films are the watchlist, films with a release ahead are counted apart', () => {
+  const available = [{key: 'a'}, {key: 'b'}];
+  const unavailable = [{key: 'c', home_date: '2026-01-01'}, {key: 'd', cinema_date: '2027-06-30'}, {key: 'e'}];
+  assert.deepEqual(baseCounts(available, unavailable, '2026-11-24'), {watchlist: 4, available: 2, notAvailable: 2, comingSoon: 1});
 });

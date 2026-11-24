@@ -4,6 +4,7 @@ import datetime
 import re
 from typing import Any
 
+from .base import service_group
 from .providers import mostly_free_from_scan
 
 WATCH_KINDS = frozenset({"free", "ads", "flatrate"})  # watchable without paying per film
@@ -300,13 +301,21 @@ def films_services(film: dict, name: str) -> list[str]:
 
 def _coverage(films: list[dict], subscriptions: list[str], free: frozenset[str], unavailable: int) -> dict:
     """How much of the watchlist the own services cover: free, subscription, rent only, the rest."""
-    free_own = [name for name in subscriptions if name in free]
-    paid_own = [name for name in subscriptions if name not in free]
+    # Ownership is by service group: a Netflix subscription covers every Netflix plan (as on the stats page).
+    free_own = {service_group(name) for name in subscriptions if name in free}
+    paid_own = {service_group(name) for name in subscriptions if name not in free}
+
+    def has(film: dict, groups: set[str]) -> bool:
+        return any(
+            service_group(name) in groups and WATCH_KINDS & set(kinds)
+            for name, kinds in film.get("providers", {}).items()
+        )
+
     counts = {"free": 0, "subscription": 0, "rent": 0, "other": unavailable}
     for film in films:
-        if any(_watchable(film, name) for name in free_own):
+        if has(film, free_own):
             counts["free"] += 1
-        elif any(_watchable(film, name) for name in paid_own):
+        elif has(film, paid_own):
             counts["subscription"] += 1
         elif not any(WATCH_KINDS & set(kinds) for kinds in film.get("providers", {}).values()):
             counts[

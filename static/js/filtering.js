@@ -109,6 +109,13 @@ export function comingSoon(films, today) {
     .sort((a, b) => next(a).localeCompare(next(b)) || String(a.title).localeCompare(String(b.title)));
 }
 
+// The one base set: the watchlist is every released, matched film; films whose release is still ahead count apart
+// (same rule as watchlist_app/base.py).
+export function baseCounts(films, unavailable, today) {
+  const coming = comingSoon(unavailable, today).length;
+  return {watchlist: films.length + unavailable.length - coming, available: films.length, notAvailable: unavailable.length - coming, comingSoon: coming};
+}
+
 // Should the film get a card in this section ("Free" or "Paid")?
 export function matchesSection(film, section, filters, context) {
   const providers = sectionProviders(film, section);
