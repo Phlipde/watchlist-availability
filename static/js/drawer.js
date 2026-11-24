@@ -199,14 +199,7 @@ function otherServicesHtml(film, ctx, action) {
     const logo = logoImg(ctx, row.name, 'svc-logo');
     return `<li class="svc${row.own ? ' is-own' : ''}${logo ? '' : ' no-logo'}" tabindex="0" role="img" aria-label="${escapeHtml(tip)}" data-tip="${escapeHtml(tip)}">${logo || `<span class="svc-name">${escapeHtml(row.name)}</span>`}${row.own ? '<i class="ti ti-check own-badge" aria-hidden="true"></i>' : ''}</li>`;
   };
-  // Free, with ads and subscription: a list with logo, name, type and a tick for your own services.
-  const rowHtml = (row, group) => {
-    const via = row.via.length ? ` <span class="muted">also via ${escapeHtml([...new Set(row.via)].join(', '))}</span>` : '';
-    return `<li class="svc-row${row.own ? ' is-own' : ''}">${logoImg(ctx, row.name, 'svc-logo') || '<span class="svc-logo no-logo" aria-hidden="true"></span>'}<span class="svc-row-name">${escapeHtml(row.name)}${via}</span><span class="svc-row-kind">${escapeHtml(group.label)}</span>${row.own ? '<i class="ti ti-check svc-row-own" role="img" aria-label="your service"></i>' : ''}</li>`;
-  };
-  const groupHtml = group => (WATCH.includes(group.kind)
-    ? `<section class="offer-group" data-offer="${group.kind}"><h3 class="offer-heading">${group.label}</h3><ul class="svc-rows">${group.rows.map(row => rowHtml(row, group)).join('')}</ul></section>`
-    : group.kind === 'buy'
+  const groupHtml = group => (group.kind === 'buy'
     ? `<details class="offer-group offer-buy" data-offer="buy"><summary class="offer-heading">Buy (${group.rows.length})</summary><ul class="svc-list">${group.rows.map(chip).join('')}</ul></details>`
     : `<section class="offer-group" data-offer="${group.kind}"><h3 class="offer-heading">${group.label}</h3><ul class="svc-list">${group.rows.map(chip).join('')}</ul></section>`);
   const visible = groups.length && others.size;

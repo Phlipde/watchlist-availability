@@ -1336,14 +1336,6 @@ a.stat-tile:focus-visible, .avail-seg:focus-visible, .avail-legend a:focus-visib
 
 .worth-actions { white-space: nowrap; }
 .worth-actions .btn { margin-left: 4px; }
-/* Other services: free, ads and subscription as rows with name and type; rent and buy stay a grid of logos. */
-.svc-rows { display: grid; gap: 2px; margin: 0 0 8px; padding: 0; list-style: none; }
-.svc-row { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 2px 0; }
-.svc-row .svc-logo { flex: none; width: 28px; height: 28px; border-radius: 6px; object-fit: cover; }
-.svc-row .no-logo { background: var(--surface-2); }
-.svc-row-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.svc-row-kind { color: var(--text-2); font-size: var(--fs-small); white-space: nowrap; }
-.svc-row-own { color: oklch(72% 0.14 150); }
 .mini-posters .no-poster { display: grid; place-items: center; padding: 6px; overflow: hidden; color: var(--text-2); font-size: var(--fs-small); line-height: 1.2; text-align: center; overflow-wrap: anywhere; }
 .source-info { position: relative; margin-left: 8px; }
 .source-info[data-tip]:hover::after, .source-info[data-tip]:focus::after { content: attr(data-tip); position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 6; width: max-content; max-width: 260px; padding: 4px 8px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface-raised); color: var(--text); font-size: var(--fs-small); }
