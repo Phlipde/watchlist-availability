@@ -252,11 +252,22 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         }
         return costs.other_countries(by_country, own, country, len(ids))
 
+    def _country_groups() -> list[tuple[str, list[tuple[str, list[str]]]]]:
+        """provider_groups with only the services TMDB lists in the app's country (no Canal+ in DE)."""
+        here = set(settings.loaded_providers(settings.country))
+        groups = providers.provider_groups(here)
+        if not here:  # the country's services were never loaded: show the built-in list
+            return groups
+        return [
+            (title, [(sub, [name for name in names if name in here]) for sub, names in subs])
+            for title, subs in groups
+        ]
+
     def _service_candidates(own: list[str]) -> list[dict]:
         """Services you could add: [{name, group}], the more usual groups first."""
         mine = set(own)
         found = []
-        for _title, subgroups in providers.provider_groups(settings.loaded_providers()):
+        for _title, subgroups in _country_groups():
             for subgroup, names in subgroups:
                 found += [{"name": name, "group": subgroup} for name in names if name not in mine]
         return found
@@ -297,11 +308,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             for name in film.get("providers", {}):
                 counts[name] = counts.get(name, 0) + 1
         selected = set(settings.subscriptions())
-        groups = {
-            subgroup: names
-            for _, subgroups in providers.provider_groups(settings.loaded_providers())
-            for subgroup, names in subgroups
-        }
+        groups = {subgroup: names for _, subgroups in _country_groups() for subgroup, names in subgroups}
         sections = [("My subscriptions", sorted(selected, key=str.casefold), True)]
         for title, opened in (
             ("Free and ad-supported", True),

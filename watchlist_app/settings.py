@@ -82,9 +82,11 @@ class AppSettings:
         stored = stored if isinstance(stored, dict) else {}
         return {name: bool(stored.get(name, default)) for name, default in DEFAULT_NOTIFY_EVENTS.items()}
 
-    def loaded_providers(self) -> list[str]:
-        """Display names of the providers loaded from TMDB, for all countries."""
-        return sorted({providers.display_name(item["name"]) for item in self._store.provider_catalog()})
+    def loaded_providers(self, country: str | None = None) -> list[str]:
+        """Display names of the providers loaded from TMDB, for one country or all of them."""
+        return sorted(
+            {providers.display_name(item["name"]) for item in self._store.provider_catalog(country)}
+        )
 
     def known_providers(self) -> set[str]:
         return providers.known_names(self.loaded_providers())

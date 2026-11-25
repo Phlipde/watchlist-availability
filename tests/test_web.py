@@ -802,3 +802,12 @@ def test_a_service_cancelled_to_a_past_date_is_no_longer_yours(settings):
         }
     )
     assert settings.subscriptions() == ["Netflix", "Disney+"]  # Netflix runs to the end date, MUBI is over
+
+
+def test_service_lists_only_offer_services_of_the_apps_country(client, store):
+    """Canal+ is a French service: it is no candidate in Germany once Germany's services are loaded."""
+    store.save_provider_catalog("DE", [{"name": "Netflix", "logo_path": None, "priority": 1}])
+    store.save_provider_catalog("FR", [{"name": "Canal+", "logo_path": None, "priority": 1}])
+    page = client.get("/subscriptions").get_data(as_text=True)
+    assert 'data-name="Canal+"' not in page
+    assert "Canal+" not in client.get("/settings/services").get_data(as_text=True)
