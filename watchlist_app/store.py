@@ -438,6 +438,11 @@ class Store:
         )
         return self._scan_from_row(rows[0]) if rows else None
 
+    def latest_scan_created(self, country: str) -> float | None:
+        """When the newest scan of a country was made, without loading its films (asked on every page)."""
+        rows = self._read("SELECT max(created) FROM scans WHERE country = ?", (country,))
+        return rows[0][0] if rows else None
+
     def recent_scans(self, country: str, source_name: str, limit: int = 2) -> list[dict]:
         """The newest scans of one watchlist in a country, newest first."""
         rows = self._read(

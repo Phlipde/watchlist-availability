@@ -149,8 +149,8 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
     @app.context_processor
     def header_context():
         """The header is the same on every page: country and the state of the data."""
-        scan = store.latest_scan(settings.country)
-        age = time.time() - scan["created"] if scan else None
+        created = store.latest_scan_created(settings.country)
+        age = time.time() - created if created else None
         stale = age is None or age > 24 * 3600
         return {
             "header_country": settings.country,
@@ -208,7 +208,6 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
                 "logoBaseUrl": _TMDB_LOGO_BASE_URL,
                 # Logos of the providers loaded from TMDB, for the services menu and the details.
                 "providerLogos": provider_logos(),
-                "toCheck": len(matches.list_matches(store)),
             },
         )
 

@@ -187,6 +187,14 @@ const state = createAppState();
     // Films with an abroad entry that are not already shown as films you can watch here (those count as "here").
     const abroadCandidates = shownKeys => (state.abroad ? [...state.films, ...state.unavailable].filter(film => state.abroad[filmKey(film)] && !shownKeys.has(filmKey(film))).map(film => abroadFilm(film, state.abroad[filmKey(film)])) : []);
     // Filter the state, then draw the cards from the result. Filters never read card attributes.
+    // "+4 coming soon · +2 to check" beside the count; the matches to check arrive after the films (not needed to draw).
+    let comingCount = 0;
+    let toCheck = 0;
+    function baseLine(coming = comingCount) {
+      comingCount = coming;
+      const extra = [coming ? `+${coming} coming soon` : '', toCheck ? `<a href="/settings/matches">+${toCheck} to check</a>` : ''].filter(Boolean);
+      document.getElementById('base-extra').innerHTML = extra.length ? ` · ${extra.join(' · ')}` : '';
+    }
     const VIEW = window.WATCHLIST_CONFIG.view;  // "tonight" (start page) or "watchlist"
     // The switch shows how many films would come in; the cost segments show their abroad share while it is on.
     function showAbroadControls(filters, context, candidates, count, where) {
@@ -274,8 +282,7 @@ const state = createAppState();
       document.getElementById('visible-count').textContent = view.visibleCount;
       const base = baseCounts(state.films, state.unavailable, today);
       document.getElementById('film-total').textContent = base.watchlist;
-      const extra = [base.comingSoon ? `+${base.comingSoon} coming soon` : '', window.WATCHLIST_CONFIG.toCheck ? `<a href="/settings/matches">+${window.WATCHLIST_CONFIG.toCheck} to check</a>` : ''].filter(Boolean);
-      document.getElementById('base-extra').innerHTML = extra.length ? ` · ${extra.join(' · ')}` : '';
+      baseLine(base.comingSoon);
       document.querySelectorAll('.filter-sheet-done span').forEach(element => { element.textContent = view.visibleCount; });
       filterBar.updateCounts(state.films, filters, filterContext);
       showAbroadControls(filters, filterContext, abroadCandidates(hereKeys), abroadCount, where);
@@ -700,9 +707,9 @@ const state = createAppState();
       history.replaceState({}, '', url);
       pollScan();
     }
-    async function loadLatestResult() {
+    async function loadLatestResult(request = null) {
       const country = document.getElementById('country-select').value;
-      const response = await fetch(`/api/latest?country=${encodeURIComponent(country)}`);
+      const response = await (request || fetch(`/api/latest?country=${encodeURIComponent(country)}`));
       if (!response.ok) return null;
       const snapshot = await response.json();
       // The service worker answers from its copy when the app cannot be reached: say how old the data is.
@@ -1496,8 +1503,11 @@ const state = createAppState();
         window.prompt('Copy this link:', location.href);
       }
     });
+    // The films load while the favorites do (the page preloads the same address).
+    const latestRequest = fetch(`/api/latest?country=${encodeURIComponent(document.getElementById('country-select').value)}`);
     loadFavorites().then(async () => {
-      const snapshot = await loadLatestResult();
+      const snapshot = await loadLatestResult(latestRequest);
+      fetch('/api/matches').then(response => (response.ok ? response.json() : [])).then(rows => { toCheck = rows.length; baseLine(); }).catch(() => {});
       const savedJob = new URL(location.href).searchParams.get('scan');
       if (savedJob) {
         resumeScan(savedJob);

@@ -10,7 +10,10 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261125-79') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/app.css', v='20261125-81') }}" rel="stylesheet">
+  {# Speed: the films and every module start loading at once instead of one level of imports after the other. #}
+  {% if view in ('watchlist', 'tonight') %}<link rel="preload" href="/api/latest?country={{ country|urlencode }}" as="fetch" crossorigin>{% endif %}
+  {% for name in ['abroad', 'bestway', 'catalog', 'deadlines', 'drawer', 'events', 'filterbar', 'filtering', 'filters', 'gridnav', 'link-filters', 'logo-stack', 'problems', 'register-sw', 'rendering', 'saved-views', 'scans', 'similar', 'state', 'statistics', 'ui'] %}<link rel="modulepreload" href="{{ url_for('static', filename='js/' ~ name ~ '.js') }}">{% endfor %}
 </head>
 <body class="view-{{ view }}">
   <a class="skip-link" href="#results">Skip to films</a>
@@ -39,6 +42,6 @@
   <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/tabler.min.js') }}"></script>
   <script>window.WATCHLIST_CONFIG = {{ client_config|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/app.js', v='20261125-79') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/app.js', v='20261125-81') }}" type="module"></script>
 </body>
 </html>
