@@ -1341,3 +1341,20 @@ a.stat-tile:focus-visible, .avail-seg:focus-visible, .avail-legend a:focus-visib
 .source-info[data-tip]:hover::after, .source-info[data-tip]:focus::after { content: attr(data-tip); position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 6; width: max-content; max-width: 260px; padding: 4px 8px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface-raised); color: var(--text); font-size: var(--fs-small); }
 .hidden-list { display: grid; gap: 4px; margin: 0 0 12px; padding: 0; list-style: none; }
 .hidden-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+/* Phone: no header line on Tonight, Subscriptions and Settings (the nav stays at the bottom); the watchlist keeps
+   only the sync dot; Settings says country and sync state in one small line. */
+.phone-status { display: none; }
+@media (max-width: 800px) {
+  .view-tonight .app-header .brand, .view-tonight .app-header .header-tools,
+  body > .app-header:has(~ main.page:not(.stats-page)) .brand, body > .app-header:has(~ main.page:not(.stats-page)) .header-tools { display: none; }
+  .view-tonight .app-header, body > .app-header:has(~ main.page:not(.stats-page)) { min-height: 0; padding: 0; border: 0; }
+  .view-watchlist .app-header .brand { display: none; }
+  .phone-status { display: block; margin: -4px 0 12px; }
+  .phone-status .sync-toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); }
+}
+/* Phone: "Add a service" is a bottom sheet on its own raised background, the list scrolls inside it. */
+@media (max-width: 800px) {
+  #add-dialog { position: fixed; inset: auto 0 0 0; width: 100%; max-width: none; max-height: 85dvh; margin: 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); border-width: 1px 0 0; border-radius: 16px 16px 0 0; background: var(--surface-raised); }
+  #add-dialog .add-list { max-height: 55dvh; }
+  #add-dialog::backdrop { background: rgb(0 0 0 / .6); }
+}

@@ -625,13 +625,20 @@ def test_settings_are_saved_and_checked(app_server, page):
     expect = playwright_api.expect
     page.goto(f"{app_server['url']}/settings")
     page.locator("#letterboxd-username").fill("bad name!")
-    page.get_by_role("button", name="Save settings").click()
+    page.locator("#letterboxd-username").blur()  # saves on its own when the field is left
     expect(page.locator("#settings-message")).to_contain_text("may only contain")
 
     page.locator("#letterboxd-username").fill("someone_else")
-    page.get_by_role("button", name="Save settings").click()
-    expect(page.locator("#settings-message")).to_have_text("Saved.")
-    assert app_server["settings"].letterboxd_username == "someone_else"
+    page.locator("#letterboxd-username").blur()
+    expect(page.locator("#toast-text")).to_have_text("Saved · Rescan now?")
+    expect(page.get_by_role("button", name="Rescan now")).to_be_visible()
+    assert wait_until(lambda: app_server["settings"].letterboxd_username == "someone_else")
+    page.locator("#weekly-hours").fill("12")
+    page.locator("#weekly-hours").blur()
+    expect(page.locator("#toast-text")).to_have_text("Saved")
+    page.get_by_role("button", name="Undo").click()
+    expect(page.locator("#toast-text")).to_have_text("Change undone")
+    assert app_server["settings"].weekly_hours != 12
 
 
 def test_price_is_saved_when_you_leave_the_field(app_server, page):
