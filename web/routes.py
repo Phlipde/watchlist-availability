@@ -183,7 +183,9 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
     def films_page(view: str):
         latest = store.latest_scan(settings.country)
         free_services = (
-            providers.mostly_free_from_scan(latest["results"], latest["unavailable"])
+            providers.mostly_free_from_scan(
+                latest["results"], latest["unavailable"], set(settings.loaded_providers(settings.country))
+            )
             if latest
             else providers.MOSTLY_FREE
         )

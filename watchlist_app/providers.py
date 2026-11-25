@@ -155,10 +155,13 @@ MOSTLY_FREE: frozenset[str] = frozenset(
 )
 
 
-def mostly_free_from_scan(results: list[dict], unavailable: list[dict]) -> frozenset[str]:
+def mostly_free_from_scan(
+    results: list[dict], unavailable: list[dict], offered_here: "set[str] | None" = None
+) -> frozenset[str]:
     """Providers that offer at least half of their scanned films free or with ads.
 
-    A provider without films in the scan keeps its place on the MOSTLY_FREE list.
+    A provider without films in the scan keeps its place on the MOSTLY_FREE list, but only if TMDB lists it in
+    the country (`offered_here`, the country's loaded services; empty or None when they were never loaded).
     """
     offered: dict[str, int] = {}
     free: dict[str, int] = {}
@@ -168,7 +171,8 @@ def mostly_free_from_scan(results: list[dict], unavailable: list[dict]) -> froze
             if any(kind in {"free", "ads"} for kind in kinds):
                 free[provider] = free.get(provider, 0) + 1
     by_data = {provider for provider, count in offered.items() if free.get(provider, 0) * 2 >= count}
-    return frozenset(by_data | (MOSTLY_FREE - offered.keys()))
+    fallback = MOSTLY_FREE - offered.keys()
+    return frozenset(by_data | (fallback & offered_here if offered_here else fallback))
 
 
 # Shops where films are rented one by one; kept apart from subscriptions.

@@ -93,3 +93,10 @@ def test_mostly_free_counts_each_service_against_its_own_films():
 
 def test_mostly_free_services_fall_back_without_scan():
     assert mostly_free_from_scan([], []) == MOSTLY_FREE
+
+
+def test_a_listed_free_service_without_films_counts_only_where_it_is_offered():
+    # Molotov is French: with Germany's services loaded it is no free service there; Arte is offered there.
+    free = mostly_free_from_scan([{"providers": {"Netflix": ["flatrate"]}}], [], {"Arte", "Netflix"})
+    assert "Arte" in free
+    assert "Molotov" not in free

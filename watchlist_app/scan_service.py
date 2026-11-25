@@ -81,6 +81,10 @@ def result_stats(results: list[dict]) -> dict:
     }
 
 
+def _offered_here(store: Store, country: str) -> set[str]:
+    return {providers.display_name(item["name"]) for item in store.provider_catalog(country)}
+
+
 def with_changes(store: Store, country: str, results: list[dict], unavailable: list[dict]) -> dict:
     """Attach the stored availability changes of the last two weeks to a scan's films."""
     changes = store.recent_changes(country, time.time() - history.CHANGE_WINDOW_SECONDS)
@@ -89,7 +93,9 @@ def with_changes(store: Store, country: str, results: list[dict], unavailable: l
         "unavailable": history.apply_changes(unavailable, changes),
         "changes": changes,
         # The page does not reload on a country switch, so the free list travels with the films.
-        "free_services": sorted(providers.mostly_free_from_scan(results, unavailable)),
+        "free_services": sorted(
+            providers.mostly_free_from_scan(results, unavailable, _offered_here(store, country))
+        ),
     }
 
 
