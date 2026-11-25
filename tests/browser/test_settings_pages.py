@@ -10,7 +10,7 @@ import pytest
 from flask import Flask
 from werkzeug.serving import make_server
 
-from tests.browser.helpers import wait_until
+from tests.browser.helpers import pick_country, wait_until
 
 playwright_api = pytest.importorskip("playwright.sync_api")
 
@@ -35,6 +35,21 @@ def test_settings_are_saved_and_checked(app_server, page):
     page.get_by_role("button", name="Undo").click()
     expect(page.locator("#toast-text")).to_have_text("Change undone")
     assert app_server["settings"].weekly_hours != 12
+
+
+def test_settings_country_picker_saves_and_scans(app_server, page):
+    expect = playwright_api.expect
+    requests: list[str] = []
+    page.on("request", lambda request: requests.append(f"{request.method} {request.url}"))
+    page.goto(f"{app_server['url']}/settings")
+    pick_country(page, "fr", picker="settings")
+    # Saved, a scan started and the watchlist follows it.
+    expect(page).to_have_url(re.compile(r"/watchlist\?scan="))
+    assert app_server["settings"].country == "FR"
+    assert [line for line in requests if line.startswith("PUT") and line.endswith("/api/settings")]
+    assert [line for line in requests if line.startswith("POST") and line.endswith("/api/scan")]
+    expect(page.locator("#header-country-pop .country-button .country-code")).to_have_text("FR")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
 
 
 def test_price_is_saved_when_you_leave_the_field(app_server, page):

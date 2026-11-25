@@ -14,7 +14,8 @@ BACKUP_VERSION = 1
 # Time of the last match correction; a recent scan is not reused after it.
 MATCHES_CHANGED_SETTING = "matches_changed_at"
 # Settings the app keeps for itself; they are not part of a backup.
-INTERNAL_SETTINGS = frozenset({MATCHES_CHANGED_SETTING, "notify_token", "notify_state"})
+REGIONS_SETTING = "tmdb_regions"  # the countries TMDB has offers for, as JSON with the fetch time
+INTERNAL_SETTINGS = frozenset({MATCHES_CHANGED_SETTING, "notify_token", "notify_state", REGIONS_SETTING})
 # Fields that identify a stored change, used to skip duplicates when restoring a backup.
 CHANGE_IDENTITY = ("created", "country", "film_key", "provider", "change")
 
@@ -788,6 +789,11 @@ class Store:
     def get_setting(self, key: str, default: str | None = None) -> str | None:
         rows = self._read("SELECT value FROM settings WHERE key = ?", (key,))
         return rows[0][0] if rows else default
+
+    def setting_keys(self, prefix: str) -> list[str]:
+        """Stored setting keys that start with `prefix` (no LIKE: `_` would be a wildcard)."""
+        rows = self._read("SELECT key FROM settings WHERE substr(key, 1, ?) = ?", (len(prefix), prefix))
+        return [row[0] for row in rows]
 
     def set_setting(self, key: str, value: str | None) -> None:
         self._write(

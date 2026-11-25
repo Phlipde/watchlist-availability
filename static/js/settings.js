@@ -1,6 +1,6 @@
-// Settings page: save watchlist, country and schedule through the API and handle backup restore.
+// Settings page: save watchlist and schedule through the API and handle backup restore.
+// The country has its own picker (header.js): it saves, scans and opens the watchlist.
 const form = document.getElementById('settings-form');
-const country = document.getElementById('country');
 function show(id, text, failed = false) {
   const element = document.getElementById(id);
   element.textContent = text;
@@ -8,10 +8,9 @@ function show(id, text, failed = false) {
 }
 
 // Every field saves on its own when it changes (text fields when they lose focus); a toast offers Undo.
-// A new Letterboxd name or country needs a new scan: the toast offers it.
+// A new Letterboxd name needs a new scan: the toast offers it.
 const fields = () => ({
   letterboxd_username: document.getElementById('letterboxd-username').value,
-  country: country.value,
   scan_interval_hours: Number(document.getElementById('scan-interval').value),
   weekly_hours: Number(document.getElementById('weekly-hours').value),
   notify_kind: document.getElementById('notify-kind').value,
@@ -20,7 +19,6 @@ const fields = () => ({
 });
 function fill(values) {
   document.getElementById('letterboxd-username').value = values.letterboxd_username;
-  country.value = values.country;
   document.getElementById('scan-interval').value = String(values.scan_interval_hours);
   document.getElementById('weekly-hours').value = String(values.weekly_hours);
   document.getElementById('notify-kind').value = values.notify_kind;
@@ -61,7 +59,7 @@ function showToast(text, onUndo, rescan) {
 document.getElementById('toast-undo').addEventListener('click', () => { toast.hidden = true; undo?.(); });
 document.getElementById('toast-rescan').addEventListener('click', async () => {
   toast.hidden = true;
-  const response = await fetch('/api/scan', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({country: country.value})});
+  const response = await fetch('/api/scan', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({})});
   const data = await response.json().catch(() => ({}));
   if (response.ok && data.job_id) location.href = `/watchlist?scan=${encodeURIComponent(data.job_id)}`;
   else show('settings-message', data.error || 'Could not start the scan.', true);
@@ -75,7 +73,7 @@ form.addEventListener('change', async event => {
   const now = fields();
   if (!await save(now)) return;
   saved = now;
-  const rescan = ['letterboxd_username', 'country'].includes(event.target.name);
+  const rescan = event.target.name === 'letterboxd_username';
   showToast(rescan ? 'Saved · Rescan now?' : 'Saved', async () => {
     fill(before);
     if (await save(before)) { saved = before; showToast('Change undone', null, false); }

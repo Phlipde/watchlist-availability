@@ -46,7 +46,6 @@
     .page-nav a { display: inline-flex; flex-direction: column; }
     .page-nav a::after { content: attr(data-text); height: 0; font-weight: 600; visibility: hidden; overflow: hidden; }
     .app-header .page-nav { margin: 0 auto; }
-    .country-select { display: inline-block; width: auto; padding-top: 2px; padding-bottom: 2px; color: var(--accent) !important; font: inherit; }
     /* Only on phones; the selectors beat the later .btn rule. */
     .phone-filters, .filter-bar .filter-sheet-done { display: none; }
     h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: .9; font-weight: 400; margin: 0; max-width: 680px; }

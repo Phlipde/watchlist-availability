@@ -5,7 +5,14 @@ from unittest.mock import patch
 
 import pytest
 
-from tests.browser.helpers import clear_services, free_tagged, tick_all_services, visible_titles, wait_until
+from tests.browser.helpers import (
+    clear_services,
+    free_tagged,
+    pick_country,
+    tick_all_services,
+    visible_titles,
+    wait_until,
+)
 from watchlist_app import letterboxd
 
 playwright_api = pytest.importorskip("playwright.sync_api")
@@ -73,18 +80,54 @@ def test_free_labels_follow_the_country(app_server, page):
     page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
     assert "Arte" in free_tagged(page) and "BBC iPlayer" not in free_tagged(page)
-    # A country switch scans without reloading the page; the labels must follow the new scan.
-    page.locator("#country-select").select_option("GB")
+    # A country switch saves the country and scans without reloading the page; the labels follow.
+    requests: list[str] = []
+    page.on("request", lambda request: requests.append(f"{request.method} {request.url}"))
+    pick_country(page, "gb")
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     assert wait_until(lambda: "BBC iPlayer" in free_tagged(page))
     assert "Arte" not in free_tagged(page)
-    # Back to a country that already has a scan: its saved films are shown, no new scan.
-    requests: list[str] = []
-    page.on("request", lambda request: requests.append(f"{request.method} {request.url}"))
-    page.locator("#country-select").select_option("DE")
-    expect(page.locator("#status-message")).to_have_text(re.compile(r"^Saved results from "))
+    assert app_server["settings"].country == "GB"
+    assert [line for line in requests if line.startswith("PUT") and line.endswith("/api/settings")]
+    # Back to a country with a scan from today: a scan starts again, the server reuses the saved one.
+    requests.clear()
+    pick_country(page, "germany")
+    expect(page.locator(".country-picker .country-code").first).to_have_text("DE")
     assert wait_until(lambda: "Arte" in free_tagged(page))
-    assert not [line for line in requests if line.startswith("POST") and line.endswith("/api/scan")]
+    assert wait_until(
+        lambda: [line for line in requests if line.startswith("POST") and line.endswith("/api/scan")]
+    )
+    assert app_server["settings"].country == "DE"
+
+
+def test_any_country_can_be_picked_and_stays_after_a_reload(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    page.locator("#header-country-pop > summary").click()
+    expect(page.locator("#header-country-search")).to_be_focused()
+    page.keyboard.type("pola")
+    expect(page.locator(".country-option:visible")).to_have_count(1)
+    expect(page.locator(".country-option:visible")).to_contain_text("Poland")
+    page.keyboard.press("Enter")
+    expect(page.locator("#header-country-pop")).not_to_have_attribute("open", "")
+    expect(page.locator("#header-country-pop > summary")).to_be_focused()
+    assert wait_until(lambda: app_server["settings"].country == "PL")
+    # The new country's scan runs and is saved.
+    assert wait_until(lambda: app_server["store"].latest_scan("PL") is not None, timeout=15)
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    # Poland has no own services yet (and the fake TMDB no offers there): none are ticked, nothing breaks.
+    assert app_server["settings"].subscriptions("PL") == []
+    assert "providers=" not in page.url
+    assert page.locator("#services-list input:checked").count() == 0
+    assert page.locator("#country-select").input_value() == "PL"
+    page.goto(app_server["url"] + "/watchlist")  # a fresh load, without the scan in the address
+    expect(page.locator("#header-country-pop .country-button .country-code")).to_have_text("PL")
+    expect(page.locator("#status-message")).to_have_text(re.compile(r"^Saved results from "))
+    # Escape closes the menu and gives the focus back to its button.
+    page.locator("#header-country-pop > summary").click()
+    page.keyboard.press("Escape")
+    expect(page.locator("#header-country-pop > summary")).to_be_focused()
 
 
 def test_saved_results_show_the_tools(app_server, page):

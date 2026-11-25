@@ -236,6 +236,12 @@ def get_region_providers(country: str, api_key: str | None = None) -> list[dict]
     return providers
 
 
+def get_regions(api_key: str | None = None) -> list[str]:
+    """The countries TMDB has watch offers for: ISO 3166 codes such as "DE"."""
+    data = _request_json("/watch/providers/regions", {"api_key": api_key}) or {}
+    return [code for item in data.get("results", []) if isinstance(code := item.get("iso_3166_1"), str)]
+
+
 def get_movie_bundle(tmdb_id: int, api_key: str | None = None) -> dict | None:
     """Fetch details, trailer and providers for every country in one request.
 

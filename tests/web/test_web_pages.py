@@ -216,3 +216,15 @@ def test_service_lists_only_offer_services_of_the_apps_country(client, store):
     page = client.get("/subscriptions").get_data(as_text=True)
     assert 'data-name="Canal+"' not in page
     assert "Canal+" not in client.get("/settings/services").get_data(as_text=True)
+
+
+def test_a_new_country_without_data_renders_every_page(client):
+    """PL has no catalog, no scan and no services yet: the pages work and the picker offers it."""
+    assert client.put("/api/settings", json={"country": "PL"}).status_code == 200
+    for path in ("/", "/watchlist", "/subscriptions", "/settings", "/settings/data", "/stats"):
+        page = client.get(path)
+        assert page.status_code == 200, path
+        assert 'id="country-select" value="PL"' in page.get_data(as_text=True), path
+    services = client.get("/settings/services").get_data(as_text=True)
+    assert "No services are known for PL yet" in services
+    assert 'data-code="FR"' in services  # the picker lists every country with a flag

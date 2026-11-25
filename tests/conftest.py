@@ -16,6 +16,13 @@ def no_provider_catalog_request(request, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_regions_request(request, monkeypatch):
+    """Scans load TMDB's country list; tests never send that request (marked tests mock HTTP instead)."""
+    if request.node.get_closest_marker("regions_request") is None:
+        monkeypatch.setattr(tmdb, "get_regions", lambda api_key=None: [])
+
+
+@pytest.fixture(autouse=True)
 def no_letterboxd_rating_request(request, monkeypatch):
     """Scans refresh the Letterboxd rating from the film page; tests must never load it.
 

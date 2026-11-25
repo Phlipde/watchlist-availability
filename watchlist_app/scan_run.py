@@ -1,17 +1,19 @@
 """One scan of a watchlist: lookup, saving, change history (`perform_scan`), and its helpers."""
 
 import hashlib
+import json
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import partial
 
 from . import history, letterboxd, matches, providers, tmdb
+from .config import valid_country
 from .lookup import film_key, lookup_film
 from .models import Film, WatchlistEntry
 from .results import build_results
 from .settings import AppSettings
-from .store import Store
+from .store import REGIONS_SETTING, Store
 from .tmdb import clean_year
 
 RESULT_REUSE_SECONDS = 24 * 60 * 60
@@ -40,6 +42,25 @@ def refresh_provider_catalog(
     if not items:
         return False
     store.save_provider_catalog(country, items)
+    return True
+
+
+def refresh_regions(store: Store, api_key: str | None, max_age: float = PROVIDER_CATALOG_TTL_SECONDS) -> bool:
+    """Store the countries TMDB has offers for, at most once a week; a failure keeps the old list."""
+    try:
+        stored = json.loads(store.get_setting(REGIONS_SETTING) or "{}")
+    except ValueError:
+        stored = {}
+    fetched_at = stored.get("fetched_at") if isinstance(stored, dict) else None
+    if not api_key or (isinstance(fetched_at, int | float) and time.time() - fetched_at < max_age):
+        return False
+    try:
+        codes = [code for code in tmdb.get_regions(api_key) if valid_country(code)]
+    except tmdb.TmdbError:
+        return False
+    if not codes:
+        return False
+    store.set_setting(REGIONS_SETTING, json.dumps({"codes": sorted(set(codes)), "fetched_at": time.time()}))
     return True
 
 
@@ -184,6 +205,7 @@ def perform_scan(
             on_failed(failure)
 
     refresh_provider_catalog(store, country, api_key)
+    refresh_regions(store, api_key)
     films = build_results(
         entries,
         None,  # keep every provider TMDB reports; the page chooses which ones to show

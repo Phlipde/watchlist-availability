@@ -30,6 +30,11 @@ class TestScanStart:
 
     def test_unsupported_country_rejected(self, client):
         assert client.post("/api/scan", data={"country": "XX"}).status_code == 400
+        assert client.post("/api/scan", data={"country": "PLX"}).status_code == 400
+
+    def test_any_country_with_a_flag_can_be_scanned(self, client, service):
+        job_id = client.post("/api/scan", data={"country": "PL"}).get_json()["job_id"]
+        assert service._live[job_id]["country"] == "PL"
 
     def test_missing_api_key_rejected(self, store, tmp_path):
         defaults = Settings(tmdb_api_key=None, letterboxd_username=None, country="DE", downloads_dir=tmp_path)
@@ -59,15 +64,24 @@ class TestScanStart:
 
 
 class TestLatestAndFavoritesApi:
-    def test_latest_scan_per_country(self, client, store):
-        assert client.get("/api/latest?country=DE").get_json() == {"available": False, "stale": True}
+    def test_latest_scan_per_country(self, client, store, settings):
+        first = client.get("/api/latest?country=DE").get_json()
+        assert (first["available"], first["stale"]) == (False, True)
+        assert first["subscriptions"] == settings.subscriptions("DE")
         store.save_scan("DE", "src", "k", [{"key": "1", "title": "Heat", "providers": {}}], [], {})
         answer = client.get("/api/latest?country=DE").get_json()
         assert answer["available"] is True
         assert answer["stale"] is False
         assert answer["results"][0]["title"] == "Heat"
         assert answer["changes"] == []
-        assert client.get("/api/latest?country=GB").get_json() == {"available": False, "stale": True}
+        assert client.get("/api/latest?country=GB").get_json()["available"] is False
+        # Any country with a flag; a made-up code is refused.
+        assert client.get("/api/latest?country=PL").get_json() == {
+            "available": False,
+            "stale": True,
+            "subscriptions": [],
+        }
+        assert client.get("/api/latest?country=<b>").status_code == 400
 
     def test_latest_scan_sends_free_services_of_its_country(self, client, store):
         # The page keeps its labels on a country switch, so each scan brings its own list.

@@ -17,6 +17,7 @@ import {updateScanFeedback} from './scans.js';
 import {abroadFilm, abroadForFilm, abroadHtml, abroadRows, abroadServices} from './abroad.js';
 import {NAV_KEYS, columnsFromTops, nextIndex, nextInRows} from './gridnav.js';
 import {drawerHtml, letterboxdUrl, seriesOrder} from './drawer.js';
+import {initCountryPicker, saveCountry} from './country-picker.js';
 
 const imageBaseUrl = window.WATCHLIST_CONFIG.imageBaseUrl;
 const scanState = createScanState();
@@ -684,8 +685,9 @@ const state = createAppState();
       state.unavailable = [];
       if (!scanState.rescanInProgress) document.getElementById('unavailable-panel').hidden = true;
       const upload = document.getElementById('csv-upload').files[0];
+      const country = document.getElementById('country-select').value;
       const body = new FormData();
-      body.append('country', document.getElementById('country-select').value);
+      body.append('country', country);
       if (upload) body.append('watchlist', upload);
       let response, data;
       try {
@@ -694,6 +696,8 @@ const state = createAppState();
       } catch {
         data = {};
       }
+      // Another country was picked meanwhile: its own scan follows, this answer is old.
+      if (country !== document.getElementById('country-select').value) return;
       if (!response?.ok || !data.job_id) {
         scanState.rescanInProgress = false;
         showScanError(data.error || 'Could not reach the app. Check that it is running, then try again.', 'Scan could not be started.');
@@ -714,6 +718,9 @@ const state = createAppState();
       const response = await (request || fetch(`/api/latest?country=${encodeURIComponent(country)}`));
       if (!response.ok) return null;
       const snapshot = await response.json();
+      // A newer country switch has started: this answer belongs to the old country.
+      if (country !== document.getElementById('country-select').value) return null;
+      if (snapshot.subscriptions) window.WATCHLIST_CONFIG.subscriptions = {...window.WATCHLIST_CONFIG.subscriptions, [country]: snapshot.subscriptions};
       // The service worker answers from its copy when the app cannot be reached: say how old the data is.
       if (response.headers.get('X-From-Cache') && snapshot.created) showToast(`Offline: showing the data from ${new Date(snapshot.created * 1000).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'})}.`);
       if (!snapshot.available) return snapshot;
@@ -724,20 +731,37 @@ const state = createAppState();
       showResultTools();
       return snapshot;
     }
-    // A country switch shows that country's saved scan; it only scans when there is none or it is old.
-    async function switchCountry() {
-      if (new URL(location.href).searchParams.get('providers') === null) state.selected = mySubscriptions();
+    // A country switch saves the country, shows its saved scan at once and always starts a scan
+    // (the server reuses a scan of the same list from today, so that is quick).
+    // Resolves once the country is saved, so the picker takes the next choice only then.
+    async function switchCountry(code) {
+      const select = document.getElementById('country-select');
+      let saved;
+      try {
+        saved = await saveCountry(code);
+      } catch (error) {
+        showToast(error.message, true);
+        return false;
+      }
+      // The new country and its services together: a render in between would see a country without services.
+      window.WATCHLIST_CONFIG.subscriptions = {...window.WATCHLIST_CONFIG.subscriptions, [code]: saved.subscriptions || []};
+      select.value = code;
+      // The page writes the ticked services into the address on every render, so providers= is no sign of a
+      // shared link here: a new country always starts with its own services.
+      state.selected = mySubscriptions();
       filterBar.buildServicesMenu();
       scanState.currentJob = undefined;
       scanState.rescanInProgress = false;
       const url = new URL(location.href);
       url.searchParams.delete('scan');
       history.replaceState({}, '', url);
-      const snapshot = await loadLatestResult().catch(() => null);
-      if (snapshot?.available && !snapshot.stale) { showSavedPanel(); return; }
-      // No scan for this country yet: the other country's films must not stay under its name.
-      if (!snapshot?.available) { state.lastScan = null; replaceWithScanResults([], [], [], null); }
-      startScan();
+      loadLatestResult().catch(() => null).then(snapshot => {
+        if (code !== select.value) return;
+        // No scan for this country yet: the other country's films must not stay under its name.
+        if (!snapshot?.available) { state.lastScan = null; replaceWithScanResults([], [], [], null); }
+        startScan();
+      });
+      return true;
     }
     function resumeScan(jobId) {
       scanState.currentJob = jobId;
@@ -1417,7 +1441,7 @@ const state = createAppState();
       localStorage.setItem('greyUnavailableDuringRescan', String(event.target.checked));
       applyRescanUnavailableState();
     });
-    document.getElementById('country-select').addEventListener('change', switchCountry);
+    document.querySelectorAll('[data-country-picker]').forEach(root => initCountryPicker(root, {onPick: switchCountry}));
     // Phones: "Filters" opens the bar as a sheet from the bottom, a modal dialog while open.
     // Phones keep the heart and the link inside the sheet; wider screens put them with the view switch in the tab row, so the bar stays one row.
     const phoneQuery = matchMedia('(max-width: 800px)');

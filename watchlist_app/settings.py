@@ -3,7 +3,7 @@
 import json
 
 from . import config, costs, providers
-from .store import Store
+from .store import REGIONS_SETTING, Store
 
 # Shorter than a day would change nothing: a scan and its offers are reused for 24 hours.
 SCAN_INTERVALS_HOURS = (0, 24, 48, 168)
@@ -41,7 +41,7 @@ class AppSettings:
     @property
     def country(self) -> str:
         stored = self._store.get_setting("country")
-        return stored if stored in config.COUNTRIES else self._defaults.country
+        return stored if config.valid_country(stored) else self._defaults.country
 
     @property
     def scan_interval_hours(self) -> int:
@@ -113,6 +113,23 @@ class AppSettings:
         except ValueError:
             return {}
 
+    def country_choices(self) -> list[str]:
+        """Countries the picker offers: TMDB's list (a scan loads it), else every flag."""
+        try:
+            stored = json.loads(self._store.get_setting(REGIONS_SETTING) or "{}")
+        except ValueError:
+            stored = {}
+        codes = stored.get("codes") if isinstance(stored, dict) else None
+        codes = codes if isinstance(codes, list) and codes else config.flag_countries()
+        return sorted(code for code in {*codes, self.country} if config.valid_country(code))
+
+    def countries_in_use(self) -> list[str]:
+        """The app's country plus every country with saved services or prices, sorted."""
+        codes = {self.country}
+        for prefix in ("subscriptions:", "subscription_costs:"):
+            codes.update(key[len(prefix) :] for key in self._store.setting_keys(prefix))
+        return sorted(code for code in codes if config.valid_country(code))
+
     def targets(self, country: str | None = None) -> dict[str, str]:
         """Subscriptions as {display name: TMDB name}, as the CLI report needs them."""
         return providers.tmdb_names(self.subscriptions(country))
@@ -155,13 +172,13 @@ class AppSettings:
                 elif isinstance(key, str) and key.startswith("subscriptions:"):
                     country = key.split(":", 1)[1]
                     names = json.loads(value) if isinstance(value, str) else value
-                    if country not in config.COUNTRIES or not isinstance(names, list):
+                    if not config.valid_country(country) or not isinstance(names, list):
                         raise ValueError("Invalid subscriptions.")
                     clean = [name[:200] for name in names[:500] if isinstance(name, str) and name.strip()]
                     self._store.set_setting(key, json.dumps(clean))
                 elif isinstance(key, str) and key.startswith("subscription_costs:"):
                     raw = json.loads(value) if isinstance(value, str) else value
-                    if key.split(":", 1)[1] not in config.COUNTRIES or not isinstance(raw, dict):
+                    if not config.valid_country(key.split(":", 1)[1]) or not isinstance(raw, dict):
                         raise ValueError("Invalid costs.")
                     names = {name for name in raw if isinstance(name, str) and len(name) <= 200}
                     self._store.set_setting(key, json.dumps(costs.clean_costs(raw, names)))
@@ -181,7 +198,7 @@ class AppSettings:
                 raise ValueError("The Letterboxd username may only contain letters, digits, _ and -.")
             validated["letterboxd_username"] = username
         if "country" in changes:
-            if changes["country"] not in config.COUNTRIES:
+            if not config.valid_country(changes["country"]):
                 raise ValueError("Unsupported country.")
             validated["country"] = changes["country"]
         if "scan_interval_hours" in changes:
@@ -227,7 +244,7 @@ class AppSettings:
             validated["weekly_hours"] = str(round(hours, 1))
         # The subscriptions page edits any country without switching the app's country.
         country = changes.get("subscriptions_country") or validated.get("country", self.country)
-        if country not in config.COUNTRIES:
+        if not config.valid_country(country):
             raise ValueError("Unsupported country.")
         if "subscriptions" in changes:
             names = changes["subscriptions"]

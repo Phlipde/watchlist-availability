@@ -183,3 +183,23 @@ a.stat-tile:focus-visible, .avail-seg:focus-visible, .avail-legend a:focus-visib
   #add-dialog .add-list { max-height: 55dvh; }
   #add-dialog::backdrop { background: rgb(0 0 0 / .6); }
 }
+/* Country picker (partials/country-picker.html): flag and code on the button, a searchable list in the menu.
+   In the header it reads as part of the brand line; on the settings page it is a field. */
+.country-button { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; list-style: none; }
+.country-button::-webkit-details-marker { display: none; }
+.country-flag { flex: none; width: 20px; height: 15px; border-radius: 2px; object-fit: cover; box-shadow: 0 0 0 1px rgb(255 255 255 / .12); }
+.app-header .country-button { padding: 2px 4px; border-radius: 4px; color: var(--accent); }
+.app-header .country-button:hover .country-code { text-decoration: underline; text-decoration-color: var(--accent); }
+.country-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.settings-country .country-button { min-height: var(--h-md); padding: 0 12px; border: 1px solid var(--line-field); border-radius: var(--radius-control); background: var(--panel); color: var(--ink); }
+.country-button::after { content: ""; width: 6px; height: 6px; margin-left: 2px; border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: translateY(-2px) rotate(45deg); }
+.country-picker[open] > .country-button::after { transform: translateY(1px) rotate(225deg); }
+.country-picker[aria-busy="true"] > .country-button { opacity: .6; cursor: progress; }
+.country-menu { width: min(300px, calc(100vw - 16px)); min-width: 0; padding: 8px; color: var(--text); text-transform: none; letter-spacing: normal; }
+.country-menu .country-search { width: 100%; margin-bottom: 6px; }
+.country-list { display: grid; max-height: min(50vh, 320px); overflow-y: auto; }
+.country-option[hidden] { display: none; }
+.country-option .country-code { flex: none; width: 2.2em; font-weight: 600; }
+.country-option .country-name { overflow: hidden; color: var(--text-2); text-overflow: ellipsis; white-space: nowrap; }
+.country-option[aria-pressed="true"] { background: var(--surface-2); }
+.country-none { margin: 4px 6px; }

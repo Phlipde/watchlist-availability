@@ -22,7 +22,7 @@ from watchlist_app import (
     tmdb,
     validation,
 )
-from watchlist_app.config import COUNTRIES
+from watchlist_app.config import valid_country
 from watchlist_app.scan_service import ScanService, with_changes
 from watchlist_app.settings import SCAN_INTERVALS_HOURS, AppSettings
 from watchlist_app.store import Store
@@ -88,7 +88,9 @@ def status_overview(store: Store, settings: AppSettings, service: ScanService) -
         "counts": store.counts(),
         "database_bytes": database.stat().st_size if database and database.exists() else None,
         "tmdb_api_key_set": bool(settings.tmdb_api_key),
-        "reminders": costs.reminders({country: settings.costs(country) for country in COUNTRIES}),
+        "reminders": costs.reminders(
+            {country: settings.costs(country) for country in settings.countries_in_use()}
+        ),
     }
 
 
@@ -154,7 +156,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         stale = age is None or age > 24 * 3600
         return {
             "header_country": settings.country,
-            "header_countries": list(COUNTRIES),
+            "header_countries": settings.country_choices(),
             "sync_state": "stale" if stale else "ok",
             "sync_text": "Out of date" if stale else "Synced",
         }
@@ -190,7 +192,6 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             needs_username=not settings.letterboxd_username and not latest,
             needs_tmdb=not settings.tmdb_api_key,
             country=settings.country,
-            countries=list(COUNTRIES),
             initial_filters=initial_filters,
             sorts=SORTS,
             client_config={
@@ -198,7 +199,9 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
                 "view": view,
                 "deadlines": costs.upcoming_deadlines(settings.costs(settings.country)),
                 "initialFilters": initial_filters,
-                "subscriptions": {country: settings.subscriptions(country) for country in COUNTRIES},
+                "subscriptions": {
+                    country: settings.subscriptions(country) for country in settings.countries_in_use()
+                },
                 "rentalShops": sorted(providers.rental_from_scan(films, unavailable)),
                 "freeServices": sorted(providers.mostly_free_from_scan(films, unavailable)),
                 "logoBaseUrl": _TMDB_LOGO_BASE_URL,
@@ -212,7 +215,6 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         return page(
             "settings.html",
             settings=settings.as_dict(),
-            countries=list(COUNTRIES),
             intervals=SCAN_INTERVALS_HOURS,
         )
 
@@ -348,17 +350,19 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
 
     @app.get("/api/latest")
     def latest_result():
-        country = request.args.get("country") or None
+        country = request.args.get("country") or settings.country
+        if not valid_country(country):
+            return jsonify({"error": "Unknown country."}), 400
         scan = store.latest_scan(country)
+        # The country's own services come along, so a country switch needs no reload.
+        own = settings.subscriptions(country)
         if not scan:
-            return jsonify({"available": False, "stale": True})
+            return jsonify({"available": False, "stale": True, "subscriptions": own})
         annotated = with_changes(store, scan["country"], scan["results"], scan["unavailable"])
-        annotated["results"] = costs.mark_only_on_my_services(
-            annotated["results"], settings.subscriptions(scan["country"])
-        )
+        annotated["results"] = costs.mark_only_on_my_services(annotated["results"], own)
         # Older than a day (or the schedule interval) counts as stale, also with the schedule off.
         stale = time.time() >= scan["created"] + max(settings.scan_interval_hours, 24) * 3600
-        return jsonify({"available": True, "stale": stale, **scan, **annotated})
+        return jsonify({"available": True, "stale": stale, **scan, **annotated, "subscriptions": own})
 
     @app.route("/api/scan", methods=["GET", "POST"])
     def start_scan():
@@ -373,7 +377,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             return jsonify({"error": "TMDB_API_KEY is missing."}), 400
         source = (request.get_json(silent=True) or {}) if request.is_json else request.form
         country = source.get("country", settings.country)
-        if country not in COUNTRIES:
+        if not valid_country(country):
             return jsonify({"error": "Unsupported country."}), 400
         entries = None
         source_name = None
@@ -521,7 +525,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         `services` are the ticked services (comma separated); the data is stored, there is no TMDB request.
         """
         country = request.args.get("country") or settings.country
-        if country not in COUNTRIES:
+        if not valid_country(country):
             return jsonify({"error": "Unknown country."}), 400
         own = {name for name in request.args.get("services", "").split(",") if name and len(name) < 80}
         scan = store.latest_scan(country)
@@ -588,7 +592,9 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
     @app.get("/calendar.ics")
     def calendar_feed():
         """The dates entered on the subscriptions page, for a calendar app to subscribe to."""
-        body = calendar.build_ics({country: settings.costs(country) for country in COUNTRIES})
+        body = calendar.build_ics(
+            {country: settings.costs(country) for country in settings.countries_in_use()}
+        )
         return Response(body, mimetype="text/calendar", headers={"Cache-Control": "no-store"})
 
     @app.get("/feed.xml")

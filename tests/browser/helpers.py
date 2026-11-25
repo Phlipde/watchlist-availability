@@ -38,3 +38,11 @@ def free_tagged(page) -> list[str]:
             "labels => labels.map(l => l.dataset.providerLabel)"
         )
     )
+
+
+def pick_country(page, search: str, picker: str = "header") -> None:
+    """Choose a country with the keyboard: open the picker, type, arrow down to the first hit, Enter."""
+    page.locator(f"#{picker}-country-pop > summary").click()
+    page.locator(f"#{picker}-country-search").fill(search)
+    page.keyboard.press("ArrowDown")
+    page.keyboard.press("Enter")

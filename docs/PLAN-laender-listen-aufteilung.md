@@ -31,13 +31,13 @@ Ursachen, warum ein Länderwechsel heute keinen Scan startet: der Wechsel übers
 wenn der letzte jünger als ein Tag ist; auf der Watchlist wird das Land gar nicht gespeichert (Reload zeigt
 wieder das alte); eine schnelle zweite Wahl kann von einer älteren Antwort überholt werden.
 
-- [ ] C1 Prüfung `valid_country` (zwei Großbuchstaben, Flagge vorhanden) statt der festen Liste mit 4 Ländern,
+- [x] C1 Prüfung `valid_country` (zwei Großbuchstaben, Flagge vorhanden) statt der festen Liste mit 4 Ländern,
       überall an der API-Grenze; Schleifen über alle Länder auf "benutzte Länder" umstellen.
-- [ ] C2 Länderliste von TMDB (`/watch/providers/regions`), gespeichert; ohne Schlüssel die Flaggen als Rückfall.
-- [ ] C3 Wechsel: Land speichern, immer Scan starten (ein frischer Scan desselben Landes von heute wird
+- [x] C2 Länderliste von TMDB (`/watch/providers/regions`), gespeichert; ohne Schlüssel die Flaggen als Rückfall.
+- [x] C3 Wechsel: Land speichern, immer Scan starten (ein frischer Scan desselben Landes von heute wird
       wiederverwendet), ältere Antworten verwerfen, Dienste des Landes mit `/api/latest` liefern.
-- [ ] C4 Auswahl als Dropdown mit Suchfeld und Flaggen (Header und Einstellungen), Tastatur und Handy.
-- [ ] C5 Neues Land startet mit leerer Dienstauswahl; die Seite "My services" bittet um Auswahl.
+- [x] C4 Auswahl als Dropdown mit Suchfeld und Flaggen (Header und Einstellungen), Tastatur und Handy.
+- [x] C5 Neues Land startet mit leerer Dienstauswahl; die Seite "My services" bittet um Auswahl.
 
 ## D. Dateien aufteilen, Teil 2 (größer)
 
