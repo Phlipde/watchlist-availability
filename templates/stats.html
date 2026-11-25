@@ -10,7 +10,7 @@
   <title>Stats · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261123-45') }}" rel="stylesheet">
+  {% include "partials/styles.html" %}
 </head>
 <body>
   {% include "partials/header.html" %}

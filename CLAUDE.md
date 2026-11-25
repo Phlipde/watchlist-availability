@@ -247,7 +247,7 @@ Flask app (`app.py`, `web/routes.py`, `watchlist_app/`) with SQLite, Tabler/Boot
 - `Stretched card link` -- the title link (`.film-open::after`) covers the whole card; Playwright refuses clicks on a child under it, click the `article` (with `position`) or the link instead
 - `Old saved scans` -- new film fields (`collection`, `watchlist_position`) are empty until the next scan refetches TMDB data
 - `Grid columns grow` -- a `display: grid` column is as wide as its widest content (a wrapper around a scrolling poster row clipped the drawer); use `grid-template-columns: minmax(0, 1fr)` and test each block's right edge, not the container's width
-- `Film format` -- bump `FILM_FORMAT` in `scan_service.py` when a film field is added (older saved scans are not reused); `buy` offers and `imdb_id` arrived that way
+- `Film format` -- bump `FILM_FORMAT` in `scan_run.py` when a film field is added (older saved scans are not reused); `buy` offers and `imdb_id` arrived that way
 - `Local .env in tests` -- the git-ignored `.env` can set `WATCHLIST_DEV=1`; tests that depend on it unset use `monkeypatch.delenv`
 - `Cards and the drawer` -- `static/js/bestway.js` is the one "best way to watch" for the card line and the drawer button; the card line shows only the logo, its words are a hover/focus/tap bubble
 - `Arrow keys` -- `gridnav.js` (pure) plus roving tabindex in `app.js`; the card's title is first in the DOM, CSS `order: -1` draws the poster on top
@@ -259,7 +259,7 @@ Flask app (`app.py`, `web/routes.py`, `watchlist_app/`) with SQLite, Tabler/Boot
 - The filter bar stays one row (search, services, cost, genre, runtime, rating, Filters, sort); every new filter goes under "Filters"
 - New film field -- add it in `models.Film`, `tmdb._details_from_movie`, `results.make_film` and `validation.clean_film` (backups and the client go through validation)
 - Wording -- "service", not "provider", in the UI; one `.pill` class with tones ok/warn/danger/neutral; amber only for controls
-- Colours -- all in OKLCH in `static/css/app.css`; surfaces `--bg` < `--surface`/`--panel` < `--surface-raised` (dialogs, menus, toasts); borders `--line`, `--line-card`, `--line-field`, `--line-strong` are white with alpha. No new hex values; error and status colours stay solid on purpose
+- Colours -- all in OKLCH in `static/css/app*.css` (six files in cascade order, linked by `partials/styles.html`; keep the order); surfaces `--bg` < `--surface`/`--panel` < `--surface-raised` (dialogs, menus, toasts); borders `--line`, `--line-card`, `--line-field`, `--line-strong` are white with alpha. No new hex values; error and status colours stay solid on purpose
 - Font sizes -- `--fs-small/.75rem`, `--fs-body/.875rem`, `--fs-text/1rem`, `--fs-heading/2rem`; nothing under 12px
 
 ### Decisions

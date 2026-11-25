@@ -1,0 +1,66 @@
+/* ===== One button system (the last word on how buttons, triggers, segments, chips and menus look) =====
+   Variants:  Primary .btn-accent · Secondary .btn-outline-secondary · Ghost .btn-ghost · Dropdown trigger .filter-button
+              Segmented .segmented · Chip .chip .quick-chip .filter-chip .chip-link .link-chip · Tab .view-tab, the page nav
+   Sizes:     sm 28 px (.btn-sm, chips) · md 36 px (default) · lg 44 px (.btn-lg, and every control on a phone)
+   States:    default · hover (surface-2) · pressed (darker) · selected ([aria-pressed=true] .active, accent border)
+              · value (a dropdown that holds one: accent border) · focus-visible (2 px accent ring) · disabled (40 %).
+   Gold fill only on Primary, gold underline only on Tab. */
+:root {
+  --surface-2: oklch(31% 0.014 163);
+  --surface-pressed: oklch(25.5% 0.014 163);
+  --border: var(--line-field);
+  --text: var(--ink);
+  --text-2: var(--muted);
+  --radius-control: 6px;
+  --radius-panel: 12px;
+  --h-sm: 28px;
+  --h-md: 36px;
+  --h-lg: 44px;
+}
+
+/* Secondary (and the other Bootstrap outline variants) */
+.btn { min-height: var(--h-md); padding: 0 12px; border-radius: var(--radius-control); font: 500 var(--fs-body) system-ui, sans-serif; gap: 8px; }
+.btn-sm { min-height: var(--h-sm); padding: 0 10px; font-size: 13px; }
+.btn-lg { min-height: var(--h-lg); padding: 0 16px; font-size: 15px; font-weight: 600; }
+.btn-outline-secondary { --bs-btn-color: var(--text); --bs-btn-border-color: var(--border); --bs-btn-bg: transparent; --bs-btn-hover-color: var(--text); --bs-btn-hover-bg: var(--surface-2); --bs-btn-hover-border-color: var(--line-strong); --bs-btn-active-color: var(--text); --bs-btn-active-bg: var(--surface-pressed); --bs-btn-active-border-color: var(--line-strong); --bs-btn-disabled-color: var(--text); --bs-btn-disabled-bg: transparent; --bs-btn-disabled-border-color: var(--border); --tblr-btn-color: var(--text); --tblr-btn-bg: transparent; --tblr-btn-border-color: var(--border); --tblr-btn-hover-color: var(--text); --tblr-btn-hover-bg: var(--surface-2); --tblr-btn-hover-border-color: var(--line-strong); --tblr-btn-active-color: var(--text); --tblr-btn-active-bg: var(--surface-pressed); --tblr-btn-active-border-color: var(--line-strong); }
+.btn-outline-secondary[aria-pressed="true"], .btn-outline-secondary.active { background: var(--surface-2); border-color: var(--accent); color: var(--text); }
+/* Primary: 8 % lighter on hover, darker while pressed */
+.btn-accent:hover { filter: none; }
+.btn-accent:active { --tblr-btn-hover-bg: color-mix(in oklch, var(--accent) 88%, black); --bs-btn-hover-bg: color-mix(in oklch, var(--accent) 88%, black); }
+/* Ghost: no border, no fill; for tools, icons and menu items */
+.btn-ghost { --bs-btn-color: var(--text-2); --bs-btn-bg: transparent; --bs-btn-border-color: transparent; --bs-btn-hover-color: var(--text); --bs-btn-hover-bg: var(--surface-2); --bs-btn-hover-border-color: transparent; --bs-btn-active-bg: var(--surface-pressed); --bs-btn-active-border-color: transparent; --tblr-btn-color: var(--text-2); --tblr-btn-bg: transparent; --tblr-btn-border-color: transparent; --tblr-btn-hover-color: var(--text); --tblr-btn-hover-bg: var(--surface-2); --tblr-btn-hover-border-color: transparent; --tblr-btn-active-bg: var(--surface-pressed); --tblr-btn-active-border-color: transparent; }
+.btn-ghost[aria-pressed="true"] { color: var(--accent); }
+.btn-icon { width: var(--h-md); padding: 0; justify-content: center; }
+.btn-icon.btn-sm { width: var(--h-sm); }
+.btn-icon i { font-size: 18px; }
+/* Dropdown trigger = Secondary + chevron; a trigger that holds a value gets the accent border */
+.filter-button { min-height: var(--h-md); border-color: var(--border); border-radius: var(--radius-control); background: transparent; font-weight: 500; }
+.filter-button:hover, .filter-pop[open] > .filter-button { background: var(--surface-2); border-color: var(--line-strong); }
+.filter-button:active { background: var(--surface-pressed); }
+.filter-pop[data-active] > .filter-button, .filter-button.has-value { border-color: var(--accent); }
+/* Segmented: one frame, the selected segment filled (no underline: that belongs to tabs) */
+.segmented { min-height: var(--h-md); border-color: var(--border); border-radius: var(--radius-control); background: transparent; }
+.segmented label { font-weight: 500; }
+.segmented label:hover { background: var(--surface-2); color: var(--text); }
+.segmented label:has(input:checked) { background: var(--surface-2); color: var(--text); box-shadow: none; }
+.segmented label:has(input:disabled) { opacity: .4; cursor: not-allowed; }
+/* Chip: 28 px pill; selected = accent at 15 % with an accent border */
+.quick-chip, .chip, .chip-link, .link-chip, .filter-chip { min-height: var(--h-sm); border-radius: 999px; font-size: 13px; }
+.quick-chip:hover, .chip:hover, .chip-link:hover, .link-chip:hover { background: var(--surface-2); color: var(--text); border-color: var(--line-strong); }
+.quick-chip[aria-pressed="true"], .chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in oklch, var(--accent) 15%, transparent); color: var(--text); }
+.chip:disabled, .chip[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
+/* Tab: text with a 2 px accent underline; nothing else uses an underline */
+.view-tab, .page-nav a, .settings-nav a { font-weight: 500; }
+/* Focus and disabled, the same everywhere */
+.btn:focus-visible, .filter-button:focus-visible, .chip:focus-visible, .quick-chip:focus-visible, .link-chip:focus-visible, .chip-link:focus-visible, .tool:focus-visible, .sync-toggle:focus-visible, .segmented label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; box-shadow: none; }
+.btn:disabled, .btn.disabled, .filter-button[aria-disabled="true"], fieldset:disabled .btn { opacity: .4; cursor: not-allowed; pointer-events: auto; }
+/* Menus: a panel with 12 px corners; items are left-aligned ghost buttons, 36 px high, no border of their own */
+.menu { min-width: 200px; padding: 6px; border: 1px solid var(--line-strong); border-radius: var(--radius-panel); background: var(--surface-raised); box-shadow: 0 12px 32px rgb(0 0 0 / .45); }
+.menu-item { display: flex; align-items: center; gap: 8px; width: 100%; min-height: var(--h-md); padding: 0 10px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--text); font: var(--fs-body) system-ui, sans-serif; text-align: left; text-decoration: none; cursor: pointer; }
+.menu-item i { width: 16px; font-size: 16px; color: var(--text-2); }
+.menu-item:hover { background: var(--surface-2); }
+.menu-item:active { background: var(--surface-pressed); }
+.menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.menu-sep { height: 1px; margin: 6px 0; background: var(--line); }
+@media (pointer: coarse) { .btn, .btn-sm, .filter-button, .segmented label, .menu-item { min-height: var(--h-lg); } .btn-icon { width: var(--h-lg); } .chip, .quick-chip { min-height: var(--h-lg); } }
+
