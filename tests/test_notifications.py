@@ -6,6 +6,7 @@ import time
 import pytest
 import requests
 
+from tests.helpers import know_services
 from watchlist_app import notifications
 from watchlist_app.config import Settings
 from watchlist_app.settings import AppSettings
@@ -20,6 +21,7 @@ def at(day: int, hour: int, minute: int = 0) -> float:
 @pytest.fixture
 def store():
     database = Store(":memory:")
+    know_services(database)
     yield database
     database.close()
 

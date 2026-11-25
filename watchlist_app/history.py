@@ -16,14 +16,12 @@ def diff_scans(
     previous: dict | None,
     results: list[dict],
     unavailable: list[dict],
-    compare_only: set[str] | None = None,
     older: dict | None = None,
 ) -> list[dict]:
     """Compare a new scan with the previous one of the same watchlist.
 
     Only films present in both scans count, so a film that was just added to or
-    removed from the watchlist does not show up as a change. With `compare_only`,
-    only these providers are compared (the previous scan knew no others).
+    removed from the watchlist does not show up as a change.
 
     Two-scan rule against TMDB hiccups: "removed" needs two scans in a row without the
     provider (it was in `older`, the scan before `previous`), and a provider that only
@@ -42,8 +40,6 @@ def diff_scans(
             continue
         new = set(film.get("providers") or {})
         oldest = earlier.get(key, old)
-        if compare_only is not None:
-            old, new, oldest = old & compare_only, new & compare_only, oldest & compare_only
         added = new - old - oldest if older else new - old
         removed = (oldest - old) - new if older else set()
         for change, providers in (("added", added), ("removed", removed)):

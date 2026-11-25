@@ -16,13 +16,13 @@ großen Umbauten von `routes.py`, `store.py` und `app.js`. Jeder Schritt: Tests 
 
 ## B. Eingebaute Dienstlisten (Ergebnis der Prüfung: weitgehend durch TMDB-Daten ersetzbar)
 
-- [ ] B1 `MOSTLY_FREE`-Rückfall entfernen: "Mostly free" kommt nur noch aus den Angeboten des Scans.
-- [ ] B2 `RENTAL_SHOPS` durch `rental_from_scan` ersetzen (Dienste, die nur leihen/kaufen anbieten).
-- [ ] B3 `_FREE_SERVICES`/`_MAIN_SUBSCRIPTIONS` weg: Gruppen auf "My services" aus Scan-Angeboten,
+- [x] B1 `MOSTLY_FREE`-Rückfall entfernen: "Mostly free" kommt nur noch aus den Angeboten des Scans.
+- [x] B2 `RENTAL_SHOPS` durch `rental_from_scan` ersetzen (Dienste, die nur leihen/kaufen anbieten).
+- [x] B3 `_FREE_SERVICES`/`_MAIN_SUBSCRIPTIONS` weg: Gruppen auf "My services" aus Scan-Angeboten,
       Reihenfolge nach TMDB-Priorität.
-- [ ] B4 `_ALL_PROVIDERS` auf eine kleine Namens-Alias-Tabelle schrumpfen (gespeicherte Kurznamen wie
+- [x] B4 `_ALL_PROVIDERS` auf eine kleine Namens-Alias-Tabelle schrumpfen (gespeicherte Kurznamen wie
       "Prime Video" bleiben gültig); `_DEFAULT_ENABLED` und `MATCHING_CHANGED` entfernen.
-- [ ] B5 `platforms.toml` nur noch als optionaler Startwert; ein Land ohne Abschnitt startet leer.
+- [x] B5 `platforms.toml` nur noch als optionaler Startwert; ein Land ohne Abschnitt startet leer.
 Behalten: `_SECTION_ORDER` (Angebotsarten → Free/Paid), die Alias-Tabelle für Anzeigenamen.
 
 ## C. Jedes Land, wählbar mit Suche und Flagge

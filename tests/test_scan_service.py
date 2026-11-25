@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from tests.helpers import BUNDLE
+from tests.helpers import BUNDLE, know_services
 from watchlist_app import scan_service, scheduler, tmdb
 from watchlist_app.config import Settings
 from watchlist_app.models import WatchlistEntry
@@ -38,6 +38,7 @@ class IdleThread:
 @pytest.fixture
 def store():
     database = Store(":memory:")
+    know_services(database)
     yield database
     database.close()
 
@@ -302,6 +303,11 @@ class TestAppSettings:
         assert settings.subscriptions("DE") == default_de
         assert settings.targets("GB") == {"MUBI": "MUBI"}
 
+    def test_a_country_without_a_platforms_section_starts_with_no_services(self, settings):
+        assert settings.subscriptions("IT") == []
+        # The start values count only for services TMDB has listed (here Netflix and Arte of the DE section).
+        assert set(settings.subscriptions("DE")) == {"Netflix", "Arte", "Prime Video", "Apple TV+"}
+
     def test_api_key_is_never_stored(self, store, settings):
         settings.update({"country": "FR"})
         assert "test-key" not in str(store._read("SELECT * FROM settings"))
@@ -328,17 +334,18 @@ class TestProviderList:
         assert outcome.results[0]["providers"] == {"Prime Video": ["flatrate"], "Brand New Stream": ["ads"]}
         assert store.latest_scan("DE")["stats"]["providers"] == "all"
 
-    def test_old_scans_do_not_report_new_providers_as_changes(self, store):
-        old = {"key": "949", "title": "Heat", "year": 1995, "providers": {"Netflix": ["flatrate"]}}
-        store.save_scan("DE", "src", "older list", [old], [], {}, created=time.time() - 3600)
+    def test_the_scan_brings_its_free_services_and_rental_shops(self, store):
+        # The page does not reload on a country switch, so both lists come from the scan's offers.
         bundle = {
             **BUNDLE,
-            "providers": {"DE": {"Netflix": ["flatrate"], "Brand New Stream": ["ads"], "MUBI": ["flatrate"]}},
+            "providers": {
+                "DE": {"Netflix": ["flatrate"], "Brand New Stream": ["ads"], "Videoload": ["rent"]}
+            },
         }
         search, fetched = tmdb_answers(bundle)
         with search, fetched:
             outcome = perform_scan(store, ENTRIES, "src", "DE", "key")
-        assert [(change["provider"], change["change"]) for change in outcome.changes] == [("MUBI", "added")]
+        assert (outcome.free_services, outcome.rental_shops) == (["Brand New Stream"], ["Videoload"])
 
     def test_a_scan_before_the_change_is_not_reused(self, store):
         search, fetched = tmdb_answers()

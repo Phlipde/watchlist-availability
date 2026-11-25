@@ -95,10 +95,11 @@ class AppSettings:
         """The user's own services for a country (display names)."""
         country = country or self.country
         stored = self._store.get_setting(f"subscriptions:{country}")
-        names = list(providers.load_platforms_config(country))
+        known = self.known_providers()
+        # platforms.toml is only a start value; a country without a section starts empty.
+        names = [name for name in providers.load_platforms_config(country) if name in known]
         if stored is not None:
             try:
-                known = self.known_providers()
                 names = [name for name in json.loads(stored) if name in known]
             except (ValueError, TypeError):
                 pass

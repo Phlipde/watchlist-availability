@@ -70,10 +70,6 @@ def result_stats(results: list[dict]) -> dict:
     }
 
 
-def _offered_here(store: Store, country: str) -> set[str]:
-    return {providers.display_name(item["name"]) for item in store.provider_catalog(country)}
-
-
 def with_changes(store: Store, country: str, results: list[dict], unavailable: list[dict]) -> dict:
     """Attach the stored availability changes of the last two weeks to a scan's films."""
     changes = store.recent_changes(country, time.time() - history.CHANGE_WINDOW_SECONDS)
@@ -81,10 +77,9 @@ def with_changes(store: Store, country: str, results: list[dict], unavailable: l
         "results": history.apply_changes(results, changes),
         "unavailable": history.apply_changes(unavailable, changes),
         "changes": changes,
-        # The page does not reload on a country switch, so the free list travels with the films.
-        "free_services": sorted(
-            providers.mostly_free_from_scan(results, unavailable, _offered_here(store, country))
-        ),
+        # The page does not reload on a country switch, so these lists travel with the films.
+        "free_services": sorted(providers.mostly_free_from_scan(results, unavailable)),
+        "rental_shops": sorted(providers.rental_from_scan(results, unavailable)),
     }
 
 
@@ -122,6 +117,7 @@ class ScanOutcome:
     scan_id: int | None = None
     failed: list[dict] = field(default_factory=list)
     free_services: list[str] = field(default_factory=list)
+    rental_shops: list[str] = field(default_factory=list)
 
 
 def perform_scan(
@@ -206,11 +202,6 @@ def perform_scan(
     earlier = store.recent_scans(country, source_name)
     previous = earlier[0] if earlier else None
     older = earlier[1] if len(earlier) > 1 else None
-    # Scans before the provider list came from TMDB only knew the built-in providers;
-    # comparing against them would report every newly known provider as "new on ...".
-    compare_only = None
-    if previous is not None and previous["stats"].get("providers") != ALL_PROVIDERS:
-        compare_only = set(providers._ALL_PROVIDERS) - providers.MATCHING_CHANGED
     created = time.time()
     stats = {**result_stats(results), "providers": ALL_PROVIDERS, "film_format": FILM_FORMAT}
     scan_id = None
@@ -223,7 +214,7 @@ def perform_scan(
         )
         store.add_changes(
             country,
-            history.diff_scans(previous, results, unavailable, compare_only, older=older),
+            history.diff_scans(previous, results, unavailable, older=older),
             created=created,
         )
     store.touch_ids(seen, seen_at=created)

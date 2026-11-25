@@ -583,14 +583,16 @@ const state = createAppState();
       renderFilms();
     }
     // The page does not reload on a country switch: relabel the services from the new country's scan.
-    function showFreeServices(names) {
-      freeServices.clear();
-      names.forEach(name => freeServices.add(name));
+    function showServiceLabels(free, rental) {
+      [[freeServices, free], [rentalShops, rental]].forEach(([set, names]) => {
+        set.clear();
+        names.forEach(name => set.add(name));
+      });
       filterBar.buildServicesMenu();
     }
     // Show a finished scan: films, unavailable films and the stored availability changes.
-    function replaceWithScanResults(films, unavailable, changes, lastScan, free) {
-      if (free) showFreeServices(free);
+    function replaceWithScanResults(films, unavailable, changes, lastScan, free, rental) {
+      if (free) showServiceLabels(free, rental || []);
       state.films = films || [];
       state.unavailable = unavailable || [];
       state.changes = changes || [];
@@ -656,7 +658,7 @@ const state = createAppState();
       if (state.films.length) showResultTools();
       if (job.status === 'complete' || job.status === 'cancelled') { if (job.status === 'complete') setProgress(100); else document.getElementById('progress-bar').classList.add('cancelled'); document.getElementById('progress-count').textContent = job.status === 'complete' ? 'Complete' : 'Cancelled'; showScanButton();       if (job.status === 'complete') {
         scanState.rescanInProgress = false;
-        replaceWithScanResults(job.results, job.unavailable, job.changes, job.last_updated, job.free_services);
+        replaceWithScanResults(job.results, job.unavailable, job.changes, job.last_updated, job.free_services, job.rental_shops);
       }
       // The server moves favorites saved under "Title|Year" to the TMDB id after a scan.
       if (job.status === 'complete') loadFavorites().then(renderFilms).then(() => openPendingFilm(true));
@@ -715,7 +717,7 @@ const state = createAppState();
       // The service worker answers from its copy when the app cannot be reached: say how old the data is.
       if (response.headers.get('X-From-Cache') && snapshot.created) showToast(`Offline: showing the data from ${new Date(snapshot.created * 1000).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'})}.`);
       if (!snapshot.available) return snapshot;
-      replaceWithScanResults(snapshot.results, snapshot.unavailable, snapshot.changes, snapshot.created, snapshot.free_services);
+      replaceWithScanResults(snapshot.results, snapshot.unavailable, snapshot.changes, snapshot.created, snapshot.free_services, snapshot.rental_shops);
       document.getElementById('source-name').textContent = snapshot.source_name || '';
       document.getElementById('result-meta').hidden = false;
       document.getElementById('film-filters').hidden = false;

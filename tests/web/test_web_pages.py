@@ -5,13 +5,20 @@ import json
 
 
 class TestPages:
-    def test_main_page_uses_saved_subscriptions(self, client, settings):
+    def test_main_page_uses_saved_subscriptions(self, client, settings, store):
         settings.update({"subscriptions": ["MUBI"]})
-        page = client.get("/").get_data(as_text=True)
-        config = json.loads(page.split("window.WATCHLIST_CONFIG = ")[1].split(";</script>")[0])
-        assert config["subscriptions"]["DE"] == ["MUBI"]
-        assert "Apple TV Store" in config["rentalShops"]
-        assert "Arte" in config["freeServices"]
+
+        def config():
+            page = client.get("/").get_data(as_text=True)
+            return json.loads(page.split("window.WATCHLIST_CONFIG = ")[1].split(";</script>")[0]), page
+
+        assert (config()[0]["rentalShops"], config()[0]["freeServices"]) == ([], [])  # no scan, no labels
+        offers = {"Apple TV Store": ["rent"], "Arte": ["free"], "MUBI": ["flatrate"]}
+        store.save_scan("DE", "src", "k", [{"key": "1", "title": "Heat", "providers": offers}], [], {})
+        data, page = config()
+        assert data["subscriptions"]["DE"] == ["MUBI"]
+        assert data["rentalShops"] == ["Apple TV Store"]
+        assert data["freeServices"] == ["Arte"]
         # The services menu is drawn in the browser from this config; the sidebar is gone.
         assert 'id="services-menu"' in page and 'id="provider-panel"' not in page
 
@@ -43,6 +50,25 @@ def test_loaded_providers_appear_on_the_pages(client, store, settings):
     assert saved.status_code == 200
     assert settings.subscriptions() == ["Brand New Stream", "Prime Video"]
     assert client.get("/api/status").get_json()["provider_catalog"]["count"] == 2
+
+
+def test_services_page_groups_come_from_the_latest_scan(client, store, settings):
+    settings.update({"subscriptions": []})
+    names = ["Netflix", "Videoload", "Arte", "Brand New Stream"]
+    store.save_provider_catalog("DE", [{"name": name, "priority": rank} for rank, name in enumerate(names)])
+    offers = {"Arte": ["ads"], "Netflix": ["flatrate"], "Videoload": ["rent"], "Canal+": ["flatrate"]}
+    store.save_scan("DE", "src", "k", [{"key": "1", "title": "Heat", "providers": offers}], [], {})
+    page = client.get("/settings/services").get_data(as_text=True)
+
+    def section(title):
+        part = page.split(f'data-section="{title}"', 1)[1].split("</details>", 1)[0]
+        return [name for name in names + ["Canal+"] if f'value="{name}"' in part]
+
+    assert section("Free and ad-supported") == ["Arte"]
+    assert section("Subscriptions") == ["Netflix"]
+    assert section("Rental shops") == ["Videoload"]
+    assert section("More services") == ["Brand New Stream"]
+    assert 'value="Canal+"' not in page  # in the scan, but TMDB does not list it in DE
 
 
 def test_provider_logos_reach_the_page_under_their_display_name(client, store):

@@ -5,6 +5,14 @@ from unittest.mock import MagicMock
 API_KEY = "fake_key_for_tests"
 
 
+def know_services(store, names=("Netflix", "MUBI", "Arte")) -> None:
+    """Only services TMDB has listed count as subscriptions: store a list as if a scan had loaded it.
+
+    It goes under an unused country, so the test's own country still has no loaded list.
+    """
+    store.save_provider_catalog("ZZ", [{"name": name} for name in names])
+
+
 def response(json_data=None, status_code=200, headers=None, text=""):
     """A mocked requests.Response."""
     mock = MagicMock()

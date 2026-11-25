@@ -218,7 +218,7 @@ Netflix      = true
 Hulu         = false
 ```
 
-`platforms.toml` only knows the built-in provider names (`watchlist_app/providers.py`); every other service TMDB lists for your country can be chosen on *Settings → My services* once the first scan has loaded the list.
+`platforms.toml` is an optional start list; a country without a section starts with no services. Names are TMDB's provider names (a few have short aliases such as "Prime Video", see `_ALIASES` in `watchlist_app/providers.py`) and count once the first scan has loaded the country's list from TMDB. All services can be chosen on *Settings → My services*; the groups there ("Free and ad-supported", "Subscriptions", "Rental shops") come from the offers in the latest scan.
 
 ---
 

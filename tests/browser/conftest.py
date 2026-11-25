@@ -15,6 +15,7 @@ import pytest
 from flask import Flask
 from werkzeug.serving import make_server
 
+from tests.helpers import know_services
 from watchlist_app.config import Settings
 from watchlist_app.models import WatchlistEntry
 from watchlist_app.scan_service import ScanService
@@ -91,10 +92,17 @@ CANDIDATES = [
 ]
 
 
+CATALOG = {
+    country: [{"name": name, "logo_path": None, "priority": rank} for rank, name in enumerate(names)]
+    for country, names in {"DE": ["Netflix", "Arte", "MUBI"], "GB": ["BBC iPlayer", "Arte", "MUBI"]}.items()
+}
+
+
 @pytest.fixture
 def app_server(tmp_path):
     """The web app with fixed answers for Letterboxd and TMDB, on a free local port."""
     store = Store(tmp_path / "test.sqlite3")
+    know_services(store)
     defaults = Settings(
         tmdb_api_key="test-key", letterboxd_username="tester", country="DE", downloads_dir=tmp_path
     )
@@ -112,7 +120,11 @@ def app_server(tmp_path):
             "watchlist_app.tmdb.get_movie_bundle", side_effect=lambda tmdb_id, key=None: BUNDLES.get(tmdb_id)
         ),
         patch("watchlist_app.tmdb.search_movies", return_value=CANDIDATES),
-        patch("watchlist_app.tmdb.get_region_providers", return_value=[]),
+        # The services TMDB lists per country; the services page and "Add a service" offer only these.
+        patch(
+            "watchlist_app.tmdb.get_region_providers",
+            side_effect=lambda country, key=None: CATALOG.get(country, []),
+        ),
     ]
     for fake in fakes:
         fake.start()

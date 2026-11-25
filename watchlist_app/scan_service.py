@@ -304,6 +304,7 @@ class ScanService:
                 unavailable=outcome.unavailable,
                 changes=outcome.changes,
                 free_services=outcome.free_services,
+                rental_shops=outcome.rental_shops,
                 stats=result_stats(outcome.results),
                 completed=len(entries),
                 last_updated=outcome.created,

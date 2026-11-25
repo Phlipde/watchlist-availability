@@ -71,9 +71,10 @@ class TestLatestAndFavoritesApi:
 
     def test_latest_scan_sends_free_services_of_its_country(self, client, store):
         # The page keeps its labels on a country switch, so each scan brings its own list.
-        free = {"BBC iPlayer": ["free"]}
-        store.save_scan("GB", "src", "k", [{"key": "1", "title": "Heat", "providers": free}], [], {})
-        assert "BBC iPlayer" in client.get("/api/latest?country=GB").get_json()["free_services"]
+        offers = {"BBC iPlayer": ["free"], "Sky Store": ["rent", "buy"]}
+        store.save_scan("GB", "src", "k", [{"key": "1", "title": "Heat", "providers": offers}], [], {})
+        latest = client.get("/api/latest?country=GB").get_json()
+        assert (latest["free_services"], latest["rental_shops"]) == (["BBC iPlayer"], ["Sky Store"])
 
     def test_latest_scan_reports_old_results_as_stale(self, client, store, settings, monkeypatch):
         store.save_scan("DE", "src", "k", [{"key": "1", "title": "Heat", "providers": {}}], [], {}, created=1)

@@ -90,14 +90,3 @@ class TestApplyChanges:
         assert history.apply_changes([film("2", "Alien", ["Arte"])], [change("1", "Arte", "added", 5)]) == [
             film("2", "Alien", ["Arte"])
         ]
-
-
-def test_compare_only_ignores_providers_the_old_scan_did_not_know():
-    from watchlist_app.history import diff_scans
-
-    previous = {"results": [{"key": "1", "title": "A", "year": 2000, "providers": {"Netflix": ["flatrate"]}}]}
-    results = [
-        {"key": "1", "title": "A", "year": 2000, "providers": {"Netflix": ["flatrate"], "New": ["ads"]}}
-    ]
-    assert diff_scans(previous, results, [], compare_only={"Netflix"}) == []
-    assert [change["provider"] for change in diff_scans(previous, results, [])] == ["New"]

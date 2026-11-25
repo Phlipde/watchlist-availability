@@ -182,13 +182,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
 
     def films_page(view: str):
         latest = store.latest_scan(settings.country)
-        free_services = (
-            providers.mostly_free_from_scan(
-                latest["results"], latest["unavailable"], set(settings.loaded_providers(settings.country))
-            )
-            if latest
-            else providers.MOSTLY_FREE
-        )
+        films, unavailable = (latest["results"], latest["unavailable"]) if latest else ([], [])
         initial_filters = {"query": request.args.get("q", ""), "sort": request.args.get("sort", SORTS[0][0])}
         return page(
             "index.html",
@@ -205,8 +199,8 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
                 "deadlines": costs.upcoming_deadlines(settings.costs(settings.country)),
                 "initialFilters": initial_filters,
                 "subscriptions": {country: settings.subscriptions(country) for country in COUNTRIES},
-                "rentalShops": sorted(providers.RENTAL_SHOPS),
-                "freeServices": sorted(free_services),
+                "rentalShops": sorted(providers.rental_from_scan(films, unavailable)),
+                "freeServices": sorted(providers.mostly_free_from_scan(films, unavailable)),
                 "logoBaseUrl": _TMDB_LOGO_BASE_URL,
                 # Logos of the providers loaded from TMDB, for the services menu and the details.
                 "providerLogos": provider_logos(),
@@ -254,25 +248,23 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         }
         return costs.other_countries(by_country, own, country, len(ids))
 
-    def _country_groups() -> list[tuple[str, list[tuple[str, list[str]]]]]:
-        """provider_groups with only the services TMDB lists in the app's country (no Canal+ in DE)."""
-        here = set(settings.loaded_providers(settings.country))
-        groups = providers.provider_groups(here)
-        if not here:  # the country's services were never loaded: show the built-in list
-            return groups
-        return [
-            (title, [(sub, [name for name in names if name in here]) for sub, names in subs])
-            for title, subs in groups
-        ]
+    def _country_groups() -> list[tuple[str, list[str]]]:
+        """The services TMDB lists in the app's country (no Canal+ in DE), grouped by the latest scan."""
+        scan = store.latest_scan(settings.country)
+        catalog = [providers.display_name(item["name"]) for item in store.provider_catalog(settings.country)]
+        return providers.provider_groups(
+            scan["results"] if scan else [], scan["unavailable"] if scan else [], catalog
+        )
 
     def _service_candidates(own: list[str]) -> list[dict]:
         """Services you could add: [{name, group}], the more usual groups first."""
         mine = set(own)
-        found = []
-        for _title, subgroups in _country_groups():
-            for subgroup, names in subgroups:
-                found += [{"name": name, "group": subgroup} for name in names if name not in mine]
-        return found
+        return [
+            {"name": name, "group": group}
+            for group, names in _country_groups()
+            for name in names
+            if name not in mine
+        ]
 
     @app.get("/subscriptions")
     def subscriptions_page():
@@ -310,7 +302,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             for name in film.get("providers", {}):
                 counts[name] = counts.get(name, 0) + 1
         selected = set(settings.subscriptions())
-        groups = {subgroup: names for _, subgroups in _country_groups() for subgroup, names in subgroups}
+        groups = dict(_country_groups())
         sections = [("My subscriptions", sorted(selected, key=str.casefold), True)]
         for title, opened in (
             ("Free and ad-supported", True),

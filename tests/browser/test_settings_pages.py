@@ -88,6 +88,8 @@ def test_services_are_saved_as_you_tick_and_can_be_undone(app_server, page):
     page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     page.goto(f"{app_server['url']}/settings/services")
+    # MUBI has no film in the scan, so it waits under the closed "More services".
+    page.locator('details[data-section="More services"] summary').click()
     page.locator('#services-sections input[value="MUBI"]').check(force=True)
     expect(page.locator("#toast-text")).to_have_text("Saved")
     assert sorted(app_server["settings"].subscriptions("DE")) == ["MUBI", "Netflix"]

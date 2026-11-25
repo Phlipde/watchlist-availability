@@ -92,8 +92,9 @@ def overview(
     for name in subscriptions:
         on = [film for film in films if _watchable(film, name)]
         only = [film for film in on if only_on_my_services(film, subscriptions)]
-        if name in free:
-            # Free services are one compact block, not a table row each.
+        # Free services are one compact block, not a table row each. A service with no film in the scan and no
+        # saved price joins it too: with no offers it cannot be told from a free one (ZDF without films).
+        if name in free or (not on and not (costs.get(name) or {}).get("price")):
             free_block.append({"name": name, "films": len(on)})
             free_films.update(film.get("key") or film.get("title") for film in on)
             continue

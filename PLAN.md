@@ -135,7 +135,7 @@ Alles kommt aus der TMDB-Antwort, die der Scan für jeden Film ohnehin lädt (`w
 
 ### Etappe 9c: Befunde aus Ponytail-Audit und -Review (vor dem Commit von 9a/9b/10)
 Audit des ganzen Projekts und Review der offenen Änderungen (2026-11-15). Doppelte Funde sind zusammengefasst. Schon behoben, beim Nachstellen gefunden:
-- [x] „Free“-Label: Die 50-%-Regel zählte gegen die ganze Watchlist statt gegen die Filme des Dienstes, dadurch hatte kein Dienst das Label und „Free services“ wählte nichts aus. Jetzt je Dienst; Dienste ohne Filme im Scan entscheidet die Liste (`providers.mostly_free_from_scan`, Test in `tests/test_providers.py`).
+- [x] „Free“-Label: Die 50-%-Regel zählte gegen die ganze Watchlist statt gegen die Filme des Dienstes, dadurch hatte kein Dienst das Label und „Free services“ wählte nichts aus. Jetzt je Dienst (`providers.mostly_free_from_scan`, Test in `tests/test_providers.py`); seit Plan B1 (25.11.) gibt es keine Rückfall-Liste mehr, Dienste ohne Filme im Scan gelten nicht als frei.
 - [x] Gespeicherte Ergebnisse ohne Scan: Der Fortschrittsbereich blieb auf „Preparing… 0 %“ mit „Cancel scan“; „Retry scan“ war versteckt. Jetzt „Showing saved results.“ mit „Retry scan“.
 
 Muss behoben werden (zuerst):
@@ -155,7 +155,7 @@ Sollte behoben werden:
 
 Optional:
 - [x] Doppelte Prüfung `and _watchable(film, name)` in `costs.overview` löschen.
-- [ ] Einmal-Umstellungen entfernen, wenn keine ältere Installation mehr existiert: `legacy_import.py` mit `config.legacy_paths` und Tests, `MATCHING_CHANGED`/`compare_only` in `scan_service.py` (rund 150 Zeilen).
+- [ ] Einmal-Umstellungen entfernen, wenn keine ältere Installation mehr existiert: `legacy_import.py` mit `config.legacy_paths` und Tests (`MATCHING_CHANGED`/`compare_only` sind mit Plan B4 vom 25.11. schon entfernt).
 - [ ] Nebenbei gefunden: Der Stichwort-Filter hat mit echten Daten 3676 Einträge und ist so kaum bedienbar. Besser nur Stichworte mit mindestens zwei oder drei Filmen anbieten oder ein Suchfeld mit Vorschlagsliste (`datalist`) nehmen.
 - Abweichungen bei der Umsetzung (2026-11-15): Die Fortschritts-Abfrage kürzt nur `results`; die Liste der nicht verfügbaren Filme ist klein (rund 15 KB) und kommt weiter ganz. Ihr Test steht in `tests/test_scan_service.py`. „Only on one of my services“ setzt der Server nicht in `with_changes` (die kennt die Abos nicht), sondern in `/api/latest` und in der Scan-Abfrage (`costs.mark_only_on_my_services`). Die Auswahl im Abend-Modus ist jetzt `eveningSuggestions` in `static/js/filtering.js`. Die Einmal-Umstellungen bleiben vorerst, weil nicht feststeht, dass es keine ältere Installation mehr gibt.
 - Bewusst gelassen: `index()` berechnet die „Free“-Liste selbst, obwohl `/api/latest` sie kurz danach liefert; so springen die Labels beim Laden nicht.
