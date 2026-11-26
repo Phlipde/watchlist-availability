@@ -9,19 +9,21 @@ from .store_schema import FAVORITE_FIELDS
 class MarkStore(StoreBase):
     # ----- favorites -----
 
-    def list_favorites(self) -> list[dict]:
+    def list_favorites(self, *, profile_id: int = 1) -> list[dict]:
         rows = self._read(
             "SELECT movie_key, title, year, poster_path, tmdb_url, trailer_url, rating, status, notes, "
-            "added_at FROM favorites ORDER BY title"
+            "added_at FROM favorites WHERE profile_id = ? ORDER BY title",
+            (profile_id,),
         )
         return [dict(zip(FAVORITE_FIELDS, row, strict=True)) for row in rows]
 
-    def add_favorite(self, movie: dict) -> None:
+    def add_favorite(self, movie: dict, *, profile_id: int = 1) -> None:
         self._write(
             "INSERT OR REPLACE INTO favorites "
-            "(movie_key, title, year, poster_path, tmdb_url, trailer_url, rating, status, notes) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "(profile_id, movie_key, title, year, poster_path, tmdb_url, trailer_url, rating, status, notes) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
+                profile_id,
                 movie["key"],
                 movie["title"],
                 movie.get("year"),
@@ -34,50 +36,59 @@ class MarkStore(StoreBase):
             ),
         )
 
-    def update_favorite(self, movie_key: str, changes: dict) -> None:
+    def update_favorite(self, movie_key: str, changes: dict, *, profile_id: int = 1) -> None:
         allowed = {key: value for key, value in changes.items() if key in {"status", "notes"}}
         if not allowed:
             return
         assignments = ", ".join(f"{column} = ?" for column in allowed)
         self._write(
-            f"UPDATE favorites SET {assignments} WHERE movie_key = ?",
-            (*allowed.values(), movie_key),
+            f"UPDATE favorites SET {assignments} WHERE profile_id = ? AND movie_key = ?",
+            (*allowed.values(), profile_id, movie_key),
         )
 
-    def remove_favorite(self, movie_key: str) -> None:
-        self._write("DELETE FROM favorites WHERE movie_key = ?", (movie_key,))
+    def remove_favorite(self, movie_key: str, *, profile_id: int = 1) -> None:
+        self._write("DELETE FROM favorites WHERE profile_id = ? AND movie_key = ?", (profile_id, movie_key))
 
     # ----- flags: "watched" and "not now" (hidden until a date), kept apart from favorites -----
 
-    def list_flags(self, now: float | None = None) -> list[dict]:
+    def list_flags(self, now: float | None = None, *, profile_id: int = 1) -> list[dict]:
         """Flags that count: watched ones, and "not now" until its date."""
         now = now if now is not None else time.time()
         rows = self._read(
-            "SELECT movie_key, flag, until FROM flags WHERE until IS NULL OR until > ? ORDER BY movie_key",
-            (now,),
+            "SELECT movie_key, flag, until FROM flags WHERE profile_id = ? AND (until IS NULL OR until > ?) "
+            "ORDER BY movie_key",
+            (profile_id, now),
         )
         return [{"key": key, "flag": flag, "until": until} for key, flag, until in rows]
 
-    def set_flag(self, movie_key: str, flag: str, until: float | None = None) -> None:
+    def set_flag(self, movie_key: str, flag: str, until: float | None = None, *, profile_id: int = 1) -> None:
         self._write(
-            "INSERT OR REPLACE INTO flags (movie_key, flag, until) VALUES (?, ?, ?)", (movie_key, flag, until)
+            "INSERT OR REPLACE INTO flags (profile_id, movie_key, flag, until) VALUES (?, ?, ?, ?)",
+            (profile_id, movie_key, flag, until),
         )
 
-    def clear_flag(self, movie_key: str) -> None:
-        self._write("DELETE FROM flags WHERE movie_key = ?", (movie_key,))
+    def clear_flag(self, movie_key: str, *, profile_id: int = 1) -> None:
+        self._write("DELETE FROM flags WHERE profile_id = ? AND movie_key = ?", (profile_id, movie_key))
 
-    def greyed_out_counts(self) -> dict[str, int]:
+    def greyed_out_counts(self, *, profile_id: int = 1) -> dict[str, int]:
         """How many films are greyed out: by the flag, and by a favorite with the status "watched"."""
-        flags = self._read("SELECT COUNT(*) FROM flags WHERE flag = 'watched'")[0][0]
-        favorites = self._read("SELECT COUNT(*) FROM favorites WHERE status = 'watched'")[0][0]
+        flags = self._read(
+            "SELECT COUNT(*) FROM flags WHERE profile_id = ? AND flag = 'watched'", (profile_id,)
+        )[0][0]
+        favorites = self._read(
+            "SELECT COUNT(*) FROM favorites WHERE profile_id = ? AND status = 'watched'", (profile_id,)
+        )[0][0]
         return {"flags": flags, "favorites": favorites}
 
-    def reset_greyed_out(self) -> dict[str, int]:
+    def reset_greyed_out(self, *, profile_id: int = 1) -> dict[str, int]:
         """Remove every grey-out; favorites stay, their status goes back to "plan". Returns the counts."""
         with self._lock:
-            flags = self._db.execute("DELETE FROM flags WHERE flag = 'watched'").rowcount
+            flags = self._db.execute(
+                "DELETE FROM flags WHERE profile_id = ? AND flag = 'watched'", (profile_id,)
+            ).rowcount
             favorites = self._db.execute(
-                "UPDATE favorites SET status = 'plan' WHERE status = 'watched'"
+                "UPDATE favorites SET status = 'plan' WHERE profile_id = ? AND status = 'watched'",
+                (profile_id,),
             ).rowcount
             self._db.commit()
         return {"flags": flags, "favorites": favorites}
