@@ -6,7 +6,7 @@ import {filmKey} from './filtering.js';
 import {abroadHtml, abroadRows, filterFlags} from './abroad.js';
 import {drawerHtml, seriesOrder} from './drawer.js';
 
-export function createFilmDetails({state, results, imageBaseUrl, openModal, modalOpeners, setDrawerKey, watchedKeys, hiddenKeys, includedOn, upcomingText, toggleFavorite, updateFavoriteField, setCompared, showToast, renderFilms}) {
+export function createFilmDetails({state, results, imageBaseUrl, openModal, modalOpeners, setDrawerKey, watchedKeys, hiddenKeys, includedOn, upcomingText, toggleFavorite, updateFavoriteField, setCompared, showToast, renderFilms, together = () => null}) {
   // "Abroad on your services": from stored scan data (no TMDB request); filled in when it arrives.
   async function showElsewhere(tmdbId, key, own) {
     let byCountry;
@@ -72,19 +72,21 @@ export function createFilmDetails({state, results, imageBaseUrl, openModal, moda
   let shownKey = null;
   // how: 'jump' (a film picked inside the drawer), 'back' (the back button) or '' (anything else).
   function showFilmDetails(key, opener = document.activeElement, how = '') {
+    // Together on Tonight (tonight-page.js): the partners' films too, the members' services, whose each one is.
+    const mode = together();
     const all = [...state.films, ...state.unavailable];
-    const film = all.find(item => filmKey(item) === key);
+    const film = all.find(item => filmKey(item) === key) || mode?.films.find(item => filmKey(item) === key);
     if (!film) return;
     const detailsOpen = document.getElementById('film-details-modal').classList.contains('show');
     if (how === 'jump' && detailsOpen && shownKey && shownKey !== key) backStack.push(shownKey);
     else if (how !== 'back') backStack.length = 0;
     shownKey = key;
-    const backFilm = backStack.length ? all.find(item => filmKey(item) === backStack.at(-1)) : null;
+    const backFilm = backStack.length ? [...all, ...(mode?.films || [])].find(item => filmKey(item) === backStack.at(-1)) : null;
     document.getElementById('film-details-title').textContent = film.title;
     setDrawerKey(key);
     const country = document.getElementById('country-select').value;
     const regions = new Intl.DisplayNames(['en'], {type: 'region'});
-    const own = state.selected;
+    const own = mode ? mode.own : state.selected;
     const saved = state.favorites.get(key);
     const watched = watchedKeys();
     const ctx = {
@@ -104,6 +106,7 @@ export function createFilmDetails({state, results, imageBaseUrl, openModal, moda
       releaseText: upcomingText(film),
       scanAt: state.lastScan,
       favoriteFields: saved ? favoriteFields(key, film.title, saved) : '',
+      whose: mode?.whose,
     };
     const content = document.getElementById('film-details-content');
     const back = backFilm ? `<button class="drawer-back film-link" type="button" data-back><i class="ti ti-chevron-left" aria-hidden="true"></i> Back to ${escapeHtml(backFilm.title)}</button>` : '';
@@ -205,7 +208,7 @@ export function createFilmDetails({state, results, imageBaseUrl, openModal, moda
   function openPendingFilm(final = false) {
     if (!pendingFilm) return;
     const key = pendingFilm;
-    if ([...state.films, ...state.unavailable].some(film => filmKey(film) === key)) {
+    if ([...state.films, ...state.unavailable, ...(together()?.films || [])].some(film => filmKey(film) === key)) {
       pendingFilm = null;
       // A link opened in a new tab (or the installed app) goes straight to the full-screen sheet on a phone.
       document.getElementById('film-details-modal').classList.toggle('is-full', matchMedia('(max-width: 800px)').matches);

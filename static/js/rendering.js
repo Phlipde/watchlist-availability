@@ -66,6 +66,12 @@ function wayLine(film, key, context) {
     ...abroadNew.map(row => ({name: row.service, kind: 'abroad', logo: url(row.service), flag: row.countries[0], country: `${context.countryName ? context.countryName(row.countries[0]) : row.countries[0]}${row.countries.length > 1 ? ` +${row.countries.length - 1} more` : ''}`})),
   ];
   if (!items.length) return none;
+  // Together: whose service each logo is, in the bubble; one owner's initial also in the top corner (a shared one has none).
+  if (context.ownersOf) items.forEach(item => {
+    const {owners, text} = context.ownersOf(item.name);
+    item.owner = text;
+    if (owners.length === 1) item.ownerBadge = `<span class="way-badge way-badge-owner" aria-hidden="true">${escapeHtml(owners[0].initial)}</span>`;
+  });
   return `<div class="best-way${way.muted ? ' is-muted' : ''}">${logoStackHtml(items, {key})}</div>`;
 }
 

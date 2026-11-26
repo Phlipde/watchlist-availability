@@ -285,7 +285,7 @@ const state = createAppState();
       renderViews(document.getElementById('tonight-views'));
     }
     ['saved-views', 'tonight-views', 'views-menu'].forEach(id => wireViews(document.getElementById(id), () => location.search, drawViews));
-    const {renderTonightPage} = createTonightPage({
+    const {renderTonightPage, togetherMode} = createTonightPage({
       state, imageBaseUrl, view: VIEW, regionLabel, drawViews, ensureAbroad, abroadOnFor, abroadCandidates, abroadFor, abroadList, watchedKeys, hiddenKeys, includedOn, showToast,
       applyTonightRoving: () => applyTonightRoving(), showFilmDetails: (key, opener) => showFilmDetails(key, opener), detailsOpener: () => modalOpeners.get('film-details-modal'),
     });
@@ -305,7 +305,7 @@ const state = createAppState();
     });
     const {showFilmDetails, openPendingFilm} = createFilmDetails({
       state, results, imageBaseUrl, openModal, modalOpeners, setDrawerKey: key => { lastDrawerKey = key; }, watchedKeys, hiddenKeys, includedOn, upcomingText,
-      toggleFavorite, updateFavoriteField, setCompared, showToast, renderFilms,
+      toggleFavorite, updateFavoriteField, setCompared, showToast, renderFilms, together: togetherMode,
     });
     const {applyRoving, applyTonightRoving, navItems, activeKey, setActiveKey} = createKeyboardNav({state, results, view: VIEW, toggleFavorite, setFlag, setCompared, renderFilms});
     // The skip link moves the focus without a #results in the address: going back to a #fragment entry

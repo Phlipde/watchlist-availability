@@ -57,7 +57,8 @@ function otherServicesHtml(film, ctx, action) {
   const others = new Set(groups.flatMap(group => group.rows.filter(row => !row.own).map(row => row.name)));
   const url = action.href || watchUrl(film, ctx.country);
   const chip = row => {
-    const tip = `${row.name}${row.own ? ' · your service' : ''}${row.via.length ? ` · also via ${[...new Set(row.via)].join(', ')}` : ''}`;
+    const owner = ctx.whose ? ctx.whose(row.name) || 'shared' : 'your';  // Together names whose it is
+    const tip = `${row.name}${row.own ? ` · ${owner} service` : ''}${row.via.length ? ` · also via ${[...new Set(row.via)].join(', ')}` : ''}`;
     return `<li class="svc${row.own ? ' is-own' : ''}" tabindex="0" role="img" aria-label="${escapeHtml(tip)}" data-tip="${escapeHtml(tip)}">${logoTile(ctx, row.name, 'svc-logo')}${row.own ? '<i class="ti ti-check own-badge" aria-hidden="true"></i>' : ''}</li>`;
   };
   const groupHtml = group => (group.kind === 'buy'
@@ -88,12 +89,14 @@ function toolButton(className, attrs, icon, label, fullName, pressed = null) {
 // The complete content of the drawer. ctx: own (Set), country, regionName, logos, logoBaseUrl, imageBaseUrl,
 // countryNames (Set), key, isFavorite, isSeen, isHidden, inCompare, series (films of the collection, oldest
 // first, with this one), similar (films), watched (Set of keys), serviceOf(film), keyOf(film), releaseText,
-// favoriteFields (HTML).
+// favoriteFields (HTML), whose(service) (Together only: 'your', "Anna's" or '' for a shared service).
 export function drawerHtml(film, ctx) {
   const key = ctx.key;
   const name = escapeHtml(film.title);
   const long = film.title.length > 30;
   const action = primaryAction(film, ctx.own, ctx.country, ctx.regionName, ctx.today);
+  const owner = action.primary && ctx.whose ? ctx.whose(action.service) : '';
+  if (owner) action.text = action.text.replace(`Watch on ${action.service}`, `Watch on ${owner} ${action.service}`);
   const badges = statusBadges(film, ctx.own).map(badge => `<p class="status-badge is-${badge.tone}">${escapeHtml(badge.text)}</p>`).join('');
   const alt = alternatives(film, ctx.own, action.service);
   const altKinds = alt.every(item => item.kind !== 'flatrate');

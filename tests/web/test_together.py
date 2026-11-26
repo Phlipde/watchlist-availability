@@ -84,3 +84,14 @@ def test_without_an_own_scan_nothing_is_available(client, store, anna):
     answer = client.get(f"/api/together?with={anna}").get_json()
     assert answer["available"] is False and answer["missing"] == []
     assert answer["together"]["members"][1]["name"] == "Anna"
+
+
+def test_tonight_offers_together_only_with_other_profiles(client, store):
+    assert b'id="together-pop"' not in client.get("/").data
+    anna = store.add_profile("Anna <3")
+    page = client.get("/").get_data(as_text=True)
+    assert 'id="together-pop"' in page and "Back to my list" in page
+    assert f'value="{anna}" data-name="Anna &lt;3"' in page  # escaped, and the active profile is not offered
+    assert 'data-name="Me"' not in page
+    as_anna = client.get(f"/?profile={anna}").get_data(as_text=True)
+    assert 'data-name="Me"' in as_anna and 'data-name="Anna' not in as_anna

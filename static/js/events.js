@@ -69,14 +69,19 @@ export const TONIGHT_CHIPS = [
 
 // The rows of the Tonight page: new → free → one per subscription (most films first). Empty rows are left out.
 // options: services (Set), favorites (Map), skip (Set of watched keys), chips (Set of chip ids), now.
-export function tonightRows(films, {services, favorites = new Map(), skip = new Set(), chips = new Set(), now}) {
+const offeredAs = (film, service, kinds) => (film.providers?.[service] || []).some(kind => kinds.includes(kind));
+// The films the quick chips let through that run on the services without paying per film (free ones only with "Free only").
+function watchableFor(films, {services, skip, chips, now}) {
   const checks = TONIGHT_CHIPS.filter(([id, , check]) => chips.has(id) && check).map(([, , check]) => check);
-  const freeOnly = chips.has('free');
-  const offeredAs = (film, service, kinds) => (film.providers?.[service] || []).some(kind => kinds.includes(kind));
   const wanted = films.filter(film => !skip.has(filmKey(film)) && checks.every(check => check(film, {services, now})));
-  const watchable = wanted.filter(film => freeOnly
+  return wanted.filter(film => chips.has('free')
     ? [...services].some(service => offeredAs(film, service, FREE_KINDS))
     : watchableOn(film, services).length);
+}
+
+export function tonightRows(films, {services, favorites = new Map(), skip = new Set(), chips = new Set(), now}) {
+  const freeOnly = chips.has('free');
+  const watchable = watchableFor(films, {services, skip, chips, now});
   const sorted = list => sortFilms(list, 'priority', {favorites});
   const fresh = sorted(newOnServices(watchable, services, now));
   const freshKeys = new Set(fresh.map(filmKey));  // a film shown under "New" is not repeated in the service rows
@@ -95,6 +100,19 @@ export function tonightRows(films, {services, favorites = new Map(), skip = new 
       }));
   }
   return {rows: rows.filter(row => row.films.length), available: watchable};
+}
+
+// Together (films from /api/together, each with `group`): "On both lists" and "One of you, unseen", with the same
+// quick chips and skip as tonightRows. Both rows are always returned, so the page can say when one is empty.
+// options: services (the members' services together), members (how many), plus those of tonightRows.
+export function togetherRows(films, {services, members = 2, favorites = new Map(), skip = new Set(), chips = new Set(), now}) {
+  const watchable = watchableFor(films, {services, skip, chips, now});
+  const sorted = list => sortFilms(list, 'priority', {favorites});
+  const rows = [
+    {id: 'both', title: members > 2 ? "On everyone's list" : 'On both lists', films: sorted(watchable.filter(film => film.group === 'both')), href: ''},
+    {id: 'one', title: 'One of you, unseen', films: sorted(watchable.filter(film => film.group !== 'both')), href: ''},
+  ];
+  return {rows, available: watchable};
 }
 
 // "Pick for me": a film from `candidates` that was not picked yet in this visit. Chance grows with the TMDB

@@ -310,3 +310,12 @@ input[type=search]:not(#svc-q) { padding-left: 32px; background-image: url("data
 .profile-field .form-label { margin-bottom: 2px; }
 .profile-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 @media (max-width: 800px) { .profile-field { flex-basis: 100%; } }
+/* M4.5/M4.6 Together on Tonight: the switch row, the note on old partner lists, and whose service a logo is. */
+.together-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; }
+.together-menu { min-width: 200px; display: grid; gap: 4px; }
+.together-menu .check-field { min-height: var(--h-md); color: var(--text); cursor: pointer; }
+.together-note { flex-basis: 100%; margin: 0; color: var(--text-2); font-size: var(--fs-small); }
+.lstack-item .way-badge-owner, .way-badge-owner { top: -5px; left: -5px; right: auto; bottom: auto; width: auto; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 999px; background: var(--surface-raised); color: var(--text); font: 700 var(--fs-small)/1 system-ui, sans-serif; z-index: 2; }
+@media (pointer: coarse) { .together-menu .check-field { min-height: var(--h-lg); } }
+.together-bar .btn { min-height: var(--h-md); }
+@media (pointer: coarse) { .together-bar .btn { min-height: var(--h-lg); } }
