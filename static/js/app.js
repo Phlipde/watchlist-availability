@@ -325,6 +325,7 @@ const state = createAppState();
       document.querySelector(`.filter-chip[data-filter-id="${id}"] .chip-remove`)?.click();
     });
     document.getElementById('favorites-show-all').addEventListener('click', () => setFavoritesOnly(false));
+    document.getElementById('favorites-empty-all').addEventListener('click', () => setFavoritesOnly(false));
     const {showFilmDetails, openPendingFilm} = createFilmDetails({
       state, results, imageBaseUrl, openModal, modalOpeners, setDrawerKey: key => { lastDrawerKey = key; }, watchedKeys, hiddenKeys, includedOn, upcomingText,
       toggleFavorite, updateFavoriteField, setCompared, showToast, renderFilms,

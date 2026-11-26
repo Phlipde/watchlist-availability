@@ -153,7 +153,7 @@ def test_no_match_offers_a_way_out(app_server, page):
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
     page.locator("#film-search").fill("nothing like this")
     expect(page.locator("#filters-empty")).to_be_visible()
-    expect(page.locator("#filter-chips")).to_contain_text("Reset all")
+    expect(page.locator("#filter-chips")).to_contain_text("Clear filters")
     # The way out names the filter that keeps the films away.
     expect(page.locator("#filters-empty-hint")).to_have_text("Without the search filter there would be 1.")
     page.locator("#empty-reset").click()

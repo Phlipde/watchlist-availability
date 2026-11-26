@@ -37,7 +37,7 @@ export function removeView(name, views = loadViews()) {
 // The "Save view" ghost button with its small popover (name and Save), shown only while filters are set.
 export function saveViewHtml(search) {
   if (!viewSearch(search)) return '';
-  return '<details class="filter-pop save-pop"><summary class="btn btn-sm btn-ghost">Save view</summary><div class="filter-menu menu"><form class="view-form"><label class="visually-hidden" for="view-name">Name of the view</label><input class="form-control form-control-sm" id="view-name" maxlength="40" placeholder="Name this view" autocomplete="off"><button class="btn btn-sm btn-accent" type="submit">Save</button></form></div></details>';
+  return '<details class="filter-pop save-pop"><summary class="btn btn-sm btn-ghost">Save view</summary><div class="filter-menu menu"><form class="view-form"><label class="form-label small" for="view-name">Name of the view</label><input class="form-control form-control-sm" id="view-name" maxlength="40" placeholder="Name this view" autocomplete="off"><button class="btn btn-sm btn-accent" type="submit">Save</button></form></div></details>';
 }
 
 // The saved views as a list for the "Views" dropdown (each an address, with a small delete button).

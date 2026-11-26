@@ -42,5 +42,5 @@
           </details>
           <details class="filter-pop sort-pop" id="sort-pop"><summary class="filter-button" id="sort-button"><span>Sort: <span id="sort-summary">{{ sorts[0][1] }}</span></span></summary><div class="filter-menu sort-menu" role="radiogroup" aria-label="Sort by" id="sort-menu">{% for group in sorts|map(attribute=2)|unique %}<p class="menu-group">{{ group }}</p>{% for value, label, g, text in sorts if g == group %}<label class="sort-option"><input type="radio" name="sort" value="{{ value }}"><span><span class="sort-name">{{ label }}</span><span class="sort-text">{{ text }}</span></span></label>{% endfor %}{% endfor %}</div></details>
           <input type="hidden" id="sort-order" value="{{ sorts[0][0] }}" data-default="{{ sorts[0][0] }}">
-          <div class="sheet-foot"><button class="btn btn-outline-secondary" id="filter-sheet-reset" type="button">Reset</button><button class="btn btn-accent filter-sheet-done" id="filter-sheet-done" type="button">Show <span>0</span> films</button></div>
+          <div class="sheet-foot"><button class="btn btn-outline-secondary" id="filter-sheet-reset" type="button">Clear filters</button><button class="btn btn-accent filter-sheet-done" id="filter-sheet-done" type="button">Show <span>0</span> films</button></div>
         </div>

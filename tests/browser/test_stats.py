@@ -66,5 +66,5 @@ def test_links_from_the_stats_page_filter_the_watchlist_and_show_removable_chips
     chip.locator(".chip-remove").click()
     expect(chip).to_have_count(0)
     assert "availability=" not in page.url
-    page.get_by_role("button", name="Reset all").click()
+    page.get_by_role("button", name="Clear filters").click()
     assert "runtimeMin" not in page.url

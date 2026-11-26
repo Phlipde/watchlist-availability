@@ -1,5 +1,5 @@
 // Filters that only links set (the stats page uses them): best way to watch, a person, a film series, a minimum runtime.
-// They live in the address, show as chips with a small x and are cleared by "Reset all". Pure functions.
+// They live in the address, show as chips with a small x and are cleared by "Clear filters". Pure functions.
 import {AVAILABILITY, AVAILABILITY_LABEL} from './statistics.js';
 
 export const emptyLink = () => ({availability: [], person: '', collection: '', runtimeMin: 0});

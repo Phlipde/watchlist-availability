@@ -352,7 +352,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     const total = chips.length;
     if (total >= 5 && !chipsOpen) chips.splice(3, total - 3, `<button class="filter-chip chips-more" type="button" data-chips-more aria-expanded="false">+${total - 3} more</button>`);
     else if (total >= 5) chips.push('<button class="filter-chip chips-more" type="button" data-chips-more aria-expanded="true">Fewer</button>');
-    if (total) chips.push('<button class="filter-chip filter-reset" type="button" data-reset-filters>Reset all</button>');
+    if (total) chips.push('<button class="filter-chip filter-reset" type="button" data-reset-filters>Clear filters</button>');
     $('filter-chips').innerHTML = chips.join('');
     $('filter-chips').hidden = !chips.length;
     // Set filters inside "Filters" must not be forgotten: count them on its button.
