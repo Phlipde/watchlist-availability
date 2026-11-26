@@ -5,6 +5,7 @@ import {serviceGroup} from './catalog.js';
 import {emptyLink} from './link-filters.js';
 import {filmHref, renderResults, runtimeText} from './rendering.js';
 import './register-sw.js';
+import './icons.js';
 import {renderViews, wireViews} from './saved-views.js';
 import {COST, readFilters} from './filters.js';
 import {createFilterBar, initPopovers} from './filterbar.js';

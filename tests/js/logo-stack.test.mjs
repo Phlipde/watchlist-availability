@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {hiddenCount, itemText, logoStackHtml, stackLabel} from '../../static/js/logo-stack.js';
+import {initials} from '../../static/js/ui.js';
 
 const item = (name, kind = 'flatrate', extra = {}) => ({name, kind, logo: `/${name}.png`, ...extra});
 const many = count => Array.from({length: count}, (_, i) => item(`S${i}`));
@@ -25,8 +26,10 @@ test('first three side by side, two overlap, the rest is +N; the card stack open
   assert.match(html, /aria-label="6 services: S0, S1/);
 });
 
-test('the plain variant has no button; no logo shows the name; no items give nothing', () => {
+test('the plain variant has no button; no logo shows a neutral tile with initials; no items give nothing', () => {
   assert.ok(!logoStackHtml(many(3)).includes('lstack-toggle'));
-  assert.match(logoStackHtml([{name: 'Joyn', kind: 'free', logo: ''}]), /lstack-name">Joyn/);
+  assert.match(logoStackHtml([{name: 'Joyn', kind: 'free', logo: ''}]), /logo-fallback" aria-hidden="true">J<\/span>/);
+  assert.equal(initials('YouTube Free'), 'YF');
+  assert.equal(initials('Arte'), 'A');
   assert.equal(logoStackHtml([]), '');
 });

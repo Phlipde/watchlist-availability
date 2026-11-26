@@ -1,6 +1,6 @@
 // The film details drawer: pure functions that turn a film and a few facts about the user into HTML.
 // No DOM access here (so node can test it); app.js wires the events.
-import {escapeHtml, numberText} from './ui.js';
+import {escapeHtml, initials, numberText} from './ui.js';
 import {
   alternatives, catalogRows, dedupeKeywords, isReleased, justWatchSearch, letterboxdUrl, metaLine, primaryAction,
   sourceText, statusBadges, watchUrl,
@@ -12,7 +12,7 @@ export {
 
 export function linkChips(film, country) {
   const links = [
-    ['Letterboxd', letterboxdUrl(film), 'Log or rate on Letterboxd'],
+    ['Letterboxd', letterboxdUrl(film), 'Open on Letterboxd'],
     film.tmdb_url ? ['TMDB', film.tmdb_url] : null,
     /^tt\d+$/.test(film.imdb_id || '') ? ['IMDb', `https://www.imdb.com/title/${film.imdb_id}/`] : null,
     ['JustWatch', justWatchSearch(film, country)],
@@ -26,6 +26,9 @@ const logoImg = (ctx, name, className = 'provider-logo') => {
   const path = ctx.logos[name] || ctx.logos[`${name} Amazon Channel`];
   return path ? `<img class="${className}" src="${escapeHtml(ctx.logoBaseUrl + path)}" alt="" loading="lazy">` : '';
 };
+// The logo, or a neutral tile with the initials (the name itself is only in the tooltip).
+const logoTile = (ctx, name, className) => logoImg(ctx, name, className)
+  || `<span class="${className} logo-fallback" aria-hidden="true">${escapeHtml(initials(name))}</span>`;
 
 function ratingsHtml(film) {
   const lb = Number(film.letterboxd_rating) > 0 ? Number(film.letterboxd_rating).toFixed(1) : '';
@@ -55,8 +58,7 @@ function otherServicesHtml(film, ctx, action) {
   const url = action.href || watchUrl(film, ctx.country);
   const chip = row => {
     const tip = `${row.name}${row.own ? ' · your service' : ''}${row.via.length ? ` · also via ${[...new Set(row.via)].join(', ')}` : ''}`;
-    const logo = logoImg(ctx, row.name, 'svc-logo');
-    return `<li class="svc${row.own ? ' is-own' : ''}${logo ? '' : ' no-logo'}" tabindex="0" role="img" aria-label="${escapeHtml(tip)}" data-tip="${escapeHtml(tip)}">${logo || `<span class="svc-name">${escapeHtml(row.name)}</span>`}${row.own ? '<i class="ti ti-check own-badge" aria-hidden="true"></i>' : ''}</li>`;
+    return `<li class="svc${row.own ? ' is-own' : ''}" tabindex="0" role="img" aria-label="${escapeHtml(tip)}" data-tip="${escapeHtml(tip)}">${logoTile(ctx, row.name, 'svc-logo')}${row.own ? '<i class="ti ti-check own-badge" aria-hidden="true"></i>' : ''}</li>`;
   };
   const groupHtml = group => (group.kind === 'buy'
     ? `<details class="offer-group offer-buy" data-offer="buy"><summary class="offer-heading">Buy (${group.rows.length})</summary><ul class="svc-list">${group.rows.map(chip).join('')}</ul></details>`
@@ -96,7 +98,7 @@ export function drawerHtml(film, ctx) {
   const alt = alternatives(film, ctx.own, action.service);
   const altKinds = alt.every(item => item.kind !== 'flatrate');
   const altLine = alt.length
-    ? `<p class="alt-line">${altKinds ? 'Also free' : 'Also on'}: ${alt.map(item => `<a class="alt-chip" href="${escapeHtml(action.href || watchUrl(film, ctx.country))}" target="_blank" rel="noreferrer">${logoImg(ctx, item.name, 'provider-logo-sm')}${escapeHtml(item.name)}</a>`).join('')}</p>`
+    ? `<p class="alt-line">${altKinds ? 'Also free' : 'Also on'}: ${alt.map(item => `<a class="alt-chip" href="${escapeHtml(action.href || watchUrl(film, ctx.country))}" target="_blank" rel="noreferrer" aria-label="${escapeHtml(item.name)}" data-tip="${escapeHtml(item.name)}">${logoTile(ctx, item.name, 'provider-logo-sm')}</a>`).join('')}</p>`
     : '';
   const backdrop = film.backdrop_path ? `<img class="film-hero-backdrop" src="${ctx.imageBaseUrl.replace('/w500', '/w780')}${escapeHtml(film.backdrop_path)}" alt="">` : '';
   const trailerId = film.trailer_url ? new URL(film.trailer_url).searchParams.get('v') : null;

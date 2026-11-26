@@ -1,6 +1,6 @@
 // LogoStack: the first logos side by side, then a few overlapping, then "+N". Names come as a bubble on hover/tap.
 // On a card the whole stack opens the film's details at "Other services" (data-open-more, handled in app.js).
-import {escapeHtml} from './ui.js';
+import {escapeHtml, initials} from './ui.js';
 
 export const WORDS = {free: 'Free', flatrate: 'Subscription', ads: 'With ads', rent: 'Rent', buy: 'Buy', abroad: 'Subscription'};
 export const WIDE = 3;         // the first logos (your services) sit side by side
@@ -13,7 +13,7 @@ export const hiddenCount = items => Math.max(items.length - WIDE - OVERLAP_MAX, 
 
 const logoHtml = item => (item.logo
   ? `<img class="lstack-logo" src="${escapeHtml(item.logo)}" alt="" loading="lazy">`
-  : `<span class="lstack-logo lstack-name">${escapeHtml(item.name)}</span>`);
+  : `<span class="lstack-logo logo-fallback" aria-hidden="true">${escapeHtml(initials(item.name))}</span>`);
 const flagHtml = item => (item.flag ? `<span class="way-badge way-badge-flag" aria-hidden="true"><img src="/static/flags/${escapeHtml(item.flag.toLowerCase())}.svg" alt=""></span>` : '');
 
 // key: the film's key; with it the stack is a button that opens the details. Without it a plain row (the services chip).

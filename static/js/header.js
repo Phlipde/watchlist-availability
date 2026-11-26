@@ -1,4 +1,5 @@
 import './register-sw.js';
+import './icons.js';
 import {initPopovers} from './popovers.js';
 import {initCountryPicker, switchCountryAway} from './country-picker.js';
 // Pages without the film list (header and the settings page): a new country is saved, its scan starts

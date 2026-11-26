@@ -35,15 +35,6 @@ export function createFilmDetails({state, results, imageBaseUrl, openModal, moda
     more.querySelector('.os-abroad').textContent = ` · ${total} abroad`;
     revealMore();
   }
-  // A tooltip must stay inside the drawer: near the right edge it grows to the left.
-  const placeTip = event => {
-    const target = event.target.closest?.('.flag[data-tip], .svc[data-tip]');
-    if (!target) return;
-    const room = document.getElementById('film-details-content').getBoundingClientRect().right - target.getBoundingClientRect().left;
-    target.dataset.side = room < 240 ? 'end' : 'start';
-  };
-  document.getElementById('film-details-content').addEventListener('pointerover', placeTip);
-  document.getElementById('film-details-content').addEventListener('focusin', placeTip);
   document.getElementById('film-details-content').addEventListener('click', event => {
     const more = event.target.closest('.flag-more');
     if (!more) return;

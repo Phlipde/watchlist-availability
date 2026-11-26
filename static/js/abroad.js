@@ -1,7 +1,7 @@
 // "Abroad on your services": where your own services have the film although they do not at home.
 // Pure functions (node tests them); app.js fetches the data and wires the clicks.
 import {TYPE_ICON} from './bestway.js';
-import {escapeHtml} from './ui.js';
+import {escapeHtml, initials} from './ui.js';
 import {catalogName} from './catalog.js';
 
 // Which countries to show first, with no setting: neighbours and the same language count, then the well-known
@@ -95,12 +95,12 @@ export function abroadHtml(rows, {nameOf, logoOf}) {
     const shown = row.countries.slice(0, 3);
     const more = row.countries.slice(3);
     const grid = more.length
-      ? `<div class="flag-grid" hidden>${groupByRegion(more).map(([group, codes]) => `<section><h4>${group}</h4><ul>${codes.map(code => `<li>${flag(code, nameOf(code), row.service, row.kinds[code])}<span>${escapeHtml(nameOf(code))}</span></li>`).join('')}</ul></section>`).join('')}</div>`
+      ? `<div class="flag-grid" hidden>${groupByRegion(more).map(([group, codes]) => `<section><h4>${group}</h4><ul>${codes.map(code => `<li>${flag(code, nameOf(code), row.service, row.kinds[code])}</li>`).join('')}</ul></section>`).join('')}</div>`
       : '';
     const logo = logoOf(row.service, 'provider-logo-sm');
     const kind = ['free', 'flatrate', 'ads'].find(k => Object.values(row.kinds).includes(k));
     const badge = kind ? `<span class="way-badge way-badge-${kind}" aria-hidden="true"><i class="ti ${TYPE_ICON[kind]}"></i></span>` : '';
-    return `<li class="abroad-row"><div class="abroad-line"><span class="abroad-service" title="${escapeHtml(row.service)}">${logo || escapeHtml(row.service)}${badge}</span><span class="abroad-flags">${shown.map(code => flag(code, nameOf(code), row.service, row.kinds[code])).join('')}${more.length ? `<button class="flag-more" type="button" aria-expanded="false">+${more.length} <i class="ti ti-chevron-right" aria-hidden="true"></i></button>` : ''}</span>${row.hint ? `<span class="abroad-hint">${row.hint}</span>` : ''}</div>${grid}</li>`;
+    return `<li class="abroad-row"><div class="abroad-line"><span class="abroad-service" role="img" aria-label="${escapeHtml(row.service)}" data-tip="${escapeHtml(row.service)}">${logo || `<span class="provider-logo-sm logo-fallback" aria-hidden="true">${escapeHtml(initials(row.service))}</span>`}${badge}</span><span class="abroad-flags">${shown.map(code => flag(code, nameOf(code), row.service, row.kinds[code])).join('')}${more.length ? `<button class="flag-more" type="button" aria-expanded="false">+${more.length} <i class="ti ti-chevron-right" aria-hidden="true"></i></button>` : ''}</span>${row.hint ? `<span class="abroad-hint">${row.hint}</span>` : ''}</div>${grid}</li>`;
   }).join('');
   return `<div class="abroad"><h3 class="offer-heading">Abroad on your services <span class="abroad-count">· ${total} ${total === 1 ? 'country' : 'countries'}</span></h3><p class="abroad-note">Needs a VPN or being in that country.</p><ul class="abroad-table">${table}</ul></div>`;
 }

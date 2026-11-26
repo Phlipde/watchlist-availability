@@ -13,7 +13,7 @@
   {% include "partials/styles.html" %}
   {# Speed: the films and every module start loading at once instead of one level of imports after the other. #}
   {% if view in ('watchlist', 'tonight') %}<link rel="preload" href="/api/latest?country={{ country|urlencode }}" as="fetch" crossorigin>{% endif %}
-  {% for name in ['abroad', 'bestway', 'catalog', 'changes-tab', 'compare', 'country-picker', 'deadlines', 'drawer', 'events', 'film-details', 'film-flags', 'film-meta', 'filterbar', 'filtering', 'filters', 'gridnav', 'keyboard-nav', 'link-filters', 'logo-stack', 'phone-sheet', 'places', 'popovers', 'problems', 'register-sw', 'rendering', 'saved-views', 'scan-flow', 'scans', 'similar', 'state', 'statistics', 'toast', 'tonight-page', 'ui'] %}<link rel="modulepreload" href="{{ url_for('static', filename='js/' ~ name ~ '.js') }}">{% endfor %}
+  {% for name in ['abroad', 'bestway', 'catalog', 'changes-tab', 'compare', 'country-picker', 'deadlines', 'drawer', 'events', 'film-details', 'film-flags', 'film-meta', 'filterbar', 'filtering', 'filters', 'gridnav', 'icons', 'keyboard-nav', 'link-filters', 'logo-stack', 'phone-sheet', 'places', 'popovers', 'problems', 'register-sw', 'rendering', 'saved-views', 'scan-flow', 'scans', 'similar', 'state', 'statistics', 'toast', 'tonight-page', 'ui'] %}<link rel="modulepreload" href="{{ url_for('static', filename='js/' ~ name ~ '.js') }}">{% endfor %}
 </head>
 <body class="view-{{ view }}">
   <a class="skip-link" href="#results">Skip to films</a>
@@ -42,6 +42,6 @@
   <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/tabler.min.js') }}"></script>
   <script>window.WATCHLIST_CONFIG = {{ client_config|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/app.js', v='20261126-3') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/app.js', v='20261126-4') }}" type="module"></script>
 </body>
 </html>

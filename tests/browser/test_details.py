@@ -73,6 +73,23 @@ def test_details_have_one_main_button_and_people_are_search_links(app_server, pa
         assert "/watchlist?q=" in link.get_attribute("href")
 
 
+def test_service_logos_name_themselves_only_in_a_tooltip(app_server, page):
+    expect = playwright_api.expect
+    page.goto(app_server["url"] + "/watchlist?film=949")
+    expect(page.locator("#film-details-title")).to_be_visible(timeout=15000)
+    page.evaluate("const more = document.getElementById('film-more'); more.hidden = false; more.open = true")
+    logos = page.locator("#film-more .svc")
+    name = logos.first.get_attribute("aria-label")
+    assert name and name.split(" · ")[0] not in logos.first.inner_text()  # no name written out
+    logos.first.focus()
+    assert page.evaluate("document.activeElement.classList.contains('svc')")
+    expect(page.locator(".tip")).to_be_visible()  # keyboard focus shows the name
+    expect(page.locator(".tip")).to_have_text(name)
+    if logos.count() > 1:
+        logos.nth(1).focus()
+        expect(page.locator(".tip")).to_have_text(logos.nth(1).get_attribute("aria-label"), timeout=200)
+
+
 def test_details_actions_sit_in_one_row_with_a_clear_main_button(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"] + "/watchlist")

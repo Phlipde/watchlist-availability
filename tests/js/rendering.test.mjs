@@ -83,7 +83,7 @@ test('a card has one stack of your free, subscription and ads services, no rent 
 test('the corner icon tells free, sub, ads, rent or buy; without a logo the name shows; nothing is said plainly', () => {
   const base = {imageBaseUrl: '', favorites: new Map(), compareKeys: new Set(), greyKeys: new Set(), providerLogos: {}, country: 'DE'};
   const ads = filmCard({key: 'a', title: 'A', providers: {Netzkino: ['ads']}}, 'All', {...base, selected: new Set(['Netzkino'])});
-  assert.match(ads, /lstack-name">Netzkino<\/span><span class="way-badge way-badge-ads" aria-hidden="true"><i class="ti ti-ad"><\/i>/);
+  assert.match(ads, /logo-fallback" aria-hidden="true">N<\/span><span class="way-badge way-badge-ads" aria-hidden="true"><i class="ti ti-ad"><\/i>/);
   const sub = filmCard({key: 's', title: 'S', providers: {Netflix: ['flatrate']}}, 'All', {...base, selected: new Set(['Netflix'])});
   assert.match(sub, /way-badge-flatrate" aria-hidden="true"><i class="ti ti-repeat"><\/i>/);
   const rent = filmCard({key: 'b', title: 'B', providers: {'Amazon VOD': ['rent'], 'Rakuten TV': ['rent']}}, 'All', {...base, selected: new Set()});
