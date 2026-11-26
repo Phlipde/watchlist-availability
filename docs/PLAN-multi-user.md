@@ -180,12 +180,12 @@ Für jede Stufe gilt: `pytest -q`, `node --test tests/js/*.mjs`, ruff und mypy g
 
 ---
 
-## 4. Offene Fragen
+## 4. Fragen (alle entschieden)
 
-1. **Hidden/Not now in Together:** Fliegt ein Film raus, wenn *eine* Person ihn versteckt hat? *Empfehlung: ja.*
-2. **Land in Together bei verschiedenen Ländern:** *Empfehlung: Land des aktiven Profils, Partnerliste dort scannen.*
-3. **Wer darf Profile anlegen und löschen?** *Empfehlung: jeder; Löschen mit Bestätigung, letztes Profil nicht löschbar.*
+1. **Hidden/Not now in Together:** Fliegt ein Film raus, wenn *eine* Person ihn versteckt hat? **Entschieden (26.11.2026): ja.**
+2. **Land in Together bei verschiedenen Ländern:** **Entschieden (26.11.2026): Land des aktiven Profils, Partnerliste dort scannen.**
+3. **Wer darf Profile anlegen und löschen?** **Entschieden (26.11.2026): jeder; Löschen mit Bestätigung, letztes Profil nicht löschbar.**
 4. **localStorage (gespeicherte Ansichten, Tonight-Chips):** ~~je Gerät oder je Profil?~~ **Entschieden: je Profil, auf dem Gerät gespeichert; teilbar ganz am Ende** (M5.6, M5.7).
-5. **Neues Profil und Scan:** sofort scannen, danach im globalen Zeitplan? *Empfehlung: ja.*
+5. **Neues Profil und Scan:** sofort scannen, danach im globalen Zeitplan? **Entschieden (26.11.2026): ja.**
 
 Nicht geprüft: das Markup der Letterboxd-Seiten `/{user}/films/`, und ob `save_bundle` die Angebote aller Länder auf einmal speichert (zeigt der Test in M2.3).
