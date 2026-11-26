@@ -16,6 +16,8 @@ def tick_all_services(page) -> None:
     """Tick every service in the services menu, group by group, as a person would."""
     from playwright.sync_api import expect
 
+    # A scan that ends later puts the saved services back; wait for it ("Complete" also for a saved result).
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     page.locator("#services-button").click()
     # The list is drawn after the menu opens; on a slow machine .all() would find nothing yet.
     expect(page.locator("#services-menu [data-group-toggle]").first).to_be_visible()

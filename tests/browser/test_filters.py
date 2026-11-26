@@ -171,6 +171,7 @@ def test_year_and_rating_panels_and_service_search(app_server, page):
 def test_many_filter_chips_collapse_behind_a_more_button(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"] + "/watchlist?votes=1000&ages=16&max=120&rating=tmdb:7&cost=free")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     chips = page.locator("#filter-chips .filter-chip:not(.chips-more):not(.filter-reset)")
     expect(page.locator("#filter-chips .chips-more")).to_have_text(re.compile(r"^\+\d+ more$"), timeout=15000)
     assert chips.count() == 3

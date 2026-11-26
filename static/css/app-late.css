@@ -241,7 +241,8 @@ input[type=search]:not(#svc-q) { padding-left: 32px; background-image: url("data
 :is(.btn, .chip, .quick-chip, .filter-chip, .filter-button, .tool, .link-chip, .alt-chip, .card-action, .favorite):active:not(:disabled) { transform: scale(.97); }
 .film > .poster { transition: transform .15s ease-out; }
 .film:has(.film-open:active) > .poster { transform: scale(.97); }
-.filter-pop[open] > .filter-menu, .sync[open] > .sync-panel, details[open] > .menu { animation: pop-in .15s ease-out; transform-origin: top; }
+/* Not the save-view menu: the views row is redrawn while a scan runs, which would restart the animation. */
+.filter-pop[open]:not(.save-pop) > .filter-menu, .sync[open] > .sync-panel, details[open]:not(.save-pop) > .menu { animation: pop-in .15s ease-out; transform-origin: top; }
 @keyframes pop-in { from { opacity: 0; transform: scale(.97); } }
 .icon-swap { animation: icon-swap .2s ease-out; }
 @keyframes icon-swap { from { opacity: 0; filter: blur(4px); transform: scale(.8); } }
