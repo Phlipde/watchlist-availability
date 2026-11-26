@@ -6,14 +6,14 @@ import time  # noqa: F401  (tests patch time, tmdb, matches, requests and notifi
 from urllib.parse import urlsplit
 
 import requests  # noqa: F401
-from flask import Flask, jsonify, request
+from flask import Flask, g, jsonify, request
 
 from watchlist_app import matches, notifications, tmdb  # noqa: F401
 from watchlist_app.scan_service import ScanService
 from watchlist_app.settings import AppSettings
 from watchlist_app.store import Store
 from web import api_data, api_scan, feeds, pages
-from web.common import SORTS, status_overview  # noqa: F401
+from web.common import PROFILE_COOKIE, SORTS, status_overview  # noqa: F401
 
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
@@ -49,6 +49,27 @@ def is_cross_site_write(method: str, headers, host: str) -> bool:
     if forwarded:
         allowed.update(part.strip().lower() for part in forwarded.split(","))
     return origin_host not in allowed
+
+
+EMAIL_HEADER = "Cf-Access-Authenticated-User-Email"
+
+
+def profile_for_request(profiles: list[dict]) -> int:
+    """The profile this request is for: ?profile=<id> (GET only), the wl_profile cookie, the Cloudflare
+    Access e-mail, else profile 1 (the lowest id when 1 is gone). Unknown values fall to the next step."""
+    ids = {profile["id"] for profile in profiles}
+    query = request.args.get("profile") if request.method == "GET" else None
+    for raw in (query, request.cookies.get(PROFILE_COOKIE)):
+        try:
+            if int(raw or "") in ids:
+                return int(raw or "")
+        except ValueError:
+            pass
+    email = request.headers.get(EMAIL_HEADER, "").strip().lower()
+    for profile in profiles:  # ordered by id: the lowest wins when two share an address
+        if email and (profile["email"] or "").lower() == email:
+            return profile["id"]
+    return 1 if 1 in ids else min(ids)
 
 
 def register_routes(app: Flask, *, store: Store, settings: AppSettings, service: ScanService) -> None:
@@ -90,6 +111,10 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         if is_cross_site_write(request.method, request.headers, request.host):
             return jsonify({"error": "Requests from other web sites are not allowed."}), 403
         return None
+
+    @app.before_request
+    def choose_profile():
+        g.profile_id = profile_for_request(store.list_profiles())
 
     @app.context_processor
     def header_context():

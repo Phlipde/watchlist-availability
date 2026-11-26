@@ -1,0 +1,111 @@
+"""Route tests: the profiles API and the profile chosen for each request."""
+
+import flask
+import pytest
+
+from web.common import active_settings
+
+EMAIL = "Cf-Access-Authenticated-User-Email"
+
+
+@pytest.fixture
+def anna(store):
+    return store.add_profile("Anna", "anna@example.org")
+
+
+def _profile_of(client, path="/api/flags", method="get", **kwargs) -> int:
+    with client:
+        getattr(client, method)(path, **kwargs)
+        return flask.g.profile_id
+
+
+class TestProfilesApi:
+    def test_list_add_rename_delete(self, client, store):
+        answer = client.post("/api/profiles", json={"name": "Ben", "email": "ben@example.org"})
+        assert answer.status_code == 201
+        ben = answer.get_json()["id"]
+        assert [p["name"] for p in client.get("/api/profiles").get_json()] == ["Me", "Ben"]
+
+        answer = client.put(f"/api/profiles/{ben}", json={"name": "Benjamin"})
+        assert answer.status_code == 200
+        assert answer.get_json()["email"] == "ben@example.org"  # a missing e-mail is kept
+        assert (
+            client.put(f"/api/profiles/{ben}", json={"name": "Benjamin", "email": None}).get_json()["email"]
+            is None
+        )
+
+        assert client.delete(f"/api/profiles/{ben}").status_code == 200
+        assert [p["id"] for p in store.list_profiles()] == [1]
+
+    def test_bad_requests_get_400(self, client, anna):
+        for body in ({"name": "Anna"}, {"name": ""}, {}, {"name": "Ben", "email": "nope"}):
+            answer = client.post("/api/profiles", json=body)
+            assert answer.status_code == 400 and answer.get_json()["error"]
+        assert client.put(f"/api/profiles/{anna}", json={"name": "Me"}).status_code == 400
+        client.delete("/api/profiles/1")
+        answer = client.delete(f"/api/profiles/{anna}")
+        assert answer.status_code == 400 and "last profile" in answer.get_json()["error"]
+
+    def test_unknown_profile_gets_404(self, client):
+        assert client.put("/api/profiles/9", json={"name": "X"}).status_code == 404
+        assert client.delete("/api/profiles/9").status_code == 404
+        assert client.post("/api/profiles/active", json={"id": 9}).status_code == 404
+
+    def test_cross_site_writes_are_refused(self, client, store, anna):
+        evil = {"Origin": "https://evil.example"}
+        assert client.post("/api/profiles", json={"name": "Eve"}, headers=evil).status_code == 403
+        assert client.put(f"/api/profiles/{anna}", json={"name": "Eve"}, headers=evil).status_code == 403
+        assert client.delete(f"/api/profiles/{anna}", headers=evil).status_code == 403
+        assert client.post("/api/profiles/active", json={"id": anna}, headers=evil).status_code == 403
+        assert len(store.list_profiles()) == 2
+
+
+class TestActiveProfile:
+    def test_choosing_sets_the_cookie(self, client, anna):
+        answer = client.post("/api/profiles/active", json={"id": anna})
+        assert answer.status_code == 200
+        cookie = answer.headers["Set-Cookie"]
+        assert cookie.startswith(f"wl_profile={anna};")
+        for part in ("HttpOnly", "SameSite=Lax", "Path=/", "Max-Age=31536000"):
+            assert part in cookie
+        assert _profile_of(client) == anna  # the test client sends the cookie back
+
+    def test_choosing_needs_an_integer_id(self, client, anna):
+        for body in ({"id": True}, {"id": "2"}, {}, {"id": 1.5}):
+            assert client.post("/api/profiles/active", json=body).status_code == 400
+
+    def test_default_is_profile_1(self, client, anna):
+        assert _profile_of(client) == 1
+
+    def test_query_beats_cookie(self, client, anna):
+        client.set_cookie("wl_profile", "1")
+        assert _profile_of(client, f"/api/flags?profile={anna}", headers={EMAIL: "anna@example.org"}) == anna
+
+    def test_cookie_beats_header(self, client, store, anna):
+        ben = store.add_profile("Ben", "ben@example.org")
+        client.set_cookie("wl_profile", str(ben))
+        assert _profile_of(client, headers={EMAIL: "anna@example.org"}) == ben
+
+    def test_header_matches_the_email_case_insensitively(self, client, anna):
+        assert _profile_of(client, headers={EMAIL: " ANNA@Example.org "}) == anna
+        assert _profile_of(client, headers={EMAIL: "someone@example.org"}) == 1
+
+    @pytest.mark.parametrize("value", ["abc", "", "9", "-1", "99999999999999999999", "²"])
+    def test_invalid_values_fall_through(self, client, anna, value):
+        assert _profile_of(client, f"/api/flags?profile={value}") == 1
+        client.set_cookie("wl_profile", value)
+        assert _profile_of(client, f"/api/flags?profile={value}", headers={EMAIL: "anna@example.org"}) == anna
+
+    def test_query_is_ignored_on_writes(self, client, anna):
+        assert _profile_of(client, f"/api/profiles?profile={anna}", "post", json={"name": "Ben"}) == 1
+
+    def test_fallback_is_the_lowest_id_when_profile_1_is_gone(self, client, store, anna):
+        store.add_profile("Ben")
+        store.delete_profile(1)
+        assert _profile_of(client) == anna
+
+    def test_active_settings_belong_to_the_request_profile(self, client, store, settings, anna):
+        store.set_profile_setting("country", "GB", profile_id=anna)
+        with client:
+            client.get(f"/api/flags?profile={anna}")
+            assert (active_settings(settings).country, settings.country) == ("GB", "DE")

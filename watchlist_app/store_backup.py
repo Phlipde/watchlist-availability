@@ -5,6 +5,7 @@ import time
 from . import validation
 from .store_films import FilmStore
 from .store_marks import MarkStore
+from .store_profiles import ProfileStore
 from .store_scans import ScanStore
 from .store_schema import CHANGE_IDENTITY, INTERNAL_SETTINGS, MATCHES_CHANGED_SETTING
 
@@ -21,7 +22,7 @@ def _personal_parts(entry) -> list[list] | None:
     return parts if all(isinstance(part, list) for part in parts) else None
 
 
-class BackupStore(FilmStore, ScanStore, MarkStore):
+class BackupStore(FilmStore, ScanStore, MarkStore, ProfileStore):
     # ----- backup -----
 
     def _public_settings(self, sql: str, parameters=()) -> dict[str, str]:
@@ -72,10 +73,6 @@ class BackupStore(FilmStore, ScanStore, MarkStore):
             ],
             "profiles": profiles,
         }
-
-    def find_profile(self, name: str) -> int | None:
-        rows = self._read("SELECT id FROM profiles WHERE name = ?", (name,))
-        return rows[0][0] if rows else None
 
     def import_backup(self, backup: dict, target_profile: int = 1) -> dict[str, int]:
         """Restore favorites, flags, changes, scans and match corrections from a backup.
@@ -141,13 +138,6 @@ class BackupStore(FilmStore, ScanStore, MarkStore):
         if counts["matches"]:
             self.set_setting(MATCHES_CHANGED_SETTING, str(now))
         return counts
-
-    def _new_profile(self, profile: dict, now: float) -> int:
-        cursor = self._write(
-            "INSERT INTO profiles (name, email, created) VALUES (?, ?, ?)",
-            (profile["name"], profile["email"], now),
-        )
-        return int(cursor.lastrowid or 0)
 
     def _fresh_install(self) -> bool:
         """Only profile 1, still unnamed ("Me") and without any data of its own."""

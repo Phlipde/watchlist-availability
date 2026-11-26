@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from flask import make_response, render_template
+from flask import g, make_response, render_template
 
 from watchlist_app import base, costs, matches, providers, scheduler, validation
 from watchlist_app.scan_service import ScanService
@@ -70,6 +70,19 @@ def status_overview(store: Store, settings: AppSettings, service: ScanService) -
             {country: settings.costs(country) for country in settings.countries_in_use()}
         ),
     }
+
+
+PROFILE_COOKIE = "wl_profile"  # the profile chosen on this device
+
+
+def active_profile_id() -> int:
+    """The profile of this request, set by routes.choose_profile; only valid inside a request."""
+    return g.profile_id
+
+
+def active_settings(settings: AppSettings) -> AppSettings:
+    """The settings of this request's profile."""
+    return settings.for_profile(active_profile_id())
 
 
 def page(template: str, **context):

@@ -9,6 +9,7 @@ from watchlist_app.config import valid_country
 from watchlist_app.scan_service import ScanService
 from watchlist_app.settings import AppSettings
 from watchlist_app.store import Store
+from web.common import PROFILE_COOKIE
 
 
 def register(app: Flask, store: Store, settings: AppSettings, service: ScanService) -> None:
@@ -103,6 +104,60 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
             abroad_cache.pop(next(iter(abroad_cache)))
         abroad_cache[cache_key] = answer
         return jsonify(answer)
+
+    # ----- profiles -----
+
+    def find(profile_id: int) -> dict | None:
+        return next((p for p in store.list_profiles() if p["id"] == profile_id), None)
+
+    @app.get("/api/profiles")
+    def list_profiles():
+        return jsonify(store.list_profiles())
+
+    @app.post("/api/profiles")
+    def add_profile():
+        body = request.get_json(silent=True) or {}
+        try:
+            profile_id = store.add_profile(body.get("name"), body.get("email"))
+        except ValueError as error:
+            return jsonify({"error": str(error)}), 400
+        # shortcut: no first scan for the new profile yet (plan question 5), that comes with M2.
+        return jsonify({"ok": True, **(find(profile_id) or {})}), 201
+
+    @app.put("/api/profiles/<int:profile_id>")
+    def rename_profile(profile_id: int):
+        body = request.get_json(silent=True) or {}
+        current = find(profile_id)
+        if current is None:
+            return jsonify({"error": "Unknown profile."}), 404
+        try:
+            # A missing "email" keeps the stored one; null or "" clears it.
+            store.rename_profile(profile_id, body.get("name"), body.get("email", current["email"]))
+        except ValueError as error:
+            return jsonify({"error": str(error)}), 400
+        return jsonify({"ok": True, **(find(profile_id) or {})})
+
+    @app.delete("/api/profiles/<int:profile_id>")
+    def delete_profile(profile_id: int):
+        try:
+            if not store.delete_profile(profile_id):
+                return jsonify({"error": "Unknown profile."}), 404
+        except ValueError as error:
+            return jsonify({"error": str(error)}), 400
+        return jsonify({"ok": True})
+
+    @app.post("/api/profiles/active")
+    def choose_profile():
+        profile_id = (request.get_json(silent=True) or {}).get("id")
+        if not isinstance(profile_id, int) or isinstance(profile_id, bool):
+            return jsonify({"error": "A profile id is required."}), 400
+        if find(profile_id) is None:
+            return jsonify({"error": "Unknown profile."}), 404
+        response = jsonify({"ok": True, "id": profile_id})
+        response.set_cookie(
+            PROFILE_COOKIE, str(profile_id), max_age=365 * 24 * 3600, path="/", samesite="Lax", httponly=True
+        )
+        return response
 
     @app.get("/api/greyouts")
     def greyed_out():

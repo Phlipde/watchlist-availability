@@ -100,3 +100,68 @@ class TestScans:
         assert [j["id"] for j in store.list_jobs()] == ["a"]
         assert [j["id"] for j in store.list_jobs(status="running", profile_id=2)] == ["c"]
         assert store.get_job("c") is not None
+
+
+def _fill(store, profile_id: int) -> None:
+    """One row of every kind for the profile."""
+    store.add_favorite(_movie("lb:heat"), profile_id=profile_id)
+    store.set_flag("lb:heat", "watched", profile_id=profile_id)
+    _scan(store, 1, profile_id=profile_id)
+    change = {"film_key": "lb:heat", "title": "Heat", "year": 1995, "provider": "Netflix", "change": "added"}
+    store.add_changes("DE", [change], created=1, profile_id=profile_id)
+    store.record_service_counts("DE", "2026-01-01", {"Netflix": (3, 1)}, profile_id=profile_id)
+    store.create_job(f"job{profile_id}", "DE", "manual", 1, profile_id=profile_id)
+    store.set_profile_setting("country", "GB", profile_id=profile_id)
+
+
+def _owned_tables(store) -> list[str]:
+    tables = [row[0] for row in store._read("SELECT name FROM sqlite_master WHERE type = 'table'")]
+    return [t for t in tables if any(c[1] == "profile_id" for c in store._read(f"PRAGMA table_info({t})"))]
+
+
+class TestProfiles:
+    def test_add_list_and_rename(self, store):
+        anna = store.add_profile("  Anna ", "Anna@Example.org")
+        assert store.list_profiles() == [
+            {"id": 1, "name": "Me", "email": None},
+            {"id": anna, "name": "Anna", "email": "Anna@Example.org"},
+        ]
+        assert store.rename_profile(anna, "Anna", "anna@new.org")  # same name, new e-mail
+        assert store.rename_profile(anna, "Annabel", None)
+        assert store.list_profiles()[1] == {"id": anna, "name": "Annabel", "email": None}
+        assert store.find_profile("Annabel") == anna
+        assert not store.rename_profile(99, "Nobody")
+
+    def test_duplicate_and_invalid_names_are_refused(self, store):
+        anna = store.add_profile("Anna")
+        with pytest.raises(ValueError, match="already exists"):
+            store.add_profile("Anna")
+        with pytest.raises(ValueError, match="already exists"):
+            store.rename_profile(anna, "Me")
+        for name in ("", "   ", "x" * 61, "a\nb", None):
+            with pytest.raises(ValueError):
+                store.add_profile(name)
+        with pytest.raises(ValueError, match="e-mail"):
+            store.add_profile("Ben", "not an address")
+        assert [p["name"] for p in store.list_profiles()] == ["Me", "Anna"]
+
+    def test_delete_leaves_no_rows_of_the_profile(self, store):
+        anna = store.add_profile("Anna")
+        _fill(store, 1)
+        _fill(store, anna)
+        tables = _owned_tables(store)
+        assert len(tables) == 7
+        assert store.delete_profile(anna)
+        for table in tables:
+            count = f"SELECT count(*) FROM {table} WHERE profile_id = ?"
+            assert store._read(count, (anna,))[0][0] == 0, table
+            assert store._read(count, (1,))[0][0] == 1, table
+        assert [p["id"] for p in store.list_profiles()] == [1]
+        assert not store.delete_profile(anna)
+
+    def test_last_profile_cannot_be_deleted(self, store):
+        anna = store.add_profile("Anna")
+        assert store.delete_profile(1)
+        with pytest.raises(ValueError, match="last profile"):
+            store.delete_profile(anna)
+        assert [p["id"] for p in store.list_profiles()] == [anna]

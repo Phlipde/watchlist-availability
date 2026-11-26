@@ -25,6 +25,10 @@ class AppSettings:
         self._defaults = defaults or config.load_settings()
         self.profile_id = profile_id
 
+    def for_profile(self, profile_id: int) -> "AppSettings":
+        """The same settings, read and written for another profile."""
+        return AppSettings(self._store, self._defaults, profile_id)
+
     def _get(self, key: str) -> str | None:
         """A stored value: the profile's own for a per-person key, else the global one."""
         if is_profile_setting(key):
