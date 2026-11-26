@@ -46,8 +46,8 @@
 }
 .stats-skeleton { display: grid; gap: 12px; }
 .stats-skeleton .sk-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.stats-skeleton .sk-tile { height: 92px; border-radius: .5rem; background: oklch(28.8% 0.013 164); }
-.stats-skeleton .sk-bar { height: 28px; border-radius: 6px; background: oklch(33.7% 0.017 159); }
+.stats-skeleton .sk-tile { height: 92px; border-radius: .5rem; background: oklch(28.8% 0.012 255); }
+.stats-skeleton .sk-bar { height: 28px; border-radius: 6px; background: oklch(33.7% 0.012 255); }
 @media (max-width: 800px) { .stats-skeleton .sk-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ===== Stats page: sections ===== */

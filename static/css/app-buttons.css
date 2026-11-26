@@ -5,18 +5,7 @@
    States:    default · hover (surface-2) · pressed (darker) · selected ([aria-pressed=true] .active, accent border)
               · value (a dropdown that holds one: accent border) · focus-visible (2 px accent ring) · disabled (40 %).
    Gold fill only on Primary, gold underline only on Tab. */
-:root {
-  --surface-2: oklch(31% 0.014 163);
-  --surface-pressed: oklch(25.5% 0.014 163);
-  --border: var(--line-field);
-  --text: var(--ink);
-  --text-2: var(--muted);
-  --radius-control: 6px;
-  --radius-panel: 12px;
-  --h-sm: 28px;
-  --h-md: 36px;
-  --h-lg: 44px;
-}
+/* The tokens live in app.css (:root). */
 
 /* Secondary (and the other Bootstrap outline variants) */
 .btn { min-height: var(--h-md); padding: 0 12px; border-radius: var(--radius-control); font: 500 var(--fs-body) system-ui, sans-serif; gap: 8px; }
@@ -55,7 +44,7 @@
 .btn:focus-visible, .filter-button:focus-visible, .chip:focus-visible, .quick-chip:focus-visible, .link-chip:focus-visible, .chip-link:focus-visible, .tool:focus-visible, .sync-toggle:focus-visible, .segmented label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; box-shadow: none; }
 .btn:disabled, .btn.disabled, .filter-button[aria-disabled="true"], fieldset:disabled .btn { opacity: .4; cursor: not-allowed; pointer-events: auto; }
 /* Menus: a panel with 12 px corners; items are left-aligned ghost buttons, 36 px high, no border of their own */
-.menu { min-width: 200px; padding: 6px; border: 1px solid var(--line-strong); border-radius: var(--radius-panel); background: var(--surface-raised); box-shadow: 0 12px 32px rgb(0 0 0 / .45); }
+.menu { min-width: 200px; padding: 6px; border: 1px solid var(--line-strong); border-radius: var(--radius-panel); background: var(--surface-raised); box-shadow: var(--shadow-raised); }
 .menu-item { display: flex; align-items: center; gap: 8px; width: 100%; min-height: var(--h-md); padding: 0 10px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--text); font: var(--fs-body) system-ui, sans-serif; text-align: left; text-decoration: none; cursor: pointer; }
 .menu-item i { width: 16px; font-size: 16px; color: var(--text-2); }
 .menu-item:hover { background: var(--surface-2); }

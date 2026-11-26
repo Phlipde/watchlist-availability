@@ -34,7 +34,7 @@ main.page a { color: var(--accent); }
 .match-row { border: 1px solid var(--line); background: var(--panel); border-radius: .375rem; padding: 12px 14px; margin-bottom: 10px; font: var(--fs-body) system-ui, sans-serif; }
 .match-row.match-saved { border-color: var(--accent); }
 .match-main { display: grid; grid-template-columns: 46px 1fr auto; gap: 14px; align-items: center; }
-.match-poster { width: 46px; height: 69px; object-fit: cover; border-radius: 3px; background: oklch(21.2% 0.008 169); display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.match-poster { width: 46px; height: 69px; object-fit: cover; border-radius: 3px; background: oklch(21.2% 0.008 255); display: flex; align-items: center; justify-content: center; color: var(--muted); }
 .match-text { display: flex; flex-direction: column; gap: 3px; }
 .match-reason { align-self: flex-start; }
 .match-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
@@ -97,7 +97,7 @@ main.stats-page { max-width: 1440px; }
 .service-row:hover { background: rgb(255 255 255 / .05); }
 .service-row .provider-logo { width: 24px; height: 24px; flex: none; border-radius: 4px; }
 .service-row .service-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.toast-bar { position: fixed; left: 50%; bottom: 24px; z-index: 1080; display: flex; align-items: center; gap: 14px; padding: 10px 16px; transform: translateX(-50%); background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: .5rem; box-shadow: 0 12px 32px rgb(0 0 0 / .45); font: var(--fs-body) system-ui, sans-serif; }
+.toast-bar { position: fixed; left: 50%; bottom: 24px; z-index: 1080; display: flex; align-items: center; gap: 14px; padding: 10px 16px; transform: translateX(-50%); background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: .5rem; box-shadow: var(--shadow-raised); font: var(--fs-body) system-ui, sans-serif; }
 @media (max-width: 800px) { .toast-bar { bottom: calc(76px + env(safe-area-inset-bottom)); } }
 
 /* Subscriptions: one table, 56px rows, numbers on the right, explanations in a tooltip. */
@@ -176,7 +176,7 @@ kbd { padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 4px
 .seg-subscription { background: var(--accent); }
 .seg-free { background: oklch(70% 0.12 160); }
 .seg-rent { background: oklch(66% 0.07 250); }
-.seg-other { background: oklch(40% 0.01 160); }
+.seg-other { background: oklch(40% 0.010 255); }
 .coverage-bar .seg:hover, .coverage-bar .seg:focus-visible { filter: brightness(1.2); outline: none; }
 .coverage-key { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: var(--fs-small); }
 .key-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; }
@@ -285,7 +285,7 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 @media (prefers-reduced-motion: reduce) { .view-compact .film .film-info { transition: none; } }
 
 /* The bar for the comparison: fixed at the bottom while films are chosen (above the phone's page bar). */
-.compare-bar { position: fixed; left: 50%; bottom: 20px; z-index: 1060; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 16px; transform: translateX(-50%); background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: 999px; box-shadow: 0 12px 32px rgb(0 0 0 / .45); font: var(--fs-body) system-ui, sans-serif; }
+.compare-bar { position: fixed; left: 50%; bottom: 20px; z-index: 1060; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 16px; transform: translateX(-50%); background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: 999px; box-shadow: var(--shadow-raised); font: var(--fs-body) system-ui, sans-serif; }
 .compare-bar[hidden] { display: none; }
 @media (max-width: 800px) { .compare-bar { bottom: calc(76px + env(safe-area-inset-bottom)); max-width: calc(100% - 24px); } }
 .compare-modal td.best, #compare-table td.best { color: var(--accent); font-weight: 600; }

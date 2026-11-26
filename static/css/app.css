@@ -1,7 +1,9 @@
 
     /* Four font sizes, nothing under 12px. Colours in OKLCH; borders are white with alpha so they sit on any surface.
        Raised layers (dialogs, menus, toasts) are lighter, because shadows barely show on a dark page. */
-    :root { color-scheme: dark; --fs-small: .75rem; --fs-body: .875rem; --fs-text: 1rem; --fs-heading: 2rem; --ink: oklch(95.9% 0.013 87); --muted: oklch(71.7% 0.018 85); --accent: oklch(81% 0.110 78); --accent-hover: oklch(87.2% 0.089 80); --on-accent: oklch(19.3% 0.011 81); --bg: oklch(18.6% 0.007 164); --surface: oklch(23.4% 0.014 163); --panel: oklch(24.1% 0.010 173); --surface-raised: oklch(27% 0.014 163); --line: rgb(255 255 255 / .15); --line-card: rgb(255 255 255 / .2); --line-field: rgb(255 255 255 / .23); --line-strong: rgb(255 255 255 / .3); }
+    /* All tokens in one place: colours (OKLCH; grays tinted slightly blue, hue 255; gold is the one accent),
+       type sizes, spacing, radii, control heights and the one shadow for raised layers. */
+    :root { color-scheme: dark; --fs-small: .75rem; --fs-body: .875rem; --fs-text: 1rem; --fs-heading: 2rem; --ink: oklch(95.9% 0.006 255); --muted: oklch(71.7% 0.012 255); --accent: oklch(81% 0.110 78); --accent-hover: oklch(87.2% 0.089 80); --on-accent: oklch(19.3% 0.011 255); --bg: oklch(18.6% 0.007 255); --surface: oklch(23.4% 0.012 255); --panel: oklch(24.1% 0.010 255); --surface-raised: oklch(27% 0.012 255); --line: rgb(255 255 255 / .15); --line-card: rgb(255 255 255 / .2); --line-field: rgb(255 255 255 / .23); --line-strong: rgb(255 255 255 / .3); --surface-2: oklch(31% 0.012 255); --surface-pressed: oklch(25.5% 0.012 255); --border: var(--line-field); --text: var(--ink); --text-2: var(--muted); --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px; --radius-sm: 4px; --radius-control: 6px; --radius-card: 8px; --radius-panel: 12px; --h-sm: 28px; --h-md: 36px; --h-lg: 44px; --shadow-raised: 0 1px 2px rgb(0 0 0 / .3), 0 4px 10px rgb(0 0 0 / .22), 0 12px 24px rgb(0 0 0 / .18); }
     * { box-sizing: border-box; }
     body { margin: 0; min-width: 320px; background: var(--bg); color: var(--ink); }
     main { max-width: 1440px; margin: auto; padding: 42px 24px 72px; }
@@ -28,7 +30,7 @@
     .sync-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; font-variant-numeric: tabular-nums; cursor: pointer; }
     .sync-toggle:hover { color: var(--ink); border-color: var(--line-strong); }
     .sync-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .sync-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: oklch(58% 0.012 160); }
+    .sync-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: oklch(58% 0.012 255); }
     .sync-toggle[data-state="ok"] { border-color: transparent; }
     .sync-toggle[data-state="stale"] .sync-dot { background: oklch(82% 0.130 85); }
     .sync-toggle[data-state="error"] { color: var(--ink); border-color: oklch(65% 0.170 28); }
@@ -40,7 +42,7 @@
     .sync { position: relative; }
     .sync > summary { list-style: none; }
     .sync > summary::-webkit-details-marker { display: none; }
-    .sync-panel { position: absolute; z-index: 1050; top: calc(100% + 8px); right: 0; width: min(440px, 92vw); padding: 14px 16px; background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: .5rem; box-shadow: 0 12px 32px rgb(0 0 0 / .45); }
+    .sync-panel { position: absolute; z-index: 1050; top: calc(100% + 8px); right: 0; width: min(440px, 92vw); padding: 14px 16px; background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: .5rem; box-shadow: var(--shadow-raised); }
     .sync-panel .progress-wrap { margin: 0; }
     /* Reserve the bold width, so the links do not shift from page to page. */
     .page-nav a { display: inline-flex; flex-direction: column; }
@@ -57,7 +59,7 @@
     .free-tag { white-space: nowrap; }
     /* The tag sits under the name, so the name keeps the width next to logo and count. */
     .provider-name .free-tag { display: table; margin-top: 3px; }
-    label { display: flex; gap: 9px; align-items: center; color: oklch(86.8% 0.018 85); font: var(--fs-body) system-ui, sans-serif; cursor: pointer; }
+    label { display: flex; gap: 9px; align-items: center; color: oklch(86.8% 0.012 255); font: var(--fs-body) system-ui, sans-serif; cursor: pointer; }
     input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; }
     .selection-note, .feedback { margin: 24px 0 0; color: var(--muted); font: var(--fs-small)/1.4 system-ui, sans-serif; }
     .feedback { margin: 0 0 12px; min-height: 1.2em; }
@@ -73,7 +75,7 @@
     .stats strong { color: var(--ink); }
     .coverage { display: grid; gap: 6px; margin: 12px 0 20px; }
     .coverage-row { display: grid; grid-template-columns: 130px 1fr 38px; gap: 8px; align-items: center; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; }
-    .coverage-row .progress { height: 7px; background: oklch(32.9% 0.012 161); }
+    .coverage-row .progress { height: 7px; background: oklch(32.9% 0.012 255); }
     .film-link { padding: 0; border: 0; background: none; color: var(--accent); font: inherit; text-decoration: underline; text-underline-offset: .2em; cursor: pointer; }
     .film-link:hover, .film-link:focus-visible { color: var(--accent-hover); }
     .film-modal-meta, .film-modal-genres { color: var(--muted); font: var(--fs-body) system-ui, sans-serif; }
@@ -104,12 +106,12 @@
     .pill-ok, .status-complete { color: oklch(88.4% 0.068 151); background: rgba(76,175,80,.18); }
     .pill-warn, .status-running { color: oklch(87.4% 0.096 85); background: rgba(232,184,107,.16); }
     .pill-danger, .status-error, .status-interrupted { color: oklch(83.7% 0.090 31); background: rgba(168,92,77,.25); }
-    .pill-neutral, .status-cancelled { color: oklch(85.5% 0.014 153); background: rgba(150,160,153,.18); }
-    .pill-service { color: oklch(86.8% 0.018 85); background: oklch(28.8% 0.013 164); font-weight: 400; }
+    .pill-neutral, .status-cancelled { color: oklch(85.5% 0.012 255); background: rgba(150,160,153,.18); }
+    .pill-service { color: oklch(86.8% 0.012 255); background: oklch(28.8% 0.012 255); font-weight: 400; }
     .service-logo { display: block; width: 28px; height: 28px; border-radius: 6px; object-fit: cover; }
     .provider-logo-sm { width: 22px; height: 22px; flex: none; border-radius: 5px; object-fit: cover; }
     /* Only the picture fades; the text keeps a readable contrast. */
-    .unavailable-card { background: oklch(21.2% 0.008 169) !important; }
+    .unavailable-card { background: oklch(21.2% 0.008 255) !important; }
     .unavailable-card .film-info { color: var(--muted); }
     .rescan-unavailable .poster { filter: grayscale(1); opacity: .58; }
     .rescan-unavailable .film-info { color: var(--muted); }
@@ -128,10 +130,10 @@
     .card-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-top: auto; }
     .service { position: relative; }
     /* Offer type on the service logo; the ring in the card colour keeps it readable on any logo. */
-    .poster-badge { position: absolute; top: 8px; left: 8px; z-index: 2; padding: 2px 8px; border-radius: 999px; background: oklch(28% 0.012 160); color: var(--ink); font: 600 var(--fs-small)/1.5 system-ui, sans-serif; }
-    .poster-badge-new { background: oklch(48% 0.11 150); color: oklch(98% 0 0); }
+    .poster-badge { position: absolute; top: 8px; left: 8px; z-index: 2; padding: 2px 8px; border-radius: 999px; background: oklch(28% 0.012 255); color: var(--ink); font: 600 var(--fs-small)/1.5 system-ui, sans-serif; }
+    .poster-badge-new { background: oklch(48% 0.11 150); color: oklch(98% 0.000 255); }
     .compare-mode .poster-badge { display: none; }
-    .poster-badge-gone, .pill-gone { background: oklch(42% 0.090 28); color: oklch(97% 0.010 28); }
+    .poster-badge-gone, .pill-gone { background: oklch(42% 0.090 28); color: oklch(97% 0.006 255); }
     /* Tonight: a context line, quick chips and rows that scroll sideways (cards snap to the edge). */
     .tonight-page { margin-top: 8px; }
     .context-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
@@ -165,7 +167,7 @@
     .favorite-status:focus-visible, .favorite-note:focus-visible, label.btn:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
     .favorite-note { flex: 1; }
     .progress-wrap { margin: 20px 0 36px; }
-    .progress-track { height: 8px; overflow: hidden; background: oklch(32.9% 0.012 161); border: 1px solid var(--line); }
+    .progress-track { height: 8px; overflow: hidden; background: oklch(32.9% 0.012 255); border: 1px solid var(--line); }
     .progress-bar { width: 0%; height: 100%; background: var(--accent); transition: width .25s ease; }
     .progress-label { display: flex; justify-content: space-between; gap: 14px; margin-top: 8px; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; }
     .scan-phase-line { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; }
@@ -195,7 +197,7 @@
     .filter-pop[open] > .filter-button::after { transform: translateY(1px) rotate(225deg); }
     .filter-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .filter-value, #more-filters-count { color: var(--accent); }
-    .filter-menu { position: absolute; z-index: 1040; top: calc(100% + 6px); left: 0; min-width: 260px; max-height: min(70dvh, 560px); overflow-y: auto; padding: 12px; background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: .5rem; box-shadow: 0 12px 32px rgb(0 0 0 / .45); font: var(--fs-body) system-ui, sans-serif; }
+    .filter-menu { position: absolute; z-index: 1040; top: calc(100% + 6px); left: 0; min-width: 260px; max-height: min(70dvh, 560px); overflow-y: auto; padding: 12px; background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: .5rem; box-shadow: var(--shadow-raised); font: var(--fs-body) system-ui, sans-serif; }
     .more-filters .filter-menu { width: min(720px, calc(100vw - 16px)); }
     .option-count { margin-left: auto; color: var(--muted); font: var(--fs-small) system-ui, sans-serif; font-variant-numeric: tabular-nums; }
     /* An option without films stays readable (4.5:1): dimmed by colour and logo, not by opacity. */
@@ -280,7 +282,7 @@
     .film-open { color: inherit; text-decoration: none; }
     .film-open:focus-visible { outline: none; }  /* the card shows the focus instead */
     .film .film-open::after { content: ""; position: absolute; inset: 0; z-index: 1; }
-    .poster { aspect-ratio: 2 / 3; background: oklch(32.9% 0.012 161); }
+    .poster { aspect-ratio: 2 / 3; background: oklch(32.9% 0.012 255); }
     .poster img { display: block; width: 100%; height: 100%; object-fit: cover; }
     .no-poster { height: 100%; display: grid; place-items: center; padding: 16px; color: var(--muted); text-align: center; font-family: system-ui, sans-serif; }
     .film-info { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 12px; }
@@ -293,16 +295,16 @@
     #favorites-empty { margin: 18px 0; padding: 20px; border: 1px dashed var(--line); border-radius: .5rem; text-align: left; }
     .btn-accent { --tblr-btn-color: var(--on-accent); --tblr-btn-bg: var(--accent); --tblr-btn-border-color: var(--accent); --tblr-btn-hover-color: var(--on-accent); --tblr-btn-hover-bg: var(--accent-hover); --tblr-btn-hover-border-color: var(--accent-hover); --bs-btn-color: var(--on-accent); --bs-btn-bg: var(--accent); --bs-btn-border-color: var(--accent); --bs-btn-hover-color: var(--on-accent); --bs-btn-hover-bg: var(--accent-hover); --bs-btn-hover-border-color: var(--accent-hover); }
     .form-control, .form-select { background-color: var(--surface) !important; border-color: var(--line-field) !important; color: var(--ink) !important; }
-    .form-control::placeholder, .favorite-note::placeholder { color: oklch(67.7% 0.019 153) !important; }
+    .form-control::placeholder, .favorite-note::placeholder { color: oklch(67.7% 0.012 255) !important; }
     .form-select option { background: var(--surface); color: var(--ink); }
-    .btn-outline-secondary { --bs-btn-color: oklch(88.9% 0.013 149); --bs-btn-border-color: var(--line-strong); --bs-btn-hover-color: oklch(18.6% 0.007 164); --bs-btn-hover-bg: oklch(85.5% 0.014 153); --bs-btn-hover-border-color: oklch(85.5% 0.014 153); }
+    .btn-outline-secondary { --bs-btn-color: oklch(88.9% 0.012 255); --bs-btn-border-color: var(--line-strong); --bs-btn-hover-color: oklch(18.6% 0.007 255); --bs-btn-hover-bg: oklch(85.5% 0.012 255); --bs-btn-hover-border-color: oklch(85.5% 0.012 255); }
     .toast { background: var(--surface-raised) !important; border: 1px solid var(--line-strong) !important; color: var(--ink) !important; }
     .toast.toast-error { border-color: oklch(83.7% 0.090 31) !important; }
     .progress-bar.cancelled { background: var(--line-strong); }
     .favorite-status.is-invalid, .favorite-note.is-invalid { border-color: oklch(83.7% 0.090 31) !important; }
     .modal-content { background: var(--surface-raised) !important; color: var(--ink); border: 1px solid var(--line-strong); }
     .table-dark { --bs-table-bg: var(--surface); --bs-table-color: var(--ink); --bs-table-border-color: var(--line-card); }
-    .progress-track { background-color: oklch(30.8% 0.020 159) !important; }
+    .progress-track { background-color: oklch(30.8% 0.012 255) !important; }
     .skeleton-card { background-color: var(--surface); border-color: var(--line-card); }
     .film { background-color: var(--card-bg); border-color: var(--line-card); }
     .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px; margin: -8px 0 16px; }
@@ -319,12 +321,12 @@
     /* A visible label on the poster; the whole pill is the 44px-high hit area. */
     .comparison-toggle { display: none; }
     .compare-mode .comparison-toggle { position: absolute; top: 0; left: 0; z-index: 3; min-height: 44px; display: flex; align-items: center; gap: 6px; padding: 0 10px; cursor: pointer; }
-    .comparison-toggle span { padding: 2px 8px 2px 4px; border-radius: 999px; background: rgba(16,20,18,.82); color: var(--ink); font: var(--fs-small) system-ui, sans-serif; }
+    .comparison-toggle span { padding: 2px 8px 2px 4px; border-radius: 999px; background: oklch(18.6% 0.012 255 / .82); color: var(--ink); font: var(--fs-small) system-ui, sans-serif; }
     .comparison-check { width: 19px; height: 19px; accent-color: var(--accent); }
     .skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
     .skeleton-card { overflow: hidden; border-radius: .5rem; background: var(--panel); }
-    .skeleton-poster { aspect-ratio: 2 / 3; background: oklch(28.8% 0.013 164); }
-    .skeleton-line { height: 12px; margin: 13px; border-radius: 4px; background: oklch(33.7% 0.017 159); }
+    .skeleton-poster { aspect-ratio: 2 / 3; background: oklch(28.8% 0.012 255); }
+    .skeleton-line { height: 12px; margin: 13px; border-radius: 4px; background: oklch(33.7% 0.012 255); }
     @media (max-width: 800px) {
       main { padding: 24px 14px 48px; }
       .app-header { position: static; flex-wrap: wrap; gap: 8px; margin: 0 -14px; padding: 10px 14px; }

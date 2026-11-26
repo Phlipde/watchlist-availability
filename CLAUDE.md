@@ -259,7 +259,7 @@ Flask app (`app.py`, `web/routes.py`, `watchlist_app/`) with SQLite, Tabler/Boot
 - The filter bar stays one row (search, services, cost, genre, runtime, rating, Filters, sort); every new filter goes under "Filters"
 - New film field -- add it in `models.Film`, `tmdb._details_from_movie`, `results.make_film` and `validation.clean_film` (backups and the client go through validation)
 - Wording -- "service", not "provider", in the UI; one `.pill` class with tones ok/warn/danger/neutral; amber only for controls
-- Colours -- all in OKLCH in `static/css/app*.css` (six files in cascade order, linked by `partials/styles.html`; keep the order); surfaces `--bg` < `--surface`/`--panel` < `--surface-raised` (dialogs, menus, toasts); borders `--line`, `--line-card`, `--line-field`, `--line-strong` are white with alpha. No new hex values; error and status colours stay solid on purpose
+- Colours -- all in OKLCH in `static/css/app*.css` (six files in cascade order, linked by `partials/styles.html`; keep the order); surfaces `--bg` < `--surface`/`--panel` < `--surface-raised` (dialogs, menus, toasts); borders `--line`, `--line-card`, `--line-field`, `--line-strong` are white with alpha. No new hex values; error and status colours stay solid on purpose. All tokens (colours, spacing, radii, heights, `--shadow-raised`) live in `:root` in `app.css`; grays are tinted blue (hue 255, chroma <= .012), gold is the one accent
 - Font sizes -- `--fs-small/.75rem`, `--fs-body/.875rem`, `--fs-text/1rem`, `--fs-heading/2rem`; nothing under 12px
 
 ### Decisions
