@@ -128,12 +128,12 @@ body:has(.more-filters[open])::after { content: ""; position: fixed; inset: 0; z
 .more-filters .filter-pop.is-moved > summary::after { display: none; }
 .more-filters .is-moved .filter-menu { position: static; width: auto; min-width: 0; max-height: none; padding: 6px 0 0; border: 0; background: transparent; box-shadow: none; translate: none; }
 .more-filters .is-moved .menu-head .menu-group { display: none; }  /* the control's own name is already the label */
-.more-filters .more-filters-menu { max-height: min(85vh, 760px); }
+.more-filters .more-filters-menu { max-height: min(85dvh, 760px); }
 /* Subscriptions: cancel to an end date, add a service, remove a free one */
 .small-dialog { width: min(420px, calc(100vw - 24px)); padding: 16px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface-raised); color: var(--text); }
 .small-dialog::backdrop { background: rgb(0 0 0 / .5); }
 .small-dialog .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
-.add-list { max-height: 50vh; margin: 8px 0 0; padding: 0; overflow-y: auto; list-style: none; }
+.add-list { max-height: 50dvh; margin: 8px 0 0; padding: 0; overflow-y: auto; list-style: none; }
 .add-item { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 4px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
 .add-item:hover, .add-item:focus-visible { background: var(--surface-2); }
 .add-item .option-count { margin-left: auto; color: var(--text-2); font-size: 12px; }

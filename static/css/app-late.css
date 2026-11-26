@@ -192,7 +192,7 @@ a.stat-tile:focus-visible, .avail-seg:focus-visible, .avail-legend a:focus-visib
 .country-picker[aria-busy="true"] > .country-button { opacity: .6; cursor: progress; }
 .country-menu { width: min(300px, calc(100vw - 16px)); min-width: 0; padding: 8px; color: var(--text); text-transform: none; letter-spacing: normal; }
 .country-menu .country-search { width: 100%; margin-bottom: 6px; }
-.country-list { display: grid; max-height: min(50vh, 320px); overflow-y: auto; }
+.country-list { display: grid; max-height: min(50dvh, 320px); overflow-y: auto; }
 .country-option[hidden] { display: none; }
 .country-option .country-code { flex: none; width: 2.2em; font-weight: 600; }
 .country-option .country-name { overflow: hidden; color: var(--text-2); text-overflow: ellipsis; white-space: nowrap; }
@@ -214,3 +214,11 @@ a.stat-tile:focus-visible, .avail-seg:focus-visible, .avail-legend a:focus-visib
 /* The one tooltip (icons.js): fixed, so no card or drawer edge clips it. */
 .tip { position: fixed; z-index: 2000; max-width: 240px; padding: 4px 8px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface-raised); color: var(--ink); font: 400 var(--fs-small)/1.3 system-ui, sans-serif; pointer-events: none; }
 .tip[hidden] { display: none; }
+
+/* Type: headings wrap balanced with a tight line height; numbers line up. Cards in the grid are grouped by the
+   larger space between rows. */
+h1, h2, h3, h4 { text-wrap: balance; }
+h2 { line-height: 1.15; }
+h3 { line-height: 1.3; }
+.film-modal-meta, .rating, .lstack-more, .os-count, .row-count, .time { font-variant-numeric: tabular-nums; }
+.films:not(.row-track) { row-gap: 24px; }

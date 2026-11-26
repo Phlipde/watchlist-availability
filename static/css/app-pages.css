@@ -219,7 +219,7 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 .drawer-head { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1; padding: 8px 8px 8px 20px; background: var(--surface-raised); border-bottom: 1px solid var(--line); }
 .drawer-head h2 { margin: 0; padding: 0; border: 0; font-size: 1.125rem; }
 .drawer-body { padding: 16px 20px 28px; font: var(--fs-body) system-ui, sans-serif; }
-.drawer-body h3 { margin: 22px 0 8px; color: var(--muted); font: 600 var(--fs-small) system-ui, sans-serif; text-transform: uppercase; letter-spacing: .06em; }
+.drawer-body h3 { margin: 22px 0 8px; color: var(--muted); font: 600 var(--fs-small) system-ui, sans-serif; }
 .figures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0; }
 .figures div { padding: 0; }
 .figures dt { color: var(--muted); font-size: var(--fs-small); font-weight: 400; }
@@ -240,7 +240,7 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 .worth, .planner { margin-top: 28px; font: var(--fs-body) system-ui, sans-serif; }
 .worth-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 .planner.is-whatif { padding: 14px; border: 1px dashed var(--accent); border-radius: .5rem; }
-.planner h3 { margin: 18px 0 6px; color: var(--muted); font: 600 var(--fs-small) system-ui, sans-serif; text-transform: uppercase; letter-spacing: .06em; }
+.planner h3 { margin: 18px 0 6px; color: var(--muted); font: 600 var(--fs-small) system-ui, sans-serif; }
 .budget-label { display: block; margin-bottom: 4px; }
 #budget { width: min(420px, 100%); accent-color: var(--accent); }
 .plan-options, .rotation { margin: 8px 0 0; padding-left: 1.2em; }
@@ -261,7 +261,7 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 /* Saved views: chips that open the watchlist with their filters. */
 .saved-views { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; font: var(--fs-small) system-ui, sans-serif; }
 .saved-views[hidden] { display: none; }
-.views-label { color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.views-label { color: var(--muted); }
 .saved-view .chip-open { text-decoration: none; }
 .view-form { display: inline-flex; align-items: center; gap: 6px; }
 .view-form input { width: 160px; }
