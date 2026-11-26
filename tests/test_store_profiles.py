@@ -169,6 +169,13 @@ class TestProfiles:
             store.delete_profile(anna)
         assert [p["id"] for p in store.list_profiles()] == [anna]
 
+    def test_ids_of_deleted_profiles_are_not_reused(self, store):
+        anna = store.add_profile("Anna")
+        assert store.delete_profile(anna)
+        ben = store.add_profile("Ben")
+        assert ben == anna + 1
+        assert "profile_last_id" not in store.export_backup()["settings"]
+
 
 class TestWatched:
     def test_replace_keeps_profiles_apart_and_resolves_matched_ids(self, store):

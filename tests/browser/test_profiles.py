@@ -122,9 +122,9 @@ def test_deleting_the_active_profile_falls_back_to_another(app_server, page):
     page.get_by_role("button", name="Delete Anna").click()
     expect(page.locator("#profiles-message")).to_have_text("Anna deleted.")
     expect(page.locator("#profile-pop .profile-button")).to_have_text("Me")
-    # The next new profile gets Anna's id again; the old cookie must not open it.
+    # The next new profile gets a fresh id, never Anna's; it does not open by itself.
     page.locator("#profile-add-name").fill("Ben")
     page.locator("#profile-add-name").press("Enter")
     expect(page.locator("#profiles-message")).to_have_text("Ben added.")
-    assert app_server["store"].list_profiles()[1]["id"] == anna
+    assert app_server["store"].list_profiles()[1]["id"] == anna + 1
     expect(page.locator("#profile-pop .profile-button")).to_have_text("Me")

@@ -5,6 +5,7 @@ import time
 
 from . import validation
 from .store_base import StoreBase
+from .store_schema import LAST_PROFILE_SETTING
 
 # Every table with rows owned by one profile; deleting the profile empties them for it.
 _OWNED_TABLES = (
@@ -44,13 +45,23 @@ class ProfileStore(StoreBase):
 
     def _new_profile(self, profile: dict, now: float) -> int:
         try:
-            cursor = self._write(
-                "INSERT INTO profiles (name, email, created) VALUES (?, ?, ?)",
-                (profile["name"], profile["email"], now),
-            )
+            with self._lock, self._db:
+                stored = self._db.execute(
+                    "SELECT value FROM settings WHERE key = ?", (LAST_PROFILE_SETTING,)
+                ).fetchone()
+                highest = self._db.execute("SELECT coalesce(max(id), 0) FROM profiles").fetchone()[0]
+                profile_id = max(int(stored[0]) if stored else 0, highest) + 1
+                self._db.execute(
+                    "INSERT INTO profiles (id, name, email, created) VALUES (?, ?, ?, ?)",
+                    (profile_id, profile["name"], profile["email"], now),
+                )
+                self._db.execute(
+                    "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+                    (LAST_PROFILE_SETTING, str(profile_id)),
+                )
         except sqlite3.IntegrityError:
             raise ValueError("A profile with that name already exists.") from None
-        return int(cursor.lastrowid or 0)
+        return profile_id
 
     def rename_profile(self, profile_id: int, name: str | None, email: str | None = None) -> bool:
         """Set name and e-mail; False for an unknown id, ValueError for an invalid or used name."""

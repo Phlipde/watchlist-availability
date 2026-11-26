@@ -4,7 +4,12 @@
 MATCHES_CHANGED_SETTING = "matches_changed_at"
 # Settings the app keeps for itself; they are not part of a backup.
 REGIONS_SETTING = "tmdb_regions"  # the countries TMDB has offers for, as JSON with the fetch time
-INTERNAL_SETTINGS = frozenset({MATCHES_CHANGED_SETTING, "notify_token", "notify_state", REGIONS_SETTING})
+# The highest profile id ever given out: ids are not reused, so an old cookie or device value
+# never opens a new person's profile.
+LAST_PROFILE_SETTING = "profile_last_id"
+INTERNAL_SETTINGS = frozenset(
+    {MATCHES_CHANGED_SETTING, "notify_token", "notify_state", REGIONS_SETTING, LAST_PROFILE_SETTING}
+)
 # Settings of one person, kept in profile_settings; every other key stays global in settings.
 PROFILE_SETTING_KEYS = frozenset(
     {

@@ -77,7 +77,7 @@ class TestActiveProfile:
     def test_deleting_the_chosen_profile_forgets_the_cookie(self, client, store, anna):
         client.post("/api/profiles/active", json={"id": anna})
         assert client.delete(f"/api/profiles/{anna}").status_code == 200
-        assert store.add_profile("Ben") == anna  # the id is free again
+        assert "wl_profile" not in {cookie.key for cookie in client._cookies.values()}
         assert _profile_of(client) == 1
 
     def test_default_is_profile_1(self, client, anna):
