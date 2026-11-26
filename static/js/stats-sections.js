@@ -20,16 +20,18 @@ export function head(stats) {
   const o = stats.overview;
   const free = o.availability.free + o.availability.ads;
   const tip = stats.rotationSuggestion;
+  // One base set on every page (base.py, baseCounts): released films; coming soon is counted apart.
+  const rows = stats.availabilityBreakdown.filter(item => item.films && item.kind !== 'coming_soon');
+  const watchlist = o.total - o.comingSoon;
   const tiles = [
     tile(number(o.availability.own_subscription), 'films on your subscriptions', {sub: `${number(stats.availabilityBreakdown[0].hours)} h`, href: watchlistHref({availability: 'own_subscription'})}),
     tile(number(free), 'free or with ads', {sub: `${number(stats.availabilityBreakdown[1].hours + stats.availabilityBreakdown[2].hours)} h`, href: watchlistHref({availability: 'free,ads'})}),
     tip ? tile(number(tip.films), `more films with ${tip.group}`, {sub: 'a subscription you do not have', href: `?svcq=${encodeURIComponent(tip.group)}&svctype=all#services-section`})
       : tile('–', 'more films with another subscription', {sub: 'nothing to add'}),
-    tile(number(o.total), 'films on the watchlist', {sub: `${number(stats.availabilityBreakdown.reduce((sum, item) => sum + item.hours, 0))} h in total`, href: '/watchlist'}),
+    tile(number(watchlist), 'films on the watchlist', {sub: `${number(rows.reduce((sum, item) => sum + item.hours, 0))} h in total${o.comingSoon ? ` · +${number(o.comingSoon)} coming soon` : ''}`, href: '/watchlist'}),
   ].join('');
-  const rows = stats.availabilityBreakdown.filter(item => item.films);
-  const segments = rows.map(item => `<a class="avail-seg avail-${item.kind}" style="flex:${item.films}" href="${esc(watchlistHref({availability: item.kind}))}" title="${esc(AVAILABILITY_LABEL[item.kind])}: ${item.films} films (${percent(item.films, o.total)}%)" aria-label="${esc(AVAILABILITY_LABEL[item.kind])}: ${item.films} films"></a>`).join('');
-  const legend = rows.map(item => `<li><a href="${esc(watchlistHref({availability: item.kind}))}"><i class="swatch avail-${item.kind}" aria-hidden="true"></i>${esc(AVAILABILITY_LABEL[item.kind])} <strong>${number(item.films)}</strong> <span class="muted">${percent(item.films, o.total)}%</span></a></li>`).join('');
+  const segments = rows.map(item => `<a class="avail-seg avail-${item.kind}" style="flex:${item.films}" href="${esc(watchlistHref({availability: item.kind}))}" title="${esc(AVAILABILITY_LABEL[item.kind])}: ${item.films} films (${percent(item.films, watchlist)}%)" aria-label="${esc(AVAILABILITY_LABEL[item.kind])}: ${item.films} films"></a>`).join('');
+  const legend = rows.map(item => `<li><a href="${esc(watchlistHref({availability: item.kind}))}"><i class="swatch avail-${item.kind}" aria-hidden="true"></i>${esc(AVAILABILITY_LABEL[item.kind])} <strong>${number(item.films)}</strong> <span class="muted">${percent(item.films, watchlist)}%</span></a></li>`).join('');
   const foot = stats.withoutRuntime ? `<p class="hint">${plural(stats.withoutRuntime, 'film')} without a runtime are counted, but not in the hours.</p>` : '';
   return `<div class="stat-tiles">${tiles}</div>
     <div class="avail" role="group" aria-label="Where the films of your watchlist can be watched">

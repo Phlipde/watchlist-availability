@@ -37,7 +37,7 @@ export function bestAvailability(film, own, today) {
   if (kinds.includes('ads')) return 'ads';
   if (kinds.includes('flatrate')) return 'other_subscription';
   if (kinds.some(kind => kind === 'rent' || kind === 'buy')) return 'rent_buy';
-  return [film.cinema_date, film.home_date].some(date => date && date > today) ? 'coming_soon' : 'unavailable';
+  return [film.cinema_date, film.home_date].some(date => date && date >= today) ? 'coming_soon' : 'unavailable';
 }
 
 // TMDB fills unreleased films with far-away placeholder dates: a year more than 3 years ahead counts as unknown.
@@ -90,7 +90,7 @@ export function watchlistStats(scan, {subscriptions = [], favorites = [], now = 
     averageLetterboxd: average(numbers(all.map(film => film.letterboxd_rating))),
     oldestYear: years.length ? Math.min(...years) : null,
     newestYear: years.length ? Math.max(...years) : null,
-    comingSoon: all.filter(film => [film.cinema_date, film.home_date].some(date => date && date > today)).length,
+    comingSoon: all.filter(film => [film.cinema_date, film.home_date].some(date => date && date >= today)).length,
     favorites: favorites.length,
     watched: favorites.filter(favorite => favorite.status === 'watched').length,
   };

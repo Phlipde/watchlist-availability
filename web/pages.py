@@ -114,6 +114,7 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
         country = settings.country
         scan = store.latest_scan(country)
         own = settings.subscriptions(country)
+        counts = base.base_counts(scan)
         return page(
             "subscriptions.html",
             country=country,
@@ -123,10 +124,11 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
                 scan["results"] if scan else [],
                 own,
                 settings.costs(country),
-                base.base_counts(scan)["not_available"],
+                counts["not_available"],
                 frozenset(favorite["key"] for favorite in store.list_favorites()),
                 weekly_hours=settings.weekly_hours,
             ),
+            coming_soon=counts["coming_soon"],
             weekly_hours=settings.weekly_hours,
             history=store.service_history(country),
             own=own,

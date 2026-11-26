@@ -24,7 +24,7 @@
     {% if costs.coverage.total %}
     <section class="coverage" aria-labelledby="coverage-heading">
       <h2 class="visually-hidden" id="coverage-heading">Coverage of your watchlist</h2>
-      <p class="coverage-text"><strong>{{ costs.coverage.percent }} %</strong> of your watchlist is watchable without extra cost ({{ costs.coverage.covered }} of {{ costs.coverage.total }}).</p>
+      <p class="coverage-text"><strong>{{ costs.coverage.percent }} %</strong> of your watchlist is watchable without extra cost ({{ costs.coverage.covered }} of {{ costs.coverage.total }}{% if coming_soon %} · +{{ coming_soon }} coming soon, counted apart{% endif %}).</p>
       <div class="coverage-bar" role="img" aria-label="{{ costs.coverage.percent }} percent covered">
         {% for segment in costs.coverage.segments if segment.films %}{% set label = {'subscription': 'Subscriptions', 'free': 'Free', 'rent': 'Rent only', 'other': 'Not on your services'}[segment.id] %}{% set link = {'subscription': '/watchlist?cost=subscription', 'free': '/watchlist?cost=free', 'rent': '/watchlist?cost=rent', 'other': '/watchlist?unavailable=1'}[segment.id] %}<a class="seg seg-{{ segment.id }}" style="flex: {{ segment.films }}" href="{{ link }}" title="{{ label }}: {{ segment.films }} films ({{ segment.percent|round(0)|int }} %)"><span class="visually-hidden">{{ label }}: {{ segment.films }} films</span></a>{% endfor %}
       </div>
