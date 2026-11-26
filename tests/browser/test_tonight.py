@@ -61,7 +61,7 @@ def test_a_saved_view_comes_back_as_a_chip_on_tonight(app_server, page):
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
     page.get_by_text("Save view", exact=True).click()  # the ghost button opens a small popover
     page.locator("#view-name").fill("Short before bed")
-    page.locator(".save-pop").get_by_role("button", name="Save", exact=True).click()
+    page.locator(".save-pop").get_by_role("button", name="Save this view", exact=True).click()
     expect(page.locator("#views-menu .menu-item")).to_have_count(1)  # now it is in the Views dropdown
     page.goto(app_server["url"])
     link = page.locator("#tonight-views .saved-view a")

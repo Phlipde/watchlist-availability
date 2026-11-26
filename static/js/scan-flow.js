@@ -205,7 +205,7 @@ export function createScanFlow({state, scanState, results, filterBar, freeServic
       state.films = [];
       seen.clear();
       results.setAttribute('aria-busy', 'true');
-      results.innerHTML = '<div class="skeleton-grid" role="status" aria-label="Loading films"><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div></div></div>';
+      results.innerHTML = '<div class="skeleton-grid" role="status" aria-label="Loading films"><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div><div class="skeleton-line is-short"></div><div class="skeleton-logos"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div><div class="skeleton-line is-short"></div><div class="skeleton-logos"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div><div class="skeleton-line"></div><div class="skeleton-line is-short"></div><div class="skeleton-logos"></div></div></div>';
     }
     if (!quiet) showToast(scanState.rescanInProgress ? 'Updating availability. Previous results remain visible.' : 'Starting watchlist scan...');
     showScanRunning(); document.getElementById('error-message').hidden = true;
