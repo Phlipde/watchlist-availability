@@ -156,8 +156,8 @@ Für jede Stufe gilt: `pytest -q`, `node --test tests/js/*.mjs`, ruff und mypy g
 
 ### M3 – Statistik und Daten je Profil
 
-- [ ] **M3.1 Stats und Abo-Seite je Profil [einfach]** — `web/pages.py` (`service_history`, `costs` des Profils).
-- [ ] **M3.2 Settings → Data zeigt Profil und Job [einfach]** — `status_overview` mit Profilname je Job; Backup-Import fragt bei v1 nach dem Zielprofil.
+- [x] **M3.1 Stats und Abo-Seite je Profil [einfach]** — `web/pages.py` (`service_history`, `costs` des Profils).
+- [x] **M3.2 Settings → Data zeigt Profil und Job [einfach]** — `status_overview` mit Profilname je Job; Backup-Import fragt bei v1 nach dem Zielprofil. Umsetzung: keine Rückfrage, sondern ein Hinweis unter Settings → Backup („v1 ins aktive Profil, v2 alle Profile nach Namen“); Data trennt „This profile“ und „Shared by all profiles“.
 
 ### M4 – Together-Modus
 

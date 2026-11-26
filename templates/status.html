@@ -19,14 +19,20 @@
     {% include "partials/settings-nav.html" %}
     {% if not status.tmdb_api_key_set %}<p class="error">The TMDB API key is missing, so no scan can run.</p>{% endif %}
 
-    <div class="analysis-panel status-tiles">
+    <h2 class="h4">This profile ({{ active_profile.name }})</h2>
+    <div class="analysis-panel status-tiles" id="profile-status">
       <div class="analysis-item">Last scan ({{ status.country }}): <strong class="time" data-time="{{ status.last_scan_at or '' }}">never</strong></div>
-      <div class="analysis-item">Automatic scan: <strong>{% if status.scan_interval_hours %}every {{ status.scan_interval_hours }} h{% else %}off{% endif %}</strong></div>
       <div class="analysis-item">Next automatic scan: <strong class="time" data-time="{{ status.next_scan_at or '' }}" data-past="due now">–</strong></div>
       <div class="analysis-item">Right now: <strong>{% if status.running %}a scan is running{% else %}idle{% endif %}</strong></div>
-      <div class="analysis-item">Films known: <strong>{{ status.counts.films }}</strong> · {{ status.base.watchlist }} on the watchlist (released) · {{ status.base.coming_soon }} coming soon · <a href="/settings/matches">{{ status.base.to_check }} to check</a></div>
-      <div class="analysis-item">Favorites: <strong>{{ status.counts.favorites }}</strong></div>
-      <div class="analysis-item">Stored changes: <strong>{{ status.counts.changes }}</strong></div>
+      <div class="analysis-item">Watchlist: <strong>{{ status.base.watchlist }}</strong> released · {{ status.base.coming_soon }} coming soon</div>
+      <div class="analysis-item">Favorites: <strong>{{ status.profile_counts.favorites }}</strong></div>
+      <div class="analysis-item">Stored changes: <strong>{{ status.profile_counts.changes }}</strong></div>
+    </div>
+
+    <h2 class="h4 mt-4">Shared by all profiles</h2>
+    <div class="analysis-panel status-tiles" id="shared-status">
+      <div class="analysis-item">Automatic scan: <strong>{% if status.scan_interval_hours %}every {{ status.scan_interval_hours }} h{% else %}off{% endif %}</strong></div>
+      <div class="analysis-item">Films known: <strong>{{ status.counts.films }}</strong></div>
       <div class="analysis-item">Matches to check: <strong><a href="/settings/matches">{{ status.uncertain_matches }}</a></strong></div>
       <div class="analysis-item">Services from TMDB ({{ status.country }}): <strong>{% if status.provider_catalog.count %}{{ status.provider_catalog.count }}, <span class="time" data-time="{{ status.provider_catalog.fetched_at }}"></span>{% else %}not loaded yet{% endif %}</strong></div>
       <div class="analysis-item">Database: <strong>{% if status.database_bytes %}{{ '%.1f'|format(status.database_bytes / 1000000) }} MB{% else %}–{% endif %}</strong></div>
@@ -56,7 +62,7 @@
     <p class="hint">Set on the <a href="/subscriptions">Subscriptions</a> page.</p>
     {% endif %}
 
-    <h2 class="h4 mt-4">Recent scans</h2>
+    <h2 class="h4 mt-4">Recent scans of {{ active_profile.name }}</h2>
     {% if status.jobs %}
     <div class="table-scroll">
       <table class="status-table">

@@ -27,8 +27,9 @@ def test_switching_the_profile_in_the_header_shows_its_own_favorites(app_server,
     assert page.evaluate("fetch('/api/favorites').then(r => r.json())") == []
 
     page.goto(app_server["url"] + "/settings/data")  # header.js wires it here
+    expect(page.locator("#profile-status")).to_contain_text("Favorites: 0")
     _switch_in_header(page, "Me")
-    # shortcut: "Favorites: N" on this page still counts every profile (M3.2), so ask the API.
+    expect(page.locator("#profile-status")).to_contain_text("Favorites: 1")
     assert [f["key"] for f in page.evaluate("fetch('/api/favorites').then(r => r.json())")] == ["949"]
     page.goto(app_server["url"] + "/watchlist")
     expect(page.locator('article.film[data-key="949"] button.favorite')).to_have_attribute(

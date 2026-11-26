@@ -79,6 +79,7 @@
         <label class="btn btn-outline-secondary mb-0" for="backup-file"><i class="ti ti-upload" aria-hidden="true"></i> Restore from file<input class="visually-hidden" id="backup-file" type="file" accept=".json,application/json"></label>
         <span class="feedback" id="backup-message" role="status"></span>
       </div>
+      <p class="hint" id="backup-target">An old backup (one person) is restored into the active profile, {{ active_profile.name }}. A newer backup restores every profile in it by name.</p>
     </section>
   </main>
   <div class="toast-bar" id="toast" role="status" hidden><span id="toast-text"></span><button class="film-link" id="toast-undo" type="button" hidden>Undo</button><button class="film-link" id="toast-rescan" type="button" hidden>Rescan now</button></div>

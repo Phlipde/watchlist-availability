@@ -148,3 +148,58 @@ class TestWritesOfProfile2:
         assert settings.for_profile(anna).subscriptions() == ["MUBI"]
         assert store.list_favorites(profile_id=1) == [] and store.list_flags(profile_id=1) == []
         assert "MUBI" not in settings.subscriptions()
+
+
+def _netflix(key: str) -> dict:
+    return {"key": key, "tmdb_id": int(key), "title": f"Film {key}", "providers": {"Netflix": ["flatrate"]}}
+
+
+@pytest.fixture
+def anna_data(store, settings, anna):
+    """Anna has Netflix at 13 a month and two films on it; profile 1 keeps MUBI at 9 and one film."""
+    settings.for_profile(anna).update({"subscriptions": ["Netflix"], "costs": {"Netflix": {"price": 13}}})
+    store.save_scan("DE", "letterboxd", None, [_netflix("1"), _netflix("2")], [], {}, profile_id=anna)
+    store.record_service_counts("DE", "2026-11-20", {"Netflix": (2, 2)}, profile_id=anna)
+    store.record_service_counts("DE", "2026-11-20", {"MUBI": (1, 1)}, profile_id=1)
+    store.add_favorite({"key": "1", "title": "Film 1"}, profile_id=anna)
+    store.add_favorite({"key": "2", "title": "Film 2"}, profile_id=anna)
+    return anna
+
+
+@pytest.mark.usefixtures("profile_1_data")
+class TestStatsAndDataPerProfile:
+    def test_subscriptions_page_shows_the_profiles_services_and_numbers(self, client, anna_data):
+        mine = client.get("/subscriptions").get_data(as_text=True)
+        theirs = client.get(f"/subscriptions?profile={anna_data}").get_data(as_text=True)
+        assert 'data-service="MUBI"' in mine and 'data-films="1"' in mine and "9.00" in mine
+        assert 'data-service="Netflix"' not in mine and "13.00" not in mine
+        assert 'data-service="Netflix"' in theirs and 'data-films="2"' in theirs and "13.00" in theirs
+        assert 'data-service="MUBI"' not in theirs
+        assert "&#34;films&#34;: 2" in theirs and "&#34;films&#34;: 2" not in mine  # detail and history
+
+    def test_stats_page_gets_the_profiles_services_and_prices(self, client, anna_data):
+        def config(path: str) -> dict:
+            html = client.get(path).get_data(as_text=True)
+            return json.loads(html.split("window.STATS_PAGE = ", 1)[1].split(";</script>", 1)[0])
+
+        mine, theirs = config("/stats"), config(f"/stats?profile={anna_data}")
+        assert (mine["subscriptions"], mine["prices"]) == (["MUBI"], {"MUBI": 9})
+        assert (theirs["subscriptions"], theirs["prices"]) == (["Netflix"], {"Netflix": 13})
+
+    def test_data_page_counts_the_active_profile_and_labels_the_shared_part(self, client, store, anna_data):
+        store.create_job("j1", "DE", "manual", 1.0, profile_id=1)
+        mine = client.get("/api/status").get_json()
+        theirs = client.get(f"/api/status?profile={anna_data}").get_json()
+        assert (mine["profile_counts"]["favorites"], mine["profile_counts"]["changes"]) == (1, 1)
+        assert (theirs["profile_counts"]["favorites"], theirs["profile_counts"]["changes"]) == (2, 0)
+        assert (mine["base"]["watchlist"], theirs["base"]["watchlist"]) == (1, 2)
+        assert mine["counts"] == theirs["counts"]  # films, offers: shared by all profiles
+        assert theirs["jobs"] == [] and len(mine["jobs"]) == 1
+        html = client.get(f"/settings/data?profile={anna_data}").get_data(as_text=True)
+        assert "This profile (Anna)" in html and "Shared by all profiles" in html
+        assert "Favorites: <strong>2</strong>" in html and "Recent scans of Anna" in html
+
+    def test_settings_page_says_where_a_backup_goes(self, client, anna):
+        html = client.get(f"/settings?profile={anna}").get_data(as_text=True)
+        assert "An old backup (one person) is restored into the active profile, Anna." in html
+        assert "restores every profile in it by name" in html

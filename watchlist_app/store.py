@@ -40,3 +40,11 @@ class Store(BackupStore):
         """Row counts for the status page."""
         tables = ("film_ids", "films", "offers", "scans", "changes", "favorites")
         return {table: self._read(f"SELECT count(*) FROM {table}")[0][0] for table in tables}
+
+    def profile_counts(self, *, profile_id: int) -> dict[str, int]:
+        """Row counts of one profile for the status page."""
+        tables = ("changes", "favorites")
+        return {
+            table: self._read(f"SELECT count(*) FROM {table} WHERE profile_id = ?", (profile_id,))[0][0]
+            for table in tables
+        }

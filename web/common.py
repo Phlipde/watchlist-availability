@@ -66,7 +66,8 @@ def status_overview(store: Store, settings: AppSettings, service: ScanService) -
         "scan_interval_hours": settings.scan_interval_hours,
         "next_scan_at": scheduler.next_scan_at(store, settings),
         "jobs": jobs,
-        "counts": store.counts(),
+        "counts": store.counts(),  # shared by all profiles
+        "profile_counts": store.profile_counts(profile_id=pid),
         "database_bytes": database.stat().st_size if database and database.exists() else None,
         "tmdb_api_key_set": bool(settings.tmdb_api_key),
         "reminders": costs.reminders(
