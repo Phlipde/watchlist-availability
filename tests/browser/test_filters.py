@@ -108,8 +108,10 @@ def test_filter_menus_stay_inside_the_window(app_server, page):
         if page.locator(f"#{name}.is-moved").count():
             continue  # it moved into the "More filters" panel (see the test below)
         page.locator(f"#{name} > summary").click()
-        box = page.locator(f"#{name} > .filter-menu").bounding_box()
-        assert box["x"] >= 0 and box["x"] + box["width"] <= 820, name
+        # The menu is moved into view on its toggle event, which can come a moment after the click.
+        inside = "s => { const r = document.querySelector(s).getBoundingClientRect();"
+        inside += " return r.left >= 0 && r.right <= 820; }"
+        page.wait_for_function(inside, arg=f"#{name} > .filter-menu", timeout=3000)
         page.locator(f"#{name} > summary").click()  # close it again: an open panel may cover the next button
 
 

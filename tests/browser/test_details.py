@@ -81,9 +81,13 @@ def test_service_logos_name_themselves_only_in_a_tooltip(app_server, page):
     logos = page.locator("#film-more .svc")
     name = logos.first.get_attribute("aria-label")
     assert name and name.split(" · ")[0] not in logos.first.inner_text()  # no name written out
-    logos.first.focus()
-    assert page.evaluate("document.activeElement.classList.contains('svc')")
-    expect(page.locator(".tip")).to_be_visible()  # keyboard focus shows the name
+    # Bootstrap moves the focus to the dialog once it has faded in (late on a slow machine):
+    # focus the logo until it sticks.
+    shown = "() => { const s = document.querySelector('#film-more .svc');"
+    shown += " if (document.activeElement !== s) s.focus();"
+    shown += " const t = document.querySelector('.tip'); return t && !t.hidden; }"
+    page.wait_for_function(shown, polling=500, timeout=8000)  # keyboard focus shows the name
+    expect(page.locator(".tip")).to_have_text(name)
     expect(page.locator(".tip")).to_have_text(name)
     if logos.count() > 1:
         logos.nth(1).focus()

@@ -79,7 +79,8 @@ def test_free_labels_follow_the_country(app_server, page):
     expect = playwright_api.expect
     page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("article.film").first).to_be_visible(timeout=15000)
-    assert "Arte" in free_tagged(page) and "BBC iPlayer" not in free_tagged(page)
+    assert wait_until(lambda: "Arte" in free_tagged(page))  # the services list is drawn after load
+    assert "BBC iPlayer" not in free_tagged(page)
     # A country switch saves the country and scans without reloading the page; the labels follow.
     requests: list[str] = []
     page.on("request", lambda request: requests.append(f"{request.method} {request.url}"))
