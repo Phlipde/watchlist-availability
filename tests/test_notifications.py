@@ -1,6 +1,7 @@
 """Tests for the notifications: what is sent, when, and how often."""
 
 import datetime
+import json
 import time
 
 import pytest
@@ -148,6 +149,6 @@ def test_settings_are_checked_and_the_token_stays_out_of_backups(store, settings
     settings.update({"notify_token": "secret"})
     assert settings.notify_token == "secret" and settings.as_dict()["notify_token_set"] is True
     assert "secret" not in str(settings.as_dict())
-    assert "notify_token" not in store.export_backup()["settings"]
+    assert "notify_token" not in json.dumps(store.export_backup())
     settings.update({"notify_token": "-"})
     assert settings.notify_token == ""

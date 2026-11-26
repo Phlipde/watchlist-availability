@@ -135,11 +135,12 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
             return jsonify({"error": "Choose a backup file."}), 400
         try:
             backup = json.loads(uploaded.read().decode("utf-8"))
-            counts = store.import_backup(backup)
+            # A version 1 file goes into profile 1 until the active profile arrives (M1.2).
+            counts = store.import_backup(backup, target_profile=1)
         except (UnicodeDecodeError, ValueError) as exc:
             message = str(exc) if "backup" in str(exc) else "The file is not valid JSON."
             return jsonify({"error": message}), 400
-        restored, skipped = settings.restore(backup.get("settings"))
+        restored, skipped = settings.restore_backup(backup, target_profile=1)
         counts["settings"] = restored
         counts["skipped"] += skipped
         return jsonify({"ok": True, "imported": counts})

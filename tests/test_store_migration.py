@@ -303,16 +303,29 @@ class TestMigrationOfProfileSettings:
         rows = _v1_database(path)
         store = Store(path)
         expected = {key: value for key, value in rows["settings"] if key not in INTERNAL_SETTINGS}
-        assert store.export_backup()["settings"] == expected
+        backup = store.export_backup()
+        assert {**backup["settings"], **backup["profiles"][0]["settings"]} == expected
         assert "notify_token" not in expected and "notify_state" not in expected
 
-    def test_an_old_backup_restores_into_profile_1(self, tmp_path):
+    def test_a_used_profile_1_is_not_taken_over_by_a_backup(self, tmp_path):
+        path = tmp_path / "old.sqlite3"
+        _v1_database(path)
+        backup = json.loads(json.dumps(Store(path).export_backup()))
+        fresh = Store(tmp_path / "fresh.sqlite3")
+        fresh.add_favorite({"key": "x|2000", "title": "X", "year": 2000})
+        fresh.import_backup(backup)
+        assert fresh.find_profile("Me") == 1 and fresh.find_profile("anna") == 2
+
+    def test_a_migrated_database_backup_restores_by_profile_name(self, tmp_path):
         path = tmp_path / "old.sqlite3"
         _v1_database(path)
         backup = json.loads(json.dumps(Store(path).export_backup()))
         fresh = Store(tmp_path / "fresh.sqlite3")
         fresh.import_backup(backup)
-        AppSettings(fresh, Settings("key", None, "GB", tmp_path)).restore(backup["settings"])
+        AppSettings(fresh, Settings("key", None, "GB", tmp_path)).restore_backup(backup)
+        # A fresh install has only an empty "Me": the backup's person takes over profile 1.
+        assert fresh.find_profile("anna") == 1 and fresh.find_profile("Me") is None
+        assert len(fresh.list_favorites()) == len(Store(path).list_favorites())
         personal = dict(fresh._read("SELECT key, value FROM profile_settings WHERE profile_id = 1"))
         assert personal["country"] == "DE" and personal["letterboxd_username"] == "anna"
         assert json.loads(personal["subscriptions:DE"]) == ["Netflix"]

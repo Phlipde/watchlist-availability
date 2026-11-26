@@ -254,3 +254,24 @@ def clean_match(data) -> dict | None:
         "title": text(data.get("title")),
         "year": year(data.get("year")),
     }
+
+
+MAX_PROFILE_NAME = 60
+MAX_EMAIL = 254
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def clean_profile(data) -> dict | None:
+    """A profile from a backup: a trimmed name of 1 to 60 printable characters, an optional e-mail.
+
+    A longer name is refused, not cut: two cut names could fall together into one profile.
+    An e-mail address that does not look like one is dropped.
+    """
+    if not isinstance(data, dict) or not isinstance(data.get("name"), str):
+        return None
+    name = data["name"].strip()
+    if not name or len(name) > MAX_PROFILE_NAME or not name.isprintable():
+        return None
+    email = data["email"].strip() if isinstance(data.get("email"), str) else ""
+    valid = len(email) <= MAX_EMAIL and _EMAIL_RE.match(email)
+    return {"name": name, "email": email if valid else None}

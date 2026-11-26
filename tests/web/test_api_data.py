@@ -235,7 +235,7 @@ class TestFlags:
         store.set_flag("2", "not_now", time.time() + 3600)
         store.set_flag("3", "not_now", time.time() - 10)  # over: no longer listed
         backup = client.get("/api/backup").get_json()
-        assert sorted(item["key"] for item in backup["flags"]) == ["1", "2"]
+        assert sorted(item["key"] for item in backup["profiles"][0]["flags"]) == ["1", "2"]
         store.clear_flag("1")
         store.clear_flag("2")
         upload = {"backup": (io.BytesIO(json.dumps(backup).encode()), "backup.json")}

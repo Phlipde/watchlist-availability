@@ -30,7 +30,7 @@ __all__ = [
 # The mixins read these through this module at call time (tests change them).
 MAX_SCANS = 30  # per country
 MAX_JOBS = 100
-BACKUP_VERSION = 1
+BACKUP_VERSION = 2  # 2: several profiles; import_backup still reads version 1
 
 
 class Store(BackupStore):

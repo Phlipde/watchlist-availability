@@ -166,10 +166,12 @@ class TestBackup:
         self._fill(store)
         backup = store.export_backup()
         assert backup["version"] == store_module.BACKUP_VERSION
-        assert backup["settings"] == {"country": "GB"}
-        assert backup["favorites"][0]["notes"] == "n"
-        assert backup["changes"][0]["provider"] == "Arte"
-        assert sorted((scan["country"], scan["created"]) for scan in backup["scans"]) == [
+        assert backup["settings"] == {}  # global settings; "country" belongs to the profile
+        (profile,) = backup["profiles"]
+        assert (profile["name"], profile["email"], profile["settings"]) == ("Me", None, {"country": "GB"})
+        assert profile["favorites"][0]["notes"] == "n"
+        assert profile["changes"][0]["provider"] == "Arte"
+        assert sorted((scan["country"], scan["created"]) for scan in profile["scans"]) == [
             ("DE", 20.0),
             ("GB", 30.0),
         ]

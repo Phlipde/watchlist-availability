@@ -2,7 +2,7 @@
 
 import json
 
-from . import config, costs, providers
+from . import config, costs, providers, validation
 from .store import REGIONS_SETTING, Store
 from .store_schema import is_profile_setting
 
@@ -204,6 +204,30 @@ class AppSettings:
                 restored += 1
             except (ValueError, TypeError):
                 skipped += 1
+        return restored, skipped
+
+    def restore_backup(self, backup: dict, target_profile: int = 1) -> tuple[int, int]:
+        """The settings of a backup that Store.import_backup has read. Returns (restored, skipped).
+
+        Version 1 holds one person: all of it goes into target_profile. Version 2 holds the global
+        settings plus each profile's own, matched by name (import_backup has created missing ones).
+        Each part only restores the keys that belong there.
+        """
+        if backup.get("version") == 1:
+            return AppSettings(self._store, self._defaults, target_profile).restore(backup.get("settings"))
+        parts: list[tuple[int, object, bool]] = [(self.profile_id, backup.get("settings"), False)]
+        for entry in backup.get("profiles") or []:
+            profile = validation.clean_profile(entry)
+            profile_id = self._store.find_profile(profile["name"]) if profile else None
+            if profile_id is not None:
+                parts.append((profile_id, entry.get("settings"), True))
+        restored = skipped = 0
+        for profile_id, stored, personal in parts:
+            if not isinstance(stored, dict):
+                continue
+            mine = {key: value for key, value in stored.items() if is_profile_setting(str(key)) == personal}
+            counts = AppSettings(self._store, self._defaults, profile_id).restore(mine)
+            restored, skipped = restored + counts[0], skipped + counts[1]
         return restored, skipped
 
     def update(self, changes: dict) -> None:
