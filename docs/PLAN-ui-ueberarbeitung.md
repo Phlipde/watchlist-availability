@@ -1,4 +1,4 @@
-# Später: UI-Überarbeitung (Auftrag vom 26.11.2026, noch nicht begonnen)
+# UI-Überarbeitung (Auftrag vom 26.11.2026, erledigt am 26.11.2026)
 
 Vom Nutzer zum Merken gegeben. Erst angehen, wenn er es sagt.
 
@@ -84,3 +84,13 @@ Create a task list from the subtasks below and work through them in order. After
 - "No mark as seen": die App hat "Hide" (Flag `watched`) und "Not now"; das ist Ausblenden, kein Loggen. Vor dem Start klären, ob das bleiben darf.
 - "Names only in tooltip": die Kosten-/Abo-Seiten und die Stats-Seite schreiben Dienstnamen in Tabellen aus; klären, ob die Regel nur für Karten/Details gilt. Die Stats-Seite sollte bisher nicht angefasst werden.
 - "Grays tinted slightly blue": die heutige Palette ist leicht grün getönt (OKLCH-Hue ~160); das wäre eine sichtbare Änderung.
+
+## Ergebnis (26.11.2026)
+Schritte 1-9 erledigt, je ein Commit (`dc2a0aa` bis zur Abschlussprüfung). Bewusst anders als die Regeln:
+- Suchfeld in der Filterleiste: Lupe statt sichtbarer Beschriftung (die Leiste bleibt einzeilig).
+- Die Dienstauswahl im Filter ("Services") listet Namen mit Häkchen: zum Suchen und Wiedererkennen nötig, viele Dienste haben kein Logo.
+- Der Hauptbutton in den Details nennt den Dienst ("Watch on Prime Video"): beschreibende Beschriftung geht vor.
+- Das Detailfenster gleitet weiter von der Seite herein statt aus scale .97; die Akkordeons animieren ihre Höhe (interpolate-size).
+- Beim Herz blendet nur das neue Symbol unscharf ein (die Karte wird neu gezeichnet, das alte Symbol ist dann schon weg).
+- mix-blend-mode für weiße Poster entfällt: die App ist nur dunkel.
+- Stats-Seite nicht angefasst; sie erbt nur die globalen Tokens (Grautöne, h3).

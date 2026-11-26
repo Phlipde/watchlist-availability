@@ -248,3 +248,6 @@ input[type=search]:not(#svc-q) { padding-left: 32px; background-image: url("data
 :is(.other-services, details.unavailable, .offer-buy)::details-content { height: 0; overflow: clip; transition: height .2s ease-out, content-visibility .2s allow-discrete; }
 :is(.other-services, details.unavailable, .offer-buy)[open]::details-content { height: auto; }
 @media (prefers-reduced-motion: reduce) { ::details-content { transition: none !important; } }  /* * does not reach this pseudo-element */
+
+/* Touch: every tap target at least 44 px (the collapsed result panels, the Buy group, the card's logo stack). */
+@media (pointer: coarse) { details.unavailable > summary, .offer-buy > summary { display: flex; align-items: center; min-height: 44px; } .lstack-toggle { min-width: 44px; } }
