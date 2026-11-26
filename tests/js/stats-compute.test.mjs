@@ -89,3 +89,16 @@ test('"Only here" counts the same films as on Subscriptions (shared case with te
     assert.equal(result.serviceValue.find(item => item.group === group).onlyHere, count, group);
   }
 });
+
+test('recent changes: one event per film, service and day (channels and plans are one service)', async () => {
+  const {oneChangePerService} = await import('../../static/js/stats-compute.js');
+  const at = Date.UTC(2026, 10, 20, 10) / 1000;
+  const change = (film_key, title, provider, created = at) => ({film_key, title, provider, change: 'added', created});
+  const events = oneChangePerService([
+    change('4638', 'Hot Fuzz', 'RTL+ Max Amazon Channel'), change('4638', 'Hot Fuzz', 'RTL+'),
+    change('522627', 'The Gentlemen', 'Filmtastic Amazon Channel'), change('522627', 'The Gentlemen', 'Filmtastic'),
+    change('4638', 'Hot Fuzz', 'RTL+', at - 2 * 86400),  // another day: its own event
+  ]);
+  assert.deepEqual(events.map(event => `${event.title} · ${event.provider}`),
+    ['Hot Fuzz · RTL+', 'The Gentlemen · Filmtastic', 'Hot Fuzz · RTL+']);
+});

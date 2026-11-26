@@ -26,6 +26,19 @@ const watchableGroups = offers => [...offers].filter(([, entry]) => WATCH.some(k
 const lostOnCancel = (offers, group, ownGroups) => [...offers].every(([other, entry]) => other === group
   || !(['free', 'ads'].some(kind => entry.kinds.has(kind)) || (ownGroups.has(other) && entry.kinds.has('flatrate'))));
 
+// Newest first, one event per film, service and day: "Hot Fuzz new on RTL+ Max Amazon Channel" and "... on RTL+"
+// are one service (serviceGroup), shown under the group's name.
+export function oneChangePerService(changes) {
+  const seen = new Set();
+  return [...changes].sort((a, b) => b.created - a.created).flatMap(change => {
+    const provider = serviceGroup(change.provider);
+    const key = [change.film_key, change.change, provider, new Date(change.created * 1000).toISOString().slice(0, 10)].join('|');
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [{...change, provider}];
+  });
+}
+
 // computeStats(scan, {subscriptions, prices, favorites, now}) -> watchlistStats plus the decision numbers of the plan.
 // prices: {service: monthly price}; without a price nothing about money is returned for that service.
 export function computeStats(scan, {subscriptions = [], prices = {}, favorites = [], now = Date.now() / 1000} = {}) {
@@ -99,7 +112,7 @@ export function computeStats(scan, {subscriptions = [], prices = {}, favorites =
     ...base,
     runtimeHistogram: {bins: histogram(runtimes, runtimeBins), average: average(runtimes)},
     ratingHistogram: {bins: histogram(ratings, ratingBins), average: average(ratings)},
-    recentChanges: [...(scan.changes || [])].sort((a, b) => b.created - a.created).slice(0, 10),
+    recentChanges: oneChangePerService(scan.changes || []).slice(0, 10),
     availabilityBreakdown,
     hoursAvailableNow,
     serviceValue,
