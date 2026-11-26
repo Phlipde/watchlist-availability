@@ -76,3 +76,18 @@ test('a series: oldest first, parts with no date or year last, and only released
   assert.equal(isReleased({year: 2026, release_date: '2026-12-25'}, '2026-11-22'), false);
   assert.equal(isReleased({year: 2026, release_date: '2026-03-01'}, '2026-11-22'), true);
 });
+
+test('an unreleased film: no TMDB 0.0, and the main button says when it is in cinemas', async () => {
+  const {primaryAction, drawerHtml, sourceText, catalogRows} = await import('../../static/js/drawer.js');
+  const own = new Set(['Netflix']);
+  const soon = {title: 'Avatar 4', providers: {}, cinema_date: '2027-06-30', rating: 0};
+  const action = primaryAction(soon, own, 'DE', 'Germany', '2026-11-24');
+  assert.equal(action.text, 'In cinemas 30.06.2027');
+  assert.ok(action.disabled);
+  assert.equal(primaryAction({title: 'X', providers: {}}, own, 'DE', 'Germany', '2026-11-24').text, 'Not streaming in Germany');
+  assert.match(sourceText('DE', Date.UTC(2026, 10, 22, 12, 0) / 1000), /^Source: TMDB \(JustWatch data\), DE, as of 22\.11\.2026 \d\d:\d\d$/);
+  assert.equal(sourceText('DE', 0), 'Source: TMDB (JustWatch data), DE');
+  // The same catalogue under two names is one row.
+  const rows = catalogRows({'Prime Video': ['flatrate'], 'Amazon Prime Video with Ads': ['flatrate'], 'MUBI Amazon Channel': ['flatrate'], MUBI: ['flatrate']}, own)[0].rows;
+  assert.deepEqual(rows.map(row => row.name), ['MUBI', 'Prime Video']);
+});

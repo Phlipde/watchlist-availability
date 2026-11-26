@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from tests.helpers import API_KEY, BUNDLE
+from tests.helpers import API_KEY, BUNDLE, know_services
 from tests.test_letterboxd import make_zip
 from watchlist_app import cli, config, letterboxd, tmdb
 from watchlist_app.models import WatchlistEntry
@@ -108,6 +108,7 @@ class TestMain:
         from watchlist_app.store import Store
 
         store = Store(tmp_path / "data" / ".watchlist.sqlite3")
+        know_services(store)
         AppSettings(store).update({"country": "GB", "subscriptions": ["MUBI"]})
         store.close()
         monkeypatch.setattr(config, "LETTERBOXD_USERNAME", None)
@@ -130,6 +131,11 @@ class TestMain:
             cli.main()
 
     def _run_main(self, monkeypatch, tmp_path, search):
+        from watchlist_app.store import Store
+
+        store = Store(tmp_path / "data" / ".watchlist.sqlite3")
+        know_services(store)
+        store.close()
         monkeypatch.setattr(config, "LETTERBOXD_USERNAME", None)
         csv = tmp_path / "watchlist-2024-01-01.csv"
         csv.write_text("Name,Year\nInception,2010\n")

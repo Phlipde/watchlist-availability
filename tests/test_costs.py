@@ -32,12 +32,10 @@ class TestOverview:
 
     def test_free_services_form_a_block_and_the_table_is_sorted_by_what_cancelling_loses(self):
         result = costs.overview(FILMS, ["MUBI", "Arte", "Netflix", "ZDF"], {})
-        assert [item["name"] for item in result["services"]] == [
-            "Netflix",
-            "MUBI",
-        ]  # Netflix: Alien is only there
+        # Netflix: Alien is only there. ZDF has no film and no price: an empty free service, no cancel advice.
+        assert [item["name"] for item in result["services"]] == ["Netflix", "MUBI"]
         assert result["free_block"] == [{"name": "Arte", "films": 1}]
-        assert (result["free_empty"], result["free_films"]) == (1, 1)  # ZDF has no film
+        assert (result["free_empty"], result["free_films"]) == (1, 1)
 
     def test_hours_and_price_per_only_here_film_and_year(self):
         films = [{**FILMS[1], "runtime": 90}, {**FILMS[0], "runtime": 120}]
@@ -294,3 +292,11 @@ def test_the_end_date_is_validated_and_kept():
     assert cleaned["Netflix"]["ends_on"] == "2026-12-01"
     with pytest.raises(ValueError, match="end date"):
         costs.clean_costs({"Netflix": {"ends_on": "soon"}}, {"Netflix"})
+
+
+def test_an_own_service_without_films_and_price_is_not_suggested_for_cancelling():
+    # ZDF: no film in this scan and no price: no paid row, no cancel advice, an empty free service.
+    films = [film("A", Netflix=["flatrate"])]
+    result = costs.overview(films, ["Netflix", "ZDF"], {"Netflix": {"price": 9.99}})
+    assert [item["name"] for item in result["services"]] == ["Netflix"]
+    assert result["free_empty"] == 1

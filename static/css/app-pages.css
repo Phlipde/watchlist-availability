@@ -1,0 +1,311 @@
+/* Settings and status pages */
+main.page { max-width: 980px; }
+main.page a { color: var(--accent); }
+.page-title { font-size: 1.5rem; margin: 18px 0 14px; }
+.settings-section { border: 1px solid var(--line); background: var(--panel); border-radius: .375rem; padding: 18px 20px; margin-bottom: 18px; }
+.settings-section .form-label { margin-top: 12px; }
+.settings-section .form-control { max-width: 360px; }
+.hint { color: var(--muted); font: var(--fs-body) system-ui, sans-serif; margin: 6px 0 0; }
+.settings-group { border-top: 1px solid var(--line); padding: 10px 0; }
+.settings-group summary { cursor: pointer; font-weight: 600; }
+.settings-providers { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 4px 12px; margin-top: 8px; font: var(--fs-body) system-ui, sans-serif; }
+.status-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+.table-scroll { overflow-x: auto; }
+.status-table { width: 100%; border-collapse: collapse; font: var(--fs-body) system-ui, sans-serif; }
+.status-table th, .status-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.status-table th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+.subscriptions-table .service-name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.subscriptions-table input { min-width: 120px; }
+/* On a phone each service is a block of label and value rows instead of a 620px wide table. */
+@media (max-width: 640px) {
+  .subscriptions-table thead { display: none; }
+  .subscriptions-table, .subscriptions-table tbody, .subscriptions-table tfoot, .subscriptions-table tr { display: block; }
+  .subscriptions-table tr { border-bottom: 1px solid var(--line); padding: 8px 0; }
+  .subscriptions-table td, .subscriptions-table th { display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 0; padding: 4px 0; }
+  .subscriptions-table td[data-label]::before, .subscriptions-table th[data-label]::before { content: attr(data-label); color: var(--muted); }
+  .subscriptions-table td.service-name { justify-content: flex-start; }
+  .subscriptions-table tfoot th:empty { display: none; }
+  .subscriptions-table input { max-width: 170px; }
+}
+.change-list { margin: 6px 0 0; padding-left: 18px; font: var(--fs-body) system-ui, sans-serif; }
+
+/* Title matches page */
+.match-list { list-style: none; padding: 0; margin: 18px 0 0; }
+.match-row { border: 1px solid var(--line); background: var(--panel); border-radius: .375rem; padding: 12px 14px; margin-bottom: 10px; font: var(--fs-body) system-ui, sans-serif; }
+.match-row.match-saved { border-color: var(--accent); }
+.match-main { display: grid; grid-template-columns: 46px 1fr auto; gap: 14px; align-items: center; }
+.match-poster { width: 46px; height: 69px; object-fit: cover; border-radius: 3px; background: oklch(21.2% 0.008 255); display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.match-text { display: flex; flex-direction: column; gap: 3px; }
+.match-reason { align-self: flex-start; }
+.match-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.match-correction { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+.match-search { display: flex; gap: 8px; margin-bottom: 10px; max-width: 620px; }
+.match-search .match-year { max-width: 100px; }
+.candidate-list { list-style: none; padding: 0; margin: 0 0 12px; }
+.candidate { display: grid; grid-template-columns: 46px 1fr auto; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.candidate-overview { color: var(--muted); font-size: var(--fs-body); margin: 2px 0 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.candidate-actions { display: flex; gap: 6px; }
+@media (max-width: 640px) {
+  .match-main, .candidate { grid-template-columns: 46px 1fr; }
+  .match-actions, .candidate-actions { grid-column: 1 / -1; justify-content: flex-start; }
+}
+.match-search .btn { flex: none; white-space: nowrap; }
+
+/* Touch screens: controls at least 44px high. */
+@media (pointer: coarse) {
+  .filter-chip, .favorite-status, .favorite-note, .btn, .country-select, #film-search, #match-mode, .filter-button, .segmented label { min-height: 44px; }
+  .page-nav a { justify-content: center; min-height: 44px; }
+  .favorite { width: 44px; height: 44px; }
+  .stats-details > summary, .feedback > summary { padding-block: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+  /* No spinning with reduced motion, but a running scan still shows: the ring fades in and out. */
+  .sync-toggle[data-state="running"] .sync-dot { animation: sync-pulse 1.6s ease-in-out infinite !important; }
+}
+/* Stats page: tiles for headline numbers, one-colour bar lists with the value next to each bar. */
+main.stats-page { max-width: 1440px; }
+.stat-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 20px 0 28px; }
+.stat-tile { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--line-card); border-radius: .5rem; background: var(--surface); }
+.stat-tile strong { font: 600 1.5rem/1.2 system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.stat-tile span { color: var(--muted); font: var(--fs-body) system-ui, sans-serif; }
+.stat-tile small { color: var(--muted); font: var(--fs-small) system-ui, sans-serif; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; align-items: start; }
+.stats-card { padding: 16px; border: 1px solid var(--line-card); border-radius: .5rem; background: var(--surface); }
+.stats-card h2 { margin: 0 0 10px; padding: 0; border: 0; font: 600 var(--fs-text) system-ui, sans-serif; }
+.stats-card .hint { margin: -4px 0 10px; font-size: var(--fs-small); }
+.bars { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; font: var(--fs-body) system-ui, sans-serif; }
+.bars li { display: grid; grid-template-columns: minmax(0, 9rem) 1fr 3ch; gap: 8px; align-items: center; }
+.bar-label { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.bar-track { height: 8px; border-radius: 4px; background: rgb(255 255 255 / .06); }
+.bar-track.inline { display: inline-block; width: 64px; margin-right: 8px; vertical-align: middle; }
+.bar { display: block; height: 100%; border-radius: 0 4px 4px 0; background: oklch(72% 0.090 165); }
+.bar-value { text-align: right; font-variant-numeric: tabular-nums; }
+.bars-more { margin-top: 8px; }
+.bars-more > summary { color: var(--accent); font: var(--fs-small) system-ui, sans-serif; cursor: pointer; }
+.bars-more > .bars, .bars-more > .table-scroll { margin-top: 8px; }
+.stats-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stats-table tr.own-service th { color: var(--ink); }
+.stats-films { margin: 0; padding-left: 1.4rem; font: var(--fs-body) system-ui, sans-serif; }
+.stats-films li + li { margin-top: 4px; }
+.muted { color: var(--muted); }
+.stats-link { margin: 24px 0 0; }
+
+/* Settings -> My services: a plain list, one row per service. */
+.service-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 2px 16px; margin: 8px 0 0; padding: 0; list-style: none; }
+.service-row { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 2px 6px; border-radius: .375rem; font: var(--fs-body) system-ui, sans-serif; cursor: pointer; }
+.service-row:hover { background: rgb(255 255 255 / .05); }
+.service-row .provider-logo { width: 24px; height: 24px; flex: none; border-radius: 4px; }
+.service-row .service-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.toast-bar { position: fixed; left: 50%; bottom: 24px; z-index: 1080; display: flex; align-items: center; gap: 14px; padding: 10px 16px; transform: translateX(-50%); background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: .5rem; box-shadow: var(--shadow-raised); font: var(--fs-body) system-ui, sans-serif; }
+@media (max-width: 800px) { .toast-bar { bottom: calc(76px + env(safe-area-inset-bottom)); } }
+
+/* Subscriptions: one table, 56px rows, numbers on the right, explanations in a tooltip. */
+.subscriptions-table td, .subscriptions-table th { vertical-align: middle; }
+.subscriptions-table tbody td { height: 56px; }
+.subscriptions-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.subscriptions-table .price-input { width: 110px; margin-left: auto; text-align: right; }
+.sort-head { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.sort-head[aria-sort="descending"]::after { content: " ↓"; }
+.sort-head[aria-sort="ascending"]::after { content: " ↑"; }
+.sort-head:hover { color: var(--ink); }
+.sort-head:focus-visible, .date-button:focus-visible, .info:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.info { display: inline-flex; vertical-align: middle; color: var(--muted); cursor: help; }
+.date-button { padding: 4px 8px; border: 1px solid transparent; border-radius: .375rem; background: transparent; color: var(--ink); font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; }
+.date-button:hover { border-color: var(--line-field); }
+.date-button.is-soon { color: oklch(72% 0.150 28); font-weight: 600; }
+.date-input { position: absolute; }
+.subscriptions-table tfoot th, .subscriptions-table tfoot td { border-bottom: 0; padding-top: 14px; }
+.totals { margin-left: 10px; font-weight: 400; color: var(--ink); font-variant-numeric: tabular-nums; }
+.only-here summary { cursor: pointer; }
+.only-here ul { margin: 6px 0 0; padding: 0; list-style: none; text-align: left; color: var(--muted); }
+.free-block { margin-top: 24px; }
+.chip-list { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.static-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 12px; border: 1px solid var(--line-field); border-radius: 999px; font: var(--fs-body) system-ui, sans-serif; }
+@media (max-width: 640px) { .subscriptions-table .price-input { margin-left: 0; } .subscriptions-table .info { display: none; } }
+
+/* The film details: a drawer from the right (a sheet from the bottom on a phone); the page stays visible behind it. */
+#film-details-modal .modal-dialog { position: fixed; top: 0; right: 0; bottom: 0; width: 480px; max-width: 100%; height: 100%; margin: 0; transform: translateX(100%); transition: transform .22s ease; }
+#film-details-modal.show .modal-dialog { transform: none; }
+#film-details-modal .modal-content { height: 100%; border-radius: 0; border-width: 0 0 0 1px; }
+body:has(#film-details-modal.show) .modal-backdrop.show { opacity: .4; }
+.drawer-nav { display: flex; gap: 2px; margin-left: auto; margin-right: 6px; }
+.drawer-step { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: .375rem; background: transparent; color: var(--ink); font-size: 1.25rem; cursor: pointer; }
+.drawer-step:hover { background: rgb(255 255 255 / .08); }
+.drawer-step:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 800px) {
+  #film-details-modal .modal-dialog { top: 0; width: 100%; height: 100dvh; transform: translateY(100%); transition: transform .3s cubic-bezier(.2, .8, .2, 1); will-change: transform; }
+  #film-details-modal.show .modal-dialog { transform: translateY(20dvh); }
+  #film-details-modal.show.is-full .modal-dialog { transform: none; }
+  /* The lower 20 % is off screen at first: pad the body so that scrolling is always possible (and expands the sheet). */
+  #film-details-modal:not(.is-full) .modal-body { padding-bottom: 20dvh; }
+  #film-details-modal .modal-content { border-radius: 12px 12px 0 0; border-width: 1px 0 0; }
+}
+@media (prefers-reduced-motion: reduce) { #film-details-modal .modal-dialog { transition: none; } }
+
+/* The "..." menu on a card: sits above the stretched title link, next to the heart. */
+@media (pointer: coarse) { .card-more { width: 44px; height: 44px; } .card-menu-items button { min-height: 44px; } }
+
+/* The list of shortcuts (a native dialog: focus trap and Escape come with it). */
+.shortcuts { width: min(440px, 92vw); padding: 20px; border: 1px solid var(--line-strong); border-radius: .75rem; background: var(--surface-raised); color: var(--ink); }
+.shortcuts::backdrop { background: rgb(0 0 0 / .55); }
+.shortcuts h2 { margin: 0 0 12px; font-size: 1.125rem; }
+.shortcuts dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0 0 16px; font: var(--fs-body) system-ui, sans-serif; }
+.shortcuts dt { white-space: nowrap; }
+.shortcuts dd { margin: 0; color: var(--muted); }
+kbd { padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--panel); color: var(--ink); font: var(--fs-small) ui-monospace, monospace; }
+
+/* A renewal date within a week; recommendation cards with their numbers and actions. */
+.deadline-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 0 0 16px; padding: 10px 14px; border: 1px solid color-mix(in oklch, var(--accent) 40%, var(--line)); border-radius: .5rem; background: color-mix(in oklch, var(--accent) 10%, var(--surface)); font: var(--fs-body) system-ui, sans-serif; }
+.deadline-banner[hidden] { display: none; }
+.deadline-banner p { margin: 0; }
+.banner-actions, .rec-actions { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.recs { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin: 8px 0 10px; }
+.rec { padding: 14px 16px; border: 1px solid var(--line); border-radius: .5rem; background: var(--surface); font: var(--fs-body) system-ui, sans-serif; }
+.rec[hidden] { display: none; }
+.rec h3 { margin: 0 0 6px; font-size: 1rem; text-transform: none; letter-spacing: 0; }
+.rec p { margin: 0 0 6px; }
+.rec .hint { margin: 0 0 8px; }
+.recs + .hint { margin-bottom: 18px; }
+
+/* Coverage of the watchlist: one bar in four parts. */
+.coverage { margin: 4px 0 18px; font: var(--fs-body) system-ui, sans-serif; }
+.coverage-text { margin: 0 0 8px; }
+.coverage-bar { display: flex; gap: 2px; height: 12px; overflow: hidden; border-radius: 999px; background: var(--line); }
+.coverage-bar .seg { display: block; min-width: 4px; }
+.seg-subscription { background: var(--accent); }
+.seg-free { background: oklch(70% 0.12 160); }
+.seg-rent { background: oklch(66% 0.07 250); }
+.seg-other { background: oklch(40% 0.010 255); }
+.coverage-bar .seg:hover, .coverage-bar .seg:focus-visible { filter: brightness(1.2); outline: none; }
+.coverage-key { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: var(--fs-small); }
+.key-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; }
+.cost-line { margin: 8px 0 0; font-variant-numeric: tabular-nums; }
+
+/* Only to rent: a row of small posters. */
+.rent-row { margin-top: 28px; }
+.rent-head { display: flex; align-items: baseline; justify-content: space-between; }
+.rent-track { display: flex; gap: 12px; margin: 8px 0 0; padding: 0 0 8px; overflow-x: auto; list-style: none; scroll-snap-type: x proximity; mask: linear-gradient(90deg, transparent, black 2% 96%, transparent); }
+.rent-track li { flex: 0 0 96px; scroll-snap-align: start; }
+.rent-track a { display: grid; gap: 4px; color: var(--ink); text-decoration: none; }
+.rent-track img, .rent-track .no-poster { width: 96px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .375rem; background: var(--panel); }
+.rent-title { color: var(--muted); font: var(--fs-small) system-ui, sans-serif; overflow-wrap: anywhere; }
+.rent-track a:hover .rent-title, .rent-track a:focus-visible .rent-title { color: var(--ink); }
+.rent-track a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Touch: every control a finger can hit is at least 44px; plain text links get a 44px-high line. */
+@media (pointer: coarse) {
+  #result-tools .btn, #result-tools .form-select, .tonight-controls .btn, .tonight-controls .form-select, .sync-toggle, .quick-chip, .chip, .view-tab, .drawer-step, .sheet-close { min-height: 44px; }
+  .sync-toggle, .drawer-step { min-width: 44px; justify-content: center; }
+  .rec-actions .film-link, .banner-actions .film-link, .rent-head .film-link, .film-row-head .film-link, .services-group-head .film-link, .toast-bar .film-link, .cost-line .film-link { display: inline-flex; align-items: center; min-height: 44px; }
+  .settings-group > summary, .bars-more > summary, .only-here summary, .stats-details > summary { display: flex; align-items: center; min-height: 44px; }
+  .service-row { min-height: 44px; }
+  .coverage-bar .seg { position: relative; }
+  .coverage-bar .seg::after { content: ""; position: absolute; inset: -16px 0; }
+  .settings-nav a { display: inline-flex; align-items: center; min-height: 44px; }
+  .price-input, .date-button { min-height: 44px; }
+  .view-tab { min-width: 44px; }
+}
+
+/* One service's drawer (a native dialog): right on desktop, a sheet from the bottom on a phone. */
+.service-open { display: inline-flex; align-items: center; gap: 8px; padding: 4px 6px; border: 0; border-radius: .375rem; background: transparent; color: var(--ink); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.service-open:hover { background: rgb(255 255 255 / .06); }
+.service-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fav-count { color: var(--accent); font-size: var(--fs-small); white-space: nowrap; }
+dialog.side-drawer { position: fixed; inset: 0 0 0 auto; width: 480px; max-width: 100%; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; border-left: 1px solid var(--line-strong); background: var(--surface-raised); color: var(--ink); overflow-y: auto; }
+dialog.side-drawer::backdrop { background: rgb(0 0 0 / .4); }
+dialog.side-drawer[open] { animation: drawer-in .22s ease; }
+@keyframes drawer-in { from { transform: translateX(100%); } }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1; padding: 8px 8px 8px 20px; background: var(--surface-raised); border-bottom: 1px solid var(--line); }
+.drawer-head h2 { margin: 0; padding: 0; border: 0; font-size: 1.125rem; }
+.drawer-body { padding: 16px 20px 28px; font: var(--fs-body) system-ui, sans-serif; }
+.drawer-body h3 { margin: 22px 0 8px; color: var(--muted); font: 600 var(--fs-small) system-ui, sans-serif; }
+.figures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0; }
+.figures div { padding: 0; }
+.figures dt { color: var(--muted); font-size: var(--fs-small); font-weight: 400; }
+.figures dd { margin: 2px 0 0; font-size: 1.125rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.poster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.poster-grid a { display: grid; gap: 4px; color: var(--ink); text-decoration: none; font-size: var(--fs-small); }
+.poster-grid img, .poster-grid .no-poster { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .375rem; background: var(--panel); }
+.poster-grid span:not(.no-poster) { color: var(--muted); overflow-wrap: anywhere; }
+.drawer-fields { display: grid; gap: 10px; }
+@media (max-width: 800px) {
+  dialog.side-drawer { inset: auto 0 0 0; width: 100%; height: 88dvh; border: 0; border-top: 1px solid var(--line-strong); border-radius: 12px 12px 0 0; }
+  dialog.side-drawer[open] { animation-name: sheet-in; }
+  @keyframes sheet-in { from { transform: translateY(100%); } }
+}
+@media (prefers-reduced-motion: reduce) { dialog.side-drawer[open] { animation: none; } }
+
+/* The planner: budget, next months, what if. */
+.worth, .planner { margin-top: 28px; font: var(--fs-body) system-ui, sans-serif; }
+.worth-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.planner.is-whatif { padding: 14px; border: 1px dashed var(--accent); border-radius: .5rem; }
+.planner h3 { margin: 18px 0 6px; color: var(--muted); font: 600 var(--fs-small) system-ui, sans-serif; }
+.budget-label { display: block; margin-bottom: 4px; }
+#budget { width: min(420px, 100%); accent-color: var(--accent); }
+.plan-options, .rotation { margin: 8px 0 0; padding-left: 1.2em; }
+.plan-options li, .rotation li { margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+.whatif { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 16px; }
+.whatif-result { margin: 10px 0 0; font-variant-numeric: tabular-nums; }
+.candidate-details { margin-top: 10px; }
+.candidate-details > summary { cursor: pointer; color: var(--muted); }
+.price-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px 12px; margin-top: 10px; }
+.overlap { margin-top: 18px; }
+.overlap > summary { cursor: pointer; color: var(--muted); }
+.overlap-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.overlap-table th[scope=row] { text-align: left; font-weight: 600; white-space: nowrap; }
+
+/* Cards far outside the window are not laid out or painted until they get near (measured: redraw of 168 cards). */
+#results .films > .film { content-visibility: auto; contain-intrinsic-size: auto 400px; }
+
+/* Saved views: chips that open the watchlist with their filters. */
+.saved-views { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; font: var(--fs-small) system-ui, sans-serif; }
+.saved-views[hidden] { display: none; }
+.views-label { color: var(--muted); }
+.saved-view .chip-open { text-decoration: none; }
+.view-form { display: inline-flex; align-items: center; gap: 6px; }
+.view-form input { width: 160px; }
+
+
+/* First start: what to do next, until a user name or a scan exists. */
+.setup { margin: 0 0 18px; padding: 14px 18px; border: 1px solid var(--line-strong); border-radius: .5rem; background: var(--surface); font: var(--fs-body) system-ui, sans-serif; }
+.setup h2 { margin: 0 0 6px; padding: 0; border: 0; font-size: 1.125rem; }
+.setup ol { margin: 0; padding-left: 1.2em; }
+
+/* View switch and the two other views: compact cards show the poster, badge and rating; the title shows on focus or hover. */
+.view-switch { min-height: 36px; }
+.view-switch label { padding: 0 10px; }
+.view-compact .films { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+.view-compact .film .film-info { position: absolute; inset: auto 0 0 0; z-index: 3; min-height: 0; padding: 8px; background: linear-gradient(to top, rgb(0 0 0 / .85), transparent); opacity: 0; transition: opacity .12s; pointer-events: none; }
+.view-compact .film:hover .film-info, .view-compact .film:focus-within .film-info { opacity: 1; }
+.view-compact .film .card-foot, .view-compact .film .year { display: none; }
+.view-compact .film .film-title a { color: #fff; font-size: var(--fs-small); }
+.film-table th[scope=row] { font-weight: 600; text-align: left; }
+.film-table td { color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .view-compact .film .film-info { transition: none; } }
+
+/* The bar for the comparison: fixed at the bottom while films are chosen (above the phone's page bar). */
+.compare-bar { position: fixed; left: 50%; bottom: 20px; z-index: 1060; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 16px; transform: translateX(-50%); background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: 999px; box-shadow: var(--shadow-raised); font: var(--fs-body) system-ui, sans-serif; }
+.compare-bar[hidden] { display: none; }
+@media (max-width: 800px) { .compare-bar { bottom: calc(76px + env(safe-area-inset-bottom)); max-width: calc(100% - 24px); } }
+.compare-modal td.best, #compare-table td.best { color: var(--accent); font-weight: 600; }
+
+/* A failed scan, in plain words above the page. */
+.state-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 0 0 16px; padding: 10px 14px; border: 1px solid oklch(65% 0.17 28); border-radius: .5rem; background: color-mix(in oklch, oklch(65% 0.17 28) 12%, var(--surface)); font: var(--fs-body) system-ui, sans-serif; }
+.state-banner[hidden] { display: none; }
+.state-banner p { margin: 0; }
+.sparkline { display: block; width: 100%; height: 60px; color: var(--accent); }
+
+/* A watched film stays in the grid but steps back; the "Watched" badge says why. */
+.film.is-watched .poster img { opacity: .45; filter: grayscale(.6); }
+
+/* Narrow cards (phone): the logos get their own row at full size; the heart and the menu go below. */
+@media (max-width: 800px) {
+  .card-foot { flex-wrap: wrap; }
+  .services li { flex: none; }
+  .service-logo { width: 28px; height: 28px; flex: none; }
+}
+
+/* "Pick for me" inside the drawer: the reason and a way to roll again. */
+.pick-reason { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; margin: 0 0 12px; font: var(--fs-body) system-ui, sans-serif; color: var(--muted); }
+

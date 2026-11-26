@@ -1,4 +1,5 @@
 // Pure filtering over the film data. No DOM access, so it can be tested with `node --test`.
+import {linkMatches} from './link-filters.js';
 
 export const SECTION_KINDS = {
   Free: ['free', 'ads'],
@@ -56,6 +57,7 @@ function genresMatch(genres, filmGenres = []) {
 // Filters that apply the same way to available and unavailable films.
 function commonMatches(film, filters, context) {
   const key = filmKey(film);
+  if (!linkMatches(film, filters.link, context.availabilityOf)) return false;
   // Films set aside with "Not now" stay away until their date, unless asked for.
   if (!filters.showHidden && context.hiddenKeys?.has(key)) return false;
   const year = Number(film.year) || 0;
@@ -107,6 +109,13 @@ export function comingSoon(films, today) {
     .sort((a, b) => next(a).localeCompare(next(b)) || String(a.title).localeCompare(String(b.title)));
 }
 
+// The one base set: the watchlist is every released, matched film; films whose release is still ahead count apart
+// (same rule as watchlist_app/base.py).
+export function baseCounts(films, unavailable, today) {
+  const coming = comingSoon(unavailable, today).length;
+  return {watchlist: films.length + unavailable.length - coming, available: films.length, notAvailable: unavailable.length - coming, comingSoon: coming};
+}
+
 // Should the film get a card in this section ("Free" or "Paid")?
 export function matchesSection(film, section, filters, context) {
   const providers = sectionProviders(film, section);
@@ -144,7 +153,7 @@ function shuffleRank(key, seed) {
   return hash >>> 0;
 }
 
-// The eight sorts of the filter bar (names in web/routes.py SORTS). context: favorites (Map, for
+// The nine sorts of the filter bar (names in web/routes.py SORTS). context: favorites (Map, for
 // "priority") and seed (number, for "random").
 export function sortFilms(films, order, context = {}) {
   const byTitle = (a, b) => String(a.title).toLowerCase().localeCompare(String(b.title).toLowerCase());
@@ -161,6 +170,8 @@ export function sortFilms(films, order, context = {}) {
     'year-desc': (a, b) => (Number(b.year) || 0) - (Number(a.year) || 0),
     // Position 0 is the film added last.
     recent: (a, b) => (numberOrNull(a.watchlist_position) ?? Infinity) - (numberOrNull(b.watchlist_position) ?? Infinity),
+    // The film that has waited longest (highest position) first.
+    oldest: (a, b) => (numberOrNull(b.watchlist_position) ?? -Infinity) - (numberOrNull(a.watchlist_position) ?? -Infinity),
     new: (a, b) => added(b) - added(a) || letterboxd(a, b),
     random: (a, b) => shuffleRank(filmKey(a), context.seed || 0) - shuffleRank(filmKey(b), context.seed || 0),
   }[order] || (() => 0);
@@ -206,18 +217,6 @@ export function filterFilms(films, unavailable, filters, context) {
   SECTIONS.forEach(section => sections[section].forEach(film => sectionOf.set(filmKey(film), sectionOf.has(filmKey(film)) ? 'All' : section)));
   const merged = new Map(SECTIONS.flatMap(section => sections[section]).map(film => [filmKey(film), film]));
   return {sections, films: sortFilms([...merged.values()], filters.sort, context), sectionOf, unavailable: unavailableMatches, visibleCount: visibleKeys.size};
-}
-
-// Watchlist films TMDB recommends for `film` that run on an own service without extra cost,
-// in TMDB's order. Watched films (`skip`) are left out.
-export function similarOnServices(film, films, subscriptions, skip = new Set(), limit = 5) {
-  const byKey = new Map(films.map(item => [filmKey(item), item]));
-  return [...new Set(film.similar_ids || [])]
-    .map(id => byKey.get(String(id)))
-    .filter(item => item && item !== film && !skip.has(filmKey(item))
-      && Object.entries(item.providers || {}).some(([provider, kinds]) =>
-        subscriptions.has(provider) && kinds.some(kind => ['free', 'ads', 'flatrate'].includes(kind))))
-    .slice(0, limit);
 }
 
 // Other countries where the film runs on one of the user's services without extra cost:

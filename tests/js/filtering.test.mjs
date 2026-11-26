@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
-import {filmKey, bestRelaxation, countVisible, facetCounts, filterFilms, matchesSection, selectedChanges, selectedKinds, similarOnServices, sortFilms, ageMatches, sortRatings, comingSoon, elsewhereOnServices} from '../../static/js/filtering.js';
+import {baseCounts, filmKey, bestRelaxation, countVisible, facetCounts, filterFilms, matchesSection, selectedChanges, selectedKinds, sortFilms, ageMatches, sortRatings, comingSoon, elsewhereOnServices} from '../../static/js/filtering.js';
 
 const baseFilters = {
   query: '', availability: 'all', kind: 'all', minRating: 0, minVotes: 0, genres: {include: [], exclude: []}, keyword: 'all', maxRuntime: 0, mode: 'any',
@@ -166,21 +166,22 @@ test('every set filter gets a chip and reset clears them all', async () => {
   const select = (value, values) => ({value, options: values.map(item => ({value: item, text: `Label ${item}`})), get selectedIndex() { return values.indexOf(this.value); }, dataset: {}});
   const controls = {
     'film-search': {value: 'heat', dataset: {}},
-    'rating-filter': select('tmdb:7', ['', 'tmdb:7']),
+    'tmdb-filter': {value: '7', dataset: {default: '', text: '7+'}},
+    'lb-filter': {value: '', dataset: {default: ''}},
     'cost-filter': {value: 'free', dataset: {default: 'all', text: 'Free'}},
     'media-filter': select('trailer', ['all', 'trailer']),
     'provider-count-filter': select('2', ['0', '2']),
     'change-filter': select('all', ['all', 'added']),
   };
   const doc = {getElementById: id => controls[id] ?? null};
-  assert.equal(FILTER_CONTROLS.length, 17);
-  assert.deepEqual(activeFilters(doc).map(chip => chip.label), ['Search', 'Cost', 'Rating', 'Trailer', 'Services']);
-  assert.equal(activeFilters(doc).find(chip => chip.id === 'rating-filter').text, 'Label tmdb:7');
+  assert.equal(FILTER_CONTROLS.length, 18);
+  assert.deepEqual(activeFilters(doc).map(chip => chip.label), ['Search', 'Cost', 'TMDB', 'Trailer', 'Services']);
+  assert.equal(activeFilters(doc).find(chip => chip.id === 'tmdb-filter').text, '7+');
   // A hidden input behind a custom control carries its readable text and its default.
   assert.equal(activeFilters(doc).find(chip => chip.id === 'cost-filter').text, 'Free');
   resetFilters(doc);
   assert.deepEqual(activeFilters(doc), []);
-  assert.equal(controls['rating-filter'].value, '');
+  assert.equal(controls['tmdb-filter'].value, '');
   assert.equal(controls['cost-filter'].value, 'all');
 });
 
@@ -190,21 +191,6 @@ test('the best value of a comparison row is marked, ties and lone values are not
   assert.deepEqual(bestIndexes([120, 95, 95], 'low'), [1, 2]);
   assert.deepEqual(bestIndexes([2, 2]), []);  // a tie of all: no winner
   assert.deepEqual(bestIndexes([4.1, null]), []);  // one value alone proves nothing
-});
-
-test('similar films: only watchlist films on own services, in TMDB order, not watched', () => {
-  const heat = {key: '949', title: 'Heat', similar_ids: [3, 2, 1, 4, 949], providers: {}};
-  const films = [
-    heat,
-    {key: '1', title: 'One', providers: {Netflix: ['flatrate']}},
-    {key: '2', title: 'Two', providers: {Netflix: ['rent']}},
-    {key: '3', title: 'Three', providers: {Arte: ['free']}},
-    {key: '4', title: 'Four', providers: {Netflix: ['flatrate']}},
-  ];
-  const titles = list => list.map(film => film.title);
-  assert.deepEqual(titles(similarOnServices(heat, films, new Set(['Netflix', 'Arte']))), ['Three', 'One', 'Four']);
-  assert.deepEqual(titles(similarOnServices(heat, films, new Set(['Netflix']), new Set(['1']))), ['Four']);
-  assert.deepEqual(similarOnServices({key: 'x', title: 'Old scan'}, films, new Set(['Netflix'])), []);
 });
 
 test('age rating: up to a number, exact for other systems, unrated films out', () => {
@@ -277,4 +263,43 @@ test('"Number of services: Only 1" is the exclusive filter, the numbers are a mi
   assert.deepEqual([readFilters(doc('only1'), false).exclusive, readFilters(doc('only1'), false).minimumProviders], [true, 0]);
   assert.deepEqual([readFilters(doc('3'), false).exclusive, readFilters(doc('3'), false).minimumProviders], [false, 3]);
   assert.deepEqual([readFilters(doc('0'), false).exclusive, readFilters(doc('0'), false).minimumProviders], [false, 0]);
+});
+
+test('Letterboxd and TMDB minimums work together (AND); a film without a value in a set source drops out', async () => {
+  const {readFilters, ratingFromParams, ratingSummary} = await import('../../static/js/filters.js');
+  const rated = [
+    {key: '1', title: 'Both', letterboxd_rating: 4.2, rating: 7.8, vote_count: 20000, providers: {Netflix: ['flatrate']}},
+    {key: '2', title: 'OnlyLB', letterboxd_rating: 4.0, providers: {Netflix: ['flatrate']}},
+    {key: '3', title: 'OnlyTMDB', rating: 8.1, vote_count: 500, providers: {Netflix: ['flatrate']}},
+    {key: '4', title: 'LowLB', letterboxd_rating: 3.0, rating: 8.0, vote_count: 30000, providers: {Netflix: ['flatrate']}},
+  ];
+  const pick = extra => filterFilms(rated, [], {...baseFilters, ...extra}, {selected: new Set(['Netflix']), favorites: new Map()}).sections.Paid.map(film => film.title).sort();
+  assert.deepEqual(pick({minLetterboxd: 3.5}), ['Both', 'OnlyLB']);                      // only Letterboxd
+  assert.deepEqual(pick({minRating: 7}), ['Both', 'LowLB', 'OnlyTMDB']);                 // only TMDB
+  assert.deepEqual(pick({minLetterboxd: 3.5, minRating: 7}), ['Both']);                  // both: AND
+  assert.deepEqual(pick({minRating: 7, minVotes: 10000}), ['Both', 'LowLB']);            // votes threshold; no TMDB rating = out
+  assert.ok(!pick({minRating: 1}).includes('OnlyLB'), 'a film without a TMDB rating is hidden while a TMDB minimum is set');
+  const value = {'lb-filter': '3.5', 'tmdb-filter': '7'};
+  const doc = {getElementById: id => (id in value ? {value: value[id]} : null)};
+  assert.deepEqual([readFilters(doc, false).minLetterboxd, readFilters(doc, false).minRating], [3.5, 7]);
+  assert.equal(ratingSummary('3.5', '7', '10k+'), 'LB 3.5+ · TMDB 7+ · 10k+ votes');
+  assert.equal(ratingSummary('', '7'), 'TMDB 7+');
+  assert.equal(ratingSummary('3.5', ''), 'LB 3.5+');
+  assert.equal(ratingSummary('', ''), '');
+});
+
+test('the new address ?lb=&tmdb= is read, and the old ?rating=lb:3.8 turns into the matching one', async () => {
+  const {ratingFromParams} = await import('../../static/js/filters.js');
+  const p = query => ratingFromParams(new URLSearchParams(query));
+  assert.deepEqual(p('lb=3.5&tmdb=7'), {lb: '3.5', tmdb: '7'});
+  assert.deepEqual(p('rating=lb:3.8'), {lb: '3.8', tmdb: ''});
+  assert.deepEqual(p('rating=tmdb:7'), {lb: '', tmdb: '7'});
+  assert.deepEqual(p('rating=tmdb:7&tmdb=8'), {lb: '', tmdb: '8'});  // the new value wins
+  assert.deepEqual(p('lb=abc&rating=nonsense'), {lb: '', tmdb: ''});
+});
+
+test('one base set: released films are the watchlist, films with a release ahead are counted apart', () => {
+  const available = [{key: 'a'}, {key: 'b'}];
+  const unavailable = [{key: 'c', home_date: '2026-01-01'}, {key: 'd', cinema_date: '2027-06-30'}, {key: 'e'}];
+  assert.deepEqual(baseCounts(available, unavailable, '2026-11-24'), {watchlist: 4, available: 2, notAvailable: 2, comingSoon: 1});
 });

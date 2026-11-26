@@ -1,7 +1,19 @@
 import './register-sw.js';
-// Header of the pages without the film list: choosing another country makes it the app's country.
-document.getElementById('country-select')?.addEventListener('change', async event => {
-  event.target.disabled = true;
-  const response = await fetch('/api/settings', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({country: event.target.value})});
-  if (response.ok) location.href = '/watchlist'; else { event.target.disabled = false; location.reload(); }
-});
+import './icons.js';
+import {initPopovers} from './popovers.js';
+import {initCountryPicker, switchCountryAway} from './country-picker.js';
+// Pages without the film list (header and the settings page): a new country is saved, its scan starts
+// and the watchlist opens to follow it.
+initPopovers(document);
+document.querySelectorAll('[data-country-picker]').forEach(root => initCountryPicker(root, {
+  onPick: async code => {
+    try {
+      await switchCountryAway(code);
+      return true;
+    } catch (error) {
+      const message = document.getElementById('settings-message');
+      if (message) { message.textContent = error.message; message.classList.add('text-danger'); }
+      return false;
+    }
+  },
+}));

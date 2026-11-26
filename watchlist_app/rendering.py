@@ -8,7 +8,7 @@ from tabulate import tabulate
 
 from .config import DOWNLOADS_DIR
 from .models import Film
-from .providers import _ALL_PROVIDERS, _DEFAULT_ENABLED, _SECTION_ORDER
+from .providers import _SECTION_ORDER
 from .tmdb import _TMDB_IMAGE_BASE_URL
 
 MONTHS_EN = [
@@ -133,9 +133,7 @@ def display_results(
     targets: dict[str, str] | None = None,
 ) -> None:
     """Print the results grouped by section (Free / Paid)."""
-    _targets = (
-        targets if targets is not None else {k: v for k, v in _ALL_PROVIDERS.items() if k in _DEFAULT_ENABLED}
-    )
+    _targets = targets if targets is not None else {}
 
     print()
 

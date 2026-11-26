@@ -1,72 +1,44 @@
-from watchlist_app.providers import MOSTLY_FREE, load_platforms_config, mostly_free_from_scan
+from watchlist_app import providers
+from watchlist_app.providers import load_platforms_config, mostly_free_from_scan, rental_from_scan
 
 
 class TestLoadPlatformsConfig:
-    def test_returns_defaults_when_no_file(self, tmp_path):
-        targets = load_platforms_config("FR", toml_path=tmp_path / "missing.toml")
-        assert "Arte" in targets
-        assert "Netflix" in targets
+    def test_no_file_gives_no_services(self, tmp_path):
+        assert load_platforms_config("FR", toml_path=tmp_path / "missing.toml") == {}
 
     def test_reads_enabled_only(self, tmp_path):
         toml = tmp_path / "platforms.toml"
         toml.write_text(
             '[FR]\nArte = true\nMolotov = false\nNetflix = true\n"Canal+" = false\n"TF1+" = true\n'
         )
-        targets = load_platforms_config("FR", toml_path=toml)
-        assert "Arte" in targets
-        assert "Molotov" not in targets
-        assert "Netflix" in targets
-        assert "Canal+" not in targets
-        assert "TF1+" in targets
-
-    def test_unknown_key_ignored(self, tmp_path):
-        toml = tmp_path / "platforms.toml"
-        toml.write_text("[FR]\nInconnu = true\nNetflix = true\n")
-        targets = load_platforms_config("FR", toml_path=toml)
-        assert "Inconnu" not in targets
-        assert "Netflix" in targets
+        assert set(load_platforms_config("FR", toml_path=toml)) == {"Arte", "Netflix", "TF1+"}
 
     def test_values_are_tmdb_names(self, tmp_path):
         toml = tmp_path / "platforms.toml"
-        toml.write_text('[FR]\n"Prime Video" = true\n')
-        targets = load_platforms_config("FR", toml_path=toml)
-        assert targets["Prime Video"] == "Amazon Prime Video"
+        toml.write_text('[FR]\n"Prime Video" = true\nNetflix = true\n')
+        assert load_platforms_config("FR", toml_path=toml) == {
+            "Prime Video": "Amazon Prime Video",
+            "Netflix": "Netflix",
+        }
 
-    def test_falls_back_to_defaults_when_country_section_missing(self, tmp_path):
-        toml = tmp_path / "platforms.toml"
-        toml.write_text("[US]\nNetflix = true\n")
-        targets = load_platforms_config("FR", toml_path=toml)
-        assert "Arte" in targets  # no [FR] → fallback to defaults
-
-    def test_different_country_section(self, tmp_path):
+    def test_a_country_without_a_section_starts_empty(self, tmp_path):
         toml = tmp_path / "platforms.toml"
         toml.write_text("[US]\nHulu = true\nNetflix = true\n[FR]\nArte = true\n")
-        us = load_platforms_config("US", toml_path=toml)
-        fr = load_platforms_config("FR", toml_path=toml)
-        assert "Hulu" in us and "Hulu" not in fr
-        assert "Arte" in fr and "Arte" not in us
+        assert load_platforms_config("IT", toml_path=toml) == {}
+        assert "Hulu" in load_platforms_config("US", toml_path=toml)
+        assert "Hulu" not in load_platforms_config("FR", toml_path=toml)
 
 
-def test_display_names_and_loaded_providers():
-    from watchlist_app import providers
-
+def test_alias_display_names_still_map():
     assert providers.display_name("Amazon Prime Video") == "Prime Video"
+    assert providers.display_name(" Disney Plus ") == "Disney+"
+    assert providers.display_name("Wow Fiction Amazon Channel") == "WOW Fiction Amazon Channel"
     assert providers.display_name("Brand New Stream") == "Brand New Stream"
     assert providers.tmdb_names(["Prime Video", "Brand New Stream"]) == {
         "Prime Video": "Amazon Prime Video",
         "Brand New Stream": "Brand New Stream",
     }
-    groups = dict(providers.provider_groups(["Brand New Stream", "Zappn amazon channel", "Netflix"]))
-    more = dict(groups["Services"])["More services"]
-    assert more[-1] == "Brand New Stream" and more.count("Netflix") == 0
-    assert "Zappn amazon channel" in groups["Amazon Channels"][0][1]
-    names = [
-        name
-        for _, subgroups in providers.provider_groups(["Netflix"])
-        for _, group in subgroups
-        for name in group
-    ]
-    assert names.count("Netflix") == 1
+    assert providers.known_names(["Netflix"]) >= {"Netflix", "Prime Video", "Apple TV+"}
 
 
 def test_mostly_free_services_use_scan_data():
@@ -88,8 +60,46 @@ def test_mostly_free_counts_each_service_against_its_own_films():
     free = mostly_free_from_scan(films, [])
     assert "Joyn" in free
     assert "Molotov" not in free
-    assert "Arte" in free  # not in the scan: the list decides
+    assert "Arte" not in free  # not in the scan: no built-in list decides any more
 
 
-def test_mostly_free_services_fall_back_without_scan():
-    assert mostly_free_from_scan([], []) == MOSTLY_FREE
+def test_without_a_scan_no_service_is_free_or_a_rental_shop():
+    assert mostly_free_from_scan([], []) == frozenset()
+    assert rental_from_scan([], []) == frozenset()
+
+
+def test_rental_shops_are_services_that_only_rent_or_buy():
+    results = [
+        {"providers": {"Apple TV Store": ["rent", "buy"], "Netflix": ["flatrate"]}},
+        {"providers": {"Rakuten TV": ["rent"], "Amazon VOD": ["rent"]}},
+        {"providers": {"Amazon VOD": ["flatrate"]}},
+    ]
+    unavailable = [{"providers": {"Videobuster": ["buy"]}}]
+    assert rental_from_scan(results, unavailable) == {"Apple TV Store", "Rakuten TV", "Videobuster"}
+
+
+def test_groups_come_from_the_scan_offers_in_catalog_order():
+    results = [
+        {"providers": {"Arte": ["free"], "Netflix": ["flatrate"], "Apple TV Store": ["rent"]}},
+        {"providers": {"MUBI": ["flatrate"], "Zappn Amazon Channel": ["flatrate"]}},
+    ]
+    catalog = ["Netflix", "Apple TV Store", "Arte", "MUBI", "Zappn Amazon Channel", "Brand New Stream"]
+    catalog.append("Netflix")  # TMDB can list a name twice
+    groups = dict(providers.provider_groups(results, [], catalog))
+    assert groups == {
+        "Free and ad-supported": ["Arte"],
+        "Subscriptions": ["Netflix", "MUBI"],  # TMDB's priority order, each name once
+        "More services": ["Brand New Stream"],  # in the country, but not in the scan
+        "Rental shops": ["Apple TV Store"],
+        "Amazon Channels": ["Zappn Amazon Channel"],
+    }
+    # Only the country's services are listed: a scan provider missing from the catalog is left out.
+    canal = [{"providers": {"Canal+": ["flatrate"]}}]
+    assert "Canal+" not in str(providers.provider_groups(canal, [], ["Arte"]))
+
+
+def test_groups_without_a_catalog_use_the_scan_providers():
+    films = [{"providers": {"Netflix": ["flatrate"], "Arte": ["ads"]}}]
+    groups = dict(providers.provider_groups(films, [], []))
+    assert groups["Subscriptions"] == ["Netflix"] and groups["Free and ad-supported"] == ["Arte"]
+    assert all(not names for names in dict(providers.provider_groups([], [], [])).values())

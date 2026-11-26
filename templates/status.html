@@ -10,7 +10,7 @@
   <title>Data &amp; status · Settings · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261122-36') }}" rel="stylesheet">
+  {% include "partials/styles.html" %}
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -24,7 +24,7 @@
       <div class="analysis-item">Automatic scan: <strong>{% if status.scan_interval_hours %}every {{ status.scan_interval_hours }} h{% else %}off{% endif %}</strong></div>
       <div class="analysis-item">Next automatic scan: <strong class="time" data-time="{{ status.next_scan_at or '' }}" data-past="due now">–</strong></div>
       <div class="analysis-item">Right now: <strong>{% if status.running %}a scan is running{% else %}idle{% endif %}</strong></div>
-      <div class="analysis-item">Films known: <strong>{{ status.counts.films }}</strong></div>
+      <div class="analysis-item">Films known: <strong>{{ status.counts.films }}</strong> · {{ status.base.watchlist }} on the watchlist (released) · {{ status.base.coming_soon }} coming soon · <a href="/settings/matches">{{ status.base.to_check }} to check</a></div>
       <div class="analysis-item">Favorites: <strong>{{ status.counts.favorites }}</strong></div>
       <div class="analysis-item">Stored changes: <strong>{{ status.counts.changes }}</strong></div>
       <div class="analysis-item">Matches to check: <strong><a href="/settings/matches">{{ status.uncertain_matches }}</a></strong></div>
@@ -45,9 +45,10 @@
     <p class="meta" id="import-preview" aria-live="polite" hidden></p>
     <button class="btn btn-sm btn-accent" id="import-go" type="button" hidden>Import</button>
 
-    <h2 class="h4 mt-4">Hidden-away films</h2>
-    <p class="meta" id="greyouts-text">Films you hid away stay in the list, only paler. Letterboxd is where you log what you watched.</p>
-    <button class="btn btn-sm btn-outline-secondary" id="greyouts-reset" type="button" disabled>Reset grey-outs</button>
+    <h2 class="h4 mt-4">Hidden films</h2>
+    <p class="meta" id="greyouts-text">Films you hid stay in the list, only paler, until you unhide them. Letterboxd is where you log what you watched.</p>
+    <ul class="hidden-list" id="hidden-list"></ul>
+    <button class="btn btn-sm btn-outline-secondary" id="greyouts-reset" type="button" disabled>Unhide all</button>
 
     {% if status.reminders %}
     <h2 class="h4 mt-4">Subscription reminders</h2>
@@ -81,8 +82,8 @@
     <p class="meta">No scan has run yet.</p>
     {% endif %}
   </main>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261122-36') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/data-tools.js', v='20261122-36') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261126-2') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/data-tools.js', v='20261125-84') }}" type="module"></script>
   <script>
     document.querySelectorAll('.time').forEach(element => {
       const seconds = Number(element.dataset.time);

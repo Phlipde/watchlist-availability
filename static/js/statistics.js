@@ -1,4 +1,5 @@
 // Numbers for the stats page, from one saved scan. Pure functions, so they are tested without a page.
+import {serviceGroup} from './catalog.js';
 
 const WATCH_KINDS = ['free', 'ads', 'flatrate'];  // watchable without paying per film
 const DAY = 24 * 3600;
@@ -16,6 +17,37 @@ export function countBy(items, keysOf) {
 const numbers = values => values.map(Number).filter(value => Number.isFinite(value) && value > 0);
 const average = values => (values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null);
 const kindsOf = film => Object.values(film.providers || {}).flat();
+
+// Every film gets exactly one of these, the best way to watch it, so the counts add up to the watchlist.
+export const AVAILABILITY = ['own_subscription', 'free', 'ads', 'other_subscription', 'rent_buy', 'coming_soon', 'unavailable'];
+
+// own_subscription: free, ad-supported or subscription on a service you have; then free, ads, a subscription you
+// do not have, rent or buy; no offer at all: coming soon (future release date) or unavailable.
+export const AVAILABILITY_LABEL = {
+  own_subscription: 'On your subscriptions', free: 'Free', ads: 'Free with ads', other_subscription: 'In a subscription you do not have',
+  rent_buy: 'Rent or buy only', coming_soon: 'Coming soon', unavailable: 'Not available',
+};
+
+// `own` holds service groups (a Netflix subscription covers every Netflix plan).
+export function bestAvailability(film, own, today) {
+  const offers = Object.entries(film.providers || {});
+  const kinds = offers.flatMap(([, list]) => list);
+  if (offers.some(([service, list]) => own.has(serviceGroup(service)) && list.some(kind => ['free', 'ads', 'flatrate'].includes(kind)))) return 'own_subscription';
+  if (kinds.includes('free')) return 'free';
+  if (kinds.includes('ads')) return 'ads';
+  if (kinds.includes('flatrate')) return 'other_subscription';
+  if (kinds.some(kind => kind === 'rent' || kind === 'buy')) return 'rent_buy';
+  return [film.cinema_date, film.home_date].some(date => date && date > today) ? 'coming_soon' : 'unavailable';
+}
+
+// TMDB fills unreleased films with far-away placeholder dates: a year more than 3 years ahead counts as unknown.
+export const plausibleYear = (year, now) => {
+  const value = Number(year);
+  return value > 0 && value <= new Date(now * 1000).getUTCFullYear() + 3 ? value : null;
+};
+
+// Technical TMDB keywords nobody searches for.
+export const KEYWORD_BLOCKLIST = new Set(['duringcreditsstinger', 'aftercreditsstinger', 'amused', 'aftercredits', 'post-credits scene', 'sequel', '3d animation']);
 
 // Films grouped into fixed ranges, in the order given, e.g. runtime or rating bands.
 function bands(films, valueOf, ranges) {
@@ -36,10 +68,15 @@ export function watchlistStats(scan, {subscriptions = [], favorites = [], now = 
   const onOwn = available.filter(film => watchableOn(film, own));
   const today = new Date(now * 1000).toISOString().slice(0, 10);
   const runtimes = numbers(available.map(film => film.runtime));
-  const years = numbers(all.map(film => film.year));
+  const years = numbers(all.map(film => plausibleYear(film.year, now)));
+  const availability = Object.fromEntries(AVAILABILITY.map(name => [name, 0]));
+  const ownGroups = new Set(subscriptions.map(serviceGroup));
+  all.forEach(film => { availability[bestAvailability(film, ownGroups, today)] += 1; });
 
   const overview = {
     total: all.length,
+    availability,
+    unknownYears: all.length - numbers(all.map(film => plausibleYear(film.year, now))).length,
     available: available.length,
     unavailable: unavailable.length,
     onSubscriptions: onOwn.length,
@@ -87,7 +124,7 @@ export function watchlistStats(scan, {subscriptions = [], favorites = [], now = 
     name, total, available: available.filter(film => (film.genres || []).includes(name)).length,
   }));
 
-  const decades = countBy(all, film => (Number(film.year) > 0 ? [`${Math.floor(film.year / 10) * 10}s`] : []))
+  const decades = countBy(all, film => (plausibleYear(film.year, now) ? [`${Math.floor(film.year / 10) * 10}s`] : []))
     .sort((a, b) => a[0].localeCompare(b[0]));
 
   const recent = (scan.changes || []).filter(change => change.created >= now - 30 * DAY);
@@ -119,7 +156,7 @@ export function watchlistStats(scan, {subscriptions = [], favorites = [], now = 
     directors: countBy(all, film => [film.director]).filter(([, count]) => count > 1),
     actors: countBy(all, film => film.cast).filter(([, count]) => count > 1),
     collections: countBy(all, film => [film.collection]).filter(([, count]) => count > 1),
-    keywords: countBy(all, film => film.keywords),
+    keywords: countBy(all, film => (film.keywords || []).filter(word => !KEYWORD_BLOCKLIST.has(word))),
     changes: {
       added30: recent.filter(change => change.change === 'added').length,
       removed30: recent.filter(change => change.change === 'removed').length,

@@ -10,7 +10,7 @@
   <title>My services · Settings · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261122-36') }}" rel="stylesheet">
+  {% include "partials/styles.html" %}
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -18,6 +18,7 @@
     <h1 class="page-title">Settings</h1>
     {% include "partials/settings-nav.html" %}
     <p class="hint">The services you pay for or use for free in {{ country }}. Every page works from this list; the filter on the watchlist can only narrow it for a moment. Changes are saved as you tick. Prices, renewal dates and cancelling to an end date are on <a href="/subscriptions">Subscriptions</a>, where you can also add a service.</p>
+    {% if not sections %}<p class="hint" id="services-empty">No services are known for {{ country }} yet. The first scan of this country loads them; then tick the ones you use.</p>{% elif not selected %}<p class="hint" id="services-empty">No services chosen for {{ country }} yet: tick the ones you use.</p>{% endif %}
     <input class="form-control mb-3" id="services-find" type="search" placeholder="Find a service…" aria-label="Find a service">
     <div id="services-sections" data-country="{{ country }}">
       {% for title, names, opened in sections %}
@@ -31,7 +32,7 @@
     </div>
     <div class="toast-bar" id="toast" role="status" hidden><span id="toast-text"></span><button class="film-link" id="toast-undo" type="button" hidden>Undo</button></div>
   </main>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261122-36') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/services.js', v='20261122-36') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261126-2') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/services.js', v='20261125-84') }}" type="module"></script>
 </body>
 </html>

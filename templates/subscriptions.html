@@ -10,7 +10,7 @@
   <title>Subscriptions · Watchlist Availability</title>
   <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/app.css', v='20261122-36') }}" rel="stylesheet">
+  {% include "partials/styles.html" %}
 </head>
 <body>
   {% include "partials/header.html" %}
@@ -96,7 +96,7 @@
 
     {% if costs.free_block or costs.free_empty %}
     <section class="free-block" aria-labelledby="free-heading">
-      <h2 class="h4" id="free-heading">Free services <span class="pill pill-ok">{{ costs.free_films }} films free</span></h2>
+      <h2 class="h4" id="free-heading">Free services <span class="row-count">{{ costs.free_films }} films free</span></h2>
       <ul class="chip-list">{% for item in costs.free_block %}<li class="static-chip">{% if logos.get(item.name) %}<img class="provider-logo-sm" src="{{ logo_base_url }}{{ logos[item.name] }}" alt="" loading="lazy">{% endif %}{{ item.name }} <span class="option-count">{{ item.films }}</span> <button class="chip-x" type="button" data-remove="{{ item.name }}" aria-label="Remove {{ item.name }} from your services"><i class="ti ti-x" aria-hidden="true"></i></button></li>{% endfor %}{% if costs.free_empty %}<li class="hint">+{{ costs.free_empty }} with no films</li>{% endif %}</ul>
     </section>
     {% endif %}
@@ -108,9 +108,10 @@
     <section class="worth" aria-labelledby="worth-heading">
       <h2 class="h4" id="worth-heading">Worth a month?</h2>
       <p class="hint">Services you do not have, by the watchlist films none of your services has.</p>
+      {% set any_fav = costs.book|selectattr('favorites')|list|length > 0 %}
       <div class="table-scroll"><table class="status-table worth-table">
-        <thead><tr><th scope="col">Service</th><th scope="col" class="num">Films</th><th scope="col" class="num">Favorites</th><th scope="col" class="num">Hours</th><th scope="col"></th></tr></thead>
-        <tbody>{% for item in costs.book %}<tr data-worth="{{ item.name }}"{% if loop.index > 5 %} hidden{% endif %}><td>{{ item.name }}</td><td class="num">{{ item.films }}</td><td class="num">{% if item.favorites %}<i class="ti ti-heart-filled fav-count" aria-hidden="true"></i> {{ item.favorites }}{% else %}–{% endif %}</td><td class="num">{{ item.hours }} h</td><td class="num"><a class="film-link" href="/watchlist?providers={{ item.name|urlencode }}&cost=subscription">Show films</a> · <button class="film-link try-it" type="button" data-service="{{ item.name }}">Try it</button></td></tr>{% endfor %}</tbody>
+        <thead><tr><th scope="col">Service</th><th scope="col" class="num">Films</th>{% if any_fav %}<th scope="col" class="num">Favorites</th>{% endif %}<th scope="col" class="num">Hours</th><th scope="col"></th></tr></thead>
+        <tbody>{% for item in costs.book %}<tr data-worth="{{ item.name }}"{% if loop.index > 5 %} hidden{% endif %}><td>{{ item.name }}</td><td class="num">{{ item.films }}</td>{% if any_fav %}<td class="num">{% if item.favorites %}<i class="ti ti-heart-filled fav-count" aria-hidden="true"></i> {{ item.favorites }}{% else %}–{% endif %}</td>{% endif %}<td class="num">{{ item.hours }} h</td><td class="num worth-actions"><a class="btn btn-sm btn-outline-secondary" href="/watchlist?providers={{ item.name|urlencode }}&cost=subscription">Show films</a> <button class="btn btn-sm btn-outline-secondary try-it" type="button" data-service="{{ item.name }}">Try it</button></td></tr>{% endfor %}</tbody>
       </table></div>
     </section>
     {% endif %}
@@ -133,7 +134,7 @@
     </section>
 
     <section class="rent-row" aria-labelledby="rent-heading">
-      <div class="rent-head"><h2 class="h4" id="rent-heading">Only to rent <span class="row-count">{{ costs.rent_only|length }}</span></h2>{% if costs.rent_only %}<a class="film-link" href="/watchlist?cost=rent">See all <span aria-hidden="true">→</span></a>{% endif %}</div>
+      <div class="rent-head"><h2 class="h4" id="rent-heading">Only to rent <span class="row-count">{{ costs.rent_only|length }}</span></h2>{% if costs.rent_only %}<a class="film-link" href="/watchlist?cost=rent">See all</a>{% endif %}</div>
       {% if costs.rent_only %}
       <ul class="rent-track">{% for film in costs.rent_only[:24] %}<li><a href="/watchlist?film={{ film.key|urlencode }}"{% if not film.key %} hidden{% endif %}>{% if film.poster_path %}<img src="{{ image_base_url }}{{ film.poster_path }}" alt="" loading="lazy">{% else %}<span class="no-poster" aria-hidden="true">No poster</span>{% endif %}<span class="rent-title">{{ film.title }}{% if film.year %} ({{ film.year }}){% endif %}</span></a></li>{% endfor %}</ul>
       {% else %}<p class="meta">No film is only available to rent.</p>{% endif %}
@@ -154,10 +155,10 @@
     <div class="dialog-actions"><button class="btn btn-sm btn-ghost" id="add-close" type="button">Close</button></div>
   </dialog>
   <dialog class="side-drawer" id="service-drawer" aria-labelledby="service-drawer-title"><div class="drawer-head"><h2 id="service-drawer-title"></h2><button class="sheet-close" id="service-drawer-close" type="button" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button></div><div class="drawer-body" id="service-drawer-body"></div></dialog>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261122-36') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261126-2') }}" type="module"></script>
   <script>window.PLAN_DATA = {{ costs.plan|tojson }};</script>
   <script>window.IMAGE_BASE_URL = {{ image_base_url|tojson }}; window.WEEKLY_HOURS = {{ weekly_hours|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/plan-page.js', v='20261122-36') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261122-36') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/plan-page.js', v='20261125-84') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261126-1') }}" type="module"></script>
 </body>
 </html>

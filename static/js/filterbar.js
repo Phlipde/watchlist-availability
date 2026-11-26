@@ -1,8 +1,11 @@
 // The filter bar of the watchlist page: services menu, cost, genres, runtime, rating, chips and counts.
 // Pure counting lives in filtering.js; this module only reads and writes the bar's DOM.
 import {escapeHtml} from './ui.js';
-import {COST, FILTER_CONTROLS, activeFilters, clearFilter, durationText, resetFilters} from './filters.js';
+import {logoStackHtml} from './logo-stack.js';
+import {COST, FILTER_CONTROLS, activeFilters, clearFilter, durationText, ratingFromParams, ratingSummary, resetFilters} from './filters.js';
 import {SECTION_KINDS, countVisible, facetCounts} from './filtering.js';
+import {clearLink, emptyLink, linkChips, needsUnavailable, parseLink, writeLink} from './link-filters.js';
+export {initPopovers, keepInView} from './popovers.js';
 
 const ALL_KINDS = ['free', 'ads', 'flatrate', 'rent'];
 const RUNTIME_STEPS = [90, 120, 150];
@@ -12,50 +15,6 @@ const runtimeText = minutes => (Number(minutes) ? `Up to ${durationText(minutes)
 function costKinds(filters) {
   if (filters.kind !== 'all') return [filters.kind];
   return SECTION_KINDS[filters.availability] || ALL_KINDS;
-}
-
-// Popovers (<details>): one open at a time, closed by a click outside or Escape (focus back on its summary),
-// arrow keys move through the controls inside. Bootstrap's dropdown toggles twice here (tabler.min.js
-// brings a second Bootstrap), so these are plain <details>.
-// A menu opens under its button; when that runs past the window edge, slide it back in.
-function keepInView(menu) {
-  if (!menu) return;
-  menu.style.translate = '';
-  const {left, right} = menu.getBoundingClientRect();
-  const margin = 8;
-  const shift = right > innerWidth - margin ? innerWidth - margin - right : 0;
-  menu.style.translate = `${Math.max(shift, margin - left)}px 0`;
-}
-
-export function initPopovers(doc = document) {
-  // A control that moved into the "More filters" panel (.is-moved) stays open there and is left alone.
-  const popovers = () => [...doc.querySelectorAll('details.filter-pop:not(.is-moved), details.sync, details.export-menu, details.card-menu')];
-  doc.addEventListener('toggle', event => {
-    if (!event.target.matches?.('details.filter-pop:not(.is-moved), details.sync, details.export-menu, details.card-menu') || !event.target.open) return;
-    popovers().forEach(other => { if (other !== event.target) other.open = false; });
-    keepInView(event.target.querySelector('.filter-menu, .sync-panel'));
-  }, true);
-  doc.addEventListener('click', event => {
-    popovers().forEach(popover => { if (popover.open && !popover.contains(event.target)) popover.open = false; });
-  });
-  doc.addEventListener('keydown', event => {
-    const popover = event.target.closest?.('details.filter-pop:not(.is-moved), details.sync, details.export-menu, details.card-menu');
-    if (!popover?.open) return;
-    if (event.key === 'Escape') {
-      popover.open = false;
-      popover.querySelector('summary').focus();
-      event.stopPropagation();
-      return;
-    }
-    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-    if (event.target.matches('select, input[type=range], input[type=number], input[type=radio]')) return;
-    const items = [...popover.querySelectorAll('summary, .filter-menu input:not([type=hidden]), .filter-menu button, .filter-menu select')]
-      .filter(item => !item.closest('[hidden]'));
-    const index = items.indexOf(event.target);
-    if (index < 0) return;
-    event.preventDefault();
-    items[Math.max(0, Math.min(items.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)))].focus();
-  });
 }
 
 export function createFilterBar({state, config, mySubscriptions, freeServices, rentalShops, onChange}) {
@@ -90,8 +49,8 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     });
   }
   function buildServicesMenu() {
-    $('services-list').innerHTML = groups().map(([title, names]) => `<section class="services-group" data-group="${escapeHtml(title)}"><div class="services-group-head"><h3>${escapeHtml(title)}</h3><button class="film-link" type="button" data-group-toggle>All</button></div>${names.map(name => `<label class="service-option" data-provider-label="${escapeHtml(name)}"><input type="checkbox" value="${escapeHtml(name)}"${state.selected.has(name) ? ' checked' : ''}>${logo(name)}<span class="provider-name">${escapeHtml(name)}${freeServices.has(name) ? '<span class="free-tag pill pill-ok">Mostly free</span>' : ''}</span><span class="option-count" data-service-count="${escapeHtml(name)}"></span></label>`).join('')}</section>`).join('')
-      + `<div class="services-foot"><select class="form-select form-select-sm" id="match-mode" aria-label="How the ticked services are combined"><option value="any">Films on any ticked service</option><option value="all">Films on all ticked services</option></select><button class="btn btn-sm btn-outline-secondary" type="button" id="clear-providers">Clear</button><a class="film-link" href="/subscriptions">Edit my subscriptions</a></div>`
+    $('services-list').innerHTML = groups().map(([title, names]) => `<section class="services-group" data-group="${escapeHtml(title)}"><div class="services-group-head"><h3>${escapeHtml(title)}</h3><button class="film-link" type="button" data-group-toggle>All</button></div>${names.map(name => `<label class="service-option" data-provider-label="${escapeHtml(name)}"><input type="checkbox" value="${escapeHtml(name)}"${state.selected.has(name) ? ' checked' : ''}>${logo(name)}<span class="provider-name">${escapeHtml(name)}${freeServices.has(name) ? '<span class="free-tag pill pill-ok" title="Label by this app; most titles are free on this service.">Mostly free</span>' : ''}</span><span class="option-count" data-service-count="${escapeHtml(name)}"></span></label>`).join('')}</section>`).join('')
+      + `<div class="services-foot"><select class="form-select form-select-sm" id="match-mode" aria-label="How the ticked services are combined"><option value="any">Films on any ticked service</option><option value="all">Films on all ticked services</option></select><button class="btn btn-sm btn-outline-secondary" type="button" id="clear-providers">Untick all</button><a class="film-link" href="/subscriptions">Edit my subscriptions</a></div>`
       + '<p class="hint">Changing services filters the list; it does not start a scan.</p>';
     $('match-mode').value = state.matchMode || 'any';
     applyServicesView();
@@ -101,9 +60,9 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   $('services-only-mine').addEventListener('change', applyServicesView);
   function updateServicesButton() {
     const chosen = [...state.selected].sort((a, b) => Number(Boolean(logos[b])) - Number(Boolean(logos[a])) || a.localeCompare(b));
-    const shown = chosen.filter(name => logos[name]).slice(0, 4);
-    $('services-logos').innerHTML = shown.map(logo).join('') + (chosen.length > shown.length ? `<span class="logo-more">+${chosen.length - shown.length}</span>` : '');
-    $('services-label').textContent = chosen.length ? (shown.length ? '' : `${chosen.length} services`) : 'No services';
+    const withLogo = chosen.filter(name => logos[name]);
+    $('services-logos').innerHTML = logoStackHtml(withLogo.map(name => ({name, kind: '', logo: (config.logoBaseUrl || '') + logos[name]})));
+    $('services-label').textContent = chosen.length ? (withLogo.length ? String(chosen.length) : `${chosen.length} services`) : 'No services';
     $('services-button').setAttribute('aria-label', `Services: ${chosen.length} ticked`);
   }
   $('services-menu').addEventListener('change', event => {
@@ -159,7 +118,6 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   // ---- year, rating and votes: quick chips plus a slider; hidden inputs hold the values ------------------------
   const YEAR_MIN = 1920;
   const YEAR_MAX = new Date().getFullYear() + 1;
-  let ratingSource = 'lb';
   let chipsOpen = false;
   $('year-min').max = $('year-max').max = String(YEAR_MAX);
   $('year-max').value = String(YEAR_MAX);
@@ -168,12 +126,12 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     $('year-to').value = to ? String(to) : '';
     if (notify) onChange();
   }
-  function setRating(value, notify = true) {
-    const input = $('rating-filter');
+  // Two independent minimums, Letterboxd and TMDB; a film must pass every one that is set.
+  const RATING_SOURCES = ['lb', 'tmdb'];
+  function setRating(source, value, notify = true) {
+    const input = $(`${source}-filter`);
     input.value = value;
-    const [source, minimum] = value.split(':');
-    input.dataset.text = value ? `${source === 'lb' ? 'Letterboxd' : 'TMDB'} ${minimum}+` : '';
-    if (value) ratingSource = source;
+    input.dataset.text = value ? `${value}+` : '';
     if (notify) onChange();
   }
   function setVotes(value, notify = true) {
@@ -193,22 +151,19 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     $('year-summary').textContent = from || to ? `${from || ''}–${to || ''}` : '';
     $('year-reset').hidden = !(from || to);
     document.querySelectorAll('#year-chips .chip').forEach(chip => chip.setAttribute('aria-pressed', String((Number(chip.dataset.from) || 0) === from && Number(chip.dataset.to) === to)));
-    const [source, minimum] = $('rating-filter').value.split(':');
-    const active = source || ratingSource;
-    document.querySelector(`input[name=rating-source][value="${active}"]`).checked = true;
-    $('rating-chips-lb').hidden = active !== 'lb';
-    $('rating-chips-tmdb').hidden = active !== 'tmdb';
-    document.querySelectorAll('[data-rating]').forEach(chip => chip.setAttribute('aria-pressed', String(chip.dataset.rating === $('rating-filter').value)));
-    $('rating-slider').max = active === 'lb' ? '5' : '10';
-    $('rating-slider').value = minimum || '0';
-    $('rating-slider-value').textContent = Number(minimum) ? `${minimum}+` : 'any';
+    RATING_SOURCES.forEach(source => {
+      const value = $(`${source}-filter`).value;
+      document.querySelectorAll(`#rating-chips-${source} [data-rating]`).forEach(chip => chip.setAttribute('aria-pressed', String(chip.dataset.rating === `${source}:${value}`)));
+      $(`rating-slider-${source}`).value = value || '0';
+      $(`rating-slider-value-${source}`).textContent = Number(value) ? `${value}+` : 'any';
+      $(`${source}-reset`).hidden = !value;
+    });
+    $('tmdb-note').hidden = !Number($('tmdb-filter').value);
     const votes = $('min-votes').value;
     const votesChip = document.querySelector(`#votes-chips [data-votes="${votes}"]`);
     $('min-votes').dataset.text = votes === '0' ? '' : votesChip ? votesChip.textContent.trim() : `${votes}+`;
-    $('rating-filter').dataset.text = minimum ? `${source === 'lb' ? 'Letterboxd' : 'TMDB'} ${minimum}+` : '';
     document.querySelectorAll('#votes-chips .chip').forEach(chip => chip.setAttribute('aria-pressed', String(chip.dataset.votes === votes)));
-    $('rating-summary').textContent = minimum ? `${source === 'lb' ? 'Letterboxd' : 'TMDB'} ${minimum}+` : '';
-    $('rating-reset').hidden = !minimum && votes === '0';
+    $('rating-summary').textContent = ratingSummary($('lb-filter').value, $('tmdb-filter').value, votes === '0' ? '' : $('min-votes').dataset.text);
   }
   $('year-chips').addEventListener('click', event => {
     const chip = event.target.closest('.chip');
@@ -224,27 +179,21 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     setYears(low > YEAR_MIN ? low : '', high < YEAR_MAX ? high : '');
   }));
   $('year-reset').addEventListener('click', () => setYears('', ''));
-  $('rating-pop').addEventListener('change', event => {
-    if (event.target.name !== 'rating-source') return;
-    ratingSource = event.target.value;
-    const hadValue = Boolean($('rating-filter').value);
-    setRating('');  // the two scales differ: a number from one is no limit on the other
-    $('rating-note').hidden = !hadValue;
-  });
   $('rating-pop').addEventListener('click', event => {
     const chip = event.target.closest('.chip');
     if (!chip) return;
-    if (chip.dataset.votes !== undefined) setVotes(chip.dataset.votes);
-    else setRating(chip.getAttribute('aria-pressed') === 'true' ? '' : chip.dataset.rating);
-    $('rating-note').hidden = true;
+    if (chip.dataset.votes !== undefined) { setVotes(chip.dataset.votes); return; }
+    const [source, value] = chip.dataset.rating.split(':');
+    setRating(source, chip.getAttribute('aria-pressed') === 'true' ? '' : value);
   });
-  $('rating-slider').addEventListener('input', event => setRating(Number(event.target.value) ? `${ratingSource}:${event.target.value}` : ''));
-  $('rating-reset').addEventListener('click', () => { setRating('', false); setVotes('0'); });
+  RATING_SOURCES.forEach(source => {
+    $(`rating-slider-${source}`).addEventListener('input', event => setRating(source, Number(event.target.value) ? event.target.value : ''));
+    $(`${source}-reset`).addEventListener('click', () => setRating(source, ''));
+  });
   // Letterboxd ratings arrive with the first scan after an update; until then only TMDB can be used.
   function setRatingAvailability(rated) {
-    document.querySelector('input[name=rating-source][value="lb"]').disabled = !rated;
-    document.querySelectorAll('#rating-chips-lb .chip').forEach(chip => { chip.disabled = !rated; });
-    if (!rated) { ratingSource = 'tmdb'; if ($('rating-filter').value.startsWith('lb:')) setRating('', false); }
+    document.querySelectorAll('#rating-chips-lb .chip, #rating-slider-lb').forEach(item => { item.disabled = !rated; });
+    if (!rated && $('lb-filter').value) setRating('lb', '', false);
   }
 
   // ---- sort: a menu of radios with one line of explanation each; the hidden #sort-order holds the value ---------
@@ -365,16 +314,20 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
       element.textContent = count;
       element.closest('label').classList.toggle('is-empty', count === 0);
     });
-    const ratingKeys = [...document.querySelectorAll('[data-rating]')].map(chip => chip.dataset.rating);
-    const ratings = facetCounts(films, filters, context, (f, c) => [{...f, minRating: 0, minLetterboxd: 0}, c], film => ratingKeys
-      .filter(key => { const [source, minimum] = key.split(':'); return source === 'lb' ? Number(film.letterboxd_rating) >= Number(minimum) : Number(film.rating) >= Number(minimum); }));
-    document.querySelectorAll('[data-rating-count]').forEach(element => { element.textContent = ratings.get(element.dataset.ratingCount) || 0; });
+    // Each source's chips count with the other source's minimum applied, and without its own.
+    RATING_SOURCES.forEach(source => {
+      const keys = [...document.querySelectorAll(`#rating-chips-${source} [data-rating]`)].map(chip => chip.dataset.rating);
+      const own = source === 'lb' ? {minLetterboxd: 0} : {minRating: 0};
+      const counts = facetCounts(films, filters, context, (f, c) => [{...f, ...own}, c], film => keys
+        .filter(key => Number(source === 'lb' ? film.letterboxd_rating : film.rating) >= Number(key.split(':')[1])));
+      document.querySelectorAll(`[data-rating-count^="${source}:"]`).forEach(element => { element.textContent = counts.get(element.dataset.ratingCount) || 0; });
+    });
     syncRanges();
   }
 
   // ---- chips ------------------------------------------------------------------------------------
   // Which panel holds a filter; every other one sits behind "Filters".
-  const PANELS = {'runtime-filter': 'runtime-pop', 'rating-filter': 'rating-pop', 'min-votes': 'rating-pop', 'year-from': 'year-pop', 'year-to': 'year-pop', 'film-search': 'film-search', 'cost-filter': 'cost-options'};
+  const PANELS = {'runtime-filter': 'runtime-pop', 'lb-filter': 'rating-pop', 'tmdb-filter': 'rating-pop', 'min-votes': 'rating-pop', 'year-from': 'year-pop', 'year-to': 'year-pop', 'film-search': 'film-search', 'cost-filter': 'cost-options'};
   const insidePanel = id => Boolean($(id).closest('#more-filters') || $(PANELS[id])?.classList.contains('is-moved'));
   function openPanel(id) {
     let element = $(id);
@@ -392,13 +345,14 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
       ...[...state.genres.include].map(genre => chip(`data-genre-include="${escapeHtml(genre)}"`, genre, 'genre-pop')),
       ...[...state.genres.exclude].map(genre => chip(`data-genre-exclude="${escapeHtml(genre)}"`, `No ${genre}`, 'genre-pop')),
       ...activeFilters(document).map(({id, label, text}) => chip(`data-filter-id="${id}"`, text ? `${label}: ${text}` : label, PANELS[id] || 'more-filters')),
+      ...linkChips(state.link).map(({key, text}) => chip(`data-link="${key}"`, text, 'more-filters')),
     ];
     $('tools-count').textContent = chips.length ? ` · ${chips.length}` : '';
     // From five chips on, only three show; the rest sit behind "+n more".
     const total = chips.length;
     if (total >= 5 && !chipsOpen) chips.splice(3, total - 3, `<button class="filter-chip chips-more" type="button" data-chips-more aria-expanded="false">+${total - 3} more</button>`);
     else if (total >= 5) chips.push('<button class="filter-chip chips-more" type="button" data-chips-more aria-expanded="true">Fewer</button>');
-    if (total) chips.push('<button class="filter-chip filter-reset" type="button" data-reset-filters>Reset all</button>');
+    if (total) chips.push('<button class="filter-chip filter-reset" type="button" data-reset-filters>Clear filters</button>');
     $('filter-chips').innerHTML = chips.join('');
     $('filter-chips').hidden = !chips.length;
     // Set filters inside "Filters" must not be forgotten: count them on its button.
@@ -423,10 +377,12 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   function resetAll() {
     resetFilters(document);
     state.genres = {include: new Set(), exclude: new Set()};
+    state.link = emptyLink();
     state.selected = new Set(mySubscriptions());
     setCost('all', false);
     setRuntime(0, false);
-    setRating('', false);
+    setRating('lb', '', false);
+    setRating('tmdb', '', false);
     setVotes('0', false);
     buildServicesMenu();
     buildGenreMenu([...document.querySelectorAll('#genre-list input')].map(input => input.value));
@@ -446,6 +402,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     const button = event.target.closest('.chip-remove')?.closest('.filter-chip');
     if (!button) return;
     if (button.hasAttribute('data-services')) { setServices(mySubscriptions()); return; }
+    if (button.dataset.link) { state.link = clearLink(state.link, button.dataset.link); onChange(); return; }
     if (button.dataset.genreInclude || button.dataset.genreExclude) { setGenre(button.dataset.genreInclude || button.dataset.genreExclude, null); return; }
     const input = $(button.dataset.filterId);
     clearFilter(input);
@@ -459,21 +416,28 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     setCost(params.get('cost') || 'all', false);
     if (params.get('unavailable') === '1') $('show-unavailable').checked = true;
     setRuntime(params.get('max') || 0, false);
-    const rating = params.get('rating') || '';
-    setRating(/^(lb|tmdb):\d+(\.\d+)?$/.test(rating) ? rating : '', false);
+    const {lb, tmdb} = ratingFromParams(params);
+    setRating('lb', lb, false);
+    setRating('tmdb', tmdb, false);
     const list = name => (params.get(name) || '').split(',').filter(value => value && value !== 'all');
     state.genres = {include: new Set(list('genre')), exclude: new Set(list('nogenre'))};
     state.matchMode = params.get('match') === 'all' ? 'all' : 'any';
+    state.link = parseLink(params);
+    // Films that are nowhere to watch show only on request.
+    if (needsUnavailable(state.link)) $('show-unavailable').checked = true;
   }
   function writeUrl(url) {
     const set = (name, value) => (value ? url.searchParams.set(name, value) : url.searchParams.delete(name));
     set('cost', $('cost-filter').value === 'all' ? '' : $('cost-filter').value);
     set('max', $('runtime-filter').value === '0' ? '' : $('runtime-filter').value);
-    set('rating', $('rating-filter').value);
+    set('lb', $('lb-filter').value);
+    set('tmdb', $('tmdb-filter').value);
+    url.searchParams.delete('rating');
     set('genre', [...state.genres.include].join(','));
     set('nogenre', [...state.genres.exclude].join(','));
     set('unavailable', $('show-unavailable').checked ? '1' : '');
     set('match', state.matchMode === 'all' ? 'all' : '');
+    writeLink(state.link, url.searchParams);
   }
 
   // ---- a bar that does not fit one row gives Year, then Runtime, then Rating to the "More filters" panel ----------

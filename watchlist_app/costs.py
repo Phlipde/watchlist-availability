@@ -1,10 +1,18 @@
 """Subscription costs: price per film, what cancelling loses, what to book next, rent-only films."""
 
-import datetime
 import re
 from typing import Any
 
+from .base import service_group
+from .cost_settings import (  # re-exported: callers use them as costs.<name>
+    clean_costs,
+    not_ended,
+    reminders,
+    upcoming_deadlines,
+)
 from .providers import mostly_free_from_scan
+
+__all__ = ["clean_costs", "not_ended", "reminders", "upcoming_deadlines"]
 
 WATCH_KINDS = frozenset({"free", "ads", "flatrate"})  # watchable without paying per film
 FREE_KINDS = frozenset({"free", "ads"})
@@ -84,8 +92,9 @@ def overview(
     for name in subscriptions:
         on = [film for film in films if _watchable(film, name)]
         only = [film for film in on if only_on_my_services(film, subscriptions)]
-        if name in free:
-            # Free services are one compact block, not a table row each.
+        # Free services are one compact block, not a table row each. A service with no film in the scan and no
+        # saved price joins it too: with no offers it cannot be told from a free one (ZDF without films).
+        if name in free or (not on and not (costs.get(name) or {}).get("price")):
             free_block.append({"name": name, "films": len(on)})
             free_films.update(film.get("key") or film.get("title") for film in on)
             continue
@@ -300,13 +309,21 @@ def films_services(film: dict, name: str) -> list[str]:
 
 def _coverage(films: list[dict], subscriptions: list[str], free: frozenset[str], unavailable: int) -> dict:
     """How much of the watchlist the own services cover: free, subscription, rent only, the rest."""
-    free_own = [name for name in subscriptions if name in free]
-    paid_own = [name for name in subscriptions if name not in free]
+    # Ownership is by service group: a Netflix subscription covers every Netflix plan (as on the stats page).
+    free_own = {service_group(name) for name in subscriptions if name in free}
+    paid_own = {service_group(name) for name in subscriptions if name not in free}
+
+    def has(film: dict, groups: set[str]) -> bool:
+        return any(
+            service_group(name) in groups and WATCH_KINDS & set(kinds)
+            for name, kinds in film.get("providers", {}).items()
+        )
+
     counts = {"free": 0, "subscription": 0, "rent": 0, "other": unavailable}
     for film in films:
-        if any(_watchable(film, name) for name in free_own):
+        if has(film, free_own):
             counts["free"] += 1
-        elif any(_watchable(film, name) for name in paid_own):
+        elif has(film, paid_own):
             counts["subscription"] += 1
         elif not any(WATCH_KINDS & set(kinds) for kinds in film.get("providers", {}).values()):
             counts[
@@ -360,114 +377,3 @@ def _recommendations(services: list[dict], cancel: list[str], loses_nothing: boo
             }
         )
     return cards
-
-
-def upcoming_deadlines(
-    costs: dict[str, dict], today: datetime.date | None = None, days: int = 7
-) -> list[dict]:
-    """Renewal or cancellation dates of one country at most `days` away (today counts), soonest first."""
-    return [
-        {"name": item["name"], "date": item["date"], "days": item["days"]}
-        for item in reminders({"": costs}, today)
-        if 0 <= item["days"] <= days
-    ]
-
-
-def clean_costs(raw: object, allowed: set[str]) -> dict[str, dict]:
-    """Prices and reminder dates as the settings store them. Raises ValueError for the user."""
-    if not isinstance(raw, dict):
-        raise ValueError("Send the costs as an object per service.")
-    clean: dict[str, dict] = {}
-    for name, entry in raw.items():
-        if name not in allowed or not isinstance(entry, dict):
-            raise ValueError("Unknown service in the costs.")
-        price = entry.get("price")
-        if price in (None, ""):
-            price = None
-        else:
-            try:
-                price = round(float(price), 2)
-            except (TypeError, ValueError):
-                raise ValueError(f"The price for {name} must be a number.") from None
-            if not 0 <= price <= 1000:
-                raise ValueError(f"The price for {name} must be between 0 and 1000.")
-        remind_on = entry.get("remind_on") or None
-        if remind_on is not None:
-            try:
-                remind_on = datetime.date.fromisoformat(str(remind_on)).isoformat()
-            except ValueError:
-                raise ValueError(f"The reminder date for {name} must be a date.") from None
-        extra = _clean_management(name, entry)
-        if price is not None or remind_on is not None or extra:
-            clean[name] = {"price": price, "remind_on": remind_on, **extra}
-    return clean
-
-
-def not_ended(names: list[str], entries: dict[str, dict], today: datetime.date | None = None) -> list[str]:
-    """The services that are still yours: one cancelled "to the end date" stays until that day is over."""
-    today = today or datetime.date.today()
-    last_day = {name: (entries.get(name) or {}).get("ends_on") or "9999-12-31" for name in names}
-    return [name for name in names if last_day[name] >= today.isoformat()]
-
-
-def _clean_management(name: str, entry: dict) -> dict:
-    """The optional fields of a service: shared, notice days, trial date, end date, note, link."""
-    extra: dict[str, Any] = {}
-    shared = entry.get("shared")
-    if shared not in (None, "", 1, "1"):
-        try:
-            shared = int(shared)
-        except (TypeError, ValueError):
-            raise ValueError(f"The number of people sharing {name} must be a whole number.") from None
-        if not 1 <= shared <= 20:
-            raise ValueError(f"The number of people sharing {name} must be between 1 and 20.")
-        extra["shared"] = shared
-    notice = entry.get("notice_days")
-    if notice not in (None, ""):
-        try:
-            notice = int(notice)
-        except (TypeError, ValueError):
-            raise ValueError(f"The notice period for {name} must be a number of days.") from None
-        if not 0 <= notice <= 365:
-            raise ValueError(f"The notice period for {name} must be between 0 and 365 days.")
-        extra["notice_days"] = notice
-    trial = entry.get("trial_on")
-    if trial not in (None, ""):
-        try:
-            extra["trial_on"] = datetime.date.fromisoformat(str(trial)).isoformat()
-        except ValueError:
-            raise ValueError(f"The trial date for {name} must be a date.") from None
-    ends = entry.get("ends_on")
-    if ends not in (None, ""):
-        try:
-            extra["ends_on"] = datetime.date.fromisoformat(str(ends)).isoformat()
-        except ValueError:
-            raise ValueError(f"The end date for {name} must be a date.") from None
-    note = str(entry.get("note") or "").strip()
-    if note:
-        extra["note"] = note[:300]
-    url = str(entry.get("cancel_url") or "").strip()
-    if url:
-        if not (url.startswith(("https://", "http://")) and len(url) <= 300 and " " not in url):
-            raise ValueError(f"The cancellation link for {name} must be a web address.")
-        extra["cancel_url"] = url
-    return extra
-
-
-def reminders(costs_by_country: dict[str, dict[str, dict]], today: datetime.date | None = None) -> list[dict]:
-    """Reminder dates of all countries, soonest first, with the days left (negative when past)."""
-    today = today or datetime.date.today()
-    found = []
-    for country, costs in costs_by_country.items():
-        for name, entry in costs.items():
-            if entry.get("remind_on"):
-                date = datetime.date.fromisoformat(entry["remind_on"])
-                found.append(
-                    {
-                        "country": country,
-                        "name": name,
-                        "date": entry["remind_on"],
-                        "days": (date - today).days,
-                    }
-                )
-    return sorted(found, key=lambda item: item["date"])

@@ -1,39 +1,83 @@
-// Settings page: save watchlist, country and schedule through the API and handle backup restore.
+// Settings page: save watchlist and schedule through the API and handle backup restore.
+// The country has its own picker (header.js): it saves, scans and opens the watchlist.
 const form = document.getElementById('settings-form');
-const country = document.getElementById('country');
 function show(id, text, failed = false) {
   const element = document.getElementById(id);
   element.textContent = text;
   element.classList.toggle('text-danger', failed);
 }
 
-form.addEventListener('submit', async event => {
-  event.preventDefault();
-  const button = document.getElementById('settings-save');
-  button.disabled = true;
+// Every field saves on its own when it changes (text fields when they lose focus); a toast offers Undo.
+// A new Letterboxd name needs a new scan: the toast offers it.
+const fields = () => ({
+  letterboxd_username: document.getElementById('letterboxd-username').value,
+  scan_interval_hours: Number(document.getElementById('scan-interval').value),
+  weekly_hours: Number(document.getElementById('weekly-hours').value),
+  notify_kind: document.getElementById('notify-kind').value,
+  notify_url: document.getElementById('notify-url').value,
+  notify_events: Object.fromEntries([...document.querySelectorAll('input[name=notify_event]')].map(box => [box.value, box.checked])),
+});
+function fill(values) {
+  document.getElementById('letterboxd-username').value = values.letterboxd_username;
+  document.getElementById('scan-interval').value = String(values.scan_interval_hours);
+  document.getElementById('weekly-hours').value = String(values.weekly_hours);
+  document.getElementById('notify-kind').value = values.notify_kind;
+  document.getElementById('notify-url').value = values.notify_url;
+  document.querySelectorAll('input[name=notify_event]').forEach(box => { box.checked = Boolean(values.notify_events[box.value]); });
+}
+async function save(values) {
   try {
+    const token = document.getElementById('notify-token');
     const response = await fetch('/api/settings', {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        letterboxd_username: document.getElementById('letterboxd-username').value,
-        country: country.value,
-        scan_interval_hours: Number(document.getElementById('scan-interval').value),
-        weekly_hours: Number(document.getElementById('weekly-hours').value),
-        notify_kind: document.getElementById('notify-kind').value,
-        notify_url: document.getElementById('notify-url').value,
-        notify_token: document.getElementById('notify-token').value,
-        notify_events: Object.fromEntries([...document.querySelectorAll('input[name=notify_event]')].map(box => [box.value, box.checked])),
-      }),
+      body: JSON.stringify({...values, notify_token: token.value}),  // an empty token keeps the saved one
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) return show('settings-message', data.error || 'Could not save the settings.', true);
-    show('settings-message', 'Saved.');
+    if (!response.ok) { show('settings-message', data.error || 'Could not save the settings.', true); return false; }
+    token.value = '';
+    show('settings-message', '');
+    return true;
   } catch {
     show('settings-message', 'Could not reach the app.', true);
-  } finally {
-    button.disabled = false;
+    return false;
   }
+}
+
+const toast = document.getElementById('toast');
+let toastTimer;
+let undo = null;
+function showToast(text, onUndo, rescan) {
+  document.getElementById('toast-text').textContent = text;
+  undo = onUndo;
+  document.getElementById('toast-undo').hidden = !onUndo;
+  document.getElementById('toast-rescan').hidden = !rescan;
+  toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.hidden = true; }, rescan ? 10000 : 5000);
+}
+document.getElementById('toast-undo').addEventListener('click', () => { toast.hidden = true; undo?.(); });
+document.getElementById('toast-rescan').addEventListener('click', async () => {
+  toast.hidden = true;
+  const response = await fetch('/api/scan', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({})});
+  const data = await response.json().catch(() => ({}));
+  if (response.ok && data.job_id) location.href = `/watchlist?scan=${encodeURIComponent(data.job_id)}`;
+  else show('settings-message', data.error || 'Could not start the scan.', true);
+});
+
+let saved = fields();
+form.addEventListener('submit', event => event.preventDefault());
+form.addEventListener('change', async event => {
+  if (!event.target.name || event.target.name === 'notify_token' && !event.target.value) return;
+  const before = saved;
+  const now = fields();
+  if (!await save(now)) return;
+  saved = now;
+  const rescan = event.target.name === 'letterboxd_username';
+  showToast(rescan ? 'Saved · Rescan now?' : 'Saved', async () => {
+    fill(before);
+    if (await save(before)) { saved = before; showToast('Change undone', null, false); }
+  }, rescan);
 });
 
 document.getElementById('tmdb-test').addEventListener('click', async () => {

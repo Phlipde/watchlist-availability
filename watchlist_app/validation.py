@@ -9,7 +9,7 @@ import math
 import re
 import time
 
-from .config import COUNTRIES
+from .config import valid_country
 from .models import OFFER_KINDS, Film
 
 MAX_TEXT = 500
@@ -151,7 +151,7 @@ def clean_films(items) -> tuple[list[dict], int]:
 
 def clean_scan(data, now: float | None = None) -> tuple[dict | None, int]:
     """A restored scan: (scan or None, number of dropped films)."""
-    if not isinstance(data, dict) or data.get("country") not in COUNTRIES:
+    if not isinstance(data, dict) or not valid_country(data.get("country")):
         return None, 0
     created = timestamp(data.get("created"), now)
     if created is None:
@@ -219,7 +219,7 @@ def clean_flag(data, now: float | None = None) -> dict | None:
 
 
 def clean_change(data, now: float | None = None) -> dict | None:
-    if not isinstance(data, dict) or data.get("country") not in COUNTRIES:
+    if not isinstance(data, dict) or not valid_country(data.get("country")):
         return None
     if data.get("change") not in CHANGE_KINDS:
         return None

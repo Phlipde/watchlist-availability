@@ -11,9 +11,9 @@
 # rental). A platform can appear in either section depending on the film. The
 # comment groupings below are just the *typical* nature of each provider.
 #
-# Provider names must match the keys in _ALL_PROVIDERS (watchlist_app/providers.py).
-# Services TMDB knows but this list does not can be chosen on the Settings page
-# once a scan has loaded the provider list from TMDB.
+# Provider names are the names the app shows: TMDB's name, or the short alias in
+# _ALIASES (watchlist_app/providers.py). A name counts only once a scan has loaded
+# the country's provider list from TMDB. A country without a section starts empty.
 
 [FR]
 # Typically free / ad-supported

@@ -1,8 +1,11 @@
 """Runtime configuration for the watchlist application."""
 
 import os
+import re
 from dataclasses import dataclass
+from functools import cache
 from pathlib import Path
+from typing import TypeGuard
 
 from dotenv import load_dotenv
 
@@ -14,7 +17,21 @@ LETTERBOXD_USERNAME: str | None = os.getenv("LETTERBOXD_USERNAME")
 COUNTRY: str = os.getenv("COUNTRY", "FR")
 DOWNLOADS_DIR = Path.home() / "Downloads"
 PLATFORMS_TOML = PROJECT_DIR / "platforms.toml"
-COUNTRIES = ("FR", "DE", "US", "GB")
+FLAGS_DIR = PROJECT_DIR / "static" / "flags"
+# Flag files that are not countries.
+_NOT_COUNTRIES = frozenset({"EU", "UN", "XX"})
+
+
+@cache
+def flag_countries() -> frozenset[str]:
+    """Codes with a flag picture in static/flags (ISO 3166 two letters, upper case)."""
+    codes = {path.stem.upper() for path in FLAGS_DIR.glob("*.svg")}
+    return frozenset(code for code in codes if re.fullmatch(r"[A-Z]{2}", code)) - _NOT_COUNTRIES
+
+
+def valid_country(code: object) -> TypeGuard[str]:
+    """Any country the app can show: two upper-case letters with a flag file."""
+    return isinstance(code, str) and code in flag_countries()
 
 
 def data_dir() -> Path:
