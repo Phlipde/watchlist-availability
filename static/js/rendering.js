@@ -92,8 +92,8 @@ export function filmCard(film, section, context) {
   const rating = numberText(film.letterboxd_rating)
     ? `<span aria-hidden="true">★</span><span class="visually-hidden">Letterboxd</span> ${Number(film.letterboxd_rating).toFixed(1)}`
     : Number(film.rating) > 0 ? `TMDB ${Number(film.rating).toFixed(1)}` : '';
-  const runtime = runtimeText(film.runtime) && `<span aria-hidden="true">${runtimeText(film.runtime)}</span><span class="visually-hidden">${runtimeSpoken(film.runtime)}</span>`;
-  const meta = [numberText(film.year, 'Year unknown'), runtime, rating].filter(Boolean).join(' · ');
+  // Only the essentials on the card; runtime, director and genres are in the details.
+  const meta = [numberText(film.year, 'Year unknown'), rating].filter(Boolean).join(' · ');
   const favorite = context.favorites.has(key);
   const savedFavorite = context.favorites.get(key) || {};
   const title = escapeHtml(film.title);

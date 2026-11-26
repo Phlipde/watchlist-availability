@@ -203,3 +203,10 @@ a.stat-tile:focus-visible, .avail-seg:focus-visible, .avail-legend a:focus-visib
 .country-option .country-name { overflow: hidden; color: var(--text-2); text-overflow: ellipsis; white-space: nowrap; }
 .country-option[aria-pressed="true"] { background: var(--surface-2); }
 .country-none { margin: 4px 6px; }
+
+/* Film cards: the poster is the card. Title and the rest sit below it on the page, grouped by space, not by a box. */
+.film:not(.unavailable-card), .film:not(.unavailable-card):hover { background: none; border-color: transparent; overflow: visible; }
+.film > .poster { border-radius: .5rem; overflow: hidden; }
+.film:not(.unavailable-card) .film-info { gap: 4px; padding: 10px 2px 4px; }
+@media (hover: hover) { .film:hover .poster img { filter: brightness(1.08); } }
+.view-compact .film:not(.unavailable-card) .film-info { padding: 8px; border-radius: 0 0 .5rem .5rem; }

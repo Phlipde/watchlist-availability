@@ -45,7 +45,7 @@ test('the card title is the link to the details; TMDB, trailer and Details butto
   const html = filmCard(film, 'Paid', context);
   assert.match(html, /<a class="film-open" href="\/\?genre=Drama&amp;film=x" data-key="x" title="Film">Film<\/a>/);
   assert.ok(!html.includes('tmdb.example') && !html.includes('trailer') && !html.includes('Details'), html);
-  assert.match(html, /2010 · <span aria-hidden="true">1h 58m<\/span><span class="visually-hidden">1 hour 58 minutes<\/span> · TMDB 7\.7</);
+  assert.match(html, /<p class="year">2010 · TMDB 7\.7<\/p>/);  // runtime is in the details, not on the card
   assert.match(html, /<img src="[^"]*" alt=""|no-poster/);
   assert.ok(!html.includes('/10'));
 });
