@@ -5,14 +5,14 @@ großen Umbauten von `routes.py`, `store.py` und `app.js`. Jeder Schritt: Tests 
 
 ## A. Dateien aufteilen, Teil 1 (risikoarm)
 
-- [ ] A1 `static/js/drawer.js` → `places.js` (Orts-/Länderlisten), `film-meta.js` (reine Helfer), `drawer.js` (HTML);
+- [x] A1 `static/js/drawer.js` → `places.js` (Orts-/Länderlisten), `film-meta.js` (reine Helfer), `drawer.js` (HTML);
       drawer.js exportiert die Helfer weiter, kein Import anderswo ändert sich.
-- [ ] A2 `tests/browser/test_pages.py` → `conftest.py` (Fake-Daten, Fixtures) + Testdateien nach Bereich
+- [x] A2 `tests/browser/test_pages.py` → `conftest.py` (Fake-Daten, Fixtures) + Testdateien nach Bereich
       (watchlist, details, phone, keyboard, settings, stats).
-- [ ] A3 `tests/test_web.py` → Paket `tests/web/` mit eigener `conftest.py` und 5 Dateien.
-- [ ] A4 `static/css/app.css` → 6 Dateien in gleicher Reihenfolge, nur an Abschnittsgrenzen geschnitten,
+- [x] A3 `tests/test_web.py` → Paket `tests/web/` mit eigener `conftest.py` und 5 Dateien.
+- [x] A4 `static/css/app.css` → 6 Dateien in gleicher Reihenfolge, nur an Abschnittsgrenzen geschnitten,
       eingebunden über ein Partial `partials/styles.html` mit einer gemeinsamen Version.
-- [ ] A5 `scan_service.py` → `scan_run.py` (Modulfunktionen); `costs.py` → `cost_settings.py`.
+- [x] A5 `scan_service.py` → `scan_run.py` (Modulfunktionen); `costs.py` → `cost_settings.py`.
 
 ## B. Eingebaute Dienstlisten (Ergebnis der Prüfung: weitgehend durch TMDB-Daten ersetzbar)
 
