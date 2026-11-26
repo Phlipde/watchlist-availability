@@ -115,8 +115,8 @@ function bars(rows, total, {limit = 8, nameOf = name => name, hrefOf = null, nou
 function histogram({bins, average}, {unit, hrefOf}) {
   const peak = Math.max(...bins.map(bin => bin.count), 1);
   const middle = bins.find(bin => average !== null && average >= bin.from && average < bin.to);
-  const columns = bins.map(bin => `<li${bin === middle ? ' class="is-average"' : ''}><a href="${esc(hrefOf(bin))}" title="${esc(bin.label)}: ${bin.count} films"><span class="histo-bar" style="height:${bin.count / peak * 100}%"></span><span class="histo-label">${esc(bin.label.replace(' min', '').replace('Under ', '<'))}</span><span class="visually-hidden">${esc(bin.label)}: ${bin.count} films</span></a></li>`).join('');
-  return `<p class="hint">${average === null ? 'No data.' : `Average ${unit(average)}`}</p><ol class="histo">${columns}</ol>`;
+  const columns = bins.map(bin => `<li${bin === middle ? ' class="is-average"' : ''}><a href="${esc(hrefOf(bin))}" title="${esc(bin.label)}: ${bin.count} films"><span class="histo-bar" style="height:${bin.count / peak * 100}%"></span><span class="histo-label" aria-hidden="true">${esc(bin.label.replace(' min', '').replace('Under ', '<').split('–')[0].replace(/(\.\d)0$/, '$1'))}</span><span class="visually-hidden">${esc(bin.label)}: ${bin.count} films</span></a></li>`).join('');
+  return `<p class="hint">${average === null ? 'No data.' : `Average ${unit(average)}`}</p><ol class="histo${bins.length > 8 ? ' is-dense' : ''}">${columns}</ol>`;
 }
 
 const sentence = (rows, total, nameOf) => {

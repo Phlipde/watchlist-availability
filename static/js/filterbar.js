@@ -492,15 +492,20 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     const items = [...row.children].flatMap(child => (getComputedStyle(child).display === 'contents' ? [...child.children] : [child]));
     return items.some(item => item.offsetParent !== null && item.offsetTop >= floor);
   };
+  // A bar that still takes two rows (a tablet) gets the heart, the link and the view switch into the gap of its
+  // second row, so the row of tabs below stays one line. Wider screens keep them beside the tabs.
+  const VIEW_TOOLS = ['favorites-view', 'share-button', 'view-switch'];
   function fitBar() {
     const row = $('film-filters').parentElement;
     const pops = GIVE_WAY.map($);
     pops.forEach(moveBack);
     if (matchMedia('(max-width: 800px)').matches || $('film-search').offsetParent === null) return;  // phones have their own sheet
+    VIEW_TOOLS.forEach(id => $('tabs-view-slot').append($(id)));
     for (const pop of pops) {
       if (!wrapped(row)) break;
       moveIn(pop);
     }
+    if (wrapped(row)) VIEW_TOOLS.forEach(id => $('bar-view-slot').append($(id)));
     updateChips();
   }
   // The row's own size does not change when a control gives way, so also look again after fonts load, on resize and after each draw.

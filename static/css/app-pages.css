@@ -309,3 +309,9 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 /* "Pick for me" inside the drawer: the reason and a way to roll again. */
 .pick-reason { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; margin: 0 0 12px; font: var(--fs-body) system-ui, sans-serif; color: var(--muted); }
 
+
+/* The coverage bar says each share in words too (not by colour alone), where the segment has room. */
+.coverage-bar { height: 20px; }
+.coverage-bar .seg { display: flex; align-items: center; justify-content: center; overflow: hidden; text-decoration: none; }
+.seg-pct { color: oklch(20% 0.012 255); font: 600 var(--fs-small)/1 system-ui, sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.seg-other .seg-pct { color: oklch(92% 0.006 255); }

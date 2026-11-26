@@ -63,6 +63,17 @@ test('tonight rows: new, free, one per subscription by size; chips narrow every 
   assert.deepEqual(tonightRows(films, {services, chips: new Set(['free']), now: NOW}).rows.map(row => row.title), ['Free']);
 });
 
+test('"New this week" keeps films that came to one of your services in the last seven days', () => {
+  const DAY = 86400;
+  const films = [
+    {key: '1', title: 'Fresh', runtime: 100, providers: {Netflix: ['flatrate']}, provider_changes: {since: NOW - 2 * DAY, added: ['Netflix'], removed: []}},
+    {key: '2', title: 'Older', runtime: 100, providers: {Netflix: ['flatrate']}, provider_changes: {since: NOW - 10 * DAY, added: ['Netflix'], removed: []}},
+    {key: '3', title: 'Elsewhere', runtime: 100, providers: {Netflix: ['flatrate'], MUBI: ['flatrate']}, provider_changes: {since: NOW - DAY, added: ['MUBI'], removed: []}},
+  ];
+  const {available} = tonightRows(films, {services: new Set(['Netflix']), chips: new Set(['week']), now: NOW});
+  assert.deepEqual(titles(available), ['Fresh']);
+});
+
 test('pick for me avoids films picked before, until none is left', () => {
   const films = [{key: '1'}, {key: '2'}];
   assert.equal(pickFilm(films, new Set(['1']), () => 0.9).key, '2');

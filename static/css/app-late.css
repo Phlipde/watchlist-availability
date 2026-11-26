@@ -275,3 +275,19 @@ input[type=search]:not(#svc-q) { padding-left: 32px; background-image: url("data
 .best-way .lstack-item:first-child + .lstack-item { margin-left: 4px; }
 .lstack-item:not(:first-child) .lstack-logo { box-shadow: 0 0 0 2px var(--surface); }
 .lstack-item { cursor: default; }
+
+/* Histograms in Stats: a bin is named by its start ("90" for 90–104); with many bins only every second name shows. */
+.histo.is-dense li:nth-child(even) .histo-label { visibility: hidden; }
+.histo.is-dense .histo-label { overflow: visible; }  /* the hidden neighbours leave room */
+
+/* The CSV picker: our own button and the file's name; the native field stays for the keyboard, out of sight. */
+.file-pick { position: relative; display: flex; align-items: center; gap: 8px; margin-top: 6px; min-width: 0; }
+.file-input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.file-input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.file-name { min-width: 0; overflow: hidden; color: var(--muted); font-size: var(--fs-small); text-overflow: ellipsis; white-space: nowrap; }
+/* Genre hint: Alt-click only means something with a mouse. */
+.hint-touch { display: none; }
+@media (pointer: coarse) { .hint-mouse { display: none; } .hint-touch { display: inline; } }
+
+/* Touch: the parts of a filter chip are 44px targets each (the x removes, the text opens the filter). */
+@media (pointer: coarse) { .filter-chip .chip-open, .filter-chip .chip-remove { min-height: 44px; } .filter-chip .chip-remove { min-width: 44px; } }

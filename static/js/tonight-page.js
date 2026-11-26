@@ -19,7 +19,7 @@ export function createTonightPage({state, imageBaseUrl, view: VIEW, regionLabel,
     if (abroadOnFor()) {
       const shown = new Set([...available.map(filmKey), ...watchedKeys(), ...hiddenKeys()]);
       const checks = TONIGHT_CHIPS.filter(([id, , check]) => tonightChips.has(id) && check).map(([, , check]) => check);
-      const list = sortFilms(abroadCandidates(shown).filter(film => checks.every(check => check(film))), 'priority', {favorites: state.favorites});
+      const list = sortFilms(abroadCandidates(shown).filter(film => checks.every(check => check(film, {services: state.selected, now: Date.now() / 1000}))), 'priority', {favorites: state.favorites});
       if (list.length) rows.push({id: 'abroad', title: 'On your services abroad', films: list, href: '/watchlist?where=abroad'});
     }
     document.getElementById('context-text').innerHTML = `${available.length} films available on <a href="/subscriptions">${state.selected.size} services</a>${state.lastScan ? ` · synced ${ago(state.lastScan)}` : ''}`;

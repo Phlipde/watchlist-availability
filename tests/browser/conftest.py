@@ -37,6 +37,7 @@ BUNDLES = {
         "poster_path": None,
         "details": {
             "tmdb_title": "Heat",
+            "collection": "Test Saga",
             "release_date": "1995-12-15",
             "overview": "A thief.",
             "rating": 8.0,
@@ -51,6 +52,7 @@ BUNDLES = {
         "poster_path": None,
         "details": {
             "tmdb_title": "Alien",
+            "collection": "Test Saga",
             "release_date": "1979-05-25",
             "overview": "In space.",
             "rating": 8.1,

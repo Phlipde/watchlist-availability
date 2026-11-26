@@ -318,6 +318,10 @@ export function createScanFlow({state, scanState, results, filterBar, freeServic
     }
   });
   document.getElementById('retry-scan').addEventListener('click', startScan);
+  // A button of our own instead of the browser's file field (whose text follows the browser's language and gets cut).
+  document.getElementById('csv-upload').addEventListener('change', event => {
+    document.getElementById('csv-name').textContent = event.target.files[0]?.name || 'No file chosen';
+  });
   document.getElementById('grey-unavailable').checked = localStorage.getItem('greyUnavailableDuringRescan') === 'true';
   document.getElementById('grey-unavailable').addEventListener('change', event => {
     localStorage.setItem('greyUnavailableDuringRescan', String(event.target.checked));
