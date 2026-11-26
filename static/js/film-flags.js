@@ -70,6 +70,8 @@ export function createFilmFlags({state, results, showToast, renderFilms}) {
       modalButton.setAttribute('aria-pressed', String(active));
       modalButton.disabled = false;
     });
+    // The new heart blurs in: the swap's only motion (see .icon-swap).
+    document.querySelectorAll(`.film[data-key="${CSS.escape(key)}"] .favorite i, .modal-favorite[data-key="${CSS.escape(key)}"] i`).forEach(icon => icon.classList.add('icon-swap'));
   }
   // Undo after removing: the favorite comes back with its status and note.
   async function restoreFavorite(previous) {

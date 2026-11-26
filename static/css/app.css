@@ -10,7 +10,7 @@
     main:has(.workspace) { max-width: 1800px; }  /* the film grid gets about 7 columns on wide screens */
     /* One slim bar: brand and country, the pages, the sync dot. It stays on top and slims down while scrolling. */
     main:has(.app-header) { padding-top: 0; }
-    .app-header { position: sticky; top: 0; z-index: 1030; display: flex; align-items: center; gap: 24px; min-height: 56px; margin: 0 -24px; padding: 0 24px; background: var(--bg); border-bottom: 1px solid var(--line); transition: min-height .15s ease; }
+    .app-header { position: sticky; top: 0; z-index: 1030; display: flex; align-items: center; gap: 24px; min-height: 56px; margin: 0 -24px; padding: 0 24px; background: var(--bg); border-bottom: 1px solid var(--line); }
     .app-header.compact { min-height: 48px; }
     body > .app-header { margin: 0; }  /* the pages without the film list: the header sits above the narrow column */
     .app-header .brand { margin: 0; white-space: nowrap; }

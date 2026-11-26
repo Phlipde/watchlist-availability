@@ -233,3 +233,18 @@ input[type=search]:not(#svc-q) { padding-left: 32px; background-image: url("data
 .skeleton-line { margin: 12px 2px 0; }
 .skeleton-line.is-short { width: 45%; height: 10px; margin-top: 8px; }
 .skeleton-logos { width: 54px; height: 24px; margin: 12px 2px 0; border-radius: 6px; background: oklch(33.7% 0.012 255); }
+
+/* Motion: feedback and entrances only, transform and opacity (the accordions animate their height on purpose).
+   prefers-reduced-motion switches all of it off (app-pages.css). */
+:root { interpolate-size: allow-keywords; }
+:is(.btn, .chip, .quick-chip, .filter-chip, .filter-button, .tool, .link-chip, .alt-chip, .card-action, .favorite) { transition: transform .15s ease-out, color .15s ease-out, background-color .15s ease-out, border-color .15s ease-out, opacity .15s ease-out; }
+:is(.btn, .chip, .quick-chip, .filter-chip, .filter-button, .tool, .link-chip, .alt-chip, .card-action, .favorite):active:not(:disabled) { transform: scale(.97); }
+.film > .poster { transition: transform .15s ease-out; }
+.film:has(.film-open:active) > .poster { transform: scale(.97); }
+.filter-pop[open] > .filter-menu, .sync[open] > .sync-panel, details[open] > .menu { animation: pop-in .15s ease-out; transform-origin: top; }
+@keyframes pop-in { from { opacity: 0; transform: scale(.97); } }
+.icon-swap { animation: icon-swap .2s ease-out; }
+@keyframes icon-swap { from { opacity: 0; filter: blur(4px); transform: scale(.8); } }
+:is(.other-services, details.unavailable, .offer-buy)::details-content { height: 0; overflow: clip; transition: height .2s ease-out, content-visibility .2s allow-discrete; }
+:is(.other-services, details.unavailable, .offer-buy)[open]::details-content { height: auto; }
+@media (prefers-reduced-motion: reduce) { ::details-content { transition: none !important; } }  /* * does not reach this pseudo-element */
