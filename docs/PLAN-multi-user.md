@@ -81,7 +81,7 @@ Status: [ ] offen, [x] erledigt, [~] teilweise.
 ### 1.7 Service Worker und localStorage
 
 - `static/sw.js` speichert API-Antworten und Seiten unter ihrer URL. Beim Profilwechsel schickt der Client `clear-pages`, der Worker leert den `PAGES`-Cache.
-- localStorage (gespeicherte Ansichten, Tonight-Chips, `abroadOn`, `viewMode`) bleibt **je Gerät** (siehe Frage 4).
+- localStorage (gespeicherte Ansichten, Tonight-Chips, `abroadOn`, `viewMode`) gilt **je Profil**, gespeichert weiter auf dem Gerät: die Schlüssel bekommen die Profil-ID (`p2:savedViews`). Teilen zwischen Profilen kommt ganz am Ende (M5.7). (Entschieden 26.11.2026, Frage 4.)
 
 ### 1.8 Tests und Fixtures
 
@@ -174,6 +174,8 @@ Für jede Stufe gilt: `pytest -q`, `node --test tests/js/*.mjs`, ruff und mypy g
 - [ ] **M5.2 Pick for me in Together [einfach]** — Gruppe `both` zählt mehr, Begründung „On both lists“.
 - [ ] **M5.3 Raster in Together [einfach, optional]** — `/watchlist?together=2`.
 - [ ] **M5.4 Feeds und Sensoren mit Profil-Link [einfach]** — Settings → Data zeigt URLs mit `?profile=`.
+- [ ] **M5.6 Gerätewerte je Profil [einfach]** — kleines Modul `static/js/profile-storage.js` (`profileKey(name)` = `p<id>:<name>`; Profil-ID aus einem `data-profile` am `<body>`), alle `localStorage`-Zugriffe (`saved-views.js`, Tonight-Chips, `abroadOn`, `viewMode`, versteckte Vorschläge) darüber; beim ersten Lesen für Profil 1 den alten Schlüssel ohne Präfix übernehmen, damit nichts verloren geht. Tests: node-Test für `profileKey` und die Übernahme; Browser: Profil 2 sieht die gespeicherten Ansichten von Profil 1 nicht.
+- [ ] **M5.7 Gespeicherte Ansichten teilen [einfach]** — eine Ansicht als Link teilen (die Filter stehen schon in der URL) und „Copy to profile …“ in der Liste der gespeicherten Ansichten. Ganz am Ende.
 - [ ] **M5.5 Doku [einfach]** — `CLAUDE.md` und `PLAN.md` aktualisieren.
 
 ---
@@ -183,7 +185,7 @@ Für jede Stufe gilt: `pytest -q`, `node --test tests/js/*.mjs`, ruff und mypy g
 1. **Hidden/Not now in Together:** Fliegt ein Film raus, wenn *eine* Person ihn versteckt hat? *Empfehlung: ja.*
 2. **Land in Together bei verschiedenen Ländern:** *Empfehlung: Land des aktiven Profils, Partnerliste dort scannen.*
 3. **Wer darf Profile anlegen und löschen?** *Empfehlung: jeder; Löschen mit Bestätigung, letztes Profil nicht löschbar.*
-4. **localStorage (gespeicherte Ansichten, Tonight-Chips):** je Gerät oder je Profil? *Empfehlung: je Gerät wie bisher.*
+4. **localStorage (gespeicherte Ansichten, Tonight-Chips):** ~~je Gerät oder je Profil?~~ **Entschieden: je Profil, auf dem Gerät gespeichert; teilbar ganz am Ende** (M5.6, M5.7).
 5. **Neues Profil und Scan:** sofort scannen, danach im globalen Zeitplan? *Empfehlung: ja.*
 
 Nicht geprüft: das Markup der Letterboxd-Seiten `/{user}/films/`, und ob `save_bundle` die Angebote aller Länder auf einmal speichert (zeigt der Test in M2.3).
