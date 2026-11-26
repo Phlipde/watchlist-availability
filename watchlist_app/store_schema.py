@@ -61,7 +61,8 @@ CREATE TABLE IF NOT EXISTS scans (
     watchlist_key TEXT,
     results TEXT NOT NULL,
     unavailable TEXT NOT NULL,
-    stats TEXT NOT NULL DEFAULT '{}'
+    stats TEXT NOT NULL DEFAULT '{}',
+    profile_id INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS changes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,11 +72,15 @@ CREATE TABLE IF NOT EXISTS changes (
     title TEXT NOT NULL,
     year INTEGER,
     provider TEXT NOT NULL,
-    change TEXT NOT NULL
+    change TEXT NOT NULL,
+    profile_id INTEGER NOT NULL DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS changes_by_country ON changes (country, created);
+CREATE INDEX IF NOT EXISTS changes_by_owner ON changes (profile_id, country, created);
+CREATE INDEX IF NOT EXISTS scans_by_owner ON scans (profile_id, country, created);
 CREATE TABLE IF NOT EXISTS favorites (
-    movie_key TEXT PRIMARY KEY,
+    profile_id INTEGER NOT NULL DEFAULT 1,
+    movie_key TEXT NOT NULL,
     title TEXT NOT NULL,
     year INTEGER,
     poster_path TEXT,
@@ -84,20 +89,24 @@ CREATE TABLE IF NOT EXISTS favorites (
     rating REAL,
     status TEXT NOT NULL DEFAULT 'plan',
     notes TEXT NOT NULL DEFAULT '',
-    added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (profile_id, movie_key)
 );
 CREATE TABLE IF NOT EXISTS service_history (
+    profile_id INTEGER NOT NULL DEFAULT 1,
     country TEXT NOT NULL,
     day TEXT NOT NULL,
     service TEXT NOT NULL,
     films INTEGER NOT NULL,
     only_here INTEGER NOT NULL,
-    PRIMARY KEY (country, day, service)
+    PRIMARY KEY (profile_id, country, day, service)
 );
 CREATE TABLE IF NOT EXISTS flags (
-    movie_key TEXT PRIMARY KEY,
+    profile_id INTEGER NOT NULL DEFAULT 1,
+    movie_key TEXT NOT NULL,
     flag TEXT NOT NULL,
-    until REAL
+    until REAL,
+    PRIMARY KEY (profile_id, movie_key)
 );
 CREATE TABLE IF NOT EXISTS jobs (
     id TEXT PRIMARY KEY,
@@ -117,7 +126,8 @@ CREATE TABLE IF NOT EXISTS jobs (
     started_at REAL NOT NULL,
     heartbeat_at REAL,
     finished_at REAL,
-    scan_id INTEGER
+    scan_id INTEGER,
+    profile_id INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
@@ -131,14 +141,90 @@ CREATE TABLE IF NOT EXISTS provider_catalog (
     fetched_at REAL NOT NULL,
     PRIMARY KEY (country, tmdb_name)
 );
+CREATE TABLE IF NOT EXISTS profiles (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    email TEXT,
+    created REAL NOT NULL
+);
+INSERT OR IGNORE INTO profiles (id, name, created) VALUES (1, 'Me', (julianday('now') - 2440587.5) * 86400.0);
 """
 
-# The database layout is versioned with SQLite's `user_version`. Version 1 is the layout of _SCHEMA above, the
-# baseline of 2026-11-22 (the production database already had it); layouts before it are not migrated.
-# A later change: put the SQL from version N-1 to N into _MIGRATIONS[N], raise SCHEMA_VERSION to N and put the
-# same change into _SCHEMA for new databases.
-SCHEMA_VERSION = 1
-_MIGRATIONS: dict[int, str] = {}
+# The database layout is versioned with SQLite's `user_version`. Version 1 is the baseline of 2026-11-22 (the
+# production database already had it); layouts before it are not migrated. _SCHEMA above is the current layout
+# and only runs on an empty database; an older one goes through the migrations.
+# A later change: put the SQL from version N-1 to N into _MIGRATIONS[N] (in BEGIN; ... COMMIT; with its
+# user_version, so a crash leaves the old layout), raise SCHEMA_VERSION to N and change _SCHEMA the same way.
+SCHEMA_VERSION = 2
+_MIGRATIONS: dict[int, str] = {
+    # 2: profiles; favorites, flags and service_history get profile_id in their key, scans, changes and jobs
+    # an owner column. Everything that exists belongs to profile 1.
+    2: """
+BEGIN;
+CREATE TABLE profiles (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    email TEXT,
+    created REAL NOT NULL
+);
+INSERT INTO profiles (id, name, created) VALUES (
+    1,
+    COALESCE(NULLIF((SELECT trim(value) FROM settings WHERE key = 'letterboxd_username'), ''), 'Me'),
+    (julianday('now') - 2440587.5) * 86400.0
+);
+CREATE TABLE favorites_new (
+    profile_id INTEGER NOT NULL DEFAULT 1,
+    movie_key TEXT NOT NULL,
+    title TEXT NOT NULL,
+    year INTEGER,
+    poster_path TEXT,
+    tmdb_url TEXT,
+    trailer_url TEXT,
+    rating REAL,
+    status TEXT NOT NULL DEFAULT 'plan',
+    notes TEXT NOT NULL DEFAULT '',
+    added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (profile_id, movie_key)
+);
+INSERT INTO favorites_new (
+    profile_id, movie_key, title, year, poster_path, tmdb_url, trailer_url, rating, status, notes, added_at
+)
+SELECT 1, movie_key, title, year, poster_path, tmdb_url, trailer_url, rating, status, notes, added_at
+FROM favorites;
+DROP TABLE favorites;
+ALTER TABLE favorites_new RENAME TO favorites;
+CREATE TABLE service_history_new (
+    profile_id INTEGER NOT NULL DEFAULT 1,
+    country TEXT NOT NULL,
+    day TEXT NOT NULL,
+    service TEXT NOT NULL,
+    films INTEGER NOT NULL,
+    only_here INTEGER NOT NULL,
+    PRIMARY KEY (profile_id, country, day, service)
+);
+INSERT INTO service_history_new (profile_id, country, day, service, films, only_here)
+SELECT 1, country, day, service, films, only_here FROM service_history;
+DROP TABLE service_history;
+ALTER TABLE service_history_new RENAME TO service_history;
+CREATE TABLE flags_new (
+    profile_id INTEGER NOT NULL DEFAULT 1,
+    movie_key TEXT NOT NULL,
+    flag TEXT NOT NULL,
+    until REAL,
+    PRIMARY KEY (profile_id, movie_key)
+);
+INSERT INTO flags_new (profile_id, movie_key, flag, until) SELECT 1, movie_key, flag, until FROM flags;
+DROP TABLE flags;
+ALTER TABLE flags_new RENAME TO flags;
+ALTER TABLE scans ADD COLUMN profile_id INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE changes ADD COLUMN profile_id INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE jobs ADD COLUMN profile_id INTEGER NOT NULL DEFAULT 1;
+CREATE INDEX changes_by_owner ON changes (profile_id, country, created);
+CREATE INDEX scans_by_owner ON scans (profile_id, country, created);
+PRAGMA user_version = 2;
+COMMIT;
+""",
+}
 
 MATCH_FIELDS = ("film_key", "title", "year", "tmdb_id", "source", "checked_at", "last_seen")
 

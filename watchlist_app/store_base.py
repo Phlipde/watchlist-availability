@@ -21,15 +21,19 @@ class StoreBase:
             version = self._db.execute("PRAGMA user_version").fetchone()[0]
             if version > SCHEMA_VERSION:
                 raise RuntimeError(f"The database is from a newer version of the app (layout {version}).")
-            if 0 < version < SCHEMA_VERSION and self.path != ":memory:":
-                # A migration cannot be undone: keep a copy of the old layout next to the database first.
-                with sqlite3.connect(f"{self.path}.pre-v{SCHEMA_VERSION}") as copy:
-                    self._db.backup(copy)
-                copy.close()
-            self._db.executescript(_SCHEMA)
-            for step in range(version + 1, SCHEMA_VERSION + 1):
-                if step in _MIGRATIONS:
-                    self._db.executescript(_MIGRATIONS[step])
+            if not self._db.execute("SELECT 1 FROM sqlite_master WHERE type = 'table'").fetchone():
+                # An empty database gets the current layout at once; _SCHEMA would not fit an older one.
+                self._db.executescript(_SCHEMA)
+            else:
+                version = max(version, 1)  # tables without a version: the baseline layout 1
+                if version < SCHEMA_VERSION and self.path != ":memory:":
+                    # A migration cannot be undone: keep a copy of the old layout next to the database first.
+                    with sqlite3.connect(f"{self.path}.pre-v{SCHEMA_VERSION}") as copy:
+                        self._db.backup(copy)
+                    copy.close()
+                for step in range(version + 1, SCHEMA_VERSION + 1):
+                    if step in _MIGRATIONS:
+                        self._db.executescript(_MIGRATIONS[step])
             self._db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
             self._db.commit()
 

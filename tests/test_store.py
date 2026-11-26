@@ -5,6 +5,7 @@ import time
 import pytest
 
 from tests.helpers import BUNDLE
+from tests.test_store_migration import _v1_database
 from watchlist_app import store as store_module
 from watchlist_app import store_base
 from watchlist_app.models import Film
@@ -329,14 +330,11 @@ class TestSchemaVersion:
 
     def test_a_database_of_the_baseline_without_a_version_is_marked_and_kept(self, tmp_path):
         path = tmp_path / "prod.sqlite3"
-        Store(path).set_setting("country", "DE")
-        connection = sqlite3.connect(path)
-        connection.execute("PRAGMA user_version = 0")  # a layout before it was versioned
-        connection.commit()
-        connection.close()
+        _v1_database(path, version=0)  # the baseline layout before it was versioned
         again = Store(path)
         assert again.get_setting("country") == "DE"
         assert again._read("PRAGMA user_version")[0][0] == SCHEMA_VERSION
+        assert again._read("SELECT profile_id, movie_key FROM favorites") == [(1, "lb:heat")]
 
     def test_a_migration_keeps_a_copy_of_the_old_database(self, tmp_path, monkeypatch):
         path = tmp_path / "old.sqlite3"
