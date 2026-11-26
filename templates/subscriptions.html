@@ -39,16 +39,20 @@
       <article class="rec rec-{{ card.type }}" data-rec="{{ card.type }}:{{ card.name }}">
         {% if card.type == 'cancel' %}
         <h3>Cancel {{ card.name }}</h3>
-        <p>{% if card.loses_nothing %}You lose no watchlist film.{% else %}<strong>{{ card.films }}</strong> film{{ '' if card.films == 1 else 's' }} only there{% if card.hours %} (≈ {{ card.hours|round(0)|int }} h){% endif %}.{% endif %}{% if card.price %} € <span data-money>{{ '%.2f'|format(card.price) }}</span> a month{% if card.per_film %} = € <span data-money>{{ '%.2f'|format(card.per_film) }}</span> per film you would lose{% endif %}.{% endif %}</p>
+        <p>{% if card.loses_nothing %}You lose no watchlist film.{% else %}<strong>{{ card.films }}</strong> film{{ '' if card.films == 1 else 's' }} only there{% if card.hours %} (≈ {{ card.hours|round(0)|int }} h){% endif %}.{% endif %}{% if card.price %} € <span data-money>{{ '%.2f'|format(card.price) }}</span> a month{% if card.per_film %} = € <span data-money>{{ '%.2f'|format(card.per_film) }}</span> per film you would lose{% endif %}.{% endif %}{% if card.weeks %} At your pace you would watch them in about {{ [card.weeks|round(0)|int, 1]|max }} week{{ '' if card.weeks < 1.5 else 's' }}.{% endif %}</p>
+        {% if card.vs and card.per_film %}<p class="hint rec-why">{{ card.name }}: {{ card.films }} films for € <span data-money>{{ '%.2f'|format(card.per_film) }}</span> each vs. {{ card.vs.name }}: {{ card.vs.films }} for € <span data-money>{{ '%.2f'|format(card.vs.per_film) }}</span> each</p>{% endif %}
+        {% elif card.type == 'keep' %}
+        <h3>All your subscriptions are worth it right now</h3>
+        <p>Every film only on one of them costs less than € <span data-money>{{ '%.2f'|format(card.cancel_from) }}</span> a month, and none would be watched within a month at your pace.</p>
         {% else %}
         <h3>Subscribe to {{ card.name }} for a month</h3>
         <p><strong>{{ card.films }}</strong> watchlist films none of your services has{% if card.hours %} (≈ {{ card.hours }} h){% endif %}.</p>
         {% endif %}
         {% if card.based_on == 'count' %}<p class="hint">Based on the film count only{% if card.type == 'cancel' %}: <button class="film-link add-price" type="button">add a price</button> for a better recommendation{% endif %}.</p>{% endif %}
-        <div class="rec-actions">
+        {% if card.type != 'keep' %}<div class="rec-actions">
           {% if card.type == 'cancel' %}<button class="btn btn-sm btn-outline-secondary set-reminder" type="button" data-service="{{ card.name }}">Set reminder</button><a class="btn btn-sm btn-outline-secondary" href="/watchlist?providers={{ card.name|urlencode }}&only=1&cost=subscription">Show the {{ card.films }} film{{ '' if card.films == 1 else 's' }}</a>{% else %}<a class="btn btn-sm btn-outline-secondary" href="/watchlist?providers={{ card.name|urlencode }}&cost=subscription">Show the films on {{ card.name }}</a>{% endif %}
           <button class="btn btn-sm btn-outline-secondary rec-hide" type="button">Not interested</button>
-        </div>
+        </div>{% endif %}
       </article>
       {% endfor %}
     </div>

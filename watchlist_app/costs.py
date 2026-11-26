@@ -68,6 +68,8 @@ def _label(film: dict) -> dict:
 
 
 GOOD_RATING = 3.8  # a Letterboxd average from which a film counts as well rated
+CANCEL_FROM = 0.50  # € a month per film you would lose: from here on cancelling is worth a tip
+WEEKS_PER_MONTH = 4.345
 
 
 def film_weight(film: dict, favorites: frozenset[str] = frozenset()) -> int:
@@ -95,6 +97,8 @@ def overview(
     costs: dict[str, dict],
     unavailable: int = 0,
     favorites: frozenset[str] = frozenset(),
+    weekly_hours: float | None = None,
+    cancel_from: float = CANCEL_FROM,
 ) -> dict:
     """What the costs page shows for the films of one scan.
 
@@ -164,29 +168,18 @@ def overview(
             gain[2] += 1 if (film.get("key") or film.get("title")) in favorites else 0
     book = sorted(gains.items(), key=lambda item: (-item[1][0], item[0]))[:5]
 
-    # Cancel what loses nothing first, then the service with the fewest films of its own.
-    # Free services (and ones saved with price 0) cost nothing to keep.
-    paid = [item for item in services if item["price"] != 0]
-    # Least value for the money first (value per euro), without prices the least weighted films first.
-    ranked = sorted(
-        paid,
-        key=lambda item: (
-            item["value"] > 0,
-            item["value_per_euro"] if item["value_per_euro"] is not None else float("inf"),
-            item["value"],
-            -(item["price"] or 0),
-        ),
-    )
-    loses_nothing = [item["name"] for item in ranked if not item["only_here"]]
+    cancel = cancel_ranking(services, weekly_hours, cancel_from)
+    loses_nothing = [
+        name for name in cancel if not next(s for s in services if s["name"] == name)["only_here"]
+    ]
     rent_only = [
         _label(film)
         for film in films
         if not any(WATCH_KINDS & set(kinds) for kinds in film.get("providers", {}).values())
         and any("rent" in kinds for kinds in film.get("providers", {}).values())
     ]
-    cancel = loses_nothing or [item["name"] for item in ranked[:1]]
     coverage = _coverage(films, subscriptions, free, unavailable)
-    recommendations = _recommendations(services, cancel, bool(loses_nothing), book)
+    recommendations = _recommendations(services, cancel, book, weekly_hours, cancel_from)
     return {
         "coverage": coverage,
         "recommendations": recommendations,
@@ -360,15 +353,57 @@ def _coverage(films: list[dict], subscriptions: list[str], free: frozenset[str],
     }
 
 
-def _recommendations(services: list[dict], cancel: list[str], loses_nothing: bool, book: list) -> list[dict]:
+def cancel_ranking(
+    services: list[dict], weekly_hours: float | None = None, cancel_from: float = CANCEL_FROM
+) -> list[str]:
+    """Own paid services worth cancelling, the highest price per film you would lose first (ties by name).
+
+    Worth cancelling: you lose no film, or each film only there costs more than `cancel_from` a month, or at
+    your pace (`weekly_hours`) you would watch the films only there within a month. A service without a price
+    counts only when it loses nothing; one saved with price 0 is free and never cancelled.
+    """
+
+    def worth(item: dict) -> bool:
+        if item["price"] == 0:
+            return False
+        if not item["only_here"]:
+            return True
+        if item["per_film"] is None:
+            return False
+        quick = bool(weekly_hours) and item["hours"] / weekly_hours < WEEKS_PER_MONTH
+        return item["per_film"] > cancel_from or quick
+
+    def per_film(item: dict) -> float:
+        return float("inf") if not item["only_here"] else item["per_film"]
+
+    found = sorted(
+        (item for item in services if worth(item)), key=lambda i: (-per_film(i), i["name"].casefold())
+    )
+    return [item["name"] for item in found]
+
+
+def _recommendations(
+    services: list[dict],
+    cancel: list[str],
+    book: list,
+    weekly_hours: float | None = None,
+    cancel_from: float = CANCEL_FROM,
+) -> list[dict]:
     """At most two cards, each with the numbers behind it: what to cancel and what to book for a month.
 
-    Without a price a card says so (it is based on the film count only).
+    The cancel card names the cheapest other priced service as the comparison ("vs"). When no service is worth
+    cancelling but prices are set, a "keep" card says so.
     """
     cards: list[dict[str, Any]] = []
     by_name = {item["name"]: item for item in services}
+    priced = sorted(
+        (item for item in services if item["per_film"] is not None),
+        key=lambda item: (item["per_film"], item["name"].casefold()),
+    )
     if cancel and cancel[0] in by_name:
         item = by_name[cancel[0]]
+        other = next((o for o in priced if o["name"] != item["name"]), None)
+        weeks = item["hours"] / weekly_hours if weekly_hours and item["only_here"] else None
         cards.append(
             {
                 "type": "cancel",
@@ -377,10 +412,16 @@ def _recommendations(services: list[dict], cancel: list[str], loses_nothing: boo
                 "hours": item["hours"],
                 "price": item["price"],
                 "per_film": item["per_film"],
-                "loses_nothing": loses_nothing,
+                "loses_nothing": not item["only_here"],
                 "based_on": "price" if item["price"] else "count",
+                "weeks": round(weeks, 1) if weeks is not None and weeks < WEEKS_PER_MONTH else None,
+                "vs": {"name": other["name"], "films": len(other["only_here"]), "per_film": other["per_film"]}
+                if other
+                else None,
             }
         )
+    elif priced:
+        cards.append({"type": "keep", "name": "", "cancel_from": cancel_from})
     if book:
         name, gain = book[0]
         cards.append(

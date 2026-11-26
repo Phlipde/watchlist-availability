@@ -125,6 +125,7 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
                 settings.costs(country),
                 base.base_counts(scan)["not_available"],
                 frozenset(favorite["key"] for favorite in store.list_favorites()),
+                weekly_hours=settings.weekly_hours,
             ),
             weekly_hours=settings.weekly_hours,
             history=store.service_history(country),
