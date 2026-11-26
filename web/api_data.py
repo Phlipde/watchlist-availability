@@ -145,7 +145,11 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
                 return jsonify({"error": "Unknown profile."}), 404
         except ValueError as error:
             return jsonify({"error": str(error)}), 400
-        return jsonify({"ok": True})
+        response = jsonify({"ok": True})
+        # Ids are reused: a cookie left on the deleted id would open the next new profile.
+        if request.cookies.get(PROFILE_COOKIE) == str(profile_id):
+            response.delete_cookie(PROFILE_COOKIE, path="/", samesite="Lax", httponly=True)
+        return response
 
     @app.post("/api/profiles/active")
     def choose_profile():

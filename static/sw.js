@@ -44,6 +44,12 @@ async function networkFirst(request, cacheName = PAGES) {
   }
 }
 
+// A profile switch: the saved pages and data belong to the old profile.
+self.addEventListener('message', event => {
+  if (event.data?.type !== 'clear-pages') return;
+  event.waitUntil(caches.delete(PAGES).then(() => event.ports[0]?.postMessage('done')));
+});
+
 self.addEventListener('fetch', event => {
   const {request} = event;
   if (request.method !== 'GET') return;

@@ -114,11 +114,12 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
 
     @app.before_request
     def choose_profile():
-        g.profile_id = profile_for_request(store.list_profiles())
+        g.profiles = store.list_profiles()
+        g.profile_id = profile_for_request(g.profiles)
 
     @app.context_processor
     def header_context():
-        """The header is the same on every page: country and the state of the data."""
+        """The header is the same on every page: profile, country and the state of the data."""
         s = active_settings(settings)
         created = store.latest_scan_created(s.country, profile_id=s.profile_id)
         age = time.time() - created if created else None
@@ -128,6 +129,8 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             "header_countries": s.country_choices(),
             "sync_state": "stale" if stale else "ok",
             "sync_text": "Out of date" if stale else "Synced",
+            "profiles": g.profiles,
+            "active_profile": next(p for p in g.profiles if p["id"] == g.profile_id),
         }
 
     for module in (pages, api_scan, api_data, feeds):

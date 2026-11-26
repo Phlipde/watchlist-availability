@@ -264,6 +264,16 @@ def test_service_worker_saves_the_page_and_the_data_for_offline_use(app_server, 
     )
     assert "/watchlist" in saved["pages"] and "/api/latest" in saved["pages"]
     assert "/static/js/app.js" in saved["files"] and "/static/css/app.css" in saved["files"]
+    # A profile switch asks the worker to forget the saved pages and data; scripts and styles stay.
+    left = page.evaluate(
+        """async () => {
+            const {clearPages} = await import('/static/js/register-sw.js');
+            await clearPages(5000);
+            const count = async name => (await (await caches.open(name)).keys()).length;
+            return {pages: await count('pages-v1'), files: await count('static-v1')};
+        }"""
+    )
+    assert left["pages"] == 0 and left["files"] > 0
     context.close()
 
 

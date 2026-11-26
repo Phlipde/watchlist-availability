@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101412">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  <title>Profiles · Settings · Watchlist Availability</title>
+  <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
+  {% include "partials/styles.html" %}
+</head>
+<body>
+  {% include "partials/header.html" %}
+  <main class="page">
+    <h1 class="page-title">Settings</h1>
+    {% include "partials/settings-nav.html" %}
+    <h2 class="h4">Profiles</h2>
+    <p class="hint">Each profile has its own favorites, hidden films, services and settings. Profiles are not private: anyone who can open this app can open and change every profile.</p>
+    <p class="hint" id="profile-email-note">With Cloudflare Access, this e-mail opens the profile automatically.</p>
+    <p class="feedback" id="profiles-message" role="status" tabindex="-1"></p>
+
+    <ul class="profile-list" id="profile-list">
+      {% for profile in profiles %}{% set active = profile.id == active_profile.id %}
+      <li class="profile-row" id="profile-{{ profile.id }}">
+        <form class="profile-form" data-profile="{{ profile.id }}" data-name="{{ profile.name }}">
+          <div class="profile-field"><label class="form-label" for="profile-name-{{ profile.id }}">Name</label><input class="form-control form-control-sm" id="profile-name-{{ profile.id }}" name="name" value="{{ profile.name }}" required maxlength="60" autocomplete="off"></div>
+          <div class="profile-field"><label class="form-label" for="profile-email-{{ profile.id }}">Cloudflare e-mail (optional)</label><input class="form-control form-control-sm" id="profile-email-{{ profile.id }}" name="email" type="email" value="{{ profile.email or '' }}" aria-describedby="profile-email-note" autocomplete="off" spellcheck="false"></div>
+          <div class="profile-actions">
+            <button class="btn btn-sm btn-outline-secondary" type="submit" aria-label="Save changes to {{ profile.name }}">Save changes</button>
+            {% if active %}<span class="pill pill-ok">Active</span>{% else %}<button class="btn btn-sm btn-outline-secondary" type="button" data-use aria-label="Use this profile: {{ profile.name }}">Use this profile</button>{% endif %}
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-delete aria-label="Delete {{ profile.name }}"{% if profiles|length == 1 %} disabled aria-describedby="profile-last-note"{% endif %}>Delete</button>
+          </div>
+        </form>
+        {% if profiles|length == 1 %}<p class="hint mb-0" id="profile-last-note">The last profile cannot be deleted.</p>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+
+    <h2 class="h4 mt-4">Add a profile</h2>
+    <form class="profile-form profile-add" id="profile-add">
+      <div class="profile-field"><label class="form-label" for="profile-add-name">Name</label><input class="form-control form-control-sm" id="profile-add-name" name="name" required maxlength="60" autocomplete="off"></div>
+      <div class="profile-field"><label class="form-label" for="profile-add-email">Cloudflare e-mail (optional)</label><input class="form-control form-control-sm" id="profile-add-email" name="email" type="email" aria-describedby="profile-email-note" autocomplete="off" spellcheck="false"></div>
+      <div class="profile-actions"><button class="btn btn-sm btn-accent" type="submit">Add profile</button></div>
+    </form>
+  </main>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261126-3') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/profiles.js', v='20261126-2') }}" type="module"></script>
+</body>
+</html>

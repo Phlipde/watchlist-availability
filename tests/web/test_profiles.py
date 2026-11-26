@@ -74,6 +74,12 @@ class TestActiveProfile:
         for body in ({"id": True}, {"id": "2"}, {}, {"id": 1.5}):
             assert client.post("/api/profiles/active", json=body).status_code == 400
 
+    def test_deleting_the_chosen_profile_forgets_the_cookie(self, client, store, anna):
+        client.post("/api/profiles/active", json={"id": anna})
+        assert client.delete(f"/api/profiles/{anna}").status_code == 200
+        assert store.add_profile("Ben") == anna  # the id is free again
+        assert _profile_of(client) == 1
+
     def test_default_is_profile_1(self, client, anna):
         assert _profile_of(client) == 1
 
@@ -109,3 +115,31 @@ class TestActiveProfile:
         with client:
             client.get(f"/api/flags?profile={anna}")
             assert (active_settings(settings).country, settings.country) == ("GB", "DE")
+
+
+class TestProfilesInThePages:
+    def test_header_shows_the_active_profile_and_offers_the_others(self, client, anna):
+        client.set_cookie("wl_profile", str(anna))
+        page = client.get("/settings").get_data(as_text=True)
+        assert 'aria-label="Profile: Anna. Switch profile"' in page
+        assert 'data-profile-id="1"' in page and f'data-profile-id="{anna}"' not in page
+        assert 'href="/settings/profiles"' in page
+
+    def test_header_with_one_profile_still_links_to_manage_profiles(self, client):
+        page = client.get("/").get_data(as_text=True)
+        assert 'aria-label="Profile: Me. Switch profile"' in page and "Manage profiles" in page
+        assert "data-profile-id=" not in page
+
+    def test_profiles_page_lists_every_profile_with_the_active_mark(self, client, anna):
+        page = client.get("/settings/profiles").get_data(as_text=True)
+        assert 'value="Me"' in page and 'value="Anna"' in page and 'value="anna@example.org"' in page
+        assert page.count('class="pill pill-ok">Active<') == 1
+        assert 'aria-label="Use this profile: Anna"' in page
+        assert 'aria-label="Use this profile: Me"' not in page
+        assert "Profiles are not private" in page and 'aria-current="page">Profiles<' in page
+        assert "The last profile cannot be deleted." not in page
+
+    def test_the_last_profile_cannot_be_deleted(self, client):
+        page = client.get("/settings/profiles").get_data(as_text=True)
+        assert "The last profile cannot be deleted." in page
+        assert 'aria-label="Delete Me" disabled' in page

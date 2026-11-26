@@ -291,3 +291,22 @@ input[type=search]:not(#svc-q) { padding-left: 32px; background-image: url("data
 
 /* Touch: the parts of a filter chip are 44px targets each (the x removes, the text opens the filter). */
 @media (pointer: coarse) { .filter-chip .chip-open, .filter-chip .chip-remove { min-height: 44px; } .filter-chip .chip-remove { min-width: 44px; } }
+
+/* Profile switcher (partials/header.html): the active profile's name; the others and "Manage profiles" in the menu. */
+.profile-button { display: inline-flex; align-items: center; gap: 6px; max-width: 12em; padding: 2px 6px; border-radius: var(--radius-sm); color: var(--text-2); font: var(--fs-body) system-ui, sans-serif; cursor: pointer; }
+.profile-button:hover, .profile-picker[open] > .profile-button { color: var(--ink); }
+.profile-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.profile-button i { font-size: 16px; }
+.profile-picker .profile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-menu { left: auto; right: 0; min-width: 200px; max-width: min(320px, calc(100vw - 16px)); padding: 6px; }
+.profile-menu .error { margin: 6px 10px 2px; }
+@media (pointer: coarse) { .profile-button { min-height: var(--h-lg); } }
+@media (max-width: 800px) { .profile-button { max-width: 8em; } }
+/* /settings/profiles: one row per profile with its fields and buttons. */
+.profile-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.profile-row { padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
+.profile-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 12px; }
+.profile-field { flex: 1 1 200px; min-width: 0; }
+.profile-field .form-label { margin-bottom: 2px; }
+.profile-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+@media (max-width: 800px) { .profile-field { flex-basis: 100%; } }

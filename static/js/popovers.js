@@ -39,7 +39,7 @@ export function initPopovers(doc = document) {
     }
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
     if (event.target.matches('select, input[type=range], input[type=number], input[type=radio]')) return;
-    const items = [...popover.querySelectorAll('summary, .filter-menu input:not([type=hidden]), .filter-menu button, .filter-menu select')]
+    const items = [...popover.querySelectorAll('summary, .filter-menu input:not([type=hidden]), .filter-menu button, .filter-menu select, .filter-menu a[href]')]
       .filter(item => !item.closest('[hidden]'));
     const index = items.indexOf(event.target);
     if (index < 0) return;

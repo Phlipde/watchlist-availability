@@ -191,6 +191,10 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
             tmdb_api_key_set=bool(s.tmdb_api_key),
         )
 
+    @app.get("/settings/profiles")
+    def profiles_page():
+        return page("profiles.html")  # the list comes from header_context
+
     @app.get("/sw.js")
     def service_worker():
         # At the root, so the worker controls every page; never cached by the browser itself.
