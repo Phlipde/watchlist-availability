@@ -69,8 +69,15 @@ def build_message(
     events = settings.notify_events
     country = settings.country
     own = set(settings.subscriptions(country))
-    favorites = {favorite["key"]: favorite["title"] for favorite in store.list_favorites()}
-    changes = [change for change in store.recent_changes(country, since) if change["provider"] in own]
+    favorites = {
+        favorite["key"]: favorite["title"]
+        for favorite in store.list_favorites(profile_id=settings.profile_id)
+    }
+    changes = [
+        change
+        for change in store.recent_changes(country, since, profile_id=settings.profile_id)
+        if change["provider"] in own
+    ]
     lines: list[str] = []
     click = None
     if events["favorite_gone"]:
@@ -107,7 +114,11 @@ def build_message(
 def weekly_message(store: Store, settings: AppSettings, now: float) -> dict:
     """Friday summary: what became available and what left in the last 7 days on the own services."""
     own = set(settings.subscriptions(settings.country))
-    changes = [c for c in store.recent_changes(settings.country, now - 7 * DAY) if c["provider"] in own]
+    changes = [
+        c
+        for c in store.recent_changes(settings.country, now - 7 * DAY, profile_id=settings.profile_id)
+        if c["provider"] in own
+    ]
     added = sorted({c["title"] for c in changes if c["change"] == "added"})
     removed = sorted({c["title"] for c in changes if c["change"] == "removed"})
     lines = [

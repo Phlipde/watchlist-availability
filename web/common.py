@@ -61,7 +61,7 @@ def status_overview(store: Store, settings: AppSettings, service: ScanService) -
             "fetched_at": max((item["fetched_at"] for item in catalog), default=None),
         },
         "country": settings.country,
-        "running": service.is_running(),
+        "running": service.is_running(pid),
         "last_scan_at": latest["created"] if latest else None,
         "scan_interval_hours": settings.scan_interval_hours,
         "next_scan_at": scheduler.next_scan_at(store, settings),

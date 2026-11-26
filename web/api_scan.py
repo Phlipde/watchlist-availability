@@ -41,13 +41,11 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
                     "status_endpoint": "/api/scan/<job_id>",
                 }
             )
-        # shortcut: ScanService scans for profile 1 only; per-profile scans come with M2.
-        if active_profile_id() != 1:
-            return jsonify({"error": "Scans for other profiles come in a later update."}), 409
-        if not settings.tmdb_api_key:
+        s, pid = active_settings(settings), active_profile_id()
+        if not s.tmdb_api_key:
             return jsonify({"error": "TMDB_API_KEY is missing."}), 400
         source = (request.get_json(silent=True) or {}) if request.is_json else request.form
-        country = source.get("country", settings.country)
+        country = source.get("country", s.country)
         if not valid_country(country):
             return jsonify({"error": "Unsupported country."}), 400
         entries = None
@@ -59,19 +57,21 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
                 source_name = uploaded_file.filename
             except (UnicodeDecodeError, ValueError) as exc:
                 return jsonify({"error": f"Could not read CSV: {exc}"}), 400
-        job_id, reconnected = service.start(country, entries=entries, source_name=source_name)
+        job_id, reconnected = service.start(country, entries=entries, source_name=source_name, profile_id=pid)
         return jsonify({"job_id": job_id, "reconnected": True} if reconnected else {"job_id": job_id})
 
     @app.get("/api/scan/<job_id>")
     def scan_status(job_id: str):
-        status = service.status(job_id, start=request.args.get("from", 0, type=int))
+        status = service.status(
+            job_id, start=request.args.get("from", 0, type=int), profile_id=active_profile_id()
+        )
         if status is None:
             return jsonify({"error": "Scan not found."}), 404
         return jsonify(status)
 
     @app.post("/api/scan/<job_id>/cancel")
     def cancel_scan(job_id: str):
-        if not service.cancel(job_id):
+        if not service.cancel(job_id, profile_id=active_profile_id()):
             return jsonify({"error": "Scan not found."}), 404
         return jsonify({"ok": True})
 

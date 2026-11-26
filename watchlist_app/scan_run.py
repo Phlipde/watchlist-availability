@@ -108,7 +108,7 @@ def with_changes(
 
 
 def load_watchlist(settings: AppSettings) -> tuple[list[WatchlistEntry], str]:
-    """The watchlist from Letterboxd, or from an exported CSV in the downloads folder."""
+    """The watchlist from Letterboxd, or (first profile only) from an exported CSV in the downloads folder."""
     username = settings.letterboxd_username
     error = None
     if username:
@@ -118,6 +118,12 @@ def load_watchlist(settings: AppSettings) -> tuple[list[WatchlistEntry], str]:
                 return entries, f"Letterboxd @{username}"
         except letterboxd.LetterboxdError as exc:
             error = exc
+    if settings.profile_id != 1:  # the downloads folder belongs to the first profile
+        if error:
+            raise error
+        if username:
+            raise ValueError(f"The Letterboxd watchlist of @{username} is empty.")
+        raise ValueError("Add your Letterboxd username in Settings or upload a watchlist CSV.")
     try:
         csv_path = letterboxd.find_watchlist_csv(settings.downloads_dir)
     except FileNotFoundError:
@@ -156,6 +162,7 @@ def perform_scan(
     on_unavailable: Callable[[Film], None] | None = None,
     on_failed: Callable[[dict], None] | None = None,
     is_cancelled: Callable[[], bool] | None = None,
+    profile_id: int = 1,
 ) -> ScanOutcome | None:
     """Check a watchlist against every known provider and store the result.
 
@@ -168,7 +175,7 @@ def perform_scan(
         (film_key(entry.title, clean_year(entry.year), entry.slug), entry.title, clean_year(entry.year))
         for entry in entries
     ]
-    recent = store.find_scan(country, key, RESULT_REUSE_SECONDS)
+    recent = store.find_scan(country, key, RESULT_REUSE_SECONDS, profile_id=profile_id)
     reusable = (
         recent is not None
         and recent["stats"].get("providers") == ALL_PROVIDERS
@@ -180,7 +187,7 @@ def perform_scan(
         films = [Film.from_dict(result) for result in recent["results"]]
         return ScanOutcome(
             films=films,
-            **with_changes(store, country, recent["results"], recent["unavailable"]),
+            **with_changes(store, country, recent["results"], recent["unavailable"], profile_id=profile_id),
             source_name=source_name,
             created=recent["created"],
             reused=True,
@@ -224,7 +231,7 @@ def perform_scan(
     if is_cancelled and is_cancelled():
         return None
     results = [film.to_dict() for film in films]
-    earlier = store.recent_scans(country, source_name)
+    earlier = store.recent_scans(country, source_name, profile_id=profile_id)
     previous = earlier[0] if earlier else None
     older = earlier[1] if len(earlier) > 1 else None
     created = time.time()
@@ -235,17 +242,25 @@ def perform_scan(
         # A scan with failed lookups is incomplete and must not be reused.
         saved_key = None if failed else key
         scan_id = store.save_scan(
-            country, source_name, saved_key, results, unavailable, stats, created=created
+            country,
+            source_name,
+            saved_key,
+            results,
+            unavailable,
+            stats,
+            created=created,
+            profile_id=profile_id,
         )
         store.add_changes(
             country,
             history.diff_scans(previous, results, unavailable, older=older),
             created=created,
+            profile_id=profile_id,
         )
     store.touch_ids(seen, seen_at=created)
     return ScanOutcome(
         films=films,
-        **with_changes(store, country, results, unavailable),
+        **with_changes(store, country, results, unavailable, profile_id=profile_id),
         source_name=source_name,
         created=created,
         scan_id=scan_id,

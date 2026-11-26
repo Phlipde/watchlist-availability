@@ -118,6 +118,16 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
             s.update(changes)
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
+        # A profile that just got its Letterboxd name and has no scan yet is scanned right away;
+        # while another scan runs, the schedule picks it up later.
+        if (
+            changes.get("letterboxd_username")
+            and s.letterboxd_username
+            and s.tmdb_api_key
+            and store.latest_scan_created(s.country, profile_id=s.profile_id) is None
+            and not service.is_running()
+        ):
+            service.start(s.country, trigger="schedule", profile_id=s.profile_id)
         return jsonify(s.as_dict())
 
     @app.get("/api/status")

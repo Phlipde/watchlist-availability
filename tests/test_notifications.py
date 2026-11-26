@@ -152,3 +152,26 @@ def test_settings_are_checked_and_the_token_stays_out_of_backups(store, settings
     assert "notify_token" not in json.dumps(store.export_backup())
     settings.update({"notify_token": "-"})
     assert settings.notify_token == ""
+
+
+def test_each_profile_gets_only_its_own_messages_once_a_day(store, settings, sent):
+    anna = settings.for_profile(store.add_profile("Anna"))
+    anna.update(
+        {"subscriptions": ["Netflix"], "notify_kind": "webhook", "notify_url": "https://hook.example/anna"}
+    )
+    store.add_favorite({"key": "1", "title": "Heat"})
+    leave(store, when=at(18, 11))  # profile 1's favorite left
+    store.add_favorite({"key": "2", "title": "Alien"}, profile_id=anna.profile_id)
+    store.add_changes(
+        "DE",
+        [{"film_key": "2", "title": "Alien", "year": 1979, "provider": "Netflix", "change": "removed"}],
+        created=at(18, 11),
+        profile_id=anna.profile_id,
+    )
+    assert notifications.run_notifications(store, settings, at(19, 9)) is True
+    assert notifications.run_notifications(store, anna, at(19, 9)) is True  # its own daily limit
+    (first_url, first), (anna_url, anna_message) = sent
+    assert first_url == "https://hook.example/x" and "Heat" in first["json"]["message"]
+    assert "Alien" not in first["json"]["message"]
+    assert anna_url == "https://hook.example/anna" and anna_message["json"]["message"] == "Alien left Netflix"
+    assert notifications.run_notifications(store, anna, at(19, 12)) is False  # one message a day

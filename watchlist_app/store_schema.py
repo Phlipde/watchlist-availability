@@ -34,6 +34,7 @@ CHANGE_IDENTITY = ("created", "country", "film_key", "provider", "change")
 
 JOB_FIELDS = (
     "id",
+    "profile_id",
     "status",
     "trigger",
     "country",

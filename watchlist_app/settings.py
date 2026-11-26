@@ -52,8 +52,8 @@ class AppSettings:
     @property
     def letterboxd_username(self) -> str | None:
         stored = self._get("letterboxd_username")
-        if stored is None:
-            return self._defaults.letterboxd_username
+        if stored is None:  # the name from the environment belongs to the first profile only
+            return self._defaults.letterboxd_username if self.profile_id == 1 else None
         return stored or None
 
     @property

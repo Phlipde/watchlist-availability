@@ -97,11 +97,39 @@ class TestWritesOfProfile2:
         client.post("/api/greyouts/reset")
         assert store.list_flags(profile_id=anna) == [] and len(store.list_flags()) == 1
 
-    def test_scan_start_is_refused_for_profile_2(self, client, anna):
+    def test_scan_of_profile_2_runs_beside_profile_1_and_stays_its_own(self, client, store, service, anna):
+        first = client.post("/api/scan", json={"country": "DE"}).get_json()["job_id"]
         client.set_cookie("wl_profile", str(anna))
-        answer = client.post("/api/scan", json={"country": "DE"})
-        assert answer.status_code == 409 and "later update" in answer.get_json()["error"]
-        assert FakeThread.started == []
+        answer = client.post("/api/scan", json={"country": "DE"}).get_json()
+        assert "reconnected" not in answer and answer["job_id"] != first
+        assert service._live[answer["job_id"]]["profile_id"] == anna
+        assert service._live[first]["cancel_requested"] is False
+        assert store.list_jobs(profile_id=anna)[0]["id"] == answer["job_id"]
+        # Profile 2 can neither see nor stop the scan of profile 1.
+        assert client.get(f"/api/scan/{first}").status_code == 404
+        assert client.post(f"/api/scan/{first}/cancel").status_code == 404
+        assert client.get(f"/api/scan/{answer['job_id']}").get_json()["profile_id"] == anna
+        assert client.post(f"/api/scan/{answer['job_id']}/cancel").status_code == 200
+        assert service._live[first]["cancel_requested"] is False
+
+    def test_a_new_letterboxd_name_starts_the_first_scan(self, client, store, service, anna):
+        client.set_cookie("wl_profile", str(anna))
+        client.put("/api/settings", json={"weekly_hours": 6})
+        assert FakeThread.started == []  # no name, no scan
+        client.put("/api/settings", json={"letterboxd_username": "anna"})
+        [job_id] = FakeThread.started
+        assert service._live[job_id]["profile_id"] == anna
+        assert service._live[job_id]["trigger"] == "schedule"
+        service._live[job_id]["status"] = "complete"
+        store.save_scan("DE", "letterboxd", None, [HEAT], [], {}, profile_id=anna)
+        client.put("/api/settings", json={"letterboxd_username": "anna2"})
+        assert len(FakeThread.started) == 1  # it has a scan now
+
+    def test_a_new_name_waits_while_another_scan_runs(self, client, service, anna):
+        client.post("/api/scan", json={"country": "DE"})
+        client.set_cookie("wl_profile", str(anna))
+        client.put("/api/settings", json={"letterboxd_username": "anna"})
+        assert len(FakeThread.started) == 1 and not service.is_running(anna)
 
     def test_backup_import_goes_into_the_active_profile(self, client, store, settings, anna):
         backup = {

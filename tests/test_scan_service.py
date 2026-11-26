@@ -390,3 +390,138 @@ class TestProviderList:
         with search, fetched:
             assert perform_scan(store, ENTRIES, "src", "DE", "key").results
         assert store.provider_catalog("DE") == []
+
+
+@pytest.fixture
+def anna(store):
+    return store.add_profile("Anna")
+
+
+class TestProfiles:
+    def test_another_profile_neither_joins_nor_stops_a_running_scan(self, store, settings, anna):
+        service = ScanService(store, settings, thread_factory=IdleThread)
+        first, _ = service.start("DE")
+        second, joined = service.start("DE", profile_id=anna)
+        assert not joined and second != first
+        other_country, _ = service.start("GB", profile_id=anna)  # stops only the second profile's scan
+        assert service._live[first]["cancel_requested"] is False
+        assert service._live[second]["cancel_requested"] is True
+        assert service.start("DE") == (first, True)
+        assert service.start("GB", profile_id=anna) == (other_country, True)
+        assert service.is_running(anna) and service.is_running(1) and not service.is_running(99)
+
+    def test_status_and_cancel_only_for_the_own_profile(self, store, settings, anna):
+        service = ScanService(store, settings, thread_factory=IdleThread)
+        job_id, _ = service.start("DE")
+        assert service.status(job_id, profile_id=anna) is None
+        assert not service.cancel(job_id, profile_id=anna)
+        assert service._live[job_id]["cancel_requested"] is False
+        restarted = ScanService(store, settings, thread_factory=IdleThread)  # read from the database
+        assert restarted.status(job_id, profile_id=anna) is None
+        assert restarted.status(job_id)["job_id"] == job_id
+
+    def test_scan_of_a_second_profile_is_saved_under_it(self, store, settings, anna):
+        settings.for_profile(anna).update({"subscriptions": ["Netflix"]})
+        service = ScanService(store, settings, thread_factory=SyncThread)
+        search, bundle = tmdb_answers()
+        with search, bundle:
+            job_id, _ = service.start("DE", entries=ENTRIES, source_name="list.csv", profile_id=anna)
+        stored = store.get_job(job_id)
+        assert stored["profile_id"] == anna and stored["status"] == "complete"
+        assert store.latest_scan("DE", profile_id=anna)["id"] == stored["scan_id"]
+        assert store.latest_scan("DE") is None and store.list_jobs() == []
+        assert store.service_history("DE", profile_id=anna) and not store.service_history("DE")
+        assert service.status(job_id, profile_id=anna)["results"][0]["only_on_my_services"] is True
+
+    def test_a_restart_resumes_each_profile_with_its_own_profile(self, store, settings, anna):
+        service = ScanService(store, settings, thread_factory=IdleThread)
+        service.start("GB")
+        service.start("FR", profile_id=anna)
+        restarted = ScanService(store, settings, thread_factory=IdleThread)
+        assert len(restarted.recover_interrupted()) == 2
+        for profile_id, country in ((1, "GB"), (anna, "FR")):
+            running = store.list_jobs(status="running", profile_id=profile_id)
+            assert [(job["trigger"], job["country"]) for job in running] == [("resume", country)]
+            assert restarted._live[running[0]["id"]]["profile_id"] == profile_id
+
+    def test_a_second_profile_fetches_only_its_new_films_from_tmdb(self, store, anna):
+        ids = {"Heat": 949, "Alien": 348}
+        with (
+            patch(
+                "watchlist_app.tmdb.search_movie_id", side_effect=lambda title, *rest: ids[title]
+            ) as search,
+            patch("watchlist_app.tmdb.get_movie_bundle", return_value=BUNDLE) as bundle,
+        ):
+            perform_scan(store, ENTRIES, "anton.csv", "DE", "key")
+            search.reset_mock()
+            bundle.reset_mock()
+            both = [*ENTRIES, WatchlistEntry("Alien", 1979)]
+            outcome = perform_scan(store, both, "anna.csv", "DE", "key", profile_id=anna)
+            assert [call.args[0] for call in search.call_args_list] == ["Alien"]
+            assert [call.args[0] for call in bundle.call_args_list] == [348]
+            assert not outcome.reused and len(outcome.results) == 2
+            # The bundle keeps every country: another country needs no new request either.
+            perform_scan(store, ENTRIES, "anna.csv", "US", "key", profile_id=anna)
+            assert bundle.call_count == 1
+
+
+class TestLoadWatchlistPerProfile:
+    def test_csv_in_the_downloads_folder_only_for_the_first_profile(self, store, settings, anna, tmp_path):
+        (tmp_path / "watchlist.csv").write_text("Name,Year\nHeat,1995\n", encoding="utf-8")
+        entries, source = scan_service.load_watchlist(settings)
+        assert entries == ENTRIES and source == "watchlist.csv"
+        with pytest.raises(ValueError, match="Letterboxd username"):
+            scan_service.load_watchlist(settings.for_profile(anna))
+
+    def test_the_name_from_the_environment_belongs_to_the_first_profile(self, store, tmp_path, anna):
+        defaults = Settings(
+            tmdb_api_key="k", letterboxd_username="anton", country="DE", downloads_dir=tmp_path
+        )
+        settings = AppSettings(store, defaults)
+        assert settings.letterboxd_username == "anton"
+        assert settings.for_profile(anna).letterboxd_username is None
+
+    def test_a_letterboxd_error_of_a_second_profile_is_reported(self, store, settings, anna):
+        anna_settings = settings.for_profile(anna)
+        anna_settings.update({"letterboxd_username": "typo"})
+        error = scan_service.letterboxd.LetterboxdError('Watchlist not found for "typo".')
+        with patch("watchlist_app.letterboxd.fetch_watchlist_from_letterboxd", side_effect=error):
+            with pytest.raises(scan_service.letterboxd.LetterboxdError, match="typo"):
+                scan_service.load_watchlist(anna_settings)
+
+
+class TestSchedulerPerProfile:
+    def test_two_profiles_are_scanned_one_after_another_on_the_same_day(self, store, settings, anna):
+        settings.update({"scan_interval_hours": 24})
+        settings.for_profile(anna).update({"letterboxd_username": "anna", "country": "GB"})
+        store.add_profile("Nameless")  # no Letterboxd name: never scanned on a schedule
+        service = ScanService(store, settings, thread_factory=IdleThread)
+        assert scheduler.run_due_scan(store, settings, service)
+        first = store.list_jobs()[0]
+        assert not scheduler.run_due_scan(store, settings, service)  # one scan at a time
+        service._live[first["id"]]["status"] = "complete"
+        store.save_scan("DE", "src", "k", [], [], {})
+        assert scheduler.run_due_scan(store, settings, service)
+        second = store.list_jobs(profile_id=anna)[0]
+        assert (second["trigger"], second["country"]) == ("schedule", "GB")
+        service._live[second["id"]]["status"] = "complete"
+        store.save_scan("GB", "src", "k", [], [], {}, profile_id=anna)
+        assert not scheduler.run_due_scan(store, settings, service)  # both done for today
+
+    def test_a_failed_scan_waits_only_for_its_own_profile(self, store, settings, anna):
+        settings.update({"scan_interval_hours": 24})
+        settings.for_profile(anna).update({"letterboxd_username": "anna"})
+        store.create_job("old", "DE", "schedule", time.time() - 600)
+        store.update_job("old", status="error")
+        service = ScanService(store, settings, thread_factory=IdleThread)
+        assert scheduler.run_due_scan(store, settings, service)
+        assert store.list_jobs(profile_id=anna)[0]["trigger"] == "schedule"
+
+    def test_next_scan_is_per_profile(self, store, settings, anna):
+        settings.update({"scan_interval_hours": 24})
+        anna_settings = settings.for_profile(anna)
+        assert scheduler.next_scan_at(store, anna_settings) is None  # no Letterboxd name yet
+        anna_settings.update({"letterboxd_username": "anna"})
+        store.save_scan("DE", "src", "k", [], [], {}, created=1000, profile_id=anna)
+        assert scheduler.next_scan_at(store, anna_settings) == 1000 + 24 * 3600
+        assert scheduler.next_scan_at(store, settings) == 24 * 3600  # profile 1 has no scan

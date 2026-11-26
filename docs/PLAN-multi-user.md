@@ -147,11 +147,11 @@ Für jede Stufe gilt: `pytest -q`, `node --test tests/js/*.mjs`, ruff und mypy g
 
 ### M2 – Scans und Einstellungen je Profil
 
-- [ ] **M2.1 Profil im Scan-Job [stark]** — `scan_service.py`, `scan_run.perform_scan`, `web/api_scan.py`. Tests: Scan von B übernimmt nicht den Job von A, bricht A nicht ab; Neustart behält das Profil. Dabei `list_jobs` in `scan_service.py` (Wiederaufnahme: alle Profile), `scheduler.py`, `web/common.py` und `app.py` auf das richtige Profil stellen (seit M0.5 sehen sie nur Profil 1). Jobs werden je Profil auf `MAX_JOBS` gekürzt.
-- [ ] **M2.2 Watchlist je Profil laden [einfach]** — `scan_run.load_watchlist`: CSV-Rückfall nur für Profil 1, sonst klare Fehlermeldung.
-- [ ] **M2.3 Der zweite Scan nutzt den Cache [einfach]** — nur ein Test: zweiter Scan zählt TMDB-Anfragen nur für neue Filme.
-- [ ] **M2.4 Scheduler je Profil [einfach]** — `scheduler.py`, `web/common.py`. Test: zwei Profile am selben Tag nacheinander gescannt.
-- [ ] **M2.5 Benachrichtigungen je Profil [einfach]** — `scheduler.py`, `notifications.py`. Test: Profil 2 bekommt nur seine Meldungen; „höchstens 1 am Tag“ je Profil.
+- [x] **M2.1 Profil im Scan-Job [stark]** — `scan_service.py`, `scan_run.perform_scan`, `web/api_scan.py`. Tests: Scan von B übernimmt nicht den Job von A, bricht A nicht ab; Neustart behält das Profil. Dabei `list_jobs` in `scan_service.py` (Wiederaufnahme: alle Profile), `scheduler.py`, `web/common.py` und `app.py` auf das richtige Profil stellen (seit M0.5 sehen sie nur Profil 1). Jobs werden je Profil auf `MAX_JOBS` gekürzt.
+- [x] **M2.2 Watchlist je Profil laden [einfach]** — `scan_run.load_watchlist`: CSV-Rückfall nur für Profil 1, sonst klare Fehlermeldung.
+- [x] **M2.3 Der zweite Scan nutzt den Cache [einfach]** — nur ein Test: zweiter Scan zählt TMDB-Anfragen nur für neue Filme.
+- [x] **M2.4 Scheduler je Profil [einfach]** — `scheduler.py`, `web/common.py`. Test: zwei Profile am selben Tag nacheinander gescannt.
+- [x] **M2.5 Benachrichtigungen je Profil [einfach]** — `scheduler.py`, `notifications.py`. Test: Profil 2 bekommt nur seine Meldungen; „höchstens 1 am Tag“ je Profil. Umsetzung M2.1–M2.5: manuelle Scans verschiedener Profile laufen parallel, Zeitplan und Erst-Scan nur wenn nichts läuft; Letterboxd-Name aus `.env` gilt nur für Profil 1. Offen: `tmdb_requests` eines Jobs ist bei parallelen Scans gemischt; ein neuer Name während eines anderen Scans bei abgeschaltetem Zeitplan startet keinen Scan.
 - [ ] **M2.6 `profile_id` wird Pflicht [einfach, viele Dateien]** — Standardwert entfernen, nur Keyword; alle Aufrufer und Tests anpassen. mypy und Tests finden jeden vergessenen Aufruf.
 
 ### M3 – Statistik und Daten je Profil
