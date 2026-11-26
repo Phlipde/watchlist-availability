@@ -49,12 +49,12 @@ function valueRow({group, films, exclusive, text, badge = '', tone = 'own', max}
 }
 
 export function subscriptions(stats, {subscriptions: owned, prices}) {
-  const own = stats.serviceValue.filter(item => item.own).sort((a, b) => b.exclusive - a.exclusive || b.films - a.films);
+  const own = stats.serviceValue.filter(item => item.own).sort((a, b) => b.onlyHere - a.onlyHere || b.films - a.films);
   const ownMax = Math.max(...own.map(item => item.films), 1);
   const rows = own.map(item => valueRow({
-    group: item.group, films: item.films, exclusive: item.exclusive, max: ownMax,
-    text: `<strong>${number(item.exclusive)}</strong> only here · ${number(item.films)} films${item.costPerExclusiveFilm !== null ? ` · ${euro(item.costPerExclusiveFilm)} per only-here film` : ''}`,
-    badge: item.price && item.films && !item.exclusive ? '<span class="pill pill-warn">Cancel candidate</span>' : '',
+    group: item.group, films: item.films, exclusive: item.onlyHere, max: ownMax,
+    text: `<strong>${number(item.onlyHere)}</strong> only here · ${number(item.films)} films${item.costPerLostFilm !== null ? ` · ${euro(item.costPerLostFilm)} per film you would lose` : ''}`,
+    badge: item.price && item.films && !item.onlyHere ? '<span class="pill pill-warn">Cancel candidate</span>' : '',
   })).join('');
   const seen = new Set(own.map(item => item.group));
   const empty = [...new Set(owned)].filter(name => ![...seen].some(group => group === name || stats.serviceValue.find(item => item.group === group)?.plans.includes(name))).sort();
@@ -64,13 +64,13 @@ export function subscriptions(stats, {subscriptions: owned, prices}) {
   const gain = stats.gainIfSubscribed.slice(0, 8);
   const gainMax = Math.max(...gain.map(item => item.films), 1);
   const tip = stats.rotationSuggestion;
-  const tipCard = tip ? `<p class="stats-tip"><strong>Tip:</strong> one month of ${esc(tip.group)} would add ${plural(tip.films, 'film')} (${number(tip.hours)} h), ${number(tip.onlyThere)} of them only there.</p>` : '';
+  const tipCard = tip ? `<p class="stats-tip"><strong>Tip:</strong> one month of ${esc(tip.group)} would add ${plural(tip.films, 'film')} (${number(tip.hours)} h), ${number(tip.onlyThere)} of them nowhere else.</p>` : '';
   const more = gain.map(item => valueRow({
     group: item.group, films: item.films, exclusive: item.onlyThere, max: gainMax, tone: 'other',
-    text: `would add <strong>${number(item.films)}</strong> films · ${number(item.hours)} h · ${number(item.onlyThere)} only there`,
+    text: `would add <strong>${number(item.films)}</strong> films · ${number(item.hours)} h · ${number(item.onlyThere)} nowhere else`,
   })).join('');
 
-  return section('Are my subscriptions worth it?', 'The bright part of a bar is what you would lose by cancelling: films no other service shows without paying per film.',
+  return section('Are my subscriptions worth it?', 'The bright part of a bar is what you would lose by cancelling ("only here", as on Subscriptions): films none of your other services has and no service shows for free.',
     `${own.length ? `<ul class="val-list">${rows}</ul>` : '<p class="empty">No subscriptions saved. Set them on the <a href="/subscriptions">Subscriptions</a> page.</p>'}${none}${noPrices}
     ${gain.length ? `<h3 class="stats-sub">Subscriptions you do not have</h3>${tipCard}<ul class="val-list val-muted">${more}</ul>` : ''}`);
 }

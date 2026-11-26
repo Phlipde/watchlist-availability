@@ -300,3 +300,14 @@ def test_an_own_service_without_films_and_price_is_not_suggested_for_cancelling(
     result = costs.overview(films, ["Netflix", "ZDF"], {"Netflix": {"price": 9.99}})
     assert [item["name"] for item in result["services"]] == ["Netflix"]
     assert result["free_empty"] == 1
+
+
+def test_only_here_is_the_same_as_on_the_stats_page():
+    # The same case runs in tests/js/stats-compute.test.mjs: one definition of "Only here" on both pages.
+    import json
+    from pathlib import Path
+
+    cases = json.loads((Path(__file__).parent / "only_here_cases.json").read_text(encoding="utf-8"))
+    result = costs.overview(cases["films"], cases["subscriptions"], {})
+    counts = {item["name"]: len(item["only_here"]) for item in result["services"]}
+    assert counts == cases["only_here"]

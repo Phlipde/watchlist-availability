@@ -31,7 +31,7 @@
   .svc-row td.num { white-space: normal; }
   .svc-row td::before { content: attr(data-label); display: block; color: var(--muted); font-size: var(--fs-small); }
   .svc-row td.svc-status::before { content: none; }
-  .svc-row td:not(.svc-status):not([data-label="Films"]):not([data-label="Only here"]):not([data-label="Hours"]) { display: none; }
+  .svc-row td:not(.svc-status):not([data-label="Films"]):not([data-label="Nowhere else"]):not([data-label="Hours"]) { display: none; }
   .svc-table .svc-row.open td { display: block !important; }
   .svc-name { min-height: 44px; font-weight: 600; }
   .svc-detail td { display: block; margin: -4px 0 8px; border: 1px solid var(--line-card); border-radius: .5rem; }

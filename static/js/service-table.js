@@ -18,7 +18,7 @@ const VALUE = {
   subscription: item => item.subscription,
   rent: item => item.rent,
   rating: item => item.averageRating,
-  cost: item => item.costPerExclusiveFilm,
+  cost: item => item.costPerLostFilm,
 };
 export const SORT_KEYS = Object.keys(VALUE);
 

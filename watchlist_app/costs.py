@@ -18,8 +18,16 @@ WATCH_KINDS = frozenset({"free", "ads", "flatrate"})  # watchable without paying
 FREE_KINDS = frozenset({"free", "ads"})
 
 
+def _kinds_by_group(film: dict) -> dict[str, set[str]]:
+    """Offer kinds of a film per service group (plans and Amazon Channels of a provider merged)."""
+    groups: dict[str, set[str]] = {}
+    for name, kinds in film.get("providers", {}).items():
+        groups.setdefault(service_group(name), set()).update(kinds)
+    return groups
+
+
 def _watchable(film: dict, name: str) -> bool:
-    return bool(WATCH_KINDS & set(film.get("providers", {}).get(name, [])))
+    return bool(WATCH_KINDS & _kinds_by_group(film).get(service_group(name), set()))
 
 
 def _free_anywhere(film: dict) -> bool:
@@ -27,8 +35,16 @@ def _free_anywhere(film: dict) -> bool:
 
 
 def only_on_my_services(film: dict, subscriptions: list[str]) -> bool:
-    """Whether a film would be lost when cancelling any one own service."""
-    return not _free_anywhere(film) and sum(_watchable(film, name) for name in subscriptions) == 1
+    """Only here: one own service (group) has the film and no other service shows it for free.
+
+    The same rule as "Only here" on the stats page (`lostOnCancel`, stats-compute.js): what cancelling loses.
+    """
+    groups = _kinds_by_group(film)
+    own = {service_group(name) for name in subscriptions}
+    mine = {group for group in own if WATCH_KINDS & groups.get(group, set())}
+    if len(mine) != 1:
+        return False
+    return not any(FREE_KINDS & kinds for group, kinds in groups.items() if group not in mine)
 
 
 def mark_only_on_my_services(films: list[dict], subscriptions: list[str]) -> list[dict]:

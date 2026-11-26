@@ -110,13 +110,6 @@ export function watchlistStats(scan, {subscriptions = [], favorites = [], now = 
     };
   });
 
-  // Own subscriptions: what each one adds that no other own subscription has.
-  const ownServices = [...own].sort().map(name => {
-    const others = new Set([...own].filter(other => other !== name));
-    const films = onOwn.filter(film => watchableOn(film, new Set([name])));
-    return {name, films: films.length, onlyHere: films.filter(film => !watchableOn(film, others)).length};
-  }).sort((a, b) => b.films - a.films || a.name.localeCompare(b.name));
-
   const offerTypes = [['Free', 'free'], ['With ads', 'ads'], ['Subscription', 'flatrate'], ['Rent', 'rent']]
     .map(([label, kind]) => [label, available.filter(film => kindsOf(film).includes(kind)).length]);
 
@@ -142,7 +135,6 @@ export function watchlistStats(scan, {subscriptions = [], favorites = [], now = 
   return {
     overview,
     services,
-    ownServices,
     offerTypes,
     genres,
     decades,

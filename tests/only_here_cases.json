@@ -1,0 +1,16 @@
+{
+  "_comment": "One case for both pages: costs.overview (Subscriptions) and computeStats (Stats) must count the same 'Only here'.",
+  "subscriptions": ["Netflix", "Prime Video", "Arte"],
+  "films": [
+    {"key": "a", "title": "A", "providers": {"Netflix": ["flatrate"]}},
+    {"key": "b", "title": "B", "providers": {"Netflix Standard with Ads": ["flatrate"]}},
+    {"key": "c", "title": "C", "providers": {"Netflix": ["flatrate"], "Prime Video": ["flatrate"]}},
+    {"key": "d", "title": "D", "providers": {"Prime Video": ["flatrate"], "MUBI": ["flatrate"]}},
+    {"key": "e", "title": "E", "providers": {"Amazon Prime Video with Ads": ["flatrate"], "Arte": ["free"]}},
+    {"key": "f", "title": "F", "providers": {"Prime Video": ["flatrate"], "Pluto TV": ["free"]}},
+    {"key": "g", "title": "G", "providers": {"Prime Video": ["flatrate"], "Paramount+ Amazon Channel": ["flatrate"]}},
+    {"key": "h", "title": "H", "providers": {"Prime Video": ["flatrate"], "Netflix Kids": ["flatrate"]}},
+    {"key": "i", "title": "I", "providers": {"Netflix": ["flatrate"], "Amazon Video": ["rent"]}}
+  ],
+  "only_here": {"Netflix": 3, "Prime Video": 2}
+}
