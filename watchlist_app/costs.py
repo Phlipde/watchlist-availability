@@ -382,6 +382,18 @@ def cancel_ranking(
     return [item["name"] for item in found]
 
 
+def cancel_hint(recommendations: list[dict]) -> str | None:
+    """One line for the Tonight page when there is a cancel tip, e.g. "54 films only on Prime Video ·
+    cancelling saves €8.99/month"; None without a tip (or when it is "keep")."""
+    card = next((card for card in recommendations if card["type"] == "cancel"), None)
+    if card is None:
+        return None
+    saves = f" · cancelling saves €{card['price']:.2f}/month" if card.get("price") else ""
+    if card["loses_nothing"]:
+        return f"Nothing on {card['name']} is only there{saves}"
+    return f"{card['films']} film{'' if card['films'] == 1 else 's'} only on {card['name']}{saves}"
+
+
 def _recommendations(
     services: list[dict],
     cancel: list[str],

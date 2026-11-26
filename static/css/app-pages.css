@@ -315,3 +315,8 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 .coverage-bar .seg { display: flex; align-items: center; justify-content: center; overflow: hidden; text-decoration: none; }
 .seg-pct { color: oklch(20% 0.012 255); font: 600 var(--fs-small)/1 system-ui, sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .seg-other .seg-pct { color: oklch(92% 0.006 255); }
+
+/* Tonight: one line to the cancel tip on Subscriptions. */
+.cancel-hint { margin: 0 0 12px; color: var(--muted); font: var(--fs-body) system-ui, sans-serif; }
+.cancel-hint .ti { color: var(--text-2); }
+@media (pointer: coarse) { .cancel-hint .film-link { display: inline-flex; align-items: center; min-height: 44px; } }

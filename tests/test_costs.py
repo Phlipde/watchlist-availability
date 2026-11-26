@@ -167,6 +167,14 @@ class TestOverview:
         assert (result["cancel"], result["cancel_loses_nothing"]) == (["MUBI"], True)
         assert result["book"] == [{"name": "Disney+", "films": 1, "hours": 0, "favorites": 0}]
 
+    def test_tonight_names_the_cancel_tip_in_one_line(self):
+        cancel = {"type": "cancel", "name": "Prime Video", "films": 54, "price": 8.99, "loses_nothing": False}
+        assert costs.cancel_hint([cancel]) == "54 films only on Prime Video · cancelling saves €8.99/month"
+        nothing = {**cancel, "films": 0, "loses_nothing": True, "price": None}
+        assert costs.cancel_hint([nothing]) == "Nothing on Prime Video is only there"
+        assert costs.cancel_hint([{"type": "keep", "name": ""}]) is None
+        assert costs.cancel_hint([]) is None
+
     def test_free_services_are_never_cancelled(self):
         prices = {"Netflix": {"price": 12.0}, "MUBI": {"price": 0}}
         assert costs.overview(FILMS, ["Netflix", "Arte", "MUBI"], prices)["cancel"] == ["Netflix"]

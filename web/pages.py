@@ -26,9 +26,22 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
         latest = store.latest_scan(settings.country)
         films, unavailable = (latest["results"], latest["unavailable"]) if latest else ([], [])
         initial_filters = {"query": request.args.get("q", ""), "sort": request.args.get("sort", SORTS[0][0])}
+        # Tonight names the cancel tip in one line, only when Subscriptions has one.
+        hint = None
+        if view == "tonight" and latest:
+            hint = costs.cancel_hint(
+                costs.overview(
+                    films,
+                    settings.subscriptions(settings.country),
+                    settings.costs(settings.country),
+                    base.base_counts(latest)["not_available"],
+                    weekly_hours=settings.weekly_hours,
+                )["recommendations"]
+            )
         return page(
             "index.html",
             view=view,
+            cancel_hint=hint,
             needs_username=not settings.letterboxd_username and not latest,
             needs_tmdb=not settings.tmdb_api_key,
             country=settings.country,
