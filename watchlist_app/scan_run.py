@@ -91,9 +91,12 @@ def result_stats(results: list[dict]) -> dict:
     }
 
 
-def with_changes(store: Store, country: str, results: list[dict], unavailable: list[dict]) -> dict:
+def with_changes(
+    store: Store, country: str, results: list[dict], unavailable: list[dict], *, profile_id: int = 1
+) -> dict:
     """Attach the stored availability changes of the last two weeks to a scan's films."""
-    changes = store.recent_changes(country, time.time() - history.CHANGE_WINDOW_SECONDS)
+    since = time.time() - history.CHANGE_WINDOW_SECONDS
+    changes = store.recent_changes(country, since, profile_id=profile_id)
     return {
         "results": history.apply_changes(results, changes),
         "unavailable": history.apply_changes(unavailable, changes),

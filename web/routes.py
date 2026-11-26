@@ -13,7 +13,7 @@ from watchlist_app.scan_service import ScanService
 from watchlist_app.settings import AppSettings
 from watchlist_app.store import Store
 from web import api_data, api_scan, feeds, pages
-from web.common import PROFILE_COOKIE, SORTS, status_overview  # noqa: F401
+from web.common import PROFILE_COOKIE, SORTS, active_settings, status_overview  # noqa: F401
 
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
@@ -119,12 +119,13 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
     @app.context_processor
     def header_context():
         """The header is the same on every page: country and the state of the data."""
-        created = store.latest_scan_created(settings.country)
+        s = active_settings(settings)
+        created = store.latest_scan_created(s.country, profile_id=s.profile_id)
         age = time.time() - created if created else None
         stale = age is None or age > 24 * 3600
         return {
-            "header_country": settings.country,
-            "header_countries": settings.country_choices(),
+            "header_country": s.country,
+            "header_countries": s.country_choices(),
             "sync_state": "stale" if stale else "ok",
             "sync_text": "Out of date" if stale else "Synced",
         }

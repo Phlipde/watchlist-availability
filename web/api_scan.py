@@ -9,6 +9,7 @@ from watchlist_app.config import valid_country
 from watchlist_app.scan_service import ScanService, with_changes
 from watchlist_app.settings import AppSettings
 from watchlist_app.store import Store
+from web.common import active_profile_id, active_settings
 
 
 def register(app: Flask, store: Store, settings: AppSettings, service: ScanService) -> None:
@@ -16,18 +17,19 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
 
     @app.get("/api/latest")
     def latest_result():
-        country = request.args.get("country") or settings.country
+        s, pid = active_settings(settings), active_profile_id()
+        country = request.args.get("country") or s.country
         if not valid_country(country):
             return jsonify({"error": "Unknown country."}), 400
-        scan = store.latest_scan(country)
+        scan = store.latest_scan(country, profile_id=pid)
         # The country's own services come along, so a country switch needs no reload.
-        own = settings.subscriptions(country)
+        own = s.subscriptions(country)
         if not scan:
             return jsonify({"available": False, "stale": True, "subscriptions": own})
-        annotated = with_changes(store, scan["country"], scan["results"], scan["unavailable"])
+        annotated = with_changes(store, scan["country"], scan["results"], scan["unavailable"], profile_id=pid)
         annotated["results"] = costs.mark_only_on_my_services(annotated["results"], own)
         # Older than a day (or the schedule interval) counts as stale, also with the schedule off.
-        stale = time.time() >= scan["created"] + max(settings.scan_interval_hours, 24) * 3600
+        stale = time.time() >= scan["created"] + max(s.scan_interval_hours, 24) * 3600
         return jsonify({"available": True, "stale": stale, **scan, **annotated, "subscriptions": own})
 
     @app.route("/api/scan", methods=["GET", "POST"])
@@ -39,6 +41,9 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
                     "status_endpoint": "/api/scan/<job_id>",
                 }
             )
+        # shortcut: ScanService scans for profile 1 only; per-profile scans come with M2.
+        if active_profile_id() != 1:
+            return jsonify({"error": "Scans for other profiles come in a later update."}), 409
         if not settings.tmdb_api_key:
             return jsonify({"error": "TMDB_API_KEY is missing."}), 400
         source = (request.get_json(silent=True) or {}) if request.is_json else request.form

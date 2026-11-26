@@ -10,7 +10,7 @@ from watchlist_app.scan_service import ScanService
 from watchlist_app.settings import SCAN_INTERVALS_HOURS, AppSettings
 from watchlist_app.store import Store
 from watchlist_app.tmdb import _TMDB_IMAGE_BASE_URL, _TMDB_LOGO_BASE_URL
-from web.common import SORTS, page, provider_logos, status_overview
+from web.common import SORTS, active_profile_id, active_settings, page, provider_logos, status_overview
 
 
 def register(app: Flask, store: Store, settings: AppSettings, service: ScanService) -> None:
@@ -23,7 +23,8 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
         return films_page("watchlist")
 
     def films_page(view: str):
-        latest = store.latest_scan(settings.country)
+        s = active_settings(settings)
+        latest = store.latest_scan(s.country, profile_id=s.profile_id)
         films, unavailable = (latest["results"], latest["unavailable"]) if latest else ([], [])
         initial_filters = {"query": request.args.get("q", ""), "sort": request.args.get("sort", SORTS[0][0])}
         # Tonight names the cancel tip in one line, only when Subscriptions has one.
@@ -32,29 +33,27 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
             hint = costs.cancel_hint(
                 costs.overview(
                     films,
-                    settings.subscriptions(settings.country),
-                    settings.costs(settings.country),
+                    s.subscriptions(s.country),
+                    s.costs(s.country),
                     base.base_counts(latest)["not_available"],
-                    weekly_hours=settings.weekly_hours,
+                    weekly_hours=s.weekly_hours,
                 )["recommendations"]
             )
         return page(
             "index.html",
             view=view,
             cancel_hint=hint,
-            needs_username=not settings.letterboxd_username and not latest,
-            needs_tmdb=not settings.tmdb_api_key,
-            country=settings.country,
+            needs_username=not s.letterboxd_username and not latest,
+            needs_tmdb=not s.tmdb_api_key,
+            country=s.country,
             initial_filters=initial_filters,
             sorts=SORTS,
             client_config={
                 "imageBaseUrl": _TMDB_IMAGE_BASE_URL,
                 "view": view,
-                "deadlines": costs.upcoming_deadlines(settings.costs(settings.country)),
+                "deadlines": costs.upcoming_deadlines(s.costs(s.country)),
                 "initialFilters": initial_filters,
-                "subscriptions": {
-                    country: settings.subscriptions(country) for country in settings.countries_in_use()
-                },
+                "subscriptions": {country: s.subscriptions(country) for country in s.countries_in_use()},
                 "rentalShops": sorted(providers.rental_from_scan(films, unavailable)),
                 "freeServices": sorted(providers.mostly_free_from_scan(films, unavailable)),
                 "logoBaseUrl": _TMDB_LOGO_BASE_URL,
@@ -67,21 +66,22 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
     def settings_page():
         return page(
             "settings.html",
-            settings=settings.as_dict(),
+            settings=active_settings(settings).as_dict(),
             intervals=SCAN_INTERVALS_HOURS,
         )
 
     @app.get("/stats")
     def stats_page():
+        s = active_settings(settings)
         return page(
             "stats.html",
             client_config={
-                "country": settings.country,
+                "country": s.country,
                 "imageBaseUrl": _TMDB_IMAGE_BASE_URL,
-                "subscriptions": settings.subscriptions(),
+                "subscriptions": s.subscriptions(),
                 "prices": {
                     name: entry["price"]
-                    for name, entry in settings.costs().items()
+                    for name, entry in s.costs().items()
                     if entry.get("price") is not None
                 },
             },
@@ -89,7 +89,7 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
 
     @app.get("/settings/data")
     def status_page():
-        return page("status.html", status=status_overview(store, settings, service))
+        return page("status.html", status=status_overview(store, active_settings(settings), service))
 
     def _other_countries(scan: dict | None, own: list[str], country: str) -> list[dict]:
         """Countries where your services show more of the watchlist (stored offers, no TMDB request)."""
@@ -103,20 +103,20 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
         }
         return costs.other_countries(by_country, own, country, len(ids))
 
-    def _country_groups() -> list[tuple[str, list[str]]]:
+    def _country_groups(s: AppSettings) -> list[tuple[str, list[str]]]:
         """The services TMDB lists in the app's country (no Canal+ in DE), grouped by the latest scan."""
-        scan = store.latest_scan(settings.country)
-        catalog = [providers.display_name(item["name"]) for item in store.provider_catalog(settings.country)]
+        scan = store.latest_scan(s.country, profile_id=s.profile_id)
+        catalog = [providers.display_name(item["name"]) for item in store.provider_catalog(s.country)]
         return providers.provider_groups(
             scan["results"] if scan else [], scan["unavailable"] if scan else [], catalog
         )
 
-    def _service_candidates(own: list[str]) -> list[dict]:
+    def _service_candidates(s: AppSettings, own: list[str]) -> list[dict]:
         """Services you could add: [{name, group}], the more usual groups first."""
         mine = set(own)
         return [
             {"name": name, "group": group}
-            for group, names in _country_groups()
+            for group, names in _country_groups(s)
             for name in names
             if name not in mine
         ]
@@ -124,28 +124,29 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
     @app.get("/subscriptions")
     def subscriptions_page():
         # The country is the app's own (header); the services are chosen under Settings -> My services.
-        country = settings.country
-        scan = store.latest_scan(country)
-        own = settings.subscriptions(country)
+        s, pid = active_settings(settings), active_profile_id()
+        country = s.country
+        scan = store.latest_scan(country, profile_id=pid)
+        own = s.subscriptions(country)
         counts = base.base_counts(scan)
         return page(
             "subscriptions.html",
             country=country,
             last_scan_at=scan["created"] if scan else None,
-            deadlines=costs.upcoming_deadlines(settings.costs(country)),
+            deadlines=costs.upcoming_deadlines(s.costs(country)),
             costs=costs.overview(
                 scan["results"] if scan else [],
                 own,
-                settings.costs(country),
+                s.costs(country),
                 counts["not_available"],
-                frozenset(favorite["key"] for favorite in store.list_favorites()),
-                weekly_hours=settings.weekly_hours,
+                frozenset(favorite["key"] for favorite in store.list_favorites(profile_id=pid)),
+                weekly_hours=s.weekly_hours,
             ),
             coming_soon=counts["coming_soon"],
-            weekly_hours=settings.weekly_hours,
-            history=store.service_history(country),
+            weekly_hours=s.weekly_hours,
+            history=store.service_history(country, profile_id=pid),
             own=own,
-            candidates=_service_candidates(own),
+            candidates=_service_candidates(s, own),
             other_countries=_other_countries(scan, own, country),
             image_base_url=_TMDB_IMAGE_BASE_URL,
             logos=provider_logos(store),
@@ -154,13 +155,14 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
 
     @app.get("/settings/services")
     def services_page():
-        scan = store.latest_scan(settings.country)
+        s = active_settings(settings)
+        scan = store.latest_scan(s.country, profile_id=s.profile_id)
         counts: dict[str, int] = {}
         for film in scan["results"] if scan else []:
             for name in film.get("providers", {}):
                 counts[name] = counts.get(name, 0) + 1
-        selected = set(settings.subscriptions())
-        groups = dict(_country_groups())
+        selected = set(s.subscriptions())
+        groups = dict(_country_groups(s))
         sections = [("My subscriptions", sorted(selected, key=str.casefold), True)]
         for title, opened in (
             ("Free and ad-supported", True),
@@ -172,7 +174,7 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
             sections.append((title, [name for name in groups.get(title, []) if name not in selected], opened))
         return page(
             "services.html",
-            country=settings.country,
+            country=s.country,
             sections=[section for section in sections if section[1]],
             selected=selected,
             counts=counts,
@@ -182,10 +184,11 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
 
     @app.get("/settings/matches")
     def matches_page():
+        s = active_settings(settings)
         return page(
             "matches.html",
-            client_config={"imageBaseUrl": _TMDB_IMAGE_BASE_URL, "country": settings.country},
-            tmdb_api_key_set=bool(settings.tmdb_api_key),
+            client_config={"imageBaseUrl": _TMDB_IMAGE_BASE_URL, "country": s.country},
+            tmdb_api_key_set=bool(s.tmdb_api_key),
         )
 
     @app.get("/sw.js")

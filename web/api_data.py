@@ -9,7 +9,7 @@ from watchlist_app.config import valid_country
 from watchlist_app.scan_service import ScanService
 from watchlist_app.settings import AppSettings
 from watchlist_app.store import Store
-from web.common import PROFILE_COOKIE
+from web.common import PROFILE_COOKIE, active_profile_id, active_settings
 
 
 def register(app: Flask, store: Store, settings: AppSettings, service: ScanService) -> None:
@@ -17,14 +17,14 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
 
     @app.get("/api/favorites")
     def list_favorites():
-        return jsonify(store.list_favorites())
+        return jsonify(store.list_favorites(profile_id=active_profile_id()))
 
     @app.post("/api/favorites")
     def add_favorite():
         favorite = validation.clean_favorite(request.get_json(silent=True) or {})
         if favorite is None:
             return jsonify({"error": "A movie key and title are required."}), 400
-        store.add_favorite(favorite)
+        store.add_favorite(favorite, profile_id=active_profile_id())
         return jsonify({"ok": True})
 
     @app.patch("/api/favorites/<path:movie_key>")
@@ -37,19 +37,19 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
             return jsonify({"error": "Invalid favorite status."}), 400
         if "notes" in updates:
             updates["notes"] = validation.text(updates["notes"], validation.MAX_NOTES) or ""
-        store.update_favorite(movie_key, updates)
+        store.update_favorite(movie_key, updates, profile_id=active_profile_id())
         return jsonify({"ok": True})
 
     @app.delete("/api/favorites/<path:movie_key>")
     def remove_favorite(movie_key: str):
-        store.remove_favorite(movie_key)
+        store.remove_favorite(movie_key, profile_id=active_profile_id())
         return jsonify({"ok": True})
 
     # ----- flags: watched and not now -----
 
     @app.get("/api/flags")
     def list_flags():
-        return jsonify(store.list_flags())
+        return jsonify(store.list_flags(profile_id=active_profile_id()))
 
     @app.put("/api/flags/<path:movie_key>")
     def set_flag(movie_key: str):
@@ -61,12 +61,12 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
         )
         if flag is None:
             return jsonify({"error": "The flag must be watched or not_now."}), 400
-        store.set_flag(flag["key"], flag["flag"], flag["until"])
+        store.set_flag(flag["key"], flag["flag"], flag["until"], profile_id=active_profile_id())
         return jsonify({"ok": True, **flag})
 
     @app.delete("/api/flags/<path:movie_key>")
     def clear_flag(movie_key: str):
-        store.clear_flag(movie_key)
+        store.clear_flag(movie_key, profile_id=active_profile_id())
         return jsonify({"ok": True})
 
     abroad_cache: dict[tuple, dict] = {}
@@ -77,15 +77,16 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
 
         `services` are the ticked services (comma separated); the data is stored, there is no TMDB request.
         """
-        country = request.args.get("country") or settings.country
+        s, pid = active_settings(settings), active_profile_id()
+        country = request.args.get("country") or s.country
         if not valid_country(country):
             return jsonify({"error": "Unknown country."}), 400
         own = {name for name in request.args.get("services", "").split(",") if name and len(name) < 80}
-        scan = store.latest_scan(country)
+        scan = store.latest_scan(country, profile_id=pid)
         if not scan or not own:
             return jsonify({})
         # The same answer for the same scan and the same services: keep the last few (it reads every country).
-        cache_key = (country, scan["created"], store.offers_version, ",".join(sorted(own)))
+        cache_key = (pid, country, scan["created"], store.offers_version, ",".join(sorted(own)))
         if cache_key in abroad_cache:
             return jsonify(abroad_cache[cache_key])
         films = [*scan["results"], *scan["unavailable"]]
@@ -161,8 +162,8 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
 
     @app.get("/api/greyouts")
     def greyed_out():
-        return jsonify(store.greyed_out_counts())
+        return jsonify(store.greyed_out_counts(profile_id=active_profile_id()))
 
     @app.post("/api/greyouts/reset")
     def reset_greyed_out():
-        return jsonify({"ok": True, **store.reset_greyed_out()})
+        return jsonify({"ok": True, **store.reset_greyed_out(profile_id=active_profile_id())})

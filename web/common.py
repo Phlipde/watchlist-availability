@@ -24,9 +24,12 @@ SORTS = [
 
 
 def status_overview(store: Store, settings: AppSettings, service: ScanService) -> dict:
-    """What the status page shows: recent scan runs, the schedule and the size of the data."""
+    """What the status page shows: recent scan runs, the schedule and the size of the data.
+
+    `settings` is bound to the profile shown (common.active_settings)."""
+    pid = settings.profile_id
     jobs = []
-    for job in store.list_jobs(limit=20):
+    for job in store.list_jobs(limit=20, profile_id=pid):
         end = job["finished_at"] or job["heartbeat_at"] or job["started_at"]
         jobs.append(
             {
@@ -47,7 +50,7 @@ def status_overview(store: Store, settings: AppSettings, service: ScanService) -
                 "reused": job["reused"],
             }
         )
-    latest = store.latest_scan(settings.country)
+    latest = store.latest_scan(settings.country, profile_id=pid)
     database = Path(store.path) if store.path != ":memory:" else None
     catalog = store.provider_catalog(settings.country)
     return {

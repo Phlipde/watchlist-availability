@@ -21,7 +21,8 @@ def next_scan_at(store: Store, settings: AppSettings) -> float | None:
     if interval <= 0:
         return None
     # Never more often than once a day.
-    return (store.latest_scan_created(settings.country) or 0) + max(interval, 24) * 3600
+    created = store.latest_scan_created(settings.country, profile_id=settings.profile_id)
+    return (created or 0) + max(interval, 24) * 3600
 
 
 def run_due_scan(store: Store, settings: AppSettings, service: ScanService, now: float | None = None) -> bool:
