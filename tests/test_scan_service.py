@@ -62,7 +62,7 @@ class TestPerformScan:
     def test_saves_the_scan(self, store):
         search, bundle = tmdb_answers()
         with search, bundle:
-            outcome = perform_scan(store, ENTRIES, "src", "DE", "key")
+            outcome = perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1)
         assert outcome.results[0]["key"] == "949"
         assert outcome.results[0]["providers"] == {"Netflix": ["flatrate"]}
         assert store.get_scan(outcome.scan_id)["results"][0]["key"] == "949"
@@ -70,8 +70,8 @@ class TestPerformScan:
     def test_same_watchlist_within_a_day_is_reused(self, store):
         search, bundle = tmdb_answers()
         with search, bundle as fetched:
-            first = perform_scan(store, ENTRIES, "src", "DE", "key")
-            again = perform_scan(store, ENTRIES, "src", "DE", "key")
+            first = perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1)
+            again = perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1)
         assert fetched.call_count == 1
         assert again.reused and again.scan_id == first.scan_id
         assert again.films[0].key == "949"
@@ -81,11 +81,11 @@ class TestPerformScan:
         second = {**BUNDLE, "providers": {"DE": {"Netflix": ["flatrate"], "Arte": ["free"]}}}
         with patch("watchlist_app.tmdb.search_movie_id", return_value=949):
             with patch("watchlist_app.tmdb.get_movie_bundle", return_value=first):
-                assert perform_scan(store, ENTRIES, "src", "DE", "key").changes == []
+                assert perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1).changes == []
             store._write("UPDATE films SET fetched_at = 0")
             store._write("UPDATE scans SET watchlist_key = 'older list'")
             with patch("watchlist_app.tmdb.get_movie_bundle", return_value=second):
-                outcome = perform_scan(store, ENTRIES, "src", "DE", "key")
+                outcome = perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1)
         changes = outcome.results[0]["provider_changes"]
         # MUBI is missing for the first time: "removed" waits for a second scan without it.
         assert (changes["added"], changes["removed"]) == (["Arte"], [])
@@ -93,16 +93,16 @@ class TestPerformScan:
         store._write("UPDATE scans SET watchlist_key = 'older list'")
         with patch("watchlist_app.tmdb.search_movie_id", return_value=949):
             with patch("watchlist_app.tmdb.get_movie_bundle", return_value=second):
-                outcome = perform_scan(store, ENTRIES, "src", "DE", "key")
+                outcome = perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1)
         changes = outcome.results[0]["provider_changes"]
         assert (changes["added"], changes["removed"]) == (["Arte"], ["MUBI"])
-        reused = perform_scan(store, ENTRIES, "src", "DE", "key")
+        reused = perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1)
         assert reused.reused and reused.results[0]["provider_changes"]["added"] == ["Arte"]
 
     def test_unavailable_film_keeps_its_details(self, store):
         search, bundle = tmdb_answers({**BUNDLE, "providers": {"US": {"Hulu": ["ads"]}}})
         with search, bundle:
-            outcome = perform_scan(store, ENTRIES, "src", "DE", "key")
+            outcome = perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1)
         assert outcome.results == []
         assert outcome.unavailable[0]["key"] == "949"
         assert outcome.unavailable[0]["overview"] == "A thief."
@@ -110,8 +110,11 @@ class TestPerformScan:
     def test_cancelled_scan_is_not_saved(self, store):
         search, bundle = tmdb_answers()
         with search, bundle:
-            assert perform_scan(store, ENTRIES, "src", "DE", "key", is_cancelled=lambda: True) is None
-        assert store.latest_scan("DE") is None
+            assert (
+                perform_scan(store, ENTRIES, "src", "DE", "key", is_cancelled=lambda: True, profile_id=1)
+                is None
+            )
+        assert store.latest_scan("DE", profile_id=1) is None
 
     def test_timeout_and_rate_limit_are_failed_lookups(self, store, monkeypatch):
         monkeypatch.setattr(tmdb.time, "sleep", lambda seconds: None)
@@ -120,28 +123,30 @@ class TestPerformScan:
             raise requests.Timeout("slow")
 
         monkeypatch.setattr(tmdb, "_http_get", timeout)
-        outcome = perform_scan(store, ENTRIES, "src", "DE", "key")
+        outcome = perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1)
         assert outcome.unavailable == []
         assert outcome.failed[0]["title"] == "Heat" and "Timeout" in outcome.failed[0]["message"]
 
         rate_limited = MagicMock(status_code=429, headers={"Retry-After": "1"})
         monkeypatch.setattr(tmdb, "_http_get", lambda *args, **kwargs: rate_limited)
-        outcome = perform_scan(store, [WatchlistEntry("Alien", 1979)], "other", "DE", "key")
+        outcome = perform_scan(store, [WatchlistEntry("Alien", 1979)], "other", "DE", "key", profile_id=1)
         assert outcome.failed[0]["message"] == "TMDB rate limit reached."
 
     def test_scan_where_nothing_worked_is_not_saved(self, store):
         search, bundle = tmdb_answers()
         with search, bundle:
-            good = perform_scan(store, ENTRIES, "src", "DE", "key")
+            good = perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1)
         store._write("UPDATE scans SET created = created - 25 * 3600")
         store._write("UPDATE films SET fetched_at = 0")
         with (
             search,
             patch("watchlist_app.tmdb.get_movie_bundle", side_effect=tmdb.TmdbError("TMDB returned 401.")),
         ):
-            outcome = perform_scan(store, ENTRIES, "src", "DE", "bad key")
+            outcome = perform_scan(store, ENTRIES, "src", "DE", "bad key", profile_id=1)
         assert outcome.scan_id is None and len(outcome.failed) == 1
-        assert store.latest_scan("DE")["id"] == good.scan_id  # the page keeps the last good scan
+        assert (
+            store.latest_scan("DE", profile_id=1)["id"] == good.scan_id
+        )  # the page keeps the last good scan
 
     def test_scan_with_failed_lookups_is_not_reused(self, store):
         entries = [*ENTRIES, WatchlistEntry("Alien", 1979)]
@@ -156,9 +161,9 @@ class TestPerformScan:
             patch("watchlist_app.tmdb.search_movie_id", side_effect=lambda title, *rest: len(title) + 344),
             patch("watchlist_app.tmdb.get_movie_bundle", side_effect=bundle),
         ):
-            first = perform_scan(store, entries, "src", "DE", "key")
+            first = perform_scan(store, entries, "src", "DE", "key", profile_id=1)
             tmdb_down[0] = False
-            again = perform_scan(store, entries, "src", "DE", "key")
+            again = perform_scan(store, entries, "src", "DE", "key", profile_id=1)
         assert len(first.failed) == 1 and first.scan_id is not None
         assert not again.reused and again.failed == [] and len(again.results) == 2
 
@@ -168,9 +173,9 @@ class TestScanService:
         service = ScanService(store, settings, thread_factory=SyncThread)
         search, bundle = tmdb_answers()
         with search, bundle:
-            job_id, joined = service.start("DE", entries=ENTRIES, source_name="list.csv")
+            job_id, joined = service.start("DE", entries=ENTRIES, source_name="list.csv", profile_id=1)
         assert not joined
-        live = service.status(job_id)
+        live = service.status(job_id, profile_id=1)
         assert (live["status"], live["message"], live["results"][0]["key"]) == (
             "complete",
             "All films loaded.",
@@ -183,16 +188,18 @@ class TestScanService:
             1,
             1,
         )
-        assert stored["scan_id"] == store.latest_scan("DE")["id"]
+        assert stored["scan_id"] == store.latest_scan("DE", profile_id=1)["id"]
         assert stored["finished_at"] >= stored["started_at"]
         assert stored["tmdb_requests"] == 0  # both TMDB calls are mocked above the counter
 
     def test_status_survives_a_restart(self, store, settings):
         search, bundle = tmdb_answers()
         with search, bundle:
-            job_id, _ = ScanService(store, settings, thread_factory=SyncThread).start("DE", entries=ENTRIES)
+            job_id, _ = ScanService(store, settings, thread_factory=SyncThread).start(
+                "DE", entries=ENTRIES, profile_id=1
+            )
         restarted = ScanService(store, settings, thread_factory=IdleThread)
-        status = restarted.status(job_id)
+        status = restarted.status(job_id, profile_id=1)
         assert status["status"] == "complete"
         assert status["results"][0]["key"] == "949"
         assert "only_on_my_services" in status["results"][0]  # for the page filter
@@ -200,53 +207,55 @@ class TestScanService:
 
     def test_a_running_scan_sends_only_new_films(self, store, settings):
         service = ScanService(store, settings, thread_factory=IdleThread)
-        job_id, _ = service.start("DE", entries=ENTRIES)
+        job_id, _ = service.start("DE", entries=ENTRIES, profile_id=1)
         service._live[job_id]["results"] = [{"key": "1", "providers": {}}, {"key": "2", "providers": {}}]
-        assert [film["key"] for film in service.status(job_id, start=1)["results"]] == ["2"]
+        assert [film["key"] for film in service.status(job_id, start=1, profile_id=1)["results"]] == ["2"]
         service._live[job_id]["status"] = "complete"
-        assert len(service.status(job_id, start=1)["results"]) == 2  # finished: always everything
+        assert (
+            len(service.status(job_id, start=1, profile_id=1)["results"]) == 2
+        )  # finished: always everything
 
     def test_interrupted_scan_is_closed_and_started_again(self, store, settings):
-        ScanService(store, settings, thread_factory=IdleThread).start("GB")
+        ScanService(store, settings, thread_factory=IdleThread).start("GB", profile_id=1)
         restarted = ScanService(store, settings, thread_factory=IdleThread)
         interrupted = restarted.recover_interrupted()
         assert len(interrupted) == 1
         assert store.get_job(interrupted[0])["status"] == "interrupted"
-        assert restarted.status(interrupted[0])["status"] == "interrupted"
-        running = store.list_jobs(status="running")
+        assert restarted.status(interrupted[0], profile_id=1)["status"] == "interrupted"
+        running = store.list_jobs(status="running", profile_id=1)
         assert len(running) == 1 and running[0]["trigger"] == "resume" and running[0]["country"] == "GB"
 
     def test_watchlist_error_ends_the_job(self, store, settings):
         service = ScanService(store, settings, thread_factory=SyncThread)
-        job_id, _ = service.start("DE")  # no username and no CSV in the downloads folder
-        assert service.status(job_id)["status"] == "error"
+        job_id, _ = service.start("DE", profile_id=1)  # no username and no CSV in the downloads folder
+        assert service.status(job_id, profile_id=1)["status"] == "error"
         assert "watchlist" in store.get_job(job_id)["message"]
 
     def test_page_does_not_stop_a_background_scan(self, store, settings):
         service = ScanService(store, settings, thread_factory=IdleThread)
-        background, _ = service.start("GB", trigger="schedule")
-        page, joined = service.start("DE")
+        background, _ = service.start("GB", trigger="schedule", profile_id=1)
+        page, joined = service.start("DE", profile_id=1)
         assert not joined and page != background
         assert service._live[background]["cancel_requested"] is False
         # The page joins a background scan of its own country.
-        assert service.start("GB") == (background, True)
+        assert service.start("GB", profile_id=1) == (background, True)
 
     def test_cancel(self, store, settings):
         service = ScanService(store, settings, thread_factory=IdleThread)
-        job_id, _ = service.start("DE")
-        assert service.cancel(job_id) and not service.cancel("unknown")
+        job_id, _ = service.start("DE", profile_id=1)
+        assert service.cancel(job_id, profile_id=1) and not service.cancel("unknown", profile_id=1)
 
     def test_stale_scan_expires_and_old_live_jobs_are_dropped(self, store, settings, monkeypatch):
         service = ScanService(store, settings, thread_factory=IdleThread)
-        job_id, _ = service.start("DE")
+        job_id, _ = service.start("DE", profile_id=1)
         service._live[job_id]["heartbeat_at"] = time.time() - 31 * 60
-        new_id, joined = service.start("DE")
+        new_id, joined = service.start("DE", profile_id=1)
         assert not joined and new_id != job_id
         assert store.get_job(job_id)["status"] == "error"
         service._live[job_id]["finished_at"] = time.time() - 2 * 3600
-        service.start("GB")
+        service.start("GB", profile_id=1)
         assert job_id not in service._live
-        assert service.status(job_id)["status"] == "error"  # still known from the database
+        assert service.status(job_id, profile_id=1)["status"] == "error"  # still known from the database
 
 
 class TestLoadWatchlist:
@@ -265,25 +274,25 @@ class TestScheduler:
 
     def test_due_scan_starts_once(self, store, settings):
         settings.update({"scan_interval_hours": 24})
-        store.save_scan("DE", "src", "k", [], [], {}, created=time.time() - 25 * 3600)
+        store.save_scan("DE", "src", "k", [], [], {}, created=time.time() - 25 * 3600, profile_id=1)
         service = ScanService(store, settings, thread_factory=IdleThread)
         assert scheduler.run_due_scan(store, settings, service)
-        assert store.list_jobs()[0]["trigger"] == "schedule"
+        assert store.list_jobs(profile_id=1)[0]["trigger"] == "schedule"
         assert not scheduler.run_due_scan(store, settings, service)  # already running
 
     def test_not_due_yet(self, store, settings):
         settings.update({"scan_interval_hours": 24})
-        store.save_scan("DE", "src", "k", [], [], {}, created=time.time() - 3600)
+        store.save_scan("DE", "src", "k", [], [], {}, created=time.time() - 3600, profile_id=1)
         assert not scheduler.run_due_scan(store, settings, ScanService(store, settings, IdleThread))
 
     def test_interval_under_a_day_counts_as_a_day(self, store, settings):
         store.set_setting("scan_interval_hours", "6")  # saved by an older version
-        store.save_scan("DE", "src", "k", [], [], {}, created=time.time() - 7 * 3600)
+        store.save_scan("DE", "src", "k", [], [], {}, created=time.time() - 7 * 3600, profile_id=1)
         assert not scheduler.run_due_scan(store, settings, ScanService(store, settings, IdleThread))
 
     def test_failed_automatic_scan_waits_an_hour(self, store, settings):
         settings.update({"scan_interval_hours": 24})
-        store.create_job("old", "DE", "schedule", time.time() - 600)
+        store.create_job("old", "DE", "schedule", time.time() - 600, profile_id=1)
         store.update_job("old", status="error")
         assert not scheduler.run_due_scan(store, settings, ScanService(store, settings, IdleThread))
 
@@ -330,9 +339,9 @@ class TestProviderList:
         }
         search, fetched = tmdb_answers(bundle)
         with search, fetched:
-            outcome = perform_scan(store, ENTRIES, "src", "DE", "key")
+            outcome = perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1)
         assert outcome.results[0]["providers"] == {"Prime Video": ["flatrate"], "Brand New Stream": ["ads"]}
-        assert store.latest_scan("DE")["stats"]["providers"] == "all"
+        assert store.latest_scan("DE", profile_id=1)["stats"]["providers"] == "all"
 
     def test_the_scan_brings_its_free_services_and_rental_shops(self, store):
         # The page does not reload on a country switch, so both lists come from the scan's offers.
@@ -344,24 +353,24 @@ class TestProviderList:
         }
         search, fetched = tmdb_answers(bundle)
         with search, fetched:
-            outcome = perform_scan(store, ENTRIES, "src", "DE", "key")
+            outcome = perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1)
         assert (outcome.free_services, outcome.rental_shops) == (["Brand New Stream"], ["Videoload"])
 
     def test_a_scan_before_the_change_is_not_reused(self, store):
         search, fetched = tmdb_answers()
         with search, fetched as bundle:
-            perform_scan(store, ENTRIES, "src", "DE", "key")
+            perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1)
             store._write("UPDATE scans SET stats = '{}'")
-            assert not perform_scan(store, ENTRIES, "src", "DE", "key").reused
+            assert not perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1).reused
         assert bundle.call_count == 1  # the film data itself is still cached
 
     def test_a_scan_in_an_older_film_format_is_not_reused(self, store):
         search, fetched = tmdb_answers()
         with search, fetched:
-            perform_scan(store, ENTRIES, "src", "DE", "key")
-            assert perform_scan(store, ENTRIES, "src", "DE", "key").reused
+            perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1)
+            assert perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1).reused
             store._write("""UPDATE scans SET stats = '{"providers": "all", "film_format": 1}'""")
-            assert not perform_scan(store, ENTRIES, "src", "DE", "key").reused
+            assert not perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1).reused
 
     @pytest.mark.provider_catalog
     def test_catalog_is_loaded_once_a_week(self, store, monkeypatch):
@@ -388,7 +397,7 @@ class TestProviderList:
         monkeypatch.setattr(tmdb, "get_region_providers", broken)
         search, fetched = tmdb_answers()
         with search, fetched:
-            assert perform_scan(store, ENTRIES, "src", "DE", "key").results
+            assert perform_scan(store, ENTRIES, "src", "DE", "key", profile_id=1).results
         assert store.provider_catalog("DE") == []
 
 
@@ -400,25 +409,25 @@ def anna(store):
 class TestProfiles:
     def test_another_profile_neither_joins_nor_stops_a_running_scan(self, store, settings, anna):
         service = ScanService(store, settings, thread_factory=IdleThread)
-        first, _ = service.start("DE")
+        first, _ = service.start("DE", profile_id=1)
         second, joined = service.start("DE", profile_id=anna)
         assert not joined and second != first
         other_country, _ = service.start("GB", profile_id=anna)  # stops only the second profile's scan
         assert service._live[first]["cancel_requested"] is False
         assert service._live[second]["cancel_requested"] is True
-        assert service.start("DE") == (first, True)
+        assert service.start("DE", profile_id=1) == (first, True)
         assert service.start("GB", profile_id=anna) == (other_country, True)
         assert service.is_running(anna) and service.is_running(1) and not service.is_running(99)
 
     def test_status_and_cancel_only_for_the_own_profile(self, store, settings, anna):
         service = ScanService(store, settings, thread_factory=IdleThread)
-        job_id, _ = service.start("DE")
+        job_id, _ = service.start("DE", profile_id=1)
         assert service.status(job_id, profile_id=anna) is None
         assert not service.cancel(job_id, profile_id=anna)
         assert service._live[job_id]["cancel_requested"] is False
         restarted = ScanService(store, settings, thread_factory=IdleThread)  # read from the database
         assert restarted.status(job_id, profile_id=anna) is None
-        assert restarted.status(job_id)["job_id"] == job_id
+        assert restarted.status(job_id, profile_id=1)["job_id"] == job_id
 
     def test_scan_of_a_second_profile_is_saved_under_it(self, store, settings, anna):
         settings.for_profile(anna).update({"subscriptions": ["Netflix"]})
@@ -429,13 +438,13 @@ class TestProfiles:
         stored = store.get_job(job_id)
         assert stored["profile_id"] == anna and stored["status"] == "complete"
         assert store.latest_scan("DE", profile_id=anna)["id"] == stored["scan_id"]
-        assert store.latest_scan("DE") is None and store.list_jobs() == []
-        assert store.service_history("DE", profile_id=anna) and not store.service_history("DE")
+        assert store.latest_scan("DE", profile_id=1) is None and store.list_jobs(profile_id=1) == []
+        assert store.service_history("DE", profile_id=anna) and not store.service_history("DE", profile_id=1)
         assert service.status(job_id, profile_id=anna)["results"][0]["only_on_my_services"] is True
 
     def test_a_restart_resumes_each_profile_with_its_own_profile(self, store, settings, anna):
         service = ScanService(store, settings, thread_factory=IdleThread)
-        service.start("GB")
+        service.start("GB", profile_id=1)
         service.start("FR", profile_id=anna)
         restarted = ScanService(store, settings, thread_factory=IdleThread)
         assert len(restarted.recover_interrupted()) == 2
@@ -452,7 +461,7 @@ class TestProfiles:
             ) as search,
             patch("watchlist_app.tmdb.get_movie_bundle", return_value=BUNDLE) as bundle,
         ):
-            perform_scan(store, ENTRIES, "anton.csv", "DE", "key")
+            perform_scan(store, ENTRIES, "anton.csv", "DE", "key", profile_id=1)
             search.reset_mock()
             bundle.reset_mock()
             both = [*ENTRIES, WatchlistEntry("Alien", 1979)]
@@ -497,10 +506,10 @@ class TestSchedulerPerProfile:
         store.add_profile("Nameless")  # no Letterboxd name: never scanned on a schedule
         service = ScanService(store, settings, thread_factory=IdleThread)
         assert scheduler.run_due_scan(store, settings, service)
-        first = store.list_jobs()[0]
+        first = store.list_jobs(profile_id=1)[0]
         assert not scheduler.run_due_scan(store, settings, service)  # one scan at a time
         service._live[first["id"]]["status"] = "complete"
-        store.save_scan("DE", "src", "k", [], [], {})
+        store.save_scan("DE", "src", "k", [], [], {}, profile_id=1)
         assert scheduler.run_due_scan(store, settings, service)
         second = store.list_jobs(profile_id=anna)[0]
         assert (second["trigger"], second["country"]) == ("schedule", "GB")
@@ -511,7 +520,7 @@ class TestSchedulerPerProfile:
     def test_a_failed_scan_waits_only_for_its_own_profile(self, store, settings, anna):
         settings.update({"scan_interval_hours": 24})
         settings.for_profile(anna).update({"letterboxd_username": "anna"})
-        store.create_job("old", "DE", "schedule", time.time() - 600)
+        store.create_job("old", "DE", "schedule", time.time() - 600, profile_id=1)
         store.update_job("old", status="error")
         service = ScanService(store, settings, thread_factory=IdleThread)
         assert scheduler.run_due_scan(store, settings, service)

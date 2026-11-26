@@ -72,10 +72,10 @@ def _add_profile(store, name, email=None):
 def test_a_version_1_backup_restores_into_profile_1(store, tmp_path):
     counts = _restore(store, tmp_path, copy.deepcopy(V1_BACKUP))
     assert counts == {"favorites": 1, "changes": 1, "scans": 1, "matches": 1, "skipped": 0, "settings": 4}
-    assert store.list_favorites()[0]["notes"] == "n"
-    assert store.list_flags() == [{"key": "348", "flag": "watched", "until": None}]
-    assert store.recent_changes("DE", 0)[0]["provider"] == "Arte"
-    assert store.latest_scan("DE")["results"][0]["providers"] == {"Netflix": ["flatrate"]}
+    assert store.list_favorites(profile_id=1)[0]["notes"] == "n"
+    assert store.list_flags(profile_id=1) == [{"key": "348", "flag": "watched", "until": None}]
+    assert store.recent_changes("DE", 0, profile_id=1)[0]["provider"] == "Arte"
+    assert store.latest_scan("DE", profile_id=1)["results"][0]["providers"] == {"Netflix": ["flatrate"]}
     assert store.get_id("lb:heat-1995")["source"] == "manual"
     assert _personal(store, 1) == {
         "country": "DE",
@@ -100,7 +100,9 @@ def test_a_version_1_backup_with_target_profile_2_lands_in_profile_2_only(store,
     assert _personal(store, second)["letterboxd_username"] == "anna"
     after = _rows(store)
     assert after["favorites"] == before["favorites"] + 1 and after["scans"] == before["scans"] + 1
-    assert len(store.recent_changes("DE", 0)) == 1 and len(store.list_favorites()) == 1
+    assert (
+        len(store.recent_changes("DE", 0, profile_id=1)) == 1 and len(store.list_favorites(profile_id=1)) == 1
+    )
 
 
 def _two_profiles(store, tmp_path):

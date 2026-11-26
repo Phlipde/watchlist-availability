@@ -35,9 +35,9 @@ def test_settings_accept_any_country(settings):
 
 
 def test_countries_in_use_are_the_country_and_those_with_saved_services(settings):
-    settings._store.set_profile_setting("subscriptions:FR", "[]")
-    settings._store.set_profile_setting("subscription_costs:PL", "{}")
-    settings._store.set_profile_setting("subscriptionsXIT", "[]")  # not the prefix
+    settings._store.set_profile_setting("subscriptions:FR", "[]", profile_id=1)
+    settings._store.set_profile_setting("subscription_costs:PL", "{}", profile_id=1)
+    settings._store.set_profile_setting("subscriptionsXIT", "[]", profile_id=1)  # not the prefix
     settings._store.set_profile_setting("subscriptions:GB", "[]", profile_id=2)  # another profile
     assert settings.countries_in_use() == ["DE", "FR", "PL"]
 
@@ -46,7 +46,7 @@ def test_backup_restore_keeps_a_scan_of_any_country():
     store = Store(":memory:")
     backup = {"version": 1, "scans": [{"created": 40.0, "country": "PL", "results": [{"title": "Ida"}]}]}
     assert store.import_backup(backup)["scans"] == 1
-    assert store.latest_scan("PL")["results"][0]["title"] == "Ida"
+    assert store.latest_scan("PL", profile_id=1)["results"][0]["title"] == "Ida"
 
 
 def test_country_choices_fall_back_to_the_flags(settings):

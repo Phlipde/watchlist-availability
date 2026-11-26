@@ -101,11 +101,11 @@ class TestCorrection:
             patch("watchlist_app.letterboxd.fetch_tmdb_id", return_value=111),
             patch("watchlist_app.tmdb.get_movie_bundle", return_value=wrong),
         ):
-            first = perform_scan(store, entries, "src", "DE", "key")
+            first = perform_scan(store, entries, "src", "DE", "key", profile_id=1)
         assert first.results[0]["key"] == "111"
         with patch("watchlist_app.tmdb.get_movie_bundle", return_value=HEAT):
             matches.correct_match(store, "lb:heat-1995", 949, "key")
-            again = perform_scan(store, entries, "src", "DE", "key")
+            again = perform_scan(store, entries, "src", "DE", "key", profile_id=1)
         # The recent scan is not reused after a correction, and the manual id is kept.
         assert not again.reused
         assert again.results[0]["key"] == "949"

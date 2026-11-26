@@ -203,8 +203,8 @@ def test_another_web_site_cannot_restore_a_backup(app_server, page):
         playwright_api.expect(page).to_have_title("sent")
     finally:
         server.shutdown()
-    assert app_server["store"].list_favorites() == []
-    assert app_server["store"].latest_scan("DE") is None
+    assert app_server["store"].list_favorites(profile_id=1) == []
+    assert app_server["store"].latest_scan("DE", profile_id=1) is None
 
 
 def test_service_drawer_saves_notes_and_splits_the_price(app_server, page):
@@ -212,7 +212,7 @@ def test_service_drawer_saves_notes_and_splits_the_price(app_server, page):
     page.goto(app_server["url"] + "/watchlist")
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     # A finished scan saved one history row for the own paid service.
-    assert "Netflix" in app_server["store"].service_history("DE")
+    assert "Netflix" in app_server["store"].service_history("DE", profile_id=1)
     page.goto(f"{app_server['url']}/subscriptions")
     netflix = page.locator('tr[data-service="Netflix"]')
     netflix.locator('[name="price"]').fill("12")

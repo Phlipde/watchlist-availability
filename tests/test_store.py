@@ -53,25 +53,25 @@ class TestFilmData:
 class TestScans:
     def _save(self, store, country="DE", key="k", created=None, title="Heat"):
         results = [{"title": title, "providers": {"Netflix": ["rent"]}}]
-        return store.save_scan(country, "src", key, results, [], {"total": 1}, created=created)
+        return store.save_scan(country, "src", key, results, [], {"total": 1}, created=created, profile_id=1)
 
     def test_latest_scan_per_country(self, store):
         self._save(store, "DE", created=100, title="Old")
         self._save(store, "DE", created=200, title="New")
         self._save(store, "GB", created=300, title="British")
-        assert store.latest_scan("DE")["results"][0]["title"] == "New"
-        assert store.latest_scan()["country"] == "GB"
-        assert store.latest_scan("US") is None
+        assert store.latest_scan("DE", profile_id=1)["results"][0]["title"] == "New"
+        assert store.latest_scan(profile_id=1)["country"] == "GB"
+        assert store.latest_scan("US", profile_id=1) is None
 
     def test_find_recent_scan_of_same_watchlist(self, store):
         self._save(store, key="list-a")
-        assert store.find_scan("DE", "list-a", max_age=60)["source_name"] == "src"
-        assert store.find_scan("DE", "list-b", max_age=60) is None
-        assert store.find_scan("GB", "list-a", max_age=60) is None
+        assert store.find_scan("DE", "list-a", max_age=60, profile_id=1)["source_name"] == "src"
+        assert store.find_scan("DE", "list-b", max_age=60, profile_id=1) is None
+        assert store.find_scan("GB", "list-a", max_age=60, profile_id=1) is None
 
     def test_old_scan_is_not_reused(self, store):
         self._save(store, key="list-a", created=time.time() - 3600)
-        assert store.find_scan("DE", "list-a", max_age=60) is None
+        assert store.find_scan("DE", "list-a", max_age=60, profile_id=1) is None
 
     def test_only_the_newest_scans_are_kept(self, store, monkeypatch):
         monkeypatch.setattr(store_module, "MAX_SCANS", 3)
@@ -85,23 +85,25 @@ class TestScans:
         self._save(store, "GB", created=0, title="British")
         for created in range(1, 6):
             self._save(store, "DE", created=created)
-        assert store.latest_scan("GB")["results"][0]["title"] == "British"
+        assert store.latest_scan("GB", profile_id=1)["results"][0]["title"] == "British"
         assert len(store._read("SELECT id FROM scans WHERE country = 'DE'")) == 2
 
 
 class TestFavorites:
     def test_add_update_remove(self, store):
-        store.add_favorite({"key": "949", "title": "Heat", "year": 1995})
-        store.update_favorite("949", {"status": "watched", "notes": "great", "title": "ignored"})
-        favorite = store.list_favorites()[0]
+        store.add_favorite({"key": "949", "title": "Heat", "year": 1995}, profile_id=1)
+        store.update_favorite(
+            "949", {"status": "watched", "notes": "great", "title": "ignored"}, profile_id=1
+        )
+        favorite = store.list_favorites(profile_id=1)[0]
         assert (favorite["key"], favorite["title"], favorite["status"], favorite["notes"]) == (
             "949",
             "Heat",
             "watched",
             "great",
         )
-        store.remove_favorite("949")
-        assert store.list_favorites() == []
+        store.remove_favorite("949", profile_id=1)
+        assert store.list_favorites(profile_id=1) == []
 
 
 def test_settings(store):
@@ -113,8 +115,8 @@ def test_settings(store):
 
 class TestJobs:
     def test_create_update_and_list(self, store):
-        store.create_job("a", "DE", "manual", 10.0)
-        store.create_job("b", "GB", "schedule", 20.0)
+        store.create_job("a", "DE", "manual", 10.0, profile_id=1)
+        store.create_job("b", "GB", "schedule", 20.0, profile_id=1)
         store.update_job("a", status="complete", failed=[{"title": "Heat"}], reused=True, tmdb_requests=7)
         job = store.get_job("a")
         assert (job["status"], job["failed"], job["reused"], job["tmdb_requests"]) == (
@@ -123,30 +125,31 @@ class TestJobs:
             True,
             7,
         )
-        assert [job["id"] for job in store.list_jobs()] == ["b", "a"]
-        assert [job["id"] for job in store.list_jobs(status="running")] == ["b"]
+        assert [job["id"] for job in store.list_jobs(profile_id=1)] == ["b", "a"]
+        assert [job["id"] for job in store.list_jobs(status="running", profile_id=1)] == ["b"]
         assert store.get_job("missing") is None
 
     def test_unknown_field_rejected(self, store):
-        store.create_job("a", "DE", "manual", 10.0)
+        store.create_job("a", "DE", "manual", 10.0, profile_id=1)
         with pytest.raises(ValueError):
             store.update_job("a", api_key="x")
 
     def test_only_the_newest_jobs_are_kept(self, store, monkeypatch):
         monkeypatch.setattr(store_module, "MAX_JOBS", 2)
         for number in range(4):
-            store.create_job(str(number), "DE", "manual", float(number))
-        assert [job["id"] for job in store.list_jobs()] == ["3", "2"]
+            store.create_job(str(number), "DE", "manual", float(number), profile_id=1)
+        assert [job["id"] for job in store.list_jobs(profile_id=1)] == ["3", "2"]
 
 
 class TestBackup:
     def _fill(self, store):
-        store.set_profile_setting("country", "GB")
-        store.add_favorite({"key": "949", "title": "Heat", "status": "watching", "notes": "n"})
+        store.set_profile_setting("country", "GB", profile_id=1)
+        store.add_favorite({"key": "949", "title": "Heat", "status": "watching", "notes": "n"}, profile_id=1)
         store.add_changes(
             "DE",
             [{"film_key": "949", "title": "Heat", "year": 1995, "provider": "Arte", "change": "added"}],
             50.0,
+            profile_id=1,
         )
         heat = {
             "key": "949",
@@ -155,9 +158,9 @@ class TestBackup:
             "year": 1995,
             "providers": {"Netflix": ["flatrate"]},
         }
-        store.save_scan("DE", "src", "k", [heat], [], {}, created=10.0)
-        store.save_scan("DE", "src", "k", [heat], [], {}, created=20.0)
-        store.save_scan("GB", "src", "k", [], [], {}, created=30.0)
+        store.save_scan("DE", "src", "k", [heat], [], {}, created=10.0, profile_id=1)
+        store.save_scan("DE", "src", "k", [heat], [], {}, created=20.0, profile_id=1)
+        store.save_scan("GB", "src", "k", [], [], {}, created=30.0, profile_id=1)
         store.save_bundle(949, BUNDLE)
         store.set_id("lb:heat-1995", 949, "manual", title="Heat", year=1995)
         store.set_id("lb:alien", 348, "letterboxd", title="Alien", year=1979)
@@ -193,10 +196,10 @@ class TestBackup:
             "skipped": 0,
         }
         # Settings are restored by AppSettings.restore, with the checks of the settings page.
-        assert fresh.get_profile_setting("country") is None
-        assert fresh.list_favorites()[0]["status"] == "watching"
-        assert fresh.recent_changes("DE", 0)[0]["created"] == 50.0
-        restored = fresh.latest_scan("DE")
+        assert fresh.get_profile_setting("country", profile_id=1) is None
+        assert fresh.list_favorites(profile_id=1)[0]["status"] == "watching"
+        assert fresh.recent_changes("DE", 0, profile_id=1)[0]["created"] == 50.0
+        restored = fresh.latest_scan("DE", profile_id=1)
         assert restored["created"] == 20.0
         assert restored["results"][0] == {
             **Film(title="Heat", year=1995, tmdb_id=949).to_dict(),
@@ -278,9 +281,9 @@ class TestBackup:
         }
         counts = store.import_backup(backup)
         assert counts == {"favorites": 1, "changes": 1, "scans": 1, "matches": 1, "skipped": 6}
-        favorite = store.list_favorites()[0]
+        favorite = store.list_favorites(profile_id=1)[0]
         assert (favorite["year"], favorite["rating"], favorite["status"]) == (None, None, "plan")
-        scan = store.latest_scan("DE")
+        scan = store.latest_scan("DE", profile_id=1)
         assert scan["created"] == 40.0
         film = scan["results"][0]
         assert (film["year"], film["runtime"], film["rating"], film["poster_path"]) == (
@@ -314,15 +317,17 @@ class TestBackup:
 
 
 def test_service_history_keeps_one_row_a_day_and_drops_a_year_old_one(store):
-    store.record_service_counts("DE", "2025-01-01", {"Netflix": (50, 10)})
-    store.record_service_counts("DE", "2026-11-17", {"Netflix": (60, 12)})
-    store.record_service_counts("DE", "2026-11-17", {"Netflix": (61, 13)})  # the same day: replaced
-    store.record_service_counts("GB", "2026-11-17", {"Netflix": (5, 1)})
-    history = store.service_history("DE")
+    store.record_service_counts("DE", "2025-01-01", {"Netflix": (50, 10)}, profile_id=1)
+    store.record_service_counts("DE", "2026-11-17", {"Netflix": (60, 12)}, profile_id=1)
+    store.record_service_counts(
+        "DE", "2026-11-17", {"Netflix": (61, 13)}, profile_id=1
+    )  # the same day: replaced
+    store.record_service_counts("GB", "2026-11-17", {"Netflix": (5, 1)}, profile_id=1)
+    history = store.service_history("DE", profile_id=1)
     assert history == {
         "Netflix": [{"day": "2026-11-17", "films": 61, "only_here": 13}]
     }  # the first day is over a year old
-    assert store.service_history("GB")["Netflix"][0]["films"] == 5
+    assert store.service_history("GB", profile_id=1)["Netflix"][0]["films"] == 5
 
 
 class TestSchemaVersion:
@@ -334,7 +339,7 @@ class TestSchemaVersion:
         path = tmp_path / "prod.sqlite3"
         _v1_database(path, version=0)  # the baseline layout before it was versioned
         again = Store(path)
-        assert again.get_profile_setting("country") == "DE"
+        assert again.get_profile_setting("country", profile_id=1) == "DE"
         assert again._read("PRAGMA user_version")[0][0] == SCHEMA_VERSION
         assert again._read("SELECT profile_id, movie_key FROM favorites") == [(1, "lb:heat")]
 

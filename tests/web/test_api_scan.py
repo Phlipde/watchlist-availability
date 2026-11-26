@@ -68,7 +68,9 @@ class TestLatestAndFavoritesApi:
         first = client.get("/api/latest?country=DE").get_json()
         assert (first["available"], first["stale"]) == (False, True)
         assert first["subscriptions"] == settings.subscriptions("DE")
-        store.save_scan("DE", "src", "k", [{"key": "1", "title": "Heat", "providers": {}}], [], {})
+        store.save_scan(
+            "DE", "src", "k", [{"key": "1", "title": "Heat", "providers": {}}], [], {}, profile_id=1
+        )
         answer = client.get("/api/latest?country=DE").get_json()
         assert answer["available"] is True
         assert answer["stale"] is False
@@ -88,7 +90,7 @@ class TestLatestAndFavoritesApi:
         import json
 
         films = [{"key": str(n), "title": f"Film {n}", "providers": {}} for n in range(200)]
-        store.save_scan("DE", "src", "k", films, [], {})
+        store.save_scan("DE", "src", "k", films, [], {}, profile_id=1)
         plain = client.get("/api/latest?country=DE")
         assert "Content-Encoding" not in plain.headers
         packed = client.get("/api/latest?country=DE", headers={"Accept-Encoding": "gzip, br"})
@@ -100,18 +102,38 @@ class TestLatestAndFavoritesApi:
     def test_latest_scan_sends_free_services_of_its_country(self, client, store):
         # The page keeps its labels on a country switch, so each scan brings its own list.
         offers = {"BBC iPlayer": ["free"], "Sky Store": ["rent", "buy"]}
-        store.save_scan("GB", "src", "k", [{"key": "1", "title": "Heat", "providers": offers}], [], {})
+        store.save_scan(
+            "GB", "src", "k", [{"key": "1", "title": "Heat", "providers": offers}], [], {}, profile_id=1
+        )
         latest = client.get("/api/latest?country=GB").get_json()
         assert (latest["free_services"], latest["rental_shops"]) == (["BBC iPlayer"], ["Sky Store"])
 
     def test_latest_scan_reports_old_results_as_stale(self, client, store, settings, monkeypatch):
-        store.save_scan("DE", "src", "k", [{"key": "1", "title": "Heat", "providers": {}}], [], {}, created=1)
+        store.save_scan(
+            "DE",
+            "src",
+            "k",
+            [{"key": "1", "title": "Heat", "providers": {}}],
+            [],
+            {},
+            created=1,
+            profile_id=1,
+        )
         settings.update({"scan_interval_hours": 24})
         monkeypatch.setattr(routes.time, "time", lambda: 24 * 60 * 60 + 1)
         assert client.get("/api/latest?country=DE").get_json()["stale"] is True
 
     def test_old_results_are_stale_with_the_schedule_off(self, client, store, monkeypatch):
-        store.save_scan("DE", "src", "k", [{"key": "1", "title": "Heat", "providers": {}}], [], {}, created=1)
+        store.save_scan(
+            "DE",
+            "src",
+            "k",
+            [{"key": "1", "title": "Heat", "providers": {}}],
+            [],
+            {},
+            created=1,
+            profile_id=1,
+        )
         monkeypatch.setattr(routes.time, "time", lambda: 24 * 60 * 60 - 1)
         assert client.get("/api/latest?country=DE").get_json()["stale"] is False
         monkeypatch.setattr(routes.time, "time", lambda: 24 * 60 * 60 + 1)
@@ -137,7 +159,7 @@ def test_latest_marks_films_only_on_one_own_service(client, store, settings):
         {"key": "1", "title": "Alien", "providers": {"Netflix": ["flatrate"]}},
         {"key": "2", "title": "Heat", "providers": {"Netflix": ["flatrate"], "MUBI": ["flatrate"]}},
     ]
-    store.save_scan("DE", "src", "k", films, [], {})
+    store.save_scan("DE", "src", "k", films, [], {}, profile_id=1)
     results = client.get("/api/latest?country=DE").get_json()["results"]
     marks = [film["only_on_my_services"] for film in results]
     assert marks == [True, False]
@@ -167,6 +189,7 @@ class TestAbroad:
             [{"key": "7", "tmdb_id": 7, "title": "Heat", "providers": {}}],
             [],
             {},
+            profile_id=1,
         )
         store.save_bundle(7, {"details": {}, "providers": {"AT": {"Netflix": ["flatrate"]}}})
         data = client.get("/api/abroad?country=DE&services=Netflix").get_json()

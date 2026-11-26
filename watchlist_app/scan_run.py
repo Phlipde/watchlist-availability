@@ -92,7 +92,7 @@ def result_stats(results: list[dict]) -> dict:
 
 
 def with_changes(
-    store: Store, country: str, results: list[dict], unavailable: list[dict], *, profile_id: int = 1
+    store: Store, country: str, results: list[dict], unavailable: list[dict], *, profile_id: int
 ) -> dict:
     """Attach the stored availability changes of the last two weeks to a scan's films."""
     since = time.time() - history.CHANGE_WINDOW_SECONDS
@@ -162,7 +162,7 @@ def perform_scan(
     on_unavailable: Callable[[Film], None] | None = None,
     on_failed: Callable[[dict], None] | None = None,
     is_cancelled: Callable[[], bool] | None = None,
-    profile_id: int = 1,
+    profile_id: int,
 ) -> ScanOutcome | None:
     """Check a watchlist against every known provider and store the result.
 

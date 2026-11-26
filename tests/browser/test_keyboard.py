@@ -92,7 +92,7 @@ def test_keyboard_shortcuts(app_server, page):
     page.keyboard.press("/")
     expect(page.locator("#film-search")).to_be_focused()
     page.keyboard.type("s")  # typing in the search must not trigger a shortcut
-    assert app_server["store"].list_flags() == []
+    assert app_server["store"].list_flags(profile_id=1) == []
     page.locator("#film-search").fill("")
     # "s" marks the card in focus as watched; "g" then "s" goes to the subscriptions.
     page.locator("article.film .film-open").first.focus()

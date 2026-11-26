@@ -28,6 +28,7 @@ class TestNotificationsAndSensors:
             [{"key": "1", "title": "Heat", "providers": {"Netflix": ["flatrate"]}}],
             [],
             {},
+            profile_id=1,
         )
         data = client.get("/api/sensors").get_json()
         assert data["watchlist_coverage"] == 100 and data["films_available"] == 1
@@ -89,10 +90,12 @@ class TestFeedAndTile:
             ],
             [],
             {},
+            profile_id=1,
         )
         store.add_changes(
             "DE",
             [{"film_key": "1", "title": "Heat & Co", "year": 1995, "provider": "Netflix", "change": "added"}],
+            profile_id=1,
         )
 
     def test_rss_lists_new_films_on_own_services_and_escapes_text(self, client, store, settings):

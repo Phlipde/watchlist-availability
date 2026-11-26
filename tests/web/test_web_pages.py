@@ -14,7 +14,9 @@ class TestPages:
 
         assert (config()[0]["rentalShops"], config()[0]["freeServices"]) == ([], [])  # no scan, no labels
         offers = {"Apple TV Store": ["rent"], "Arte": ["free"], "MUBI": ["flatrate"]}
-        store.save_scan("DE", "src", "k", [{"key": "1", "title": "Heat", "providers": offers}], [], {})
+        store.save_scan(
+            "DE", "src", "k", [{"key": "1", "title": "Heat", "providers": offers}], [], {}, profile_id=1
+        )
         data, page = config()
         assert data["subscriptions"]["DE"] == ["MUBI"]
         assert data["rentalShops"] == ["Apple TV Store"]
@@ -33,7 +35,7 @@ class TestPages:
         assert 'type="checkbox"' not in client.get("/subscriptions").get_data(as_text=True)
 
     def test_status_page_lists_scans(self, client, store):
-        store.create_job("abc", "DE", "schedule", 100.0)
+        store.create_job("abc", "DE", "schedule", 100.0, profile_id=1)
         store.update_job("abc", status="complete", finished_at=112.5, tmdb_requests=42, completed=3, total=3)
         page = client.get("/settings/data").get_data(as_text=True)
         assert "schedule" in page and "12.5 s" in page and ">42<" in page
@@ -57,7 +59,9 @@ def test_services_page_groups_come_from_the_latest_scan(client, store, settings)
     names = ["Netflix", "Videoload", "Arte", "Brand New Stream"]
     store.save_provider_catalog("DE", [{"name": name, "priority": rank} for rank, name in enumerate(names)])
     offers = {"Arte": ["ads"], "Netflix": ["flatrate"], "Videoload": ["rent"], "Canal+": ["flatrate"]}
-    store.save_scan("DE", "src", "k", [{"key": "1", "title": "Heat", "providers": offers}], [], {})
+    store.save_scan(
+        "DE", "src", "k", [{"key": "1", "title": "Heat", "providers": offers}], [], {}, profile_id=1
+    )
     page = client.get("/settings/services").get_data(as_text=True)
 
     def section(title):
@@ -128,7 +132,7 @@ class TestRecommendationsAndDeadlines:
             {"key": "2", "title": "Alien", "runtime": 90, "providers": {"Netflix": ["flatrate"]}},
             {"key": "3", "title": "Ran", "runtime": 150, "providers": {"Disney+": ["flatrate"]}},
         ]
-        store.save_scan("DE", "letterboxd", None, films, [], {})
+        store.save_scan("DE", "letterboxd", None, films, [], {}, profile_id=1)
 
     def test_cards_name_the_service_the_numbers_and_the_actions(self, client, store, settings):
         self._scan(store, settings)

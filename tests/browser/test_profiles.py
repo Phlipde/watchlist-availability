@@ -17,7 +17,7 @@ def test_switching_the_profile_in_the_header_shows_its_own_favorites(app_server,
     expect = playwright_api.expect
     store = app_server["store"]
     store.add_profile("Anna")
-    store.add_favorite({"key": "949", "title": "Heat", "year": 1995})
+    store.add_favorite({"key": "949", "title": "Heat", "year": 1995}, profile_id=1)
     page.goto(app_server["url"] + "/watchlist")  # app.js wires the header here
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     expect(page.locator('article.film[data-key="949"] button.favorite')).to_have_attribute(

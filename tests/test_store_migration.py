@@ -240,20 +240,26 @@ class TestMigrationToProfiles:
         path = tmp_path / "old.sqlite3"
         _v1_database(path)
         store = Store(path)
-        store.add_favorite({"key": "lb:heat", "title": "Heat", "year": 1995, "status": "seen"})  # replaces
-        store.add_favorite({"key": "lb:up", "title": "Up"})
-        store.update_favorite("lb:up", {"notes": "later"})
-        assert [(f["key"], f["status"], f["notes"]) for f in store.list_favorites()] == [
+        store.add_favorite(
+            {"key": "lb:heat", "title": "Heat", "year": 1995, "status": "seen"}, profile_id=1
+        )  # replaces
+        store.add_favorite({"key": "lb:up", "title": "Up"}, profile_id=1)
+        store.update_favorite("lb:up", {"notes": "later"}, profile_id=1)
+        assert [(f["key"], f["status"], f["notes"]) for f in store.list_favorites(profile_id=1)] == [
             ("lb:heat", "seen", ""),
             ("lb:up", "plan", "later"),
         ]
-        store.remove_favorite("lb:heat")
-        assert [f["key"] for f in store.list_favorites()] == ["lb:up"]
-        store.set_flag("lb:alien", "not_now", 9e9)  # replaces the "watched" flag
-        store.clear_flag("lb:jaws")
-        assert store.list_flags(now=0) == [{"key": "lb:alien", "flag": "not_now", "until": 9e9}]
-        store.record_service_counts("DE", "2026-11-20", {"Netflix": (61, 13)})  # the same day: replaced
-        assert store.service_history("DE")["Netflix"] == [{"day": "2026-11-20", "films": 61, "only_here": 13}]
+        store.remove_favorite("lb:heat", profile_id=1)
+        assert [f["key"] for f in store.list_favorites(profile_id=1)] == ["lb:up"]
+        store.set_flag("lb:alien", "not_now", 9e9, profile_id=1)  # replaces the "watched" flag
+        store.clear_flag("lb:jaws", profile_id=1)
+        assert store.list_flags(now=0, profile_id=1) == [{"key": "lb:alien", "flag": "not_now", "until": 9e9}]
+        store.record_service_counts(
+            "DE", "2026-11-20", {"Netflix": (61, 13)}, profile_id=1
+        )  # the same day: replaced
+        assert store.service_history("DE", profile_id=1)["Netflix"] == [
+            {"day": "2026-11-20", "films": 61, "only_here": 13}
+        ]
         assert store._read("SELECT DISTINCT profile_id FROM favorites") == [(1,)]
         assert store._read("SELECT DISTINCT profile_id FROM flags") == [(1,)]
         assert "profile_id" not in json.dumps(store.export_backup())  # the backup format is unchanged
@@ -312,7 +318,7 @@ class TestMigrationOfProfileSettings:
         _v1_database(path)
         backup = json.loads(json.dumps(Store(path).export_backup()))
         fresh = Store(tmp_path / "fresh.sqlite3")
-        fresh.add_favorite({"key": "x|2000", "title": "X", "year": 2000})
+        fresh.add_favorite({"key": "x|2000", "title": "X", "year": 2000}, profile_id=1)
         fresh.import_backup(backup)
         assert fresh.find_profile("Me") == 1 and fresh.find_profile("anna") == 2
 
@@ -325,7 +331,7 @@ class TestMigrationOfProfileSettings:
         AppSettings(fresh, Settings("key", None, "GB", tmp_path)).restore_backup(backup)
         # A fresh install has only an empty "Me": the backup's person takes over profile 1.
         assert fresh.find_profile("anna") == 1 and fresh.find_profile("Me") is None
-        assert len(fresh.list_favorites()) == len(Store(path).list_favorites())
+        assert len(fresh.list_favorites(profile_id=1)) == len(Store(path).list_favorites(profile_id=1))
         personal = dict(fresh._read("SELECT key, value FROM profile_settings WHERE profile_id = 1"))
         assert personal["country"] == "DE" and personal["letterboxd_username"] == "anna"
         assert json.loads(personal["subscriptions:DE"]) == ["Netflix"]

@@ -19,11 +19,11 @@ def anna(store):
 @pytest.fixture
 def profile_1_data(store, settings):
     """Profile 1 has a favorite, a flag, a service, a scan and a change; profile 2 has nothing."""
-    store.add_favorite({"key": "949", "title": "Heat"})
-    store.set_flag("348", "watched")
+    store.add_favorite({"key": "949", "title": "Heat"}, profile_id=1)
+    store.set_flag("348", "watched", profile_id=1)
     settings.update({"subscriptions": ["MUBI"], "costs": {"MUBI": {"price": 9, "remind_on": "2099-01-01"}}})
-    store.save_scan("DE", "letterboxd", None, [HEAT], [], {})
-    store.add_changes("DE", [ADDED])
+    store.save_scan("DE", "letterboxd", None, [HEAT], [], {}, profile_id=1)
+    store.add_changes("DE", [ADDED], profile_id=1)
 
 
 @pytest.mark.usefixtures("profile_1_data")
@@ -47,7 +47,7 @@ class TestProfile2SeesNothingOfProfile1:
         assert len(client.get("/api/latest").get_json()["changes"]) == 1
 
     def test_status_and_header(self, client, store, anna):
-        store.create_job("j1", "DE", "manual", 1.0)
+        store.create_job("j1", "DE", "manual", 1.0, profile_id=1)
         status = client.get(f"/api/status?profile={anna}").get_json()
         assert status["jobs"] == [] and status["last_scan_at"] is None
         assert len(client.get("/api/status").get_json()["jobs"]) == 1
@@ -84,18 +84,18 @@ class TestWritesOfProfile2:
         assert [(f["key"], f["status"]) for f in favorites] == [("949", "watching")]
         assert [f["key"] for f in store.list_flags(profile_id=anna)] == ["348"]
         assert settings.for_profile(anna).subscriptions() == ["MUBI"]
-        assert store.list_favorites() == [] and store.list_flags() == []
+        assert store.list_favorites(profile_id=1) == [] and store.list_flags(profile_id=1) == []
         assert "MUBI" not in settings.subscriptions()
         client.delete("/api/favorites/949")
         client.delete("/api/flags/348")
         assert store.list_favorites(profile_id=anna) == [] and store.list_flags(profile_id=anna) == []
 
     def test_greyout_reset_only_touches_profile_2(self, client, store, anna):
-        store.set_flag("1", "watched")
+        store.set_flag("1", "watched", profile_id=1)
         store.set_flag("2", "watched", profile_id=anna)
         client.set_cookie("wl_profile", str(anna))
         client.post("/api/greyouts/reset")
-        assert store.list_flags(profile_id=anna) == [] and len(store.list_flags()) == 1
+        assert store.list_flags(profile_id=anna) == [] and len(store.list_flags(profile_id=1)) == 1
 
     def test_scan_of_profile_2_runs_beside_profile_1_and_stays_its_own(self, client, store, service, anna):
         first = client.post("/api/scan", json={"country": "DE"}).get_json()["job_id"]
@@ -146,5 +146,5 @@ class TestWritesOfProfile2:
         assert [f["key"] for f in store.list_favorites(profile_id=anna)] == ["949"]
         assert [f["key"] for f in store.list_flags(profile_id=anna)] == ["348"]
         assert settings.for_profile(anna).subscriptions() == ["MUBI"]
-        assert store.list_favorites() == [] and store.list_flags() == []
+        assert store.list_favorites(profile_id=1) == [] and store.list_flags(profile_id=1) == []
         assert "MUBI" not in settings.subscriptions()

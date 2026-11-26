@@ -31,7 +31,7 @@ if os.getenv("WATCHLIST_DISABLE_SCHEDULER", "").lower() not in {"1", "true", "ye
 def health():
     """For the Docker healthcheck: the database answers and, if there is a schedule, its thread is alive."""
     try:
-        _STORE.list_jobs(limit=1)
+        _STORE.list_jobs(limit=1, profile_id=1)  # only checks that the database answers
     except Exception:
         return {"status": "database unavailable"}, 503
     if _SCHEDULER is not None and not _SCHEDULER.is_alive():

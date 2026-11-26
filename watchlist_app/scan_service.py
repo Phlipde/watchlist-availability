@@ -67,7 +67,7 @@ class ScanService:
         source_name: str | None = None,
         trigger: str = "manual",
         *,
-        profile_id: int = 1,
+        profile_id: int,
     ) -> tuple[str, bool]:
         """Start a scan for a profile. Returns (job id, True if an already running scan was joined).
 
@@ -114,7 +114,7 @@ class ScanService:
         self._thread_factory(target=self.run, args=(job_id,), daemon=True).start()
         return job_id, False
 
-    def cancel(self, job_id: str, *, profile_id: int = 1) -> bool:
+    def cancel(self, job_id: str, *, profile_id: int) -> bool:
         with self._lock:
             job = self._live.get(job_id)
             if job is None or job["profile_id"] != profile_id:
@@ -179,7 +179,7 @@ class ScanService:
 
     # ----- progress -----
 
-    def status(self, job_id: str, start: int = 0, *, profile_id: int = 1) -> dict | None:
+    def status(self, job_id: str, start: int = 0, *, profile_id: int) -> dict | None:
         """The state of a scan for the browser, from memory or, after a restart, the database.
 
         While a scan runs, only the films found after the first `start` are sent; the

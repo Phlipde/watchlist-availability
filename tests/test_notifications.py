@@ -58,6 +58,7 @@ def leave(store, key="1", title="Heat", when=None):
         "DE",
         [{"film_key": key, "title": title, "year": 1995, "provider": "Netflix", "change": "removed"}],
         created=when,
+        profile_id=1,
     )
 
 
@@ -73,13 +74,13 @@ def test_the_three_targets_get_their_own_request(sent):
 
 
 def test_a_favorite_that_left_is_announced_once_a_day_and_never_at_night(store, settings, sent):
-    store.add_favorite({"key": "1", "title": "Heat"})
+    store.add_favorite({"key": "1", "title": "Heat"}, profile_id=1)
     leave(store, when=at(18, 11))
     assert notifications.run_notifications(store, settings, at(18, 23)) is False  # quiet hours: it waits
     assert notifications.run_notifications(store, settings, at(19, 9, 30)) is True
     assert "Heat left Netflix" in sent[0][1]["json"]["message"]
     leave(store, "2", "Alien", when=at(19, 10))
-    store.add_favorite({"key": "2", "title": "Alien"})
+    store.add_favorite({"key": "2", "title": "Alien"}, profile_id=1)
     assert notifications.run_notifications(store, settings, at(19, 12)) is False  # one message per day
     assert notifications.run_notifications(store, settings, at(20, 10)) is True
     assert "Alien left Netflix" in sent[1][1]["json"]["message"]
@@ -93,6 +94,7 @@ def test_films_that_are_not_favorites_stay_quiet_unless_asked(store, settings, s
         "DE",
         [{"film_key": "3", "title": "Ran", "year": 1985, "provider": "Netflix", "change": "added"}],
         created=at(19, 9, 5),
+        profile_id=1,
     )
     assert notifications.run_notifications(store, settings, at(19, 10)) is True
     assert "Ran is new on Netflix" in sent[0][1]["json"]["message"]
@@ -104,6 +106,7 @@ def test_the_weekly_summary_comes_on_friday_evening_once(store, settings, sent):
         "DE",
         [{"film_key": "3", "title": "Ran", "year": 1985, "provider": "Netflix", "change": "added"}],
         created=at(18, 9),
+        profile_id=1,
     )
     assert notifications.run_notifications(store, settings, at(20, 16)) is False  # before 17:00
     assert notifications.run_notifications(store, settings, at(20, 17, 30)) is True
@@ -124,7 +127,7 @@ def test_a_renewal_date_is_announced_once_per_stage(store, settings, sent):
 
 
 def test_a_target_that_fails_is_tried_again_and_nothing_is_lost(store, settings, monkeypatch):
-    store.add_favorite({"key": "1", "title": "Heat"})
+    store.add_favorite({"key": "1", "title": "Heat"}, profile_id=1)
     leave(store, when=at(18, 11))
 
     def broken(url, **kwargs):
@@ -159,7 +162,7 @@ def test_each_profile_gets_only_its_own_messages_once_a_day(store, settings, sen
     anna.update(
         {"subscriptions": ["Netflix"], "notify_kind": "webhook", "notify_url": "https://hook.example/anna"}
     )
-    store.add_favorite({"key": "1", "title": "Heat"})
+    store.add_favorite({"key": "1", "title": "Heat"}, profile_id=1)
     leave(store, when=at(18, 11))  # profile 1's favorite left
     store.add_favorite({"key": "2", "title": "Alien"}, profile_id=anna.profile_id)
     store.add_changes(

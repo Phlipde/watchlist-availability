@@ -46,7 +46,7 @@ def test_scan_filters_and_favorite(app_server, page):
     # (the cards used to be redrawn when the field lost the focus).
     page.locator('article.film[data-key="949"] button.favorite').click()
     store = app_server["store"]
-    assert wait_until(lambda: [favorite["key"] for favorite in store.list_favorites()] == ["949"])
+    assert wait_until(lambda: [favorite["key"] for favorite in store.list_favorites(profile_id=1)] == ["949"])
 
     # After a reload the favorite and the scan come back from the database.
     page.reload()
@@ -115,7 +115,7 @@ def test_any_country_can_be_picked_and_stays_after_a_reload(app_server, page):
     expect(page.locator("#header-country-pop > summary")).to_be_focused()
     assert wait_until(lambda: app_server["settings"].country == "PL")
     # The new country's scan runs and is saved.
-    assert wait_until(lambda: app_server["store"].latest_scan("PL") is not None, timeout=15)
+    assert wait_until(lambda: app_server["store"].latest_scan("PL", profile_id=1) is not None, timeout=15)
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     # Poland has no own services yet (and the fake TMDB no offers there): none are ticked, nothing breaks.
     assert app_server["settings"].subscriptions("PL") == []
@@ -179,12 +179,12 @@ def test_removed_favorite_comes_back_with_undo(app_server, page):
     page.locator("#favorites-view").click()
     page.locator('article.film[data-key="949"] .favorite-note').fill("with Lisa")
     page.locator('article.film[data-key="949"] .favorite-note').blur()
-    assert wait_until(lambda: store.list_favorites()[0].get("notes") == "with Lisa")
+    assert wait_until(lambda: store.list_favorites(profile_id=1)[0].get("notes") == "with Lisa")
     page.locator("#favorites-view").click()
     star.click()
-    assert wait_until(lambda: store.list_favorites() == [])
+    assert wait_until(lambda: store.list_favorites(profile_id=1) == [])
     page.locator("#toast-undo").click()
-    assert wait_until(lambda: [f.get("notes") for f in store.list_favorites()] == ["with Lisa"])
+    assert wait_until(lambda: [f.get("notes") for f in store.list_favorites(profile_id=1)] == ["with Lisa"])
     expect(star).to_have_attribute("aria-pressed", "true")
 
 
@@ -214,7 +214,7 @@ def test_a_note_that_could_not_be_saved_is_marked(app_server, page):
     expect(page.locator("#app-toast")).to_have_class(re.compile("toast-error"))
     expect(page.locator("#toast-message")).to_contain_text("Could not save the note")
     # The text typed before the redraw was saved; the failed save did not replace it.
-    assert app_server["store"].list_favorites()[0].get("notes", "") == "Watch with"
+    assert app_server["store"].list_favorites(profile_id=1)[0].get("notes", "") == "Watch with"
 
 
 def test_card_menu_sets_a_film_aside_and_marks_it_watched_with_undo(app_server, page):
@@ -229,10 +229,10 @@ def test_card_menu_sets_a_film_aside_and_marks_it_watched_with_undo(app_server, 
     first.get_by_role("button", name="Hide: stays hidden until you unhide it").click()
     expect(page.locator("#toast-message")).to_contain_text("hidden away")
     expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_text("Hidden")
-    assert any(item["flag"] == "watched" for item in app_server["store"].list_flags())
+    assert any(item["flag"] == "watched" for item in app_server["store"].list_flags(profile_id=1))
     page.locator("#toast-undo").click()
     expect(page.locator("article.film", has_text=name).locator(".poster-badge")).to_have_count(0)
-    assert app_server["store"].list_flags() == []
+    assert app_server["store"].list_flags(profile_id=1) == []
     # Not now: the film leaves the list until the filter asks for it.
     first = page.locator("article.film").first
     first.hover()

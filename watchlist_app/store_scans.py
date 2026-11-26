@@ -20,7 +20,7 @@ class ScanStore(StoreBase):
         stats: dict,
         created: float | None = None,
         *,
-        profile_id: int = 1,
+        profile_id: int,
     ) -> int:
         from . import store as store_module  # read at call time, so tests can change the limit
 
@@ -64,7 +64,7 @@ class ScanStore(StoreBase):
     _SCAN_COLUMNS = "id, created, country, source_name, watchlist_key, results, unavailable, stats"
 
     def latest_scan(
-        self, country: str | None = None, source_name: str | None = None, *, profile_id: int = 1
+        self, country: str | None = None, source_name: str | None = None, *, profile_id: int
     ) -> dict | None:
         conditions = ["profile_id = ?"]
         parameters: list[object] = [profile_id]
@@ -81,16 +81,14 @@ class ScanStore(StoreBase):
         )
         return self._scan_from_row(rows[0]) if rows else None
 
-    def latest_scan_created(self, country: str, *, profile_id: int = 1) -> float | None:
+    def latest_scan_created(self, country: str, *, profile_id: int) -> float | None:
         """When the newest scan of a country was made, without loading its films (asked on every page)."""
         rows = self._read(
             "SELECT max(created) FROM scans WHERE profile_id = ? AND country = ?", (profile_id, country)
         )
         return rows[0][0] if rows else None
 
-    def recent_scans(
-        self, country: str, source_name: str, limit: int = 2, *, profile_id: int = 1
-    ) -> list[dict]:
+    def recent_scans(self, country: str, source_name: str, limit: int = 2, *, profile_id: int) -> list[dict]:
         """The newest scans of one watchlist in a country, newest first."""
         rows = self._read(
             f"SELECT {self._SCAN_COLUMNS} FROM scans WHERE profile_id = ? AND country = ? "
@@ -99,9 +97,7 @@ class ScanStore(StoreBase):
         )
         return [self._scan_from_row(row) for row in rows]
 
-    def find_scan(
-        self, country: str, watchlist_key: str, max_age: float, *, profile_id: int = 1
-    ) -> dict | None:
+    def find_scan(self, country: str, watchlist_key: str, max_age: float, *, profile_id: int) -> dict | None:
         """A recent scan of exactly this watchlist, to skip scanning again."""
         rows = self._read(
             f"SELECT {self._SCAN_COLUMNS} FROM scans WHERE profile_id = ? AND country = ? "
@@ -117,7 +113,7 @@ class ScanStore(StoreBase):
     # ----- scan jobs (progress and history of scan runs) -----
 
     def create_job(
-        self, job_id: str, country: str, trigger: str, started_at: float, *, profile_id: int = 1
+        self, job_id: str, country: str, trigger: str, started_at: float, *, profile_id: int
     ) -> None:
         from . import store as store_module  # read at call time, so tests can change the limit
 
@@ -154,7 +150,7 @@ class ScanStore(StoreBase):
         rows = self._read(f"SELECT {', '.join(JOB_FIELDS)} FROM jobs WHERE id = ?", (job_id,))
         return self._job_from_row(rows[0]) if rows else None
 
-    def list_jobs(self, limit: int = 20, status: str | None = None, *, profile_id: int = 1) -> list[dict]:
+    def list_jobs(self, limit: int = 20, status: str | None = None, *, profile_id: int) -> list[dict]:
         """Scan runs, newest first."""
         if status is None:
             rows = self._read(
@@ -173,7 +169,7 @@ class ScanStore(StoreBase):
     # ----- availability changes -----
 
     def add_changes(
-        self, country: str, changes: list[dict], created: float | None = None, *, profile_id: int = 1
+        self, country: str, changes: list[dict], created: float | None = None, *, profile_id: int
     ) -> None:
         """Store changes found by watchlist_app.history.diff_scans."""
         moment = created if created is not None else time.time()
@@ -197,7 +193,7 @@ class ScanStore(StoreBase):
             )
             self._db.commit()
 
-    def recent_changes(self, country: str, since: float, *, profile_id: int = 1) -> list[dict]:
+    def recent_changes(self, country: str, since: float, *, profile_id: int) -> list[dict]:
         """Changes for a country after `since`, newest first."""
         rows = self._read(
             "SELECT created, film_key, title, year, provider, change FROM changes "
@@ -210,7 +206,7 @@ class ScanStore(StoreBase):
     # ----- service history: how many films each own service had, one row a day, kept for a year -----
 
     def record_service_counts(
-        self, country: str, day: str, counts: dict[str, tuple[int, int]], *, profile_id: int = 1
+        self, country: str, day: str, counts: dict[str, tuple[int, int]], *, profile_id: int
     ) -> None:
         """Save {service: (films, only_here)} for a day (a second scan the same day replaces it)."""
         with self._lock:
@@ -227,7 +223,7 @@ class ScanStore(StoreBase):
             )
             self._db.commit()
 
-    def service_history(self, country: str, *, profile_id: int = 1) -> dict[str, list[dict]]:
+    def service_history(self, country: str, *, profile_id: int) -> dict[str, list[dict]]:
         """{service: [{day, films, only_here}]} oldest first."""
         rows = self._read(
             "SELECT service, day, films, only_here FROM service_history WHERE profile_id = ? AND country = ? "

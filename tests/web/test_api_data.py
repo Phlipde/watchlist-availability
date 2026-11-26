@@ -56,7 +56,7 @@ class TestCosts:
             {"key": "1", "title": "Heat", "providers": {"Netflix": ["flatrate"], "MUBI": ["flatrate"]}},
             {"key": "2", "title": "Alien", "providers": {"Netflix": ["flatrate"]}},
         ]
-        store.save_scan("DE", "letterboxd", None, films, [], {})
+        store.save_scan("DE", "letterboxd", None, films, [], {}, profile_id=1)
         answer = client.put(
             "/api/settings", json={"costs": {"Netflix": {"price": "10", "remind_on": "2026-12-01"}}}
         )
@@ -111,7 +111,7 @@ class TestCosts:
     def test_free_services_have_no_price_field(self, client, store, settings):
         settings.update({"subscriptions": ["Arte", "Netflix"]})
         films = [{"key": "1", "title": "Heat", "providers": {"Arte": ["free"], "Netflix": ["flatrate"]}}]
-        store.save_scan("DE", "letterboxd", None, films, [], {})
+        store.save_scan("DE", "letterboxd", None, films, [], {}, profile_id=1)
         page = client.get("/subscriptions").get_data(as_text=True)
         assert "Price per month for Netflix" in page and "Price per month for Arte" not in page
         assert "Free services" in page and "Arte" in page  # the free service is a chip, not a row
@@ -127,15 +127,15 @@ class TestCosts:
 
 class TestBackupApi:
     def test_download_and_restore(self, client, store):
-        store.add_favorite({"key": "949", "title": "Heat", "status": "watched"})
+        store.add_favorite({"key": "949", "title": "Heat", "status": "watched"}, profile_id=1)
         answer = client.get("/api/backup")
         assert "attachment" in answer.headers["Content-Disposition"]
         backup = answer.get_json()
-        store.remove_favorite("949")
+        store.remove_favorite("949", profile_id=1)
         upload = {"backup": (io.BytesIO(json.dumps(backup).encode()), "backup.json")}
         restored = client.post("/api/backup", data=upload, content_type="multipart/form-data").get_json()
         assert restored["imported"]["favorites"] == 1
-        assert store.list_favorites()[0]["status"] == "watched"
+        assert store.list_favorites(profile_id=1)[0]["status"] == "watched"
 
     @pytest.mark.parametrize("content", [b"not json", b'{"version": 99}', b"[]"])
     def test_invalid_file_rejected(self, client, content):
@@ -231,22 +231,22 @@ class TestFlags:
         assert client.put("/api/flags/949", json={"flag": "loved"}).status_code == 400
 
     def test_flags_survive_a_backup_and_an_expired_one_is_dropped(self, client, store):
-        store.set_flag("1", "watched")
-        store.set_flag("2", "not_now", time.time() + 3600)
-        store.set_flag("3", "not_now", time.time() - 10)  # over: no longer listed
+        store.set_flag("1", "watched", profile_id=1)
+        store.set_flag("2", "not_now", time.time() + 3600, profile_id=1)
+        store.set_flag("3", "not_now", time.time() - 10, profile_id=1)  # over: no longer listed
         backup = client.get("/api/backup").get_json()
         assert sorted(item["key"] for item in backup["profiles"][0]["flags"]) == ["1", "2"]
-        store.clear_flag("1")
-        store.clear_flag("2")
+        store.clear_flag("1", profile_id=1)
+        store.clear_flag("2", profile_id=1)
         upload = {"backup": (io.BytesIO(json.dumps(backup).encode()), "backup.json")}
         client.post("/api/backup", data=upload, content_type="multipart/form-data")
-        assert sorted(item["key"] for item in store.list_flags()) == ["1", "2"]
+        assert sorted(item["key"] for item in store.list_flags(profile_id=1)) == ["1", "2"]
 
     def test_a_backup_cannot_hide_a_film_for_ever(self, client, store):
         hostile = {"version": 1, "flags": [{"key": "9", "flag": "not_now", "until": time.time() + 10**9}]}
         upload = {"backup": (io.BytesIO(json.dumps(hostile).encode()), "backup.json")}
         answer = client.post("/api/backup", data=upload, content_type="multipart/form-data").get_json()
-        assert answer["imported"]["skipped"] == 1 and store.list_flags() == []
+        assert answer["imported"]["skipped"] == 1 and store.list_flags(profile_id=1) == []
 
 
 class TestTmdbKeyCheck:

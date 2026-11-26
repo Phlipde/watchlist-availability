@@ -73,7 +73,14 @@ def main() -> None:
         settings = AppSettings(store)
         targets = settings.targets()
         entries, source_name, output_dir = load_watchlist_source(settings.letterboxd_username)
-        outcome = perform_scan(store, entries, source_name, settings.country, settings.tmdb_api_key)
+        outcome = perform_scan(
+            store,
+            entries,
+            source_name,
+            settings.country,
+            settings.tmdb_api_key,
+            profile_id=settings.profile_id,
+        )
     finally:
         store.close()
     assert outcome is not None  # only a cancelled scan has no outcome
