@@ -274,3 +274,64 @@ class TestLetterboxdZip:
         assert csv_path == tmp_path / "watchlist.csv"
         assert csv_path.exists()
         assert not zip_path.exists()
+
+
+# A real /dave/films/ page (2026-11-26), trimmed to 3 of its 72 posters and the pager.
+FILMS_PAGE = (Path(__file__).parent / "fixtures" / "letterboxd_films_page.html").read_text(encoding="utf-8")
+# Derived, not seen: on the last page the pager has no link to an older page.
+LAST_FILMS_PAGE = FILMS_PAGE.replace('<a class="next" href="/dave/films/page/2/">Older</a>', "")
+
+
+class TestWatchedFilms:
+    def test_real_page_gives_slugs_and_a_next_page(self):
+        assert LAST_FILMS_PAGE != FILMS_PAGE
+        assert letterboxd.parse_watched_page(FILMS_PAGE) == (
+            ["visionquest", "clayface", "wildwood-2026"],
+            True,
+        )
+        assert letterboxd.parse_watched_page(LAST_FILMS_PAGE)[1] is False
+
+    def test_pages_are_followed_until_there_is_no_next_page(self):
+        session = MagicMock()
+        page_2 = FILMS_PAGE.replace("visionquest", "heat").replace("clayface", "alien")
+        session.get.side_effect = [
+            response(text=FILMS_PAGE),
+            response(text=page_2),
+            response(text=LAST_FILMS_PAGE),
+        ]
+        slugs = letterboxd.fetch_watched_slugs("dave", session=session)
+        # A film on two pages (logged while paging) is kept once.
+        assert slugs == ["visionquest", "clayface", "wildwood-2026", "heat", "alien"]
+        urls = [call.args[0] for call in session.get.call_args_list]
+        assert urls == [
+            "https://letterboxd.com/dave/films/",
+            "https://letterboxd.com/dave/films/page/2/",
+            "https://letterboxd.com/dave/films/page/3/",
+        ]
+
+    def test_an_empty_page_stops(self):
+        session = MagicMock()
+        session.get.return_value = response(text="<html><body></body></html>")
+        assert letterboxd.fetch_watched_slugs("nobody", session=session) == []
+        assert session.get.call_count == 1
+
+    def test_unknown_or_private_user_raises(self):
+        session = MagicMock()
+        session.get.return_value = response(status_code=404)
+        with pytest.raises(letterboxd.LetterboxdError, match="private profile"):
+            letterboxd.fetch_watched_slugs("ghost", session=session)
+
+    def test_a_rate_limit_is_retried_once(self, monkeypatch):
+        monkeypatch.setattr(letterboxd.time, "sleep", lambda seconds: None)
+        session = MagicMock()
+        session.get.side_effect = [response(status_code=429), response(text=LAST_FILMS_PAGE)]
+        assert len(letterboxd.fetch_watched_slugs("dave", session=session)) == 3
+        session.get.side_effect = [response(status_code=429), response(status_code=429)]
+        with pytest.raises(letterboxd.LetterboxdError, match="429"):
+            letterboxd.fetch_watched_slugs("dave", session=session)
+
+    def test_too_many_pages_raise(self):
+        session = MagicMock()
+        session.get.return_value = response(text=FILMS_PAGE)
+        with pytest.raises(letterboxd.LetterboxdError, match="More than 2 pages"):
+            letterboxd.fetch_watched_slugs("dave", max_pages=2, session=session)

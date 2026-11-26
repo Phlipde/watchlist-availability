@@ -21,6 +21,7 @@ from .scan_run import (  # re-exported: importers and tests use them from here
     load_watchlist,
     perform_scan,
     refresh_provider_catalog,
+    refresh_watched,
     result_stats,
     watchlist_key,
     with_changes,
@@ -347,6 +348,12 @@ class ScanService:
             finish("complete", "Complete", "Loaded from cache." if outcome.reused else "All films loaded.")
         except (FileNotFoundError, ValueError, letterboxd.LetterboxdError) as exc:
             finish("error", "Error", str(exc))
+            return
         except Exception:
             logging.exception("Scan %s failed", job_id)
             finish("error", "Error", "The scan failed unexpectedly.")
+            return
+        try:  # after the scan is complete: Together needs the watched films, the scan does not
+            refresh_watched(store, settings)
+        except Exception:
+            logging.exception("Could not refresh the watched films")

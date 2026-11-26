@@ -534,3 +534,42 @@ class TestSchedulerPerProfile:
         store.save_scan("DE", "src", "k", [], [], {}, created=1000, profile_id=anna)
         assert scheduler.next_scan_at(store, anna_settings) == 1000 + 24 * 3600
         assert scheduler.next_scan_at(store, settings) == 24 * 3600  # profile 1 has no scan
+
+
+class TestWatchedRefresh:
+    def test_a_good_scan_loads_the_watched_films_at_most_once_a_day(self, store, settings, anna):
+        anna_settings = settings.for_profile(anna)
+        anna_settings.update({"letterboxd_username": "anna"})
+        service = ScanService(store, settings, thread_factory=SyncThread)
+        search, bundle = tmdb_answers()
+        fetch = patch("watchlist_app.letterboxd.fetch_watched_slugs", return_value=["heat", "alien"])
+        with search, bundle, fetch as fetched:
+            service.start("DE", entries=ENTRIES, source_name="a.csv", profile_id=anna)
+            service.start("DE", entries=ENTRIES, source_name="b.csv", profile_id=anna)
+            service.start("DE", entries=ENTRIES, source_name="c.csv", profile_id=1)  # no Letterboxd name
+            fetched.assert_called_once_with("anna")
+            assert store.watched_keys(profile_id=anna) == {"lb:heat", "lb:alien"}
+            assert store.watched_keys(profile_id=1) == set()
+            store.replace_watched(["lb:heat"], now=time.time() - 25 * 3600, profile_id=anna)  # a day old
+            assert scan_service.refresh_watched(store, anna_settings)
+        assert store.watched_keys(profile_id=anna) == {"lb:heat", "lb:alien"}
+
+    def test_a_letterboxd_failure_keeps_the_old_list_and_the_scan(self, store, settings, anna, caplog):
+        settings.for_profile(anna).update({"letterboxd_username": "anna"})
+        store.replace_watched(["lb:heat"], now=1.0, profile_id=anna)
+        service = ScanService(store, settings, thread_factory=SyncThread)
+        search, bundle = tmdb_answers()
+        error = scan_service.letterboxd.LetterboxdError("Letterboxd returned 403.")
+        with search, bundle, patch("watchlist_app.letterboxd.fetch_watched_slugs", side_effect=error):
+            job_id, _ = service.start("DE", entries=ENTRIES, profile_id=anna)
+            assert service.status(job_id, profile_id=anna)["status"] == "complete"
+        assert store.watched_keys(profile_id=anna) == {"lb:heat"}
+        assert store.watched_fetched_at(profile_id=anna) == 1.0  # tried again by the next scan
+        assert "403" in caplog.text
+
+    def test_an_unexpected_error_does_not_fail_the_scan(self, store, settings, anna):
+        service = ScanService(store, settings, thread_factory=SyncThread)
+        search, bundle = tmdb_answers()
+        with search, bundle, patch.object(scan_service, "refresh_watched", side_effect=RuntimeError("boom")):
+            job_id, _ = service.start("DE", entries=ENTRIES, profile_id=1)
+        assert service.status(job_id, profile_id=1)["status"] == "complete"

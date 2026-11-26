@@ -114,6 +114,7 @@ def _fill(store, profile_id: int) -> None:
     store.record_service_counts("DE", "2026-01-01", {"Netflix": (3, 1)}, profile_id=profile_id)
     store.create_job(f"job{profile_id}", "DE", "manual", 1, profile_id=profile_id)
     store.set_profile_setting("country", "GB", profile_id=profile_id)
+    store.replace_watched(["lb:heat"], profile_id=profile_id)
 
 
 def _owned_tables(store) -> list[str]:
@@ -152,7 +153,7 @@ class TestProfiles:
         _fill(store, 1)
         _fill(store, anna)
         tables = _owned_tables(store)
-        assert len(tables) == 7
+        assert len(tables) == 8
         assert store.delete_profile(anna)
         for table in tables:
             count = f"SELECT count(*) FROM {table} WHERE profile_id = ?"
@@ -167,3 +168,22 @@ class TestProfiles:
         with pytest.raises(ValueError, match="last profile"):
             store.delete_profile(anna)
         assert [p["id"] for p in store.list_profiles()] == [anna]
+
+
+class TestWatched:
+    def test_replace_keeps_profiles_apart_and_resolves_matched_ids(self, store):
+        anna = store.add_profile("Anna")
+        store.replace_watched(["lb:heat", "lb:alien", "lb:heat"], now=10.0, profile_id=1)
+        store.replace_watched(["lb:up"], now=20.0, profile_id=anna)
+        store.set_id("lb:heat", 949, "letterboxd")
+        store.set_id("lb:alien", None, "search")  # not found on TMDB
+        assert store.watched_keys(profile_id=1) == {"lb:heat", "lb:alien"}
+        assert store.watched_tmdb_ids(profile_id=1) == {949}
+        assert (store.watched_fetched_at(profile_id=1), store.watched_fetched_at(profile_id=anna)) == (
+            10.0,
+            20.0,
+        )
+        store.replace_watched([], now=30.0, profile_id=1)
+        assert store.watched_keys(profile_id=1) == set() and store.watched_fetched_at(profile_id=1) == 30.0
+        assert store.watched_keys(profile_id=anna) == {"lb:up"}
+        assert store.watched_fetched_at(profile_id=99) is None

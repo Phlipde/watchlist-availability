@@ -1,7 +1,7 @@
 // Service worker: the app opens offline with what it saved last. Served from /sw.js so it controls every page.
 //  - fonts, icons and posters: answered from the cache at once, refreshed in the background
 //  - scripts and styles: network first, the saved copy offline
-//  - pages and the data they read (/api/latest, favorites, marks, abroad): network first, the saved copy when the network is gone (marked X-From-Cache)
+//  - pages and the data they read (/api/latest, /api/together, favorites, marks, abroad): network first, the saved copy when the network is gone (marked X-From-Cache)
 const VERSION = 'v1';
 const STATIC = `static-${VERSION}`;
 const PAGES = `pages-${VERSION}`;
@@ -59,7 +59,7 @@ self.addEventListener('fetch', event => {
     if (/\.(js|css)$/.test(url.pathname) && url.pathname.startsWith('/static/')) { event.respondWith(networkFirst(request, STATIC)); return; }
     if (url.pathname.startsWith('/static/')) { event.respondWith(staleWhileRevalidate(request, STATIC)); return; }
     // The data the pages read: online it is always fresh and saved, offline the last saved copy shows (favorites and marks too).
-    if (['/api/latest', '/api/favorites', '/api/flags', '/api/abroad', '/api/greyouts'].includes(url.pathname) || request.mode === 'navigate') { event.respondWith(networkFirst(request)); return; }
+    if (['/api/latest', '/api/together', '/api/favorites', '/api/flags', '/api/abroad', '/api/greyouts'].includes(url.pathname) || request.mode === 'navigate') { event.respondWith(networkFirst(request)); return; }
     return;
   }
   if (url.hostname === 'image.tmdb.org') event.respondWith(staleWhileRevalidate(request, IMAGES, MAX_IMAGES));

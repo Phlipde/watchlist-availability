@@ -197,7 +197,7 @@ class TestMigrationToProfiles:
         rows = _v1_database(path)
         Store(path).close()
         connection = sqlite3.connect(path)
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 3
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 4
         for table in ("favorites", "flags", "service_history"):
             stored = connection.execute(f"SELECT * FROM {table}").fetchall()
             assert sorted(stored) == sorted((1, *row) for row in rows[table])  # profile_id comes first
@@ -206,7 +206,7 @@ class TestMigrationToProfiles:
             assert sorted(stored) == sorted((*row, 1) for row in rows[table])  # profile_id comes last
         assert connection.execute("SELECT id, name, email FROM profiles").fetchall() == [(1, "anna", None)]
         connection.close()
-        copy = sqlite3.connect(tmp_path / "old.sqlite3.pre-v3")
+        copy = sqlite3.connect(tmp_path / "old.sqlite3.pre-v4")
         assert copy.execute("PRAGMA user_version").fetchone()[0] == 1
         assert copy.execute("SELECT movie_key FROM favorites").fetchall() == [("lb:heat",)]
         copy.close()
@@ -300,7 +300,7 @@ class TestMigrationOfProfileSettings:
             (1, key, value) for key, value in v2_settings if (key, value) not in GLOBAL_SETTINGS
         ] == personal
         assert shared == sorted(GLOBAL_SETTINGS)
-        copy = sqlite3.connect(tmp_path / "old.sqlite3.pre-v3")
+        copy = sqlite3.connect(tmp_path / "old.sqlite3.pre-v4")
         assert copy.execute("PRAGMA user_version").fetchone()[0] == 2
         copy.close()
 
@@ -354,3 +354,30 @@ def test_a_second_profile_does_not_see_the_services_of_profile_1(tmp_path):
     second.update({"country": "FR", "subscriptions_country": "DE", "subscriptions": ["Netflix"]})
     assert (first.country, second.country) == ("DE", "FR")
     assert first.subscriptions("DE") == ["MUBI", "Arte"] and second.subscriptions("DE") == ["Netflix"]
+
+
+class TestMigrationOfWatched:
+    def test_from_version_3_profiles_get_an_empty_watched_list(self, tmp_path, monkeypatch):
+        path = tmp_path / "old.sqlite3"
+        _v1_database(path)
+        with monkeypatch.context() as patch:
+            patch.setattr(store_base, "SCHEMA_VERSION", 3)
+            Store(path).close()
+        before = _dump(path)
+        assert "watched" not in before
+        store = Store(path)
+        assert store._read("PRAGMA user_version") == [(4,)]
+        assert store.watched_keys(profile_id=1) == set() and store.watched_fetched_at(profile_id=1) is None
+        after = _dump(path)
+        assert after["watched"] == []
+        for table, rows in before.items():  # every row is kept; profiles get the empty fetched-at column
+            assert after[table] == ([(*row, None) for row in rows] if table == "profiles" else rows), table
+        store.replace_watched(["lb:seen-only"], now=5.0, profile_id=1)
+        assert store.watched_keys(profile_id=1) == {"lb:seen-only"}
+        assert store.watched_fetched_at(profile_id=1) == 5.0
+        backup = json.dumps(store.export_backup())  # a cache: not backed up
+        assert "lb:seen-only" not in backup and "watched_fetched_at" not in backup
+        store.close()
+        copy = sqlite3.connect(tmp_path / "old.sqlite3.pre-v4")
+        assert copy.execute("PRAGMA user_version").fetchone()[0] == 3
+        copy.close()

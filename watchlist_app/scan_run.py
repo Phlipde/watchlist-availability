@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -18,6 +19,7 @@ from .tmdb import clean_year
 
 RESULT_REUSE_SECONDS = 24 * 60 * 60
 PROVIDER_CATALOG_TTL_SECONDS = 7 * 24 * 60 * 60
+WATCHED_TTL_SECONDS = 24 * 60 * 60
 # Marks scans that keep every provider TMDB reports (stats["providers"]).
 ALL_PROVIDERS = "all"
 # Raise when films get new fields: a saved scan in an older format is not reused, so the new
@@ -61,6 +63,24 @@ def refresh_regions(store: Store, api_key: str | None, max_age: float = PROVIDER
     if not codes:
         return False
     store.set_setting(REGIONS_SETTING, json.dumps({"codes": sorted(set(codes)), "fetched_at": time.time()}))
+    return True
+
+
+def refresh_watched(store: Store, settings: AppSettings, max_age: float = WATCHED_TTL_SECONDS) -> bool:
+    """Load the profile's watched films from Letterboxd, at most once a day. Returns True if loaded.
+
+    A failure (private profile, network) is logged and keeps the old list; the next scan tries again.
+    """
+    username = settings.letterboxd_username
+    fetched_at = store.watched_fetched_at(profile_id=settings.profile_id)
+    if not username or (fetched_at is not None and time.time() - fetched_at < max_age):
+        return False
+    try:
+        slugs = letterboxd.fetch_watched_slugs(username)
+    except letterboxd.LetterboxdError as exc:
+        logging.warning("Could not load the watched films of @%s: %s", username, exc)
+        return False
+    store.replace_watched([film_key("", None, slug) for slug in slugs], profile_id=settings.profile_id)
     return True
 
 

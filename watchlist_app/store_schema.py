@@ -170,7 +170,8 @@ CREATE TABLE IF NOT EXISTS profiles (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
     email TEXT,
-    created REAL NOT NULL
+    created REAL NOT NULL,
+    watched_fetched_at REAL
 );
 INSERT OR IGNORE INTO profiles (id, name, created) VALUES (1, 'Me', (julianday('now') - 2440587.5) * 86400.0);
 CREATE TABLE IF NOT EXISTS profile_settings (
@@ -179,6 +180,11 @@ CREATE TABLE IF NOT EXISTS profile_settings (
     value TEXT,
     PRIMARY KEY (profile_id, key)
 );
+CREATE TABLE IF NOT EXISTS watched (
+    profile_id INTEGER NOT NULL,
+    film_key TEXT NOT NULL,
+    PRIMARY KEY (profile_id, film_key)
+);
 """
 
 # The database layout is versioned with SQLite's `user_version`. Version 1 is the baseline of 2026-11-22 (the
@@ -186,7 +192,7 @@ CREATE TABLE IF NOT EXISTS profile_settings (
 # and only runs on an empty database; an older one goes through the migrations.
 # A later change: put the SQL from version N-1 to N into _MIGRATIONS[N] (in BEGIN; ... COMMIT; with its
 # user_version, so a crash leaves the old layout), raise SCHEMA_VERSION to N and change _SCHEMA the same way.
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 _MIGRATIONS: dict[int, str] = {
     # 2: profiles; favorites, flags and service_history get profile_id in their key, scans, changes and jobs
     # an owner column. Everything that exists belongs to profile 1.
@@ -269,6 +275,19 @@ INSERT INTO profile_settings (profile_id, key, value)
 SELECT 1, key, value FROM settings WHERE {_PROFILE_KEYS_SQL};
 DELETE FROM settings WHERE {_PROFILE_KEYS_SQL};
 PRAGMA user_version = 3;
+COMMIT;
+""",
+    # 4: the films each profile has watched on Letterboxd (`lb:{slug}`), a cache that is not backed up,
+    # and when it was loaded.
+    4: """
+BEGIN;
+ALTER TABLE profiles ADD COLUMN watched_fetched_at REAL;
+CREATE TABLE watched (
+    profile_id INTEGER NOT NULL,
+    film_key TEXT NOT NULL,
+    PRIMARY KEY (profile_id, film_key)
+);
+PRAGMA user_version = 4;
 COMMIT;
 """,
 }

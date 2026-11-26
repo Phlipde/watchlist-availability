@@ -30,3 +30,17 @@ def no_letterboxd_rating_request(request, monkeypatch):
     """
     if request.node.get_closest_marker("letterboxd_rating") is None:
         monkeypatch.setattr(letterboxd, "fetch_rating", lambda slug, session=None: None)
+
+
+@pytest.fixture(autouse=True)
+def no_letterboxd_watched_request(monkeypatch):
+    """A finished scan loads the watched films from Letterboxd; tests get an empty list instead.
+
+    A test that passes its own (mocked) session uses the real function.
+    """
+    real = letterboxd.fetch_watched_slugs
+
+    def fake(username, max_pages=500, session=None):
+        return real(username, max_pages, session) if session is not None else []
+
+    monkeypatch.setattr(letterboxd, "fetch_watched_slugs", fake)

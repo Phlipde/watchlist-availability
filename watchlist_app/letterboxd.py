@@ -135,6 +135,24 @@ def extract_num_entries(html: str) -> int | None:
         return None
 
 
+def _get_list_page(sess: requests.Session, url: str, not_found: str) -> str:
+    """HTML of one page of a user's list, with one retry after a rate limit; LetterboxdError otherwise."""
+    for attempt in range(2):
+        try:
+            response = sess.get(url, headers={"User-Agent": _USER_AGENT}, timeout=10)
+        except requests.RequestException as exc:
+            raise LetterboxdError(f"Network error reaching Letterboxd: {exc}") from exc
+        if response.status_code == 429 and attempt == 0:
+            time.sleep(2)
+            continue
+        break
+    if response.status_code == 404:
+        raise LetterboxdError(not_found)
+    if not response.ok:
+        raise LetterboxdError(f"Letterboxd returned {response.status_code} for {url}.")
+    return response.text
+
+
 def fetch_watchlist_from_letterboxd(
     username: str,
     max_pages: int = 100,
@@ -147,29 +165,17 @@ def fetch_watchlist_from_letterboxd(
     try:
         for page in range(1, max_pages + 1):
             url = f"https://letterboxd.com/{username}/watchlist/page/{page}/"
-            for attempt in range(2):
-                try:
-                    response = sess.get(url, headers={"User-Agent": _USER_AGENT}, timeout=10)
-                except requests.RequestException as exc:
-                    raise LetterboxdError(f"Network error reaching Letterboxd: {exc}") from exc
-                if response.status_code == 429 and attempt == 0:
-                    time.sleep(2)
-                    continue
-                break
-            if response.status_code == 404:
-                raise LetterboxdError(
-                    f"Watchlist not found for “{username}” (wrong username or private watchlist)."
-                )
-            if not response.ok:
-                raise LetterboxdError(f"Letterboxd returned {response.status_code} for {url}.")
+            html = _get_list_page(
+                sess, url, f"Watchlist not found for “{username}” (wrong username or private watchlist)."
+            )
             if progress is None:
                 progress = tqdm(
-                    total=extract_num_entries(response.text),
+                    total=extract_num_entries(html),
                     desc="Fetching Letterboxd watchlist",
                     unit="film",
                     disable=not show_progress,
                 )
-            page_rows = parse_watchlist_page(response.text)
+            page_rows = parse_watchlist_page(html)
             if not page_rows:
                 break
             rows.extend(page_rows)
@@ -182,6 +188,39 @@ def fetch_watchlist_from_letterboxd(
         if progress is not None:
             progress.close()
     return rows
+
+
+def parse_watched_page(html: str) -> tuple[list[str], bool]:
+    """The film slugs on one page of /{user}/films/ and whether an older page follows.
+
+    The page has the watchlist's poster grid (72 films, checked 2026-11-26); the pager links
+    the next page as `.pagination a.next`.
+    """
+    slugs = [entry.slug for entry in parse_watchlist_page(html) if entry.slug]
+    more = BeautifulSoup(html, "html.parser").select_one(".pagination a.next") is not None
+    return slugs, more
+
+
+def fetch_watched_slugs(
+    username: str, max_pages: int = 500, session: requests.Session | None = None
+) -> list[str]:
+    """Slugs of every film a user has marked as watched, newest first, from the public /films/ pages."""
+    sess = session or requests.Session()
+    slugs: list[str] = []
+    for page in range(1, max_pages + 1):
+        suffix = f"page/{page}/" if page > 1 else ""
+        html = _get_list_page(
+            sess,
+            f"https://letterboxd.com/{username}/films/{suffix}",
+            f"Watched films not found for “{username}” (wrong username or private profile).",
+        )
+        page_slugs, more = parse_watched_page(html)
+        slugs.extend(page_slugs)
+        if not page_slugs or not more:
+            break
+    else:
+        raise LetterboxdError(f"More than {max_pages} pages of watched films.")
+    return list(dict.fromkeys(slugs))  # a film logged while paging can show up twice
 
 
 def find_watchlist_csv(downloads_dir: Path | None = None) -> Path:
