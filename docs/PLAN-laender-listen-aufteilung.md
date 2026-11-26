@@ -41,10 +41,10 @@ wieder das alte); eine schnelle zweite Wahl kann von einer älteren Antwort übe
 
 ## D. Dateien aufteilen, Teil 2 (größer)
 
-- [ ] D1 `web/routes.py` → mehrere Module mit je `register(...)`; Tests patchen Module, nicht Namen.
-- [ ] D2 `watchlist_app/store.py` → Schema-Datei + Mixins (Scans, Favoriten/Flags, Backup).
-- [ ] D3 `static/js/filterbar.js` → `popovers.js`.
-- [ ] D4 `static/js/app.js` → Toast/Sync, Tastatur, Handy-Sheet, Scan-Ablauf als eigene Module.
+- [x] D1 `web/routes.py` → mehrere Module mit je `register(...)`; Tests patchen Module, nicht Namen.
+- [x] D2 `watchlist_app/store.py` → Schema-Datei + Mixins (Scans, Favoriten/Flags, Backup).
+- [x] D3 `static/js/filterbar.js` → `popovers.js`.
+- [x] D4 `static/js/app.js` → Toast/Sync, Tastatur, Handy-Sheet, Scan-Ablauf als eigene Module.
 
 ## Nicht Teil dieses Plans
 Stats-Seite, Zugangsschutz, PWA, Bildoptimierung.
