@@ -6,6 +6,7 @@ import pytest
 
 from tests.helpers import BUNDLE
 from watchlist_app import store as store_module
+from watchlist_app import store_base
 from watchlist_app.models import Film
 from watchlist_app.store import SCHEMA_VERSION, Store
 
@@ -336,6 +337,22 @@ class TestSchemaVersion:
         again = Store(path)
         assert again.get_setting("country") == "DE"
         assert again._read("PRAGMA user_version")[0][0] == SCHEMA_VERSION
+
+    def test_a_migration_keeps_a_copy_of_the_old_database(self, tmp_path, monkeypatch):
+        path = tmp_path / "old.sqlite3"
+        Store(path).set_setting("country", "DE")
+        Store(tmp_path / "fresh.sqlite3")
+        next_version = SCHEMA_VERSION + 1
+        monkeypatch.setattr(store_base, "SCHEMA_VERSION", next_version)
+        monkeypatch.setattr(store_base, "_MIGRATIONS", {next_version: "CREATE TABLE added (a);"})
+        Store(path)
+        copy = sqlite3.connect(tmp_path / f"old.sqlite3.pre-v{next_version}")
+        assert copy.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION  # the layout before
+        assert copy.execute("SELECT value FROM settings WHERE key = 'country'").fetchone() == ("DE",)
+        assert not copy.execute("SELECT 1 FROM sqlite_master WHERE name = 'added'").fetchall()
+        copy.close()
+        Store(path)  # already migrated: no second copy needed, the first stays
+        assert sorted(item.name for item in tmp_path.glob("*.pre-v*")) == [f"old.sqlite3.pre-v{next_version}"]
 
     def test_a_database_from_a_newer_app_is_refused(self, tmp_path):
         path = tmp_path / "future.sqlite3"

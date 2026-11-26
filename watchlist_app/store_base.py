@@ -18,10 +18,15 @@ class StoreBase:
         self.offers_version = 0  # counts the saved offers, so answers built from them can be cached safely
         self._db = sqlite3.connect(str(path), check_same_thread=False)
         with self._lock:
-            self._db.executescript(_SCHEMA)
             version = self._db.execute("PRAGMA user_version").fetchone()[0]
             if version > SCHEMA_VERSION:
                 raise RuntimeError(f"The database is from a newer version of the app (layout {version}).")
+            if 0 < version < SCHEMA_VERSION and self.path != ":memory:":
+                # A migration cannot be undone: keep a copy of the old layout next to the database first.
+                with sqlite3.connect(f"{self.path}.pre-v{SCHEMA_VERSION}") as copy:
+                    self._db.backup(copy)
+                copy.close()
+            self._db.executescript(_SCHEMA)
             for step in range(version + 1, SCHEMA_VERSION + 1):
                 if step in _MIGRATIONS:
                     self._db.executescript(_MIGRATIONS[step])
