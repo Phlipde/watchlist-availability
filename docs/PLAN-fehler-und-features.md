@@ -131,7 +131,7 @@ Aus dem Verbesserungs-Auftrag (P0 bis P2):
 
 ## B1. Grundlage absichern
 
-- [ ] **Zugriffsschutz:** alle Seiten **und** API-Endpunkte (Sync/Scan, Einstellungen, Export, Abo-Daten) nur nach Anmeldung. Bevorzugt über den Reverse-Proxy mit SSO (in der App prüfen, dass nichts am Proxy vorbei erreichbar ist); sonst App-Login. Sync-Endpunkt zusätzlich mit Token für geplante Aufrufe. Vorher sagen, welche Variante zum Setup passt.
+- [x] (entfällt, 26.11.2026: die App läuft hinter Cloudflare Access oder nur lokal; kein Login in der App) **Zugriffsschutz:** alle Seiten **und** API-Endpunkte (Sync/Scan, Einstellungen, Export, Abo-Daten) nur nach Anmeldung. Bevorzugt über den Reverse-Proxy mit SSO (in der App prüfen, dass nichts am Proxy vorbei erreichbar ist); sonst App-Login. Sync-Endpunkt zusätzlich mit Token für geplante Aufrufe. Vorher sagen, welche Variante zum Setup passt.
 - [~] (ein Scan des Tages wird wiederverwendet; keine feste Drosselung je Sekunde) **Rate-Limits/Caching** externer Quellen: Scan gestaffelt (z. B. 5 Anfragen/s), Antworten 24 h cachen, manueller Scan max. 1× pro 10 min.
 - [x] (behält 7 statt 14, `backups.KEEP`) **Backups** der App-Daten: täglicher JSON-Export in ein konfigurierbares Verzeichnis, letzte 14 behalten.
 - [ ] **Fehlerlog** unter Settings → Data: letzter Sync je Quelle, Fehler der letzten 7 Tage, Filme ohne TMDB-Treffer mit „Match manually“.
@@ -164,7 +164,7 @@ Aus dem Verbesserungs-Auftrag (P0 bis P2):
 
 ## Abnahme Teil B
 
-- [ ] Ohne Anmeldung ist weder Seite noch Endpunkt erreichbar; Backups laufen.
+- [x] Zugriff regelt Cloudflare Access bzw. das lokale Netz (kein Login in der App); Backups laufen.
 - [x] App lässt sich installieren und zeigt offline den letzten Stand.
 - [ ] Tonight zeigt abends Endzeiten; „Fits tonight“ filtert korrekt.
 - [ ] Globale Suche findet Watchlist-Filme, andere Filme und Personen.
