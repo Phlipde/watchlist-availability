@@ -17,7 +17,7 @@ export function linkChips(film, country) {
     /^tt\d+$/.test(film.imdb_id || '') ? ['IMDb', `https://www.imdb.com/title/${film.imdb_id}/`] : null,
     ['JustWatch', justWatchSearch(film, country)],
   ].filter(Boolean);
-  return `<p class="film-modal-links">${links.map(([name, href, tip]) => `<a class="link-chip" href="${escapeHtml(href)}" target="_blank" rel="noreferrer"${tip ? ` title="${escapeHtml(tip)}"` : ''}>${name} <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a>`).join('')}</p>`;
+  return `<p class="film-modal-links">${links.map(([name, href, tip]) => `<a class="link-chip" href="${escapeHtml(href)}" target="_blank" rel="noreferrer"${tip ? ` title="${escapeHtml(tip)}"` : ''}>${name}</a>`).join('')}</p>`;
 }
 
 // ---- HTML pieces ----
@@ -62,7 +62,7 @@ function otherServicesHtml(film, ctx, action) {
     ? `<details class="offer-group offer-buy" data-offer="buy"><summary class="offer-heading">Buy (${group.rows.length})</summary><ul class="svc-list">${group.rows.map(chip).join('')}</ul></details>`
     : `<section class="offer-group" data-offer="${group.kind}"><h3 class="offer-heading">${group.label}</h3><ul class="svc-list">${group.rows.map(chip).join('')}</ul></section>`);
   const visible = groups.length && others.size;
-  return `<details class="other-services" id="film-more"${visible ? '' : ' hidden'}><summary><span>Other services</span> <span class="os-count">${others.size ? `(${others.size})` : ''}</span><span class="os-abroad"></span></summary>${groups.map(groupHtml).join('')}<div id="film-abroad" class="film-abroad" hidden></div><p class="report-line">${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">All offers <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a>` : ''}<span class="info source-info" tabindex="0" role="note" data-tip="${escapeHtml(sourceText(ctx.country, ctx.scanAt))}" aria-label="${escapeHtml(sourceText(ctx.country, ctx.scanAt))}"><i class="ti ti-info-circle" aria-hidden="true"></i></span></p></details>`;
+  return `<details class="other-services" id="film-more"${visible ? '' : ' hidden'}><summary><span>Other services</span> <span class="os-count">${others.size ? `(${others.size})` : ''}</span><span class="os-abroad"></span></summary>${groups.map(groupHtml).join('')}<div id="film-abroad" class="film-abroad" hidden></div><p class="report-line">${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">All offers</a>` : ''}<span class="info source-info" tabindex="0" role="note" data-tip="${escapeHtml(sourceText(ctx.country, ctx.scanAt))}" aria-label="${escapeHtml(sourceText(ctx.country, ctx.scanAt))}"><i class="ti ti-info-circle" aria-hidden="true"></i></span></p></details>`;
 }
 
 // A row of mini posters: the series (`current` marked) or the similar films, the service logo under each.
@@ -96,7 +96,7 @@ export function drawerHtml(film, ctx) {
   const alt = alternatives(film, ctx.own, action.service);
   const altKinds = alt.every(item => item.kind !== 'flatrate');
   const altLine = alt.length
-    ? `<p class="alt-line">${altKinds ? 'Also free' : 'Also on'}: ${alt.map(item => `<a class="alt-chip" href="${escapeHtml(action.href || watchUrl(film, ctx.country))}" target="_blank" rel="noreferrer">${logoImg(ctx, item.name, 'provider-logo-sm')}${escapeHtml(item.name)} <i class="ti ti-chevron-right" aria-hidden="true"></i></a>`).join('')}</p>`
+    ? `<p class="alt-line">${altKinds ? 'Also free' : 'Also on'}: ${alt.map(item => `<a class="alt-chip" href="${escapeHtml(action.href || watchUrl(film, ctx.country))}" target="_blank" rel="noreferrer">${logoImg(ctx, item.name, 'provider-logo-sm')}${escapeHtml(item.name)}</a>`).join('')}</p>`
     : '';
   const backdrop = film.backdrop_path ? `<img class="film-hero-backdrop" src="${ctx.imageBaseUrl.replace('/w500', '/w780')}${escapeHtml(film.backdrop_path)}" alt="">` : '';
   const trailerId = film.trailer_url ? new URL(film.trailer_url).searchParams.get('v') : null;

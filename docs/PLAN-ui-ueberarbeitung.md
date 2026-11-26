@@ -75,6 +75,11 @@ Create a task list from the subtasks below and work through them in order. After
 - If a rule conflicts with an existing product decision or the data I actually have, the product decision wins; tell me about it instead of silently working around it.
 - If something is ambiguous, pick the most reasonable option, say which one you picked, and continue. Only stop to ask for destructive or hard-to-reverse changes.
 
+## Entscheidungen des Nutzers (26.11.2026, Start)
+- "Hide" und "Not now" bleiben (Ausblenden, kein Loggen).
+- "Namen nur im Tooltip" gilt für Karten, Details und Filter; Tabellen auf Subscriptions und Stats behalten Namen, Stats bleibt unberührt.
+- Grautöne leicht blau wie im Plan.
+
 ## Notizen von Claude zu möglichen Konflikten (vor dem Start ansprechen)
 - "No mark as seen": die App hat "Hide" (Flag `watched`) und "Not now"; das ist Ausblenden, kein Loggen. Vor dem Start klären, ob das bleiben darf.
 - "Names only in tooltip": die Kosten-/Abo-Seiten und die Stats-Seite schreiben Dienstnamen in Tabellen aus; klären, ob die Regel nur für Karten/Details gilt. Die Stats-Seite sollte bisher nicht angefasst werden.

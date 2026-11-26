@@ -44,6 +44,7 @@
 .menu-group { color: var(--text-2); font: 500 12px system-ui, sans-serif; letter-spacing: 0; text-transform: none; }
 .more-filters .filter-menu { left: auto; right: 0; width: min(720px, calc(100vw - 16px)); }
 .more-filters-menu .menu-head { display: flex; align-items: center; justify-content: space-between; margin: -4px 0 8px; }
+.more-filters-menu .menu-head .btn { margin-left: auto; }
 .more-filters-menu .menu-head .menu-group { margin: 0; color: var(--text); font-size: var(--fs-body); font-weight: 600; }
 .more-filters-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 .more-filters-menu select.form-select-sm { min-height: var(--h-md); }

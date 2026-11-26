@@ -8,7 +8,6 @@ main.page a { color: var(--accent); }
 .hint { color: var(--muted); font: var(--fs-body) system-ui, sans-serif; margin: 6px 0 0; }
 .settings-group { border-top: 1px solid var(--line); padding: 10px 0; }
 .settings-group summary { cursor: pointer; font-weight: 600; }
-.settings-group .subgroup { color: var(--muted); font: var(--fs-small) system-ui, sans-serif; text-transform: uppercase; letter-spacing: .06em; margin: 12px 0 6px; }
 .settings-providers { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 4px 12px; margin-top: 8px; font: var(--fs-body) system-ui, sans-serif; }
 .status-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
 .table-scroll { overflow-x: auto; }
@@ -61,7 +60,6 @@ main.page a { color: var(--accent); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
-  .btn:hover:not(:disabled) { transform: none; }
   /* No spinning with reduced motion, but a running scan still shows: the ring fades in and out. */
   .sync-toggle[data-state="running"] .sync-dot { animation: sync-pulse 1.6s ease-in-out infinite !important; }
 }
@@ -161,12 +159,10 @@ kbd { padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 4px
 .deadline-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 0 0 16px; padding: 10px 14px; border: 1px solid color-mix(in oklch, var(--accent) 40%, var(--line)); border-radius: .5rem; background: color-mix(in oklch, var(--accent) 10%, var(--surface)); font: var(--fs-body) system-ui, sans-serif; }
 .deadline-banner[hidden] { display: none; }
 .deadline-banner p { margin: 0; }
-.deadline-banner p::before, .rec h3::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--accent); vertical-align: middle; }
 .banner-actions, .rec-actions { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .recs { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin: 8px 0 10px; }
 .rec { padding: 14px 16px; border: 1px solid var(--line); border-radius: .5rem; background: var(--surface); font: var(--fs-body) system-ui, sans-serif; }
 .rec[hidden] { display: none; }
-.rec-subscribe h3::before { background: oklch(70% 0.12 160); }
 .rec h3 { margin: 0 0 6px; font-size: 1rem; text-transform: none; letter-spacing: 0; }
 .rec p { margin: 0 0 6px; }
 .rec .hint { margin: 0 0 8px; }
@@ -225,7 +221,7 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 .drawer-body { padding: 16px 20px 28px; font: var(--fs-body) system-ui, sans-serif; }
 .drawer-body h3 { margin: 22px 0 8px; color: var(--muted); font: 600 var(--fs-small) system-ui, sans-serif; text-transform: uppercase; letter-spacing: .06em; }
 .figures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0; }
-.figures div { padding: 10px 12px; border: 1px solid var(--line); border-radius: .5rem; }
+.figures div { padding: 0; }
 .figures dt { color: var(--muted); font-size: var(--fs-small); font-weight: 400; }
 .figures dd { margin: 2px 0 0; font-size: 1.125rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .poster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }

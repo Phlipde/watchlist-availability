@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
 import {numberText} from '../../static/js/ui.js';
-import {availabilityByOffer, filmCard, filmHref, runtimeText, unavailableCard} from '../../static/js/rendering.js';
+import {filmCard, filmHref, runtimeText, unavailableCard} from '../../static/js/rendering.js';
 
 const attack = '<img src=x onerror="alert(1)">';
 
@@ -67,22 +67,6 @@ test('a new film gets one badge on the poster, a hidden-away favorite says so in
   assert.ok(!fresh.includes('is-watched'));
   assert.ok(!watched.includes('poster-badge-new'));
   assert.match(watched, /aria-pressed="true"[^>]*><i class="ti ti-heart-filled"/);
-});
-
-test('availability is grouped by offer type, in a fixed order, with logos', () => {
-  const html = availabilityByOffer(
-    {'Sky Store': ['rent'], WOW: ['flatrate', 'rent'], 'Pluto TV': ['ads'], arte: ['free']},
-    {WOW: '/wow.png'},
-    'https://img/w92',
-  );
-  const headings = [...html.matchAll(/<\/i> ([^<]+)<\/h6>/g)].map(match => match[1]);
-  assert.deepEqual(headings, ['Free', 'With ads', 'Subscription', 'Rent']);
-  const rent = html.slice(html.indexOf('data-offer="rent"'));
-  assert.deepEqual([...rent.matchAll(/<span>([^<]+)<\/span>/g)].map(match => match[1]), ['Sky Store', 'WOW']);
-  assert.equal((html.match(/src="https:\/\/img\/w92\/wow.png"/g) || []).length, 2); // WOW in two groups
-  assert.ok(!html.includes('<img class="provider-logo" src="https://img/w92undefined'));
-  assert.ok(!html.includes('offer-free'), 'groups have no offer colors');
-  assert.equal(availabilityByOffer({}), '');
 });
 
 test('a card has one stack of your free, subscription and ads services, no rent or buy; the best logo carries its type icon', () => {

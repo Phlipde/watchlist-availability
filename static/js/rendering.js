@@ -3,33 +3,6 @@ import {SECTION_KINDS, filmKey, sectionProviders, selectedChanges} from './filte
 import {TYPE_ICON, bestWay, catalogues, wayText} from './bestway.js';
 import {logoStackHtml} from './logo-stack.js';
 
-// "Free" alone was read three ways; the section says what it holds.
-
-const OFFER_TYPES = {
-  free: ['Free', 'ti ti-gift'],
-  ads: ['With ads', 'ti ti-ad-2'],
-  flatrate: ['Subscription', 'ti ti-repeat'],
-  rent: ['Rent', 'ti ti-ticket'],
-};
-
-// Availability in the details window: one group per offer type (Free, With ads, Subscription,
-// Rent). The user's own services come first and are marked, the rest in alphabetical order,
-// each with its logo when TMDB has one.
-export function availabilityByOffer(providers, logos = {}, logoBaseUrl = '', own = new Set()) {
-  const entries = Object.entries(providers || {});
-  return Object.entries(OFFER_TYPES).map(([kind, [label, icon]]) => {
-    const names = entries.filter(([, kinds]) => kinds.includes(kind)).map(([name]) => name)
-      .sort((a, b) => Number(own.has(b)) - Number(own.has(a)) || a.localeCompare(b, undefined, {sensitivity: 'base'}));
-    if (!names.length) return '';
-    const rows = names.map(name => {
-      const logo = logos[name] ? `<img class="provider-logo" src="${escapeHtml(logoBaseUrl + logos[name])}" alt="" loading="lazy">` : '';
-      const mine = own.has(name) ? ' <span class="pill pill-ok">Your service</span>' : '';
-      return `<li${own.has(name) ? ' class="own-service"' : ''}>${logo}<span>${escapeHtml(name)}</span>${mine}</li>`;
-    }).join('');
-    return `<section class="film-offer-group" data-offer="${kind}"><h6 class="film-offer-heading"><i class="${icon}" aria-hidden="true"></i> ${label}</h6><ul class="film-provider-list">${rows}</ul></section>`;
-  }).join('');
-}
-
 // Runtime on the card as hours and minutes: 154 → "2h 34m", 58 → "58m", 120 → "2h".
 export function runtimeText(minutes) {
   const total = Math.round(Number(minutes));
@@ -148,7 +121,7 @@ export function filmCard(film, section, context) {
 export function unavailableCard(film, selected, pageHref = 'http://localhost/') {
   const key = filmKey(film);
   const changeBadges = changeBadgesFor(film, selected);
-  return `<article class="film unavailable-card" data-key="${escapeHtml(key)}" data-section="Unavailable"><div class="film-info"><h3 class="film-title">${filmLink(film, key, pageHref)}</h3><span class="year">${numberText(film.year, 'Year unknown')} · <span class="pill pill-neutral"><i class="ti ti-eye-off" aria-hidden="true"></i> Unavailable</span></span>${changeBadges ? `<p class="provider-changes">${changeBadges}</p>` : ''}</div></article>`;
+  return `<article class="film unavailable-card" data-key="${escapeHtml(key)}" data-section="Unavailable"><div class="film-info"><h3 class="film-title">${filmLink(film, key, pageHref)}</h3><span class="year">${numberText(film.year, 'Year unknown')}</span>${changeBadges ? `<p class="provider-changes">${changeBadges}</p>` : ''}</div></article>`;
 }
 
 // The table view: one row per film, the title is the link to the details.

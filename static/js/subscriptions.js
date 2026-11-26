@@ -170,7 +170,7 @@ function openDrawer(name, opener) {
   const field = (id, label, type, value, extra = '') => `<label class="menu-field"><span>${label}</span><input class="form-control form-control-sm" id="drawer-${id}" name="${id}" type="${type}" value="${escape(value)}" ${extra}></label>`;
   document.getElementById('service-drawer-body').innerHTML = `
     <dl class="figures"><div><dt>Watchlist</dt><dd>${detail.films}</dd></div><div><dt>Only here</dt><dd>${only.length}${detail.favorites ? ` <span class="fav-count"><i class="ti ti-heart-filled" aria-hidden="true"></i> ${detail.favorites}</span>` : ''}</dd></div><div><dt>Value</dt><dd>${detail.value}</dd></div><div><dt>Hours</dt><dd>${detail.hours} h</dd></div><div><dt>Your pace</dt><dd>${pace}</dd></div><div><dt>€ / film</dt><dd>${detail.per_film != null ? money(detail.per_film) : '–'}</dd></div></dl>
-    <h3>Only here <span class="row-count">${only.length}</span></h3>
+    <h3>Only here</h3>
     ${only.length ? `<ul class="poster-grid">${filmLinks(only.slice(0, 36))}</ul>${only.length > 36 ? `<p class="hint">and ${only.length - 36} more: <a href="/watchlist?providers=${encodeURIComponent(name)}&only=1&cost=subscription">see them all</a></p>` : ''}` : '<p class="hint">Nothing: cancelling loses no film you cannot watch elsewhere.</p>'}
     ${history.length > 1 ? `<h3>Only here over time</h3>${sparkline(history)}` : ''}
     <h3>Also elsewhere <span class="row-count">${elsewhere.length}</span></h3>
@@ -184,7 +184,7 @@ function openDrawer(name, opener) {
       ${field('cancel_url', 'Cancellation page', 'url', detail.cancel_url || '', 'placeholder="https://…"')}
       <label class="menu-field"><span>Note</span><textarea class="form-control form-control-sm" id="drawer-note" name="note" rows="2" maxlength="300">${escape(detail.note || '')}</textarea></label>
     </div>
-    ${detail.cancel_url ? `<p><a class="film-link" href="${escape(detail.cancel_url)}" target="_blank" rel="noreferrer noopener">Open the cancellation page ↗</a></p>` : ''}`;
+    ${detail.cancel_url ? `<p><a class="film-link" href="${escape(detail.cancel_url)}" target="_blank" rel="noreferrer noopener">Open the cancellation page</a></p>` : ''}`;
   drawer.dataset.service = name;
   drawer.opener = opener;
   drawer.showModal();
