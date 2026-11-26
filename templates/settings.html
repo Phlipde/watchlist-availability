@@ -12,7 +12,7 @@
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
   {% include "partials/styles.html" %}
 </head>
-<body>
+<body data-profile="{{ active_profile.id }}">
   {% include "partials/header.html" %}
   <main class="page">
     <h1 class="page-title">Settings</h1>
@@ -45,7 +45,8 @@
       </section>
 
       <section class="settings-section" id="notifications">
-        <h2 class="h4">Notifications</h2>
+        <h2 class="h4">Notifications for {{ active_profile.name }}</h2>
+        <p class="hint">Each profile has its own target and events; the test message goes to {{ active_profile.name }}'s target.</p>
         <label class="form-label" for="notify-kind">Send messages to</label>
         <select class="form-select w-auto" id="notify-kind" name="notify_kind">{% for value, label in [('', 'Nowhere'), ('ntfy', 'ntfy'), ('gotify', 'Gotify'), ('webhook', 'A webhook')] %}<option value="{{ value }}" {% if settings.notify_kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
         <label class="form-label mt-2" for="notify-url">Address</label>

@@ -6,6 +6,7 @@ import json
 import pytest
 
 from tests.web.conftest import FakeThread
+from web import routes
 
 HEAT = {"key": "949", "tmdb_id": 949, "title": "Heat", "year": 1995, "providers": {"MUBI": ["flatrate"]}}
 ADDED = {"film_key": "949", "title": "Heat", "year": 1995, "provider": "MUBI", "change": "added"}
@@ -198,6 +199,29 @@ class TestStatsAndDataPerProfile:
         html = client.get(f"/settings/data?profile={anna_data}").get_data(as_text=True)
         assert "This profile (Anna)" in html and "Shared by all profiles" in html
         assert "Favorites: <strong>2</strong>" in html and "Recent scans of Anna" in html
+
+    def test_data_page_links_feeds_and_sensors_to_the_active_profile(self, client, anna_data):
+        anna = anna_data
+        html = client.get(f"/settings/data?profile={anna}").get_data(as_text=True)
+        for path in ("calendar.ics", "feed.xml", "tile", "api/sensors"):
+            assert f"http://localhost/{path}?profile={anna}</code>" in html, path
+        assert "/feed.xml?profile=1</code>" in client.get("/settings/data").get_data(as_text=True)
+        subscriptions = client.get(f"/subscriptions?profile={anna}").get_data(as_text=True)
+        assert f'href="/calendar.ics?profile={anna}"' in subscriptions
+
+    def test_notifications_are_labelled_and_tested_per_profile(self, client, settings, anna, monkeypatch):
+        settings.update({"notify_kind": "ntfy", "notify_url": "https://ntfy.example/me"})
+        settings.for_profile(anna).update(
+            {"notify_kind": "webhook", "notify_url": "https://hook.example/anna"}
+        )
+        sent = []
+        monkeypatch.setattr(routes.notifications, "send", lambda kind, url, *rest: sent.append((kind, url)))
+        assert "Notifications for Anna" in client.get(f"/settings?profile={anna}").get_data(as_text=True)
+        client.set_cookie("wl_profile", str(anna))
+        assert client.post("/api/notify/test").status_code == 200
+        client.set_cookie("wl_profile", "1")
+        assert client.post("/api/notify/test").status_code == 200
+        assert sent == [("webhook", "https://hook.example/anna"), ("ntfy", "https://ntfy.example/me")]
 
     def test_settings_page_says_where_a_backup_goes(self, client, anna):
         html = client.get(f"/settings?profile={anna}").get_data(as_text=True)

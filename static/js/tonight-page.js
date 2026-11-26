@@ -1,4 +1,5 @@
 // Tonight (the start page): rows of films, a context line, quick chips, "Pick for me" and the films that just left.
+import {local} from './profile-storage.js';
 import {ago, escapeHtml, numberText} from './ui.js';
 import {showDeadlines} from './deadlines.js';
 import {TONIGHT_CHIPS, nowOnText, pickFilm, pickReason, recentlyGone, togetherRows, tonightRows} from './events.js';
@@ -7,14 +8,14 @@ import {filmCard, filmHref} from './rendering.js';
 import {filmKey, sortFilms} from './filtering.js';
 
 export function createTonightPage({state, imageBaseUrl, view: VIEW, regionLabel, drawViews, ensureAbroad, abroadOnFor, abroadCandidates, abroadFor, abroadList, watchedKeys, hiddenKeys, includedOn, applyTonightRoving, showFilmDetails, showToast, detailsOpener}) {
-  const tonightChips = new Set(JSON.parse(localStorage.getItem('tonightChips') || '[]'));
+  const tonightChips = new Set(JSON.parse(local.getItem('tonightChips') || '[]'));
   const picked = new Set(JSON.parse(sessionStorage.getItem('pickedFilms') || '[]'));
   let tonightAvailable = [];
   // ---- Together: the lists of other profiles merged with yours (/api/together), remembered in this browser ----
-  const TOGETHER_KEY = 'togetherWith';  // M5.6 prefixes it per profile
+  const TOGETHER_KEY = 'togetherWith';  // per profile, see profile-storage.js
   const picks = () => [...document.querySelectorAll('.together-pick')];
   const togetherIds = () => picks().filter(box => box.checked).map(box => Number(box.value));
-  const savedIds = new Set(JSON.parse(localStorage.getItem(TOGETHER_KEY) || '[]'));
+  const savedIds = new Set(JSON.parse(local.getItem(TOGETHER_KEY) || '[]'));
   picks().forEach(box => { box.checked = savedIds.has(Number(box.value)); });  // ids of deleted profiles drop out
   let together = null;    // the answer of /api/together for `togetherFor`
   let togetherFor = '';   // "2,3|<time of your last scan>": a new scan of yours loads it again
@@ -35,7 +36,7 @@ export function createTonightPage({state, imageBaseUrl, view: VIEW, regionLabel,
   }
   function setTogether(ids) {
     picks().forEach(box => { box.checked = ids.includes(Number(box.value)); });
-    localStorage.setItem(TOGETHER_KEY, JSON.stringify(ids));
+    local.setItem(TOGETHER_KEY, JSON.stringify(ids));
     renderTonightPage();
   }
   const members = () => together?.together?.members || [];
@@ -116,7 +117,7 @@ export function createTonightPage({state, imageBaseUrl, view: VIEW, regionLabel,
     const chip = event.target.closest('.quick-chip');
     if (!chip) return;
     if (tonightChips.has(chip.dataset.chip)) tonightChips.delete(chip.dataset.chip); else tonightChips.add(chip.dataset.chip);
-    localStorage.setItem('tonightChips', JSON.stringify([...tonightChips]));
+    local.setItem('tonightChips', JSON.stringify([...tonightChips]));
     renderTonightPage();
   });
   document.getElementById('together-pop')?.addEventListener('change', () => setTogether(togetherIds()));
@@ -140,7 +141,7 @@ export function createTonightPage({state, imageBaseUrl, view: VIEW, regionLabel,
     showFilmDetails(filmKey(film), opener);
     // The drawer covers the button, so the reason and "Pick another" sit inside it.
     const where = includedOn(film, togetherMode()?.own || state.selected);
-    const reason = pickReason(film, where ? `on ${where}` : '');
+    const reason = pickReason(film, where ? `on ${where}` : '', members().length > 2 ? "On everyone's list" : undefined);
     document.getElementById('film-details-content').insertAdjacentHTML('afterbegin', `<p class="pick-reason"><span>Picked for you${reason ? `: ${escapeHtml(reason)}` : ''}</span><button class="film-link pick-again" type="button"><i class="ti ti-dice-5" aria-hidden="true"></i> Pick another</button></p>`);
   }
   document.getElementById('film-details-content').addEventListener('click', event => {

@@ -69,7 +69,7 @@ def test_together_shows_both_lists_with_owner_badges_and_turns_off(app_server, p
     expect(page.locator("#film-details-modal")).to_be_hidden()
 
     # Remembered in this browser.
-    assert json.loads(page.evaluate("localStorage.getItem('togetherWith')")) == [anna]
+    assert json.loads(page.evaluate("localStorage.getItem('p1:togetherWith')")) == [anna]
     page.goto(app_server["url"])
     expect(page.locator("#row-both")).to_have_text("On both lists 1", timeout=15000)
 
@@ -79,7 +79,7 @@ def test_together_shows_both_lists_with_owner_badges_and_turns_off(app_server, p
     expect(page.locator("#together-off")).to_be_hidden()
     expect(page.locator("#tonight-rows .way-badge-owner")).to_have_count(0)
     expect(page.locator("#together-pop > summary")).to_be_focused()
-    assert json.loads(page.evaluate("localStorage.getItem('togetherWith')")) == []
+    assert json.loads(page.evaluate("localStorage.getItem('p1:togetherWith')")) == []
 
 
 def test_together_names_a_partner_without_a_scan_and_says_when_nothing_is_shared(app_server, page):

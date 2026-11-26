@@ -1,4 +1,5 @@
 // Subscriptions page: prices and dates save when you leave the field; totals follow at once.
+import {local} from './profile-storage.js';
 import {showDeadlines} from './deadlines.js';
 const page = document.getElementById('subscriptions-page');
 const country = page.dataset.country;
@@ -13,11 +14,11 @@ let timer;
 const banner = document.getElementById('deadline-banner');
 showDeadlines(banner, banner ? JSON.parse(banner.dataset.deadlines || '[]') : []);
 const HIDE_KEY = 'hiddenRecommendations';
-const hidden = () => { try { return JSON.parse(localStorage.getItem(HIDE_KEY) || '{}'); } catch { return {}; } };
+const hidden = () => { try { return JSON.parse(local.getItem(HIDE_KEY) || '{}'); } catch { return {}; } };
 document.querySelectorAll('.rec').forEach(card => { if (hidden()[card.dataset.rec] > Date.now()) card.hidden = true; });
 document.querySelectorAll('.rec-hide').forEach(button => button.addEventListener('click', () => {
   const card = button.closest('.rec');
-  localStorage.setItem(HIDE_KEY, JSON.stringify({...hidden(), [card.dataset.rec]: Date.now() + 30 * 86400000}));
+  local.setItem(HIDE_KEY, JSON.stringify({...hidden(), [card.dataset.rec]: Date.now() + 30 * 86400000}));
   card.hidden = true;
 }));
 document.querySelectorAll('.set-reminder').forEach(button => button.addEventListener('click', () => {

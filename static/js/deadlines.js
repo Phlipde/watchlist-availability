@@ -1,7 +1,8 @@
 // The banner for a renewal or cancellation date that is at most a week away (dates the user entered).
 // "Remind me tomorrow" and "Dismiss" are remembered in this browser only.
+import {local} from './profile-storage.js';
 const KEY = 'deadlineSnooze';
-const read = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } };
+const read = () => { try { return JSON.parse(local.getItem(KEY) || '{}'); } catch { return {}; } };
 
 export function dayText(iso) {
   return new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, {day: '2-digit', month: '2-digit', year: 'numeric'});
@@ -36,7 +37,7 @@ export function showDeadlines(container, deadlines, {link = false, now = Date.no
   const hide = until => {
     const stored = read();
     visible.forEach(item => { stored[`${item.name}|${item.date}`] = until; });
-    localStorage.setItem(KEY, JSON.stringify(stored));
+    local.setItem(KEY, JSON.stringify(stored));
     showDeadlines(container, deadlines, {link, now: Date.now()});
   };
   add('Remind me tomorrow', () => hide(Date.now() + 20 * 3600 * 1000));

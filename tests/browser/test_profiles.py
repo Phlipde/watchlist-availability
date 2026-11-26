@@ -37,6 +37,33 @@ def test_switching_the_profile_in_the_header_shows_its_own_favorites(app_server,
     )
 
 
+def test_saved_views_belong_to_a_profile_and_an_old_one_goes_to_profile_1(app_server, page):
+    expect = playwright_api.expect
+    store = app_server["store"]
+    anna = store.add_profile("Anna")
+    heat = {"key": "949", "tmdb_id": 949, "title": "Heat", "providers": {"Netflix": ["flatrate"]}}
+    store.save_scan("DE", "letterboxd", None, [heat], [], {}, profile_id=anna)
+    page.goto(app_server["url"] + "/watchlist")  # lets the first scan of profile 1 finish
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    # A view saved before profiles had keys, and one Anna saved on this device.
+    old, annas = (
+        '[{"name": "Old night", "search": "?max=150"}]',
+        '[{"name": "Anna night", "search": "?max=90"}]',
+    )
+    page.evaluate(
+        "([key, a, b]) => { localStorage.setItem('savedViews', a); localStorage.setItem(key, b); }",
+        [f"p{anna}:savedViews", old, annas],
+    )
+    page.goto(app_server["url"])
+    expect(page.locator("#tonight-views .saved-view a")).to_have_text(["Old night"], timeout=15000)
+    assert page.evaluate("localStorage.getItem('savedViews')") is None  # taken over by profile 1
+    _switch_in_header(page, "Anna")
+    expect(page.locator("body")).to_have_attribute("data-profile", str(anna))
+    expect(page.locator("#tonight-views .saved-view a")).to_have_text(["Anna night"], timeout=15000)
+    _switch_in_header(page, "Me")
+    expect(page.locator("#tonight-views .saved-view a")).to_have_text(["Old night"], timeout=15000)
+
+
 def test_profiles_page_adds_renames_and_deletes_with_the_keyboard(app_server, page):
     expect = playwright_api.expect
     store = app_server["store"]

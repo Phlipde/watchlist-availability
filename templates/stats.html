@@ -12,7 +12,7 @@
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
   {% include "partials/styles.html" %}
 </head>
-<body>
+<body data-profile="{{ active_profile.id }}">
   {% include "partials/header.html" %}
   <main class="page stats-page">
     <h1 class="page-title">Stats</h1>

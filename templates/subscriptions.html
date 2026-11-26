@@ -12,7 +12,7 @@
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
   {% include "partials/styles.html" %}
 </head>
-<body>
+<body data-profile="{{ active_profile.id }}">
   {% include "partials/header.html" %}
   <main class="page" id="subscriptions-page" data-country="{{ country }}" data-own="{{ own|tojson|forceescape }}">
     <h1 class="page-title">Subscriptions</h1>
@@ -94,7 +94,7 @@
         <tfoot><tr><th scope="row" colspan="2">Total <span class="totals">€ <span data-money id="total-month">{{ '%.2f'|format(costs.monthly_total) }}</span> / month · € <span data-money id="total-year">{{ '%.2f'|format(costs.yearly_total) }}</span> / year</span></th><td colspan="7"><span class="feedback" id="save-state" role="status"></span></td></tr></tfoot>
       </table>
     </div>
-    <p class="hint">Put the dates in your calendar: subscribe to <a href="/calendar.ics">/calendar.ics</a> in your calendar app.</p>
+    <p class="hint">Put the dates in your calendar: subscribe to <a href="/calendar.ics?profile={{ active_profile.id }}">/calendar.ics?profile={{ active_profile.id }}</a> in your calendar app.</p>
     <p class="hint" id="price-hint" hidden>Add the prices to see what the services cost and what a lost film costs you. <button class="film-link add-price" type="button">Add a price</button></p>
     {% endif %}
 
@@ -162,7 +162,7 @@
   <script src="{{ url_for('static', filename='js/header.js', v='20261126-3') }}" type="module"></script>
   <script>window.PLAN_DATA = {{ costs.plan|tojson }};</script>
   <script>window.IMAGE_BASE_URL = {{ image_base_url|tojson }}; window.WEEKLY_HOURS = {{ weekly_hours|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/plan-page.js', v='20261125-84') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261126-1') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/plan-page.js', v='20261126-1') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/subscriptions.js', v='20261126-2') }}" type="module"></script>
 </body>
 </html>

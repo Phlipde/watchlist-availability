@@ -1,4 +1,5 @@
 // The scan: the panel and the sync dot in the header, start, poll, resume, cancel, the saved result and a country switch.
+import {local} from './profile-storage.js';
 import {ago, dateTime} from './ui.js';
 import {scanProblem} from './problems.js';
 import {scanResultText, updateScanFeedback} from './scans.js';
@@ -322,9 +323,9 @@ export function createScanFlow({state, scanState, results, filterBar, freeServic
   document.getElementById('csv-upload').addEventListener('change', event => {
     document.getElementById('csv-name').textContent = event.target.files[0]?.name || 'No file chosen';
   });
-  document.getElementById('grey-unavailable').checked = localStorage.getItem('greyUnavailableDuringRescan') === 'true';
+  document.getElementById('grey-unavailable').checked = local.getItem('greyUnavailableDuringRescan') === 'true';
   document.getElementById('grey-unavailable').addEventListener('change', event => {
-    localStorage.setItem('greyUnavailableDuringRescan', String(event.target.checked));
+    local.setItem('greyUnavailableDuringRescan', String(event.target.checked));
     applyRescanUnavailableState();
   });
   return {startScan, resumeScan, loadLatestResult, switchCountry, showSavedPanel};

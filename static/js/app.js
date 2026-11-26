@@ -1,3 +1,4 @@
+import {local} from './profile-storage.js';
 import {escapeHtml, numberText} from './ui.js';
 import {createAppState, createScanState} from './state.js';
 import {bestAvailability} from './statistics.js';
@@ -84,7 +85,7 @@ const state = createAppState();
         .then(response => (response.ok ? response.json() : {}), () => ({}))
         .then(data => { if (abroadLoadedFor === wanted) { state.abroad = data; renderFilms(); } });
     }
-    const abroadOnFor = () => (VIEW === 'tonight' ? localStorage.getItem('abroadOn') === '1' : document.getElementById('where-filter').value !== 'all');
+    const abroadOnFor = () => (VIEW === 'tonight' ? local.getItem('abroadOn') === '1' : document.getElementById('where-filter').value !== 'all');
     const abroadFor = film => abroadForFilm(state.abroad?.[filmKey(film)], document.getElementById('country-select').value, code => regionLabel.of(code) || code);
     // With the switch on, every card also shows your services that have the film abroad.
     const abroadList = film => (abroadOnFor() ? abroadServices(state.abroad?.[filmKey(film)], document.getElementById('country-select').value, code => regionLabel.of(code) || code) : []);
@@ -265,14 +266,14 @@ const state = createAppState();
         .map(([provider]) => provider).sort().join(', ');
     }
     // Grid, Compact (posters only) or Table; the choice stays in this browser.
-    const viewMode = () => localStorage.getItem('viewMode') || 'grid';
+    const viewMode = () => local.getItem('viewMode') || 'grid';
     function syncViewMode() {
       const mode = viewMode();
       document.querySelectorAll('#view-switch input').forEach(input => { input.checked = input.value === mode; });
       results.classList.toggle('view-compact', mode === 'compact');
     }
     document.getElementById('view-switch')?.addEventListener('change', event => {
-      localStorage.setItem('viewMode', event.target.value);
+      local.setItem('viewMode', event.target.value);
       syncViewMode();
       renderFilms();
       // The same film stays the active one (the tab stop) and in sight after the layout changed.
@@ -410,7 +411,7 @@ const state = createAppState();
     document.getElementById('abroad-toggle').addEventListener('click', event => {
       if (event.currentTarget.getAttribute('aria-disabled') === 'true') return;
       setWhere(document.getElementById('where-filter').value === 'all' ? 'both' : 'all');
-      localStorage.setItem('abroadOn', document.getElementById('where-filter').value === 'all' ? '' : '1');
+      local.setItem('abroadOn', document.getElementById('where-filter').value === 'all' ? '' : '1');
       renderFilms();
     });
     document.querySelectorAll('[data-country-picker]').forEach(root => initCountryPicker(root, {onPick: switchCountry}));

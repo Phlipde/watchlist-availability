@@ -12,7 +12,7 @@
   <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
   {% include "partials/styles.html" %}
 </head>
-<body>
+<body data-profile="{{ active_profile.id }}">
   {% include "partials/header.html" %}
   <main class="page">
     <h1 class="page-title">Settings</h1>
@@ -50,6 +50,13 @@
     </div>
     <p class="meta" id="import-preview" aria-live="polite" hidden></p>
     <button class="btn btn-sm btn-accent" id="import-go" type="button" hidden>Import</button>
+
+    <h2 class="h4 mt-4">Feeds for other apps</h2>
+    <p class="hint">These addresses always show {{ active_profile.name }}'s data, whichever profile the other app would see.</p>
+    <ul class="meta" id="feed-links">
+      {% for label, path in [('Calendar with the subscription dates', 'calendar.ics'), ('RSS of films new on your services', 'feed.xml'), ('Tile for Homepage or Homarr', 'tile'), ('Home Assistant sensors (JSON)', 'api/sensors')] %}<li>{{ label }}: <code>{{ request.url_root }}{{ path }}?profile={{ active_profile.id }}</code></li>
+      {% endfor %}
+    </ul>
 
     <h2 class="h4 mt-4">Hidden films</h2>
     <p class="meta" id="greyouts-text">Films you hid stay in the list, only paler, until you unhide them. Letterboxd is where you log what you watched.</p>

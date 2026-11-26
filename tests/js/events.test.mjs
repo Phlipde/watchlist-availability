@@ -89,6 +89,15 @@ test('pick for me favours well rated films and says why', () => {
   assert.equal(pickReason({key: '3'}, ''), '');
 });
 
+test('pick for me in Together counts a film on both lists three times and says so', () => {
+  const films = [{key: '1', rating: 7, group: 'one'}, {key: '2', rating: 7, group: 'both'}];
+  assert.equal(pickFilm(films, new Set(), () => 0.3).key, '2');  // weights 1:3, so 0.3 already lands on "both"
+  assert.equal(pickFilm(films, new Set(), () => 0.2).key, '1');
+  assert.equal(pickReason(films[1], 'on Netflix'), 'On both lists · on Netflix');
+  assert.equal(pickReason(films[0], ''), '');
+  assert.equal(pickReason(films[1], '', "On everyone's list"), "On everyone's list");
+});
+
 test('a film under "New" is not repeated in the service rows', () => {
   const films = [
     {key: '1', title: 'Fresh', providers: {Netflix: ['flatrate']}, provider_changes: {added: ['Netflix'], since: NOW - 3600}},

@@ -1,5 +1,6 @@
 // The filter bar of the watchlist page: services menu, cost, genres, runtime, rating, chips and counts.
 // Pure counting lives in filtering.js; this module only reads and writes the bar's DOM.
+import {local} from './profile-storage.js';
 import {escapeHtml} from './ui.js';
 import {logoStackHtml} from './logo-stack.js';
 import {COST, FILTER_CONTROLS, WITHOUT, activeFilters, clearFilter, durationText, ratingFromParams, ratingSummary, resetFilters} from './filters.js';
@@ -361,7 +362,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     if (id === 'cost-filter') setCost('all', false);
     if (id === 'runtime-filter') setRuntime(0, false);
     if (id === 'age-filter') setAges([], false);
-    if (id === 'where-filter') localStorage.setItem('abroadOn', '');
+    if (id === 'where-filter') local.setItem('abroadOn', '');
     onChange();
   }
   let shownChips = [];
@@ -399,7 +400,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   function resetAll() {
     resetFilters(document);
     if (state.favoritesOnly) setFavoritesOnly(false);
-    localStorage.setItem('abroadOn', '');
+    local.setItem('abroadOn', '');
     state.genres = {include: new Set(), exclude: new Set()};
     state.link = emptyLink();
     state.selected = new Set(mySubscriptions());

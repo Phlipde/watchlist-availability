@@ -117,11 +117,12 @@ export function togetherRows(films, {services, members = 2, favorites = new Map(
 
 // "Pick for me": a film from `candidates` that was not picked yet in this visit. Chance grows with the TMDB
 // rating (rating cubed, 5 when unrated), so a 4.5 beats a 3.3 most of the time but is not certain.
+// In Together a film on both lists (`group: 'both'`) counts three times.
 export function pickFilm(candidates, picked, random = Math.random) {
   const fresh = candidates.filter(film => !picked.has(filmKey(film)));
   const pool = fresh.length ? fresh : candidates;
   if (!pool.length) return null;
-  const weights = pool.map(film => Math.max(Number(film.rating) || 5, 1) ** 3);
+  const weights = pool.map(film => Math.max(Number(film.rating) || 5, 1) ** 3 * (film.group === 'both' ? 3 : 1));
   let point = random() * weights.reduce((sum, weight) => sum + weight, 0);
   for (let index = 0; index < pool.length; index += 1) {
     point -= weights[index];
@@ -131,8 +132,9 @@ export function pickFilm(candidates, picked, random = Math.random) {
 }
 
 // Why this film was picked, in a few words: "Highly rated · 1h 47m · on Netflix".
-export function pickReason(film, serviceText) {
-  const parts = [];
+// `bothText` names the Together row of a film on every list ("On everyone's list" with three or more).
+export function pickReason(film, serviceText, bothText = 'On both lists') {
+  const parts = film.group === 'both' ? [bothText] : [];
   if (Number(film.rating) >= 7.5) parts.push('Highly rated');
   if (Number(film.runtime) > 0) parts.push(`${Math.floor(film.runtime / 60) ? `${Math.floor(film.runtime / 60)}h ` : ''}${film.runtime % 60}m`.trim());
   if (serviceText) parts.push(serviceText);

@@ -1,10 +1,11 @@
 // Saved views ("Movie night with Lea"): a name and the filters of the watchlist address, kept in this browser.
+import {local} from './profile-storage.js';
 const KEY = 'savedViews';
 const escape = text => String(text).replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
 
 export function loadViews() {
   try {
-    const views = JSON.parse(localStorage.getItem(KEY) || '[]');
+    const views = JSON.parse(local.getItem(KEY) || '[]');
     return Array.isArray(views) ? views.filter(view => typeof view?.name === 'string' && typeof view?.search === 'string') : [];
   } catch {
     return [];
@@ -24,13 +25,13 @@ export function saveView(name, search, views = loadViews()) {
   const clean = name.trim().slice(0, 40);
   if (!clean) return views;
   const next = [...views.filter(view => view.name !== clean), {name: clean, search: viewSearch(search)}].slice(-12);
-  localStorage.setItem(KEY, JSON.stringify(next));
+  local.setItem(KEY, JSON.stringify(next));
   return next;
 }
 
 export function removeView(name, views = loadViews()) {
   const next = views.filter(view => view.name !== name);
-  localStorage.setItem(KEY, JSON.stringify(next));
+  local.setItem(KEY, JSON.stringify(next));
   return next;
 }
 

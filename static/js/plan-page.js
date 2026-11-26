@@ -1,4 +1,5 @@
 // The planner of the subscriptions page: the best services for a budget, what to book month by month, a what-if.
+import {local} from './profile-storage.js';
 import {bestCombinations, coverage, rotation} from './planner.js';
 
 const data = window.PLAN_DATA;
@@ -8,7 +9,7 @@ if (data && section && Object.keys(data.services).length) {
   const money = value => value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
   const escape = text => String(text).replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
   const KEY = 'candidatePrices';
-  const stored = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } };
+  const stored = () => { try { return JSON.parse(local.getItem(KEY) || '{}'); } catch { return {}; } };
   const prices = () => ({...stored(), ...data.prices});  // a saved price of your own service wins
   const budget = document.getElementById('budget');
   const result = document.getElementById('budget-result');
@@ -23,7 +24,7 @@ if (data && section && Object.keys(data.services).length) {
     const value = Number(event.target.value.replace(',', '.'));
     const next = stored();
     if (event.target.value.trim() === '' || Number.isNaN(value) || value < 0) delete next[name]; else next[name] = value;
-    localStorage.setItem(KEY, JSON.stringify(next));
+    local.setItem(KEY, JSON.stringify(next));
     draw();
   });
   budget.value = String(Math.min(50, Math.max(5, Math.round(Object.values(data.prices).reduce((sum, price) => sum + price, 0) || 15))));
