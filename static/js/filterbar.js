@@ -2,7 +2,7 @@
 // Pure counting lives in filtering.js; this module only reads and writes the bar's DOM.
 import {escapeHtml} from './ui.js';
 import {logoStackHtml} from './logo-stack.js';
-import {COST, FILTER_CONTROLS, activeFilters, clearFilter, durationText, ratingFromParams, ratingSummary, resetFilters} from './filters.js';
+import {COST, FILTER_CONTROLS, WITHOUT, activeFilters, clearFilter, durationText, ratingFromParams, ratingSummary, resetFilters} from './filters.js';
 import {SECTION_KINDS, countVisible, facetCounts} from './filtering.js';
 import {clearLink, emptyLink, linkChips, needsUnavailable, parseLink, writeLink} from './link-filters.js';
 export {initPopovers, keepInView} from './popovers.js';
@@ -17,7 +17,7 @@ function costKinds(filters) {
   return SECTION_KINDS[filters.availability] || ALL_KINDS;
 }
 
-export function createFilterBar({state, config, mySubscriptions, freeServices, rentalShops, onChange}) {
+export function createFilterBar({state, config, mySubscriptions, freeServices, rentalShops, onChange, setFavoritesOnly}) {
   const $ = id => document.getElementById(id);
   const logos = config.providerLogos || {};
   const logo = name => (logos[name] ? `<img class="provider-logo-sm" src="${escapeHtml((config.logoBaseUrl || '') + logos[name])}" alt="" loading="lazy">` : '');
@@ -327,7 +327,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
 
   // ---- chips ------------------------------------------------------------------------------------
   // Which panel holds a filter; every other one sits behind "Filters".
-  const PANELS = {'runtime-filter': 'runtime-pop', 'lb-filter': 'rating-pop', 'tmdb-filter': 'rating-pop', 'min-votes': 'rating-pop', 'year-from': 'year-pop', 'year-to': 'year-pop', 'film-search': 'film-search', 'cost-filter': 'cost-options'};
+  const PANELS = {'runtime-filter': 'runtime-pop', 'lb-filter': 'rating-pop', 'tmdb-filter': 'rating-pop', 'min-votes': 'rating-pop', 'year-from': 'year-pop', 'year-to': 'year-pop', 'film-search': 'film-search', 'cost-filter': 'cost-options', 'where-filter': 'abroad-toggle', 'favorite-status-filter': 'favorite-status-filter'};
   const insidePanel = id => Boolean($(id).closest('#more-filters') || $(PANELS[id])?.classList.contains('is-moved'));
   function openPanel(id) {
     let element = $(id);
@@ -335,18 +335,40 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     if (element.tagName === 'DETAILS') { element.open = true; element.querySelector('summary').focus(); return; }
     (element.querySelector?.('input:checked') || element).focus();
   }
-  function updateChips() {
+  // Every set filter once: chip text, the panel it lives in, how to remove it, and the filters without it
+  // (for "Without X: n" in an empty list; null for filters that only add films). Chips, the empty list and Clear all use it.
+  function activeChips() {
     const subscriptions = mySubscriptions();
     const ownSelection = state.selected.size === subscriptions.size && [...subscriptions].every(name => state.selected.has(name));
-    // The text opens the panel the filter lives in; the x removes just this filter.
-    const chip = (attributes, text, panel) => `<span class="filter-chip" ${attributes}><button class="chip-open" type="button" data-panel="${panel}" aria-label="Change filter ${escapeHtml(text)}">${escapeHtml(text)}</button><button class="chip-remove" type="button" aria-label="Remove filter ${escapeHtml(text)}"><i class="ti ti-x" aria-hidden="true"></i></button></span>`;
-    const chips = [
-      ...(ownSelection ? [] : [chip('data-services', `Services: ${[...state.selected].sort().slice(0, 3).join(', ') || 'none'}${state.selected.size > 3 ? ` +${state.selected.size - 3}` : ''}`, 'services-pop')]),
-      ...[...state.genres.include].map(genre => chip(`data-genre-include="${escapeHtml(genre)}"`, genre, 'genre-pop')),
-      ...[...state.genres.exclude].map(genre => chip(`data-genre-exclude="${escapeHtml(genre)}"`, `No ${genre}`, 'genre-pop')),
-      ...activeFilters(document).map(({id, label, text}) => chip(`data-filter-id="${id}"`, text ? `${label}: ${text}` : label, PANELS[id] || 'more-filters')),
-      ...linkChips(state.link).map(({key, text}) => chip(`data-link="${key}"`, text, 'more-filters')),
+    const services = `Services: ${[...state.selected].sort().slice(0, 3).join(', ') || 'none'}${state.selected.size > 3 ? ` +${state.selected.size - 3}` : ''}`;
+    const genre = (list, name, text) => ({attrs: `data-genre-${list}="${escapeHtml(name)}"`, text, panel: 'genre-pop', remove: () => setGenre(name, null),
+      without: (f, c) => [{...f, genres: {...f.genres, [list]: f.genres[list].filter(item => item !== name)}}, c]});
+    return [
+      ...(ownSelection ? [] : [{attrs: 'data-services', text: services, panel: 'services-pop', remove: () => setServices(mySubscriptions()), without: (f, c) => [f, {...c, selected: new Set(mySubscriptions())}]}]),
+      ...(state.favoritesOnly ? [{attrs: 'data-favorites', text: 'Only favorites', panel: 'favorites-view', remove: () => setFavoritesOnly(false), without: (f, c) => [{...f, favoritesOnly: false}, c]}] : []),
+      ...[...state.genres.include].map(name => genre('include', name, name)),
+      ...[...state.genres.exclude].map(name => genre('exclude', name, `No ${name}`)),
+      ...activeFilters(document).map(({id, label, text}) => ({
+        attrs: `data-filter-id="${id}"`, text: text ? `${label}: ${text}` : label, panel: PANELS[id] || 'more-filters', remove: () => removeControl(id),
+        // "Here and abroad" only adds films, so leaving it out brings none back.
+        without: WITHOUT[id] && !(id === 'where-filter' && $(id).value === 'both') ? (f, c) => [{...f, ...WITHOUT[id]}, c] : null,
+      })),
+      ...linkChips(state.link).map(({key, text}) => ({attrs: `data-link="${key}"`, text, panel: 'more-filters', remove: () => { state.link = clearLink(state.link, key); onChange(); }, without: (f, c) => [{...f, link: clearLink(f.link, key)}, c]})),
     ];
+  }
+  function removeControl(id) {
+    clearFilter($(id));
+    if (id === 'cost-filter') setCost('all', false);
+    if (id === 'runtime-filter') setRuntime(0, false);
+    if (id === 'age-filter') setAges([], false);
+    if (id === 'where-filter') localStorage.setItem('abroadOn', '');
+    onChange();
+  }
+  let shownChips = [];
+  function updateChips() {
+    shownChips = activeChips();
+    // The text opens the panel the filter lives in; the x removes just this filter.
+    const chips = shownChips.map(({attrs, text, panel}, index) => `<span class="filter-chip" ${attrs} data-chip="${index}"><button class="chip-open" type="button" data-panel="${panel}" aria-label="Change filter ${escapeHtml(text)}">${escapeHtml(text)}</button><button class="chip-remove" type="button" aria-label="Remove filter ${escapeHtml(text)}"><i class="ti ti-x" aria-hidden="true"></i></button></span>`);
     $('tools-count').textContent = chips.length ? ` · ${chips.length}` : '';
     // From five chips on, only three show; the rest sit behind "+n more".
     const total = chips.length;
@@ -376,6 +398,8 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   });
   function resetAll() {
     resetFilters(document);
+    if (state.favoritesOnly) setFavoritesOnly(false);
+    localStorage.setItem('abroadOn', '');
     state.genres = {include: new Set(), exclude: new Set()};
     state.link = emptyLink();
     state.selected = new Set(mySubscriptions());
@@ -384,6 +408,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     setRating('lb', '', false);
     setRating('tmdb', '', false);
     setVotes('0', false);
+    setAges([], false);
     buildServicesMenu();
     buildGenreMenu([...document.querySelectorAll('#genre-list input')].map(input => input.value));
     onChange();
@@ -400,15 +425,7 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     if (event.target.closest('[data-chips-more]')) { chipsOpen = !chipsOpen; updateChips(); return; }
     if (event.target.closest('[data-reset-filters]')) { resetAll(); return; }
     const button = event.target.closest('.chip-remove')?.closest('.filter-chip');
-    if (!button) return;
-    if (button.hasAttribute('data-services')) { setServices(mySubscriptions()); return; }
-    if (button.dataset.link) { state.link = clearLink(state.link, button.dataset.link); onChange(); return; }
-    if (button.dataset.genreInclude || button.dataset.genreExclude) { setGenre(button.dataset.genreInclude || button.dataset.genreExclude, null); return; }
-    const input = $(button.dataset.filterId);
-    clearFilter(input);
-    if (input.id === 'cost-filter') setCost('all', false);
-    if (input.id === 'runtime-filter') setRuntime(0, false);
-    onChange();
+    if (button) shownChips[button.dataset.chip]?.remove();
   });
 
   // ---- links --------------------------------------------------------------------------------------
@@ -490,6 +507,6 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   new ResizeObserver(fitBar).observe($('film-filters').parentElement);
   addEventListener('resize', fitBar);
   document.fonts?.ready.then(fitBar);
-  return {fitBar, buildServicesMenu, buildGenreMenu, buildAgeChips, setAges, setRatingAvailability, updateServicesButton, updateCounts, updateChips, resetAll, setServices, readUrl, writeUrl};
+  return {fitBar, activeChips, buildServicesMenu, buildGenreMenu, buildAgeChips, setAges, setRatingAvailability, updateServicesButton, updateCounts, updateChips, resetAll, setServices, readUrl, writeUrl};
 }
 

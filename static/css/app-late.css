@@ -252,3 +252,26 @@ input[type=search]:not(#svc-q) { padding-left: 32px; background-image: url("data
 
 /* Touch: every tap target at least 44 px (the collapsed result panels, the Buy group, the card's logo stack). */
 @media (pointer: coarse) { details.unavailable > summary, .offer-buy > summary { display: flex; align-items: center; min-height: 44px; } .lstack-toggle { min-width: 44px; } }
+
+/* A scan in progress: a slim line at the very top; the films below stay as they were. */
+.scan-line { position: fixed; inset: 0 0 auto; z-index: 1040; height: 3px; background: var(--line); pointer-events: none; }
+.scan-line > span { display: block; width: 0; height: 100%; background: var(--accent); transition: width .3s ease-out; }
+/* A card without a poster: title and year on a calm surface instead of an empty grey box. */
+.no-poster { align-content: center; gap: 6px; background: var(--surface); }
+.no-poster-title { color: var(--text); font: 600 var(--fs-text)/1.25 system-ui, sans-serif; overflow-wrap: anywhere; }
+.no-poster-year { color: var(--muted); font-size: var(--fs-body); }
+
+/* Abroad countries in the drawer: folded regions of flags, a search from 10 countries. */
+.flag-search { max-width: 240px; margin: 6px 0 4px; }
+.flag-region > summary { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; color: var(--text-2); font: 600 var(--fs-small) system-ui, sans-serif; cursor: pointer; }
+.flag-region-count { color: var(--muted); font-weight: 400; }
+.flag-region ul { padding: 2px 0 6px; }
+@media (pointer: coarse) { .flag-region > summary { min-height: 44px; } }
+
+/* Card logos: the best way larger, the others overlap behind it, then "+N"; at least 20px each. */
+.lstack-logo { width: 20px; height: 20px; }
+.best-way .lstack-item:first-child .lstack-logo { width: 28px; height: 28px; }
+.lstack-item + .lstack-item { margin-left: -6px; }
+.best-way .lstack-item:first-child + .lstack-item { margin-left: 4px; }
+.lstack-item:not(:first-child) .lstack-logo { box-shadow: 0 0 0 2px var(--surface); }
+.lstack-item { cursor: default; }

@@ -194,13 +194,14 @@ export function facetCounts(films, filters, context, open, keysOf) {
   return counts;
 }
 
-// For an empty result: the one filter whose removal brings back the most films.
-// candidates: [{id, label, open(filters, context) -> [filters, context]}]
-export function bestRelaxation(films, filters, context, candidates) {
+// For an empty result: each filter with the films its removal brings back, most first; filters that bring none are left out.
+// candidates: [{..., open(filters, context) -> [filters, context]}]
+// shortcut: counts only the films here (countVisible), so with "Here and abroad" they can be too low; fine while abroad films are few.
+export function relaxationCounts(films, filters, context, candidates) {
   return candidates
     .map(candidate => ({...candidate, count: countVisible(films, ...candidate.open(filters, context))}))
     .filter(candidate => candidate.count > 0)
-    .sort((a, b) => b.count - a.count)[0] || null;
+    .sort((a, b) => b.count - a.count);
 }
 
 // Returns what to show: films per section, matching unavailable films and the visible count.

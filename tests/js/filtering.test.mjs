@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
-import {baseCounts, filmKey, bestRelaxation, countVisible, facetCounts, filterFilms, matchesSection, selectedChanges, selectedKinds, sortFilms, ageMatches, sortRatings, comingSoon, elsewhereOnServices} from '../../static/js/filtering.js';
+import {baseCounts, filmKey, relaxationCounts, countVisible, facetCounts, filterFilms, matchesSection, selectedChanges, selectedKinds, sortFilms, ageMatches, sortRatings, comingSoon, elsewhereOnServices} from '../../static/js/filtering.js';
 
 const baseFilters = {
   query: '', availability: 'all', kind: 'all', minRating: 0, minVotes: 0, genres: {include: [], exclude: []}, keyword: 'all', maxRuntime: 0, mode: 'any',
@@ -143,11 +143,23 @@ test('counts per option leave their own filter out; the best way out of an empty
   assert.deepEqual(Object.fromEntries(genres), {Comedy: 1});
   const empty = {...baseFilters, genres: {include: ['Drama'], exclude: []}, maxRuntime: 90};
   assert.equal(countVisible(films, empty, ctx), 0);
-  const way = bestRelaxation(films, empty, ctx, [
-    {id: 'runtime', label: 'runtime', open: (f, c) => [{...f, maxRuntime: 0}, c]},
-    {id: 'genre', label: 'genre', open: (f, c) => [{...f, genres: {include: [], exclude: []}}, c]},
+  const ways = relaxationCounts(films, empty, ctx, [
+    {id: 'genre', open: (f, c) => [{...f, genres: {include: [], exclude: []}}, c]},
+    {id: 'runtime', open: (f, c) => [{...f, maxRuntime: 0}, c]},
+    {id: 'search', open: (f, c) => [{...f, query: ''}, c]},  // not set: brings nothing back, so it is left out
   ]);
-  assert.deepEqual([way.id, way.count], ['runtime', 2]);
+  assert.deepEqual(ways.map(way => [way.id, way.count]), [['runtime', 2], ['genre', 1]]);
+});
+
+test('an empty list of favorites names each filter with the films it keeps out', () => {
+  const ctx = context(['Netflix', 'Arte', 'Apple TV Store'], new Map([['Gamma|2020', {status: 'plan'}]]));
+  const empty = {...baseFilters, favoritesOnly: true, maxRuntime: 90};
+  assert.equal(countVisible(films, empty, ctx), 0);
+  const ways = relaxationCounts(films, empty, ctx, [
+    {text: 'Only favorites', open: (f, c) => [{...f, favoritesOnly: false}, c]},
+    {text: 'Runtime: Up to 90 min', open: (f, c) => [{...f, maxRuntime: 0}, c]},
+  ]);
+  assert.deepEqual(ways.map(way => [way.text, way.count]), [['Only favorites', 1], ['Runtime: Up to 90 min', 1]]);
 });
 
 test('years entered the wrong way round are swapped', async () => {
@@ -174,7 +186,7 @@ test('every set filter gets a chip and reset clears them all', async () => {
     'change-filter': select('all', ['all', 'added']),
   };
   const doc = {getElementById: id => controls[id] ?? null};
-  assert.equal(FILTER_CONTROLS.length, 18);
+  assert.equal(FILTER_CONTROLS.length, 19);
   assert.deepEqual(activeFilters(doc).map(chip => chip.label), ['Search', 'Cost', 'TMDB', 'Trailer', 'Services']);
   assert.equal(activeFilters(doc).find(chip => chip.id === 'tmdb-filter').text, '7+');
   // A hidden input behind a custom control carries its readable text and its default.

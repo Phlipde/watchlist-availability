@@ -97,7 +97,6 @@ summary.offer-heading { cursor: pointer; }
 .flag-more[aria-expanded=true] i { transform: rotate(90deg); }
 .flag-grid { margin: 2px 0 8px 28px; }
 .flag-grid[hidden] { display: none; }
-.flag-grid h4 { margin: 8px 0 4px; color: var(--muted); font: 600 var(--fs-small) system-ui, sans-serif; }
 .flag-grid ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; margin: 0; padding: 0; list-style: none; }
 .flag-grid li { display: flex; align-items: center; gap: 8px; font: var(--fs-body) system-ui, sans-serif; }
 @media (pointer: coarse) { .flag-more { min-height: 44px; padding: 0 12px; } .other-services > summary { min-height: 44px; } }
@@ -133,3 +132,10 @@ summary.offer-heading { cursor: pointer; }
 @media (max-width: 800px) { .overview-box.clamped .film-modal-overview { cursor: pointer; } }
 #tonight-rows article.film { scroll-margin-top: 150px; scroll-margin-bottom: 96px; }
 
+
+/* Switching films inside the drawer: back to the film before, and a short fade of the new content. */
+.drawer-back { display: inline-flex; align-items: center; gap: 4px; margin: 0 0 8px; padding: 4px 0; font-size: var(--fs-body); }
+@media (pointer: coarse) { .drawer-back { min-height: 44px; } }
+#film-details-content.is-switching { animation: drawer-switch .22s ease-out; }
+@keyframes drawer-switch { from { opacity: .35; translate: 0 6px; } }
+@media (prefers-reduced-motion: reduce) { #film-details-content.is-switching { animation: none; } }

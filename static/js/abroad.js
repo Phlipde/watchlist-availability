@@ -94,8 +94,10 @@ export function abroadHtml(rows, {nameOf, logoOf}) {
   const table = rows.map(row => {
     const shown = row.countries.slice(0, 3);
     const more = row.countries.slice(3);
+    // Flags only, one folded region each ("Europe 24 ▸"); from 10 countries a search that also finds the names.
+    const search = row.countries.length >= 10 ? `<input class="form-control form-control-sm flag-search" type="search" placeholder="Find a country…" aria-label="Find a country for ${escapeHtml(row.service)}">` : '';
     const grid = more.length
-      ? `<div class="flag-grid" hidden>${groupByRegion(more).map(([group, codes]) => `<section><h4>${group}</h4><ul>${codes.map(code => `<li>${flag(code, nameOf(code), row.service, row.kinds[code])}</li>`).join('')}</ul></section>`).join('')}</div>`
+      ? `<div class="flag-grid" hidden>${search}${groupByRegion(more).map(([group, codes]) => `<details class="flag-region"><summary>${group} <span class="flag-region-count">${codes.length}</span></summary><ul>${codes.map(code => `<li data-name="${escapeHtml(`${nameOf(code)} ${code}`.toLowerCase())}">${flag(code, nameOf(code), row.service, row.kinds[code])}</li>`).join('')}</ul></details>`).join('')}<p class="hint flag-none" hidden>No country found.</p></div>`
       : '';
     const logo = logoOf(row.service, 'provider-logo-sm');
     const kind = ['free', 'flatrate', 'ads'].find(k => Object.values(row.kinds).includes(k));
@@ -125,4 +127,22 @@ export function abroadFilm(film, entry) {
   const providers = {};
   for (const [service, byCountry] of Object.entries(entry || {})) providers[service] = [...new Set(Object.values(byCountry))];
   return {...film, providers, abroadOnly: true};
+}
+
+// The drawer's country search: matching flags stay, their regions open; an empty search folds everything again.
+export function filterFlags(grid, query) {
+  const text = query.trim().toLowerCase();
+  let found = 0;
+  grid.querySelectorAll('.flag-region').forEach(region => {
+    let hits = 0;
+    region.querySelectorAll('li').forEach(item => {
+      const hit = !text || item.dataset.name.includes(text);
+      item.hidden = !hit;
+      if (hit) hits += 1;
+    });
+    region.hidden = Boolean(text) && !hits;
+    region.open = Boolean(text) && hits > 0;
+    found += hits;
+  });
+  grid.querySelector('.flag-none').hidden = !text || found > 0;
 }

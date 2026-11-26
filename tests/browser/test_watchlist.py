@@ -155,8 +155,8 @@ def test_no_match_offers_a_way_out(app_server, page):
     page.locator("#film-search").fill("nothing like this")
     expect(page.locator("#filters-empty")).to_be_visible()
     expect(page.locator("#filter-chips")).to_contain_text("Clear filters")
-    # The way out names the filter that keeps the films away.
-    expect(page.locator("#filters-empty-hint")).to_have_text("Without the search filter there would be 1.")
+    # The way out names each filter that keeps films away, with how many come back.
+    expect(page.locator("#empty-ways")).to_have_text("Without Search: nothing like this: 1")
     page.locator("#empty-reset").click()
     expect(page.locator("#film-search")).to_have_value("")
     expect(page.locator("#filters-empty")).to_be_hidden()
@@ -383,12 +383,12 @@ def test_the_abroad_switch_adds_films_your_services_have_in_other_countries(app_
     expect(page.locator("#result-meta")).to_contain_text("1 via VPN")
     assert "where=both" in page.url
     expect(page.locator("#filter-chips")).to_contain_text("Where: Here and abroad")
-    # "Only abroad" in the panel shows just that film; the switch and the field are one setting.
-    page.locator("#more-filters > summary").click()
-    page.locator("#where-filter").select_option("abroad")
+    # "Only abroad" comes from a link (Tonight's row); the switch is the one control and turns it off.
+    page.goto(app_server["url"] + "/watchlist?where=abroad")
     expect(page.locator("article.film")).to_have_count(1)
     expect(toggle).to_have_attribute("aria-pressed", "true")
-    page.locator("#where-filter").select_option("all")
+    expect(page.locator("#filter-chips")).to_contain_text("Where: Only abroad")
+    toggle.click()
     expect(page.locator("article.film")).to_have_count(here)
     expect(toggle).to_have_attribute("aria-pressed", "false")
 
@@ -407,5 +407,32 @@ def test_a_card_shows_only_the_logo_and_the_words_come_on_hover(app_server, page
     assert (
         card.locator(".lstack-item .way-badge").count() == card.locator(".lstack-item").count()
     )  # a type icon on each
-    stack.locator(".lstack-item").first.click()  # a click opens the details
+    first.hover()  # the name comes as a bubble
+    expect(page.locator(".tip")).to_have_text(first.get_attribute("data-tip"))
+    first.click()  # a click on a logo opens nothing
+    expect(page.locator("#film-details-modal")).to_be_hidden()
+    stack.locator(".lstack-toggle").focus()  # the stack's button opens the details
+    page.keyboard.press("Enter")
     expect(page.locator("#film-details-modal")).to_be_visible(timeout=5000)
+
+
+def test_an_empty_list_names_every_filter_and_clear_resets_all(app_server, page):
+    expect = playwright_api.expect
+    # Heat (1995, on Netflix only) is the one film; only "Services: 2+" keeps it out,
+    # and its chip hides behind "+2 more".
+    page.goto(app_server["url"] + "/watchlist?from=1990&to=2000&media=trailer&minproviders=2&hidden=1")
+    expect(page.locator("#filters-empty")).to_be_visible(timeout=15000)
+    expect(page.locator("[data-chips-more]")).to_have_text("+2 more")
+    expect(page.locator("#empty-ways")).to_have_text("Without Services: 2+: 1")
+    page.locator("#empty-ways button").click()
+    expect(page.locator("#visible-count")).to_have_text("1")
+    # "Only favorites" is a chip like every other filter, and the empty list names it too.
+    page.locator("#favorites-view").click()
+    expect(page.locator("#filter-chips [data-favorites]")).to_contain_text("Only favorites")
+    expect(page.locator("#empty-ways")).to_contain_text("Without Only favorites: 1")
+    page.locator("[data-reset-filters]").click()
+    expect(page.locator("#filter-chips")).to_be_hidden()
+    expect(page.locator("#favorites-view")).to_have_attribute("aria-pressed", "false")
+    expect(page.locator('#age-chips .chip[aria-pressed="true"]')).to_have_count(0)
+    for name in ("favorites=", "media=", "minproviders=", "from=", "to=", "hidden="):
+        assert name not in page.url

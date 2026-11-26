@@ -83,6 +83,20 @@ class TestLatestAndFavoritesApi:
         }
         assert client.get("/api/latest?country=<b>").status_code == 400
 
+    def test_big_answers_are_gzipped_when_the_browser_accepts_it(self, client, store):
+        import gzip
+        import json
+
+        films = [{"key": str(n), "title": f"Film {n}", "providers": {}} for n in range(200)]
+        store.save_scan("DE", "src", "k", films, [], {})
+        plain = client.get("/api/latest?country=DE")
+        assert "Content-Encoding" not in plain.headers
+        packed = client.get("/api/latest?country=DE", headers={"Accept-Encoding": "gzip, br"})
+        assert packed.headers["Content-Encoding"] == "gzip"
+        assert "Accept-Encoding" in packed.headers["Vary"]
+        assert len(packed.data) < len(plain.data) / 3
+        assert json.loads(gzip.decompress(packed.data)) == plain.get_json()
+
     def test_latest_scan_sends_free_services_of_its_country(self, client, store):
         # The page keeps its labels on a country switch, so each scan brings its own list.
         offers = {"BBC iPlayer": ["free"], "Sky Store": ["rent", "buy"]}

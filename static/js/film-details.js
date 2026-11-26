@@ -3,7 +3,7 @@ import {escapeHtml} from './ui.js';
 import {similarOnServices} from './similar.js';
 import {favoriteFields, filmHref} from './rendering.js';
 import {filmKey} from './filtering.js';
-import {abroadHtml, abroadRows} from './abroad.js';
+import {abroadHtml, abroadRows, filterFlags} from './abroad.js';
 import {drawerHtml, seriesOrder} from './drawer.js';
 
 export function createFilmDetails({state, results, imageBaseUrl, openModal, modalOpeners, setDrawerKey, watchedKeys, hiddenKeys, includedOn, upcomingText, toggleFavorite, updateFavoriteField, setCompared, showToast, renderFilms}) {
@@ -42,6 +42,9 @@ export function createFilmDetails({state, results, imageBaseUrl, openModal, moda
     grid.hidden = !grid.hidden;
     more.setAttribute('aria-expanded', String(!grid.hidden));
   });
+  document.getElementById('film-details-content').addEventListener('input', event => {
+    if (event.target.matches('.flag-search')) filterFlags(event.target.closest('.flag-grid'), event.target.value);
+  });
   // Every ISO country name in lower case (from the browser), to keep places out of the keyword chips.
   let countryNameSet = null;
   function allCountryNames() {
@@ -64,10 +67,19 @@ export function createFilmDetails({state, results, imageBaseUrl, openModal, moda
     heroTitleWatcher = new IntersectionObserver(([entry]) => header.classList.toggle('show-title', !entry.isIntersecting), {root: document.getElementById('film-details-content')});
     heroTitleWatcher.observe(title);
   }
-  function showFilmDetails(key, opener = document.activeElement) {
+  // Films left through Similar or the series, newest last: "‹ Back to …" returns to them. The arrows start afresh.
+  const backStack = [];
+  let shownKey = null;
+  // how: 'jump' (a film picked inside the drawer), 'back' (the back button) or '' (anything else).
+  function showFilmDetails(key, opener = document.activeElement, how = '') {
     const all = [...state.films, ...state.unavailable];
     const film = all.find(item => filmKey(item) === key);
     if (!film) return;
+    const detailsOpen = document.getElementById('film-details-modal').classList.contains('show');
+    if (how === 'jump' && detailsOpen && shownKey && shownKey !== key) backStack.push(shownKey);
+    else if (how !== 'back') backStack.length = 0;
+    shownKey = key;
+    const backFilm = backStack.length ? all.find(item => filmKey(item) === backStack.at(-1)) : null;
     document.getElementById('film-details-title').textContent = film.title;
     setDrawerKey(key);
     const country = document.getElementById('country-select').value;
@@ -93,10 +105,19 @@ export function createFilmDetails({state, results, imageBaseUrl, openModal, moda
       scanAt: state.lastScan,
       favoriteFields: saved ? favoriteFields(key, film.title, saved) : '',
     };
-    document.getElementById('film-details-content').innerHTML = drawerHtml(film, ctx);
+    const content = document.getElementById('film-details-content');
+    const back = backFilm ? `<button class="drawer-back film-link" type="button" data-back><i class="ti ti-chevron-left" aria-hidden="true"></i> Back to ${escapeHtml(backFilm.title)}</button>` : '';
+    content.innerHTML = back + drawerHtml(film, ctx);
+    // Another film in an open drawer starts at the top and fades in (no motion with reduced motion).
+    if (detailsOpen) {
+      content.scrollTop = 0;
+      content.classList.remove('is-switching');
+      void content.offsetWidth;
+      content.classList.add('is-switching');
+      if (how) (content.querySelector('[data-back]') || document.getElementById('film-details-modal')).focus({preventScroll: true});
+    }
     watchHeroTitle();
     if (film.tmdb_id) showElsewhere(film.tmdb_id, key, own);
-    const detailsOpen = document.getElementById('film-details-modal').classList.contains('show');
     openModal('film-details-modal', opener);
     setFilmAddress(key, !detailsOpen);
   }
@@ -119,7 +140,7 @@ export function createFilmDetails({state, results, imageBaseUrl, openModal, moda
   // "+N" and "Abroad" on a card open the details at "Other services".
   document.addEventListener('click', event => {
     const more = event.target.closest('[data-open-more]');
-    if (!more) return;
+    if (!more || event.target.closest('.lstack-item')) return;  // a logo only shows its name (icons.js)
     event.preventDefault();
     // On a phone "+N" goes straight to the full-screen sheet: the list of services needs the room.
     document.getElementById('film-details-modal').classList.toggle('is-full', matchMedia('(max-width: 800px)').matches);
@@ -169,7 +190,8 @@ export function createFilmDetails({state, results, imageBaseUrl, openModal, moda
     // Middle, Ctrl, Cmd and Shift clicks keep the browser's own behaviour: a new tab or window.
     if (!link || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
-    showFilmDetails(link.dataset.key, link);
+    const inDrawer = link.closest('#film-details-modal');
+    showFilmDetails(link.dataset.key, inDrawer ? modalOpeners.get('film-details-modal') : link, inDrawer ? 'jump' : '');
   });
   // Filters may have changed since the link was drawn; refresh it before the browser (or a screen reader) uses it.
   const refreshFilmLink = event => {
@@ -253,7 +275,8 @@ export function createFilmDetails({state, results, imageBaseUrl, openModal, moda
   // Another film of the series replaces the content; the focus later still goes back to the first opener.
   document.getElementById('film-details-content').addEventListener('click', event => {
     const pick = event.target.closest('.series-pick');
-    if (pick) showFilmDetails(pick.dataset.key, modalOpeners.get('film-details-modal'));
+    if (pick) showFilmDetails(pick.dataset.key, modalOpeners.get('film-details-modal'), 'jump');
+    if (event.target.closest('[data-back]') && backStack.length) showFilmDetails(backStack.pop(), modalOpeners.get('film-details-modal'), 'back');
   });
   document.getElementById('film-details-content').addEventListener('change', event => { if (event.target.matches('.favorite-status, .favorite-note')) updateFavoriteField(event.target).then(renderFilms); });
   return {showFilmDetails, openPendingFilm};

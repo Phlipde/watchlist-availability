@@ -74,10 +74,13 @@ test('a card has one stack of your free, subscription and ads services, no rent 
   const base = {imageBaseUrl: '', favorites: new Map(), compareKeys: new Set(), greyKeys: new Set(), providerLogos: {Arte: '/a.png'}, logoBaseUrl: 'https://img/', country: 'DE'};
   const html = filmCard(film, 'All', {...base, selected: new Set(['Arte', 'Netflix'])});
   assert.equal((html.match(/class="best-way(?:"| )/g) || []).length, 1);
-  assert.match(html, /lstack-item is-wide" data-tip="Arte · Free"><img class="lstack-logo" src="https:\/\/img\/\/a\.png"[^>]*><span class="way-badge way-badge-free"/);
+  assert.match(html, /lstack-item is-wide" role="img" aria-label="Arte · Free" data-tip="Arte · Free"><img class="lstack-logo" src="https:\/\/img\/\/a\.png"[^>]*><span class="way-badge way-badge-free"/);
   assert.match(html, /aria-label="2 services: Arte, Netflix · details"/);
   assert.ok(!html.includes('Rakuten') && !html.includes('lstack-more'));
   assert.ok(!html.includes('data-provider='), 'no grid of logos');
+  // Free services that are not yours follow your own; subscriptions that are not yours stay off the card.
+  const other = filmCard({key: 'y', title: 'Y', providers: {Arte: ['free'], Netflix: ['flatrate'], MUBI: ['flatrate']}}, 'All', {...base, selected: new Set(['Netflix'])});
+  assert.deepEqual([...other.matchAll(/aria-label="([^"]+)" data-tip/g)].map(match => match[1]), ['Netflix · Subscription', 'Arte · Free']);
 });
 
 test('the corner icon tells free, sub, ads, rent or buy; without a logo the name shows; nothing is said plainly', () => {
@@ -100,7 +103,7 @@ test('a film that is only available abroad shows the logo with the flag of its b
     abroadFor: () => ({service: 'Prime Video', countries: ['IT', 'ES', 'US']})};
   const html = filmCard(film, 'All', context);
   assert.match(html, /<span class="way-badge way-badge-flag" aria-hidden="true"><img src="\/static\/flags\/it\.svg" alt=""><\/span>/);
-  assert.match(html, /data-tip="Prime Video · Subscription · Italy, ES, US"/);
+  assert.match(html, /data-tip="Prime Video · Subscription · Italy \+2 more"/);
 });
 
 test('with the switch on, your services abroad follow the ones you can use here; the same service is not shown twice', () => {
@@ -110,7 +113,7 @@ test('with the switch on, your services abroad follow the ones you can use here;
     providerLogos: {}, country: 'DE', countryName: code => code, abroadList};
   const html = filmCard(film, 'All', context);
   assert.match(html, /aria-label="2 services: Netflix, Disney\+ · details"/);  // Netflix here, Disney+ abroad
-  assert.match(html, /data-tip="Disney\+ · Subscription · IT, ES"/);
+  assert.match(html, /data-tip="Disney\+ · Subscription · IT \+1 more"/);
 });
 
 test('the card has a small heart on the poster and an action bar, no "..." menu', () => {

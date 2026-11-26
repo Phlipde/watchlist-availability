@@ -1,5 +1,6 @@
 """Flask route registration for the web application."""
 
+import gzip
 import os
 import time  # noqa: F401  (tests patch time, tmdb, matches, requests and notifications through here)
 from urllib.parse import urlsplit
@@ -58,6 +59,26 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
         # The flag pictures never change: the browser keeps them for a month instead of asking again.
         if request.path.startswith("/static/flags/"):
             response.headers["Cache-Control"] = "public, max-age=2592000"
+        return response
+
+    @app.after_request
+    def compress(response):
+        # The film list is close to 1 MB of JSON and is fetched on every page; gzip makes it about a tenth.
+        if (
+            response.status_code != 200
+            or response.is_streamed
+            or response.direct_passthrough
+            or "Content-Encoding" in response.headers
+            or response.mimetype not in {"application/json", "text/html"}
+            or "gzip" not in request.headers.get("Accept-Encoding", "")
+        ):
+            return response
+        data = response.get_data()
+        if len(data) < 2048:
+            return response
+        response.set_data(gzip.compress(data, compresslevel=5))
+        response.headers["Content-Encoding"] = "gzip"
+        response.vary.add("Accept-Encoding")
         return response
 
     @app.errorhandler(413)

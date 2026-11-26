@@ -1,7 +1,7 @@
 // The scan: the panel and the sync dot in the header, start, poll, resume, cancel, the saved result and a country switch.
 import {ago, dateTime} from './ui.js';
 import {scanProblem} from './problems.js';
-import {updateScanFeedback} from './scans.js';
+import {scanResultText, updateScanFeedback} from './scans.js';
 import {filmKey} from './filtering.js';
 import {saveCountry} from './country-picker.js';
 
@@ -34,9 +34,10 @@ export function createScanFlow({state, scanState, results, filterBar, freeServic
     // No scan running: the panel shrinks to one line with the message and the button.
     document.getElementById('loading-panel').classList.add('idle');
     document.getElementById('grey-unavailable-label').hidden = true;
+    document.getElementById('scan-line').hidden = true;
   }
   function showScanRunning() {
-    setSync('running', 'Checking…');
+    setSync('running', 'Scanning…');
     document.getElementById('loading-panel').classList.remove('idle');
     document.getElementById('cancel-scan').hidden = false;
     document.getElementById('retry-scan').hidden = true;
@@ -76,11 +77,15 @@ export function createScanFlow({state, scanState, results, filterBar, freeServic
     document.getElementById('error-message').hidden = true;
     showScanButton();
   }
-  function setProgress(percent) {
+  // The panel's bar, plus a slim line at the top of the page while a scan runs (the old films stay visible below it).
+  function setProgress(percent, label = `${Math.round(percent)}%`) {
     const bar = document.getElementById('progress-bar');
     bar.style.width = `${percent}%`;
     bar.parentElement.setAttribute('aria-valuenow', String(percent));
-    if (document.getElementById('sync-toggle').dataset.state === 'running') setSync('running', `${Math.round(percent)}%`);
+    const running = document.getElementById('sync-toggle').dataset.state === 'running';
+    if (running) setSync('running', label);
+    document.getElementById('scan-line').hidden = !running;
+    document.getElementById('scan-line').firstElementChild.style.width = `${percent}%`;
   }
   function showResultTools() {
     if (!state.films.length) return;
@@ -164,7 +169,7 @@ export function createScanFlow({state, scanState, results, filterBar, freeServic
     }
     const percent = job.total ? Math.round(job.completed / job.total * 100) : 3;
     updateScanFeedback(job);
-    setProgress(percent);
+    setProgress(percent, job.total ? `Scanning ${job.completed}/${job.total}` : 'Scanning…');
     document.getElementById('progress-count').textContent = job.total ? `${percent}% · ${job.completed}/${job.total}` : 'Loading';
     document.getElementById('status-message').textContent = job.message;
     document.getElementById('current-title').textContent = job.current_title || job.phase;
@@ -191,7 +196,7 @@ export function createScanFlow({state, scanState, results, filterBar, freeServic
     }
     // The server moves favorites saved under "Title|Year" to the TMDB id after a scan.
     if (job.status === 'complete') loadFavorites().then(renderFilms).then(() => openPendingFilm(true));
-    scanState.rescanInProgress = false; scanState.pendingUnavailable = []; applyRescanUnavailableState(); showToast(job.status === 'complete' ? 'Watchlist scan complete.' : 'Scan cancelled. Previous results kept.'); return; }
+    scanState.rescanInProgress = false; scanState.pendingUnavailable = []; applyRescanUnavailableState(); showToast(job.status === 'complete' ? scanResultText(job, mySubscriptions()) : 'Scan cancelled. Previous results kept.'); return; }
     // The app was restarted during the scan: it has started a new one, join it.
     if (job.status === 'interrupted') { startScan(); return; }
     if (job.status === 'error') { scanState.rescanInProgress = false; scanState.pendingUnavailable = []; applyRescanUnavailableState(); showScanError(job.message, 'Scan failed. The reason is shown above the films.'); return; }

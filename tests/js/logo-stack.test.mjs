@@ -16,12 +16,13 @@ test('aria label counts and names the services', () => {
   assert.equal(stackLabel([item('Netflix')]), '1 service: Netflix');
 });
 
-test('first three side by side, two overlap, the rest is +N; the card stack opens the details', () => {
-  assert.equal(hiddenCount(many(5)), 0);
-  assert.equal(hiddenCount(many(6)), 1);
+test('the best logo alone, two overlap, the rest is +N; each logo is named; the card stack opens the details', () => {
+  assert.equal(hiddenCount(many(3)), 0);
+  assert.equal(hiddenCount(many(6)), 3);
   const html = logoStackHtml(many(6), {key: 'k'});
-  assert.equal((html.match(/lstack-item/g) || []).length, 5);
-  assert.match(html, /<span class="lstack-more">\+1<\/span>/);
+  assert.equal((html.match(/class="lstack-item/g) || []).length, 3);
+  assert.match(html, /<span class="lstack-more">\+3<\/span>/);
+  assert.match(html, /class="lstack-item is-wide" role="img" aria-label="S0 · Subscription"/);
   assert.match(html, /class="lstack" data-open-more data-key="k"/);
   assert.match(html, /aria-label="6 services: S0, S1/);
 });

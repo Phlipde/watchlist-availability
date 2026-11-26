@@ -1,5 +1,5 @@
 // Logos and flags carry their names only as a tooltip: one bubble for every [data-tip], shown on mouse hover,
-// keyboard focus and touch tap (not where a tap already acts, like a card's logo stack). Only the first bubble waits;
+// keyboard focus and touch tap (a tap on a card's logo shows its name and opens nothing). Only the first bubble waits;
 // the next ones within a moment show at once. A logo or flag that fails to load becomes a neutral tile.
 import {initials} from './ui.js';
 
@@ -61,7 +61,7 @@ document.addEventListener('focusout', hide);
 document.addEventListener('pointerup', event => {
   if (event.pointerType === 'mouse') return;
   const target = tipOf(event.target);
-  if (!target || target.closest('[data-open-more]')) return hide();
+  if (!target || (target.closest('[data-open-more]') && !target.matches('.lstack-item'))) return hide();
   if (target === current) hide(); else show(target, true);
 });
 document.addEventListener('keydown', event => { if (event.key === 'Escape') hide(); });

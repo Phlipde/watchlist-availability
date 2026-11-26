@@ -33,6 +33,14 @@ def test_similar_film_on_own_service_opens_from_the_details(app_server, page):
     expect(similar).to_contain_text("Similar on your services")
     similar.get_by_role("button", name="Heat (1995)").click()
     expect(page.locator("#film-details-title")).to_have_text("Heat")
+    # The new film starts at the top, with a way back to the one before.
+    assert page.locator("#film-details-content").evaluate("body => body.scrollTop") == 0
+    back = page.locator("#film-details-content [data-back]")
+    expect(back).to_have_text("Back to Alien")
+    expect(back).to_be_focused()
+    back.click()
+    expect(page.locator("#film-details-title")).to_have_text("Alien")
+    expect(page.locator("#film-details-content [data-back]")).to_have_count(0)
 
 
 def test_details_window_has_its_own_address(app_server, page):

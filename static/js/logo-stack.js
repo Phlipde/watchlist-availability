@@ -1,9 +1,10 @@
-// LogoStack: the first logos side by side, then a few overlapping, then "+N". Names come as a bubble on hover/tap.
-// On a card the whole stack opens the film's details at "Other services" (data-open-more, handled in app.js).
+// LogoStack: the best logo first and larger, then a few overlapping, then "+N". Names come as a bubble on hover/tap.
+// On a card "+N" and the space around the logos open the film's details at "Other services" (data-open-more,
+// film-details.js); a tap on a logo only shows its name.
 import {escapeHtml, initials} from './ui.js';
 
 export const WORDS = {free: 'Free', flatrate: 'Subscription', ads: 'With ads', rent: 'Rent', buy: 'Buy', abroad: 'Subscription'};
-export const WIDE = 3;         // the first logos (your services) sit side by side
+export const WIDE = 1;         // the best logo stands alone (larger on a card)
 export const OVERLAP_MAX = 2;  // then this many overlap, then "+N"
 
 // item: {name, kind, logo (url or ''), country ('Italy' for a service abroad), flag (country code), badge (html)}
@@ -20,7 +21,7 @@ const flagHtml = item => (item.flag ? `<span class="way-badge way-badge-flag" ar
 export function logoStackHtml(items, {key = ''} = {}) {
   if (!items.length) return '';
   const hidden = hiddenCount(items);
-  const cells = items.slice(0, WIDE + OVERLAP_MAX).map((item, index) => `<span class="lstack-item${index < WIDE ? ' is-wide' : ''}" data-tip="${escapeHtml(itemText(item))}">${logoHtml(item)}${item.badge || ''}${flagHtml(item)}</span>`).join('');
+  const cells = items.slice(0, WIDE + OVERLAP_MAX).map((item, index) => `<span class="lstack-item${index < WIDE ? ' is-wide' : ''}" role="img" aria-label="${escapeHtml(itemText(item))}" data-tip="${escapeHtml(itemText(item))}">${logoHtml(item)}${item.badge || ''}${flagHtml(item)}</span>`).join('');
   const more = hidden ? `<span class="lstack-more">+${hidden}</span>` : '';
   if (!key) return `<span class="lstack" role="img" aria-label="${escapeHtml(stackLabel(items))}">${cells}${more}</span>`;
   return `<div class="lstack" data-open-more data-key="${escapeHtml(key)}"><div class="lstack-row">${cells}${more}</div>`

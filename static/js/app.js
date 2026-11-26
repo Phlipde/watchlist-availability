@@ -2,14 +2,13 @@ import {escapeHtml, numberText} from './ui.js';
 import {createAppState, createScanState} from './state.js';
 import {bestAvailability} from './statistics.js';
 import {serviceGroup} from './catalog.js';
-import {emptyLink} from './link-filters.js';
 import {filmHref, renderResults, runtimeText} from './rendering.js';
 import './register-sw.js';
 import './icons.js';
 import {renderViews, wireViews} from './saved-views.js';
 import {COST, readFilters} from './filters.js';
 import {createFilterBar, initPopovers} from './filterbar.js';
-import {baseCounts, bestRelaxation, comingSoon, elsewhereOnServices, filmKey, filterFilms, sortRatings} from './filtering.js';
+import {baseCounts, comingSoon, relaxationCounts, elsewhereOnServices, filmKey, filterFilms, sortRatings} from './filtering.js';
 import {abroadFilm, abroadForFilm, abroadServices} from './abroad.js';
 import {initCountryPicker} from './country-picker.js';
 import {createToast} from './toast.js';
@@ -34,7 +33,7 @@ const state = createAppState();
     state.selected = linkProviders !== null ? new Set(linkProviders.split(',').filter(Boolean)) : mySubscriptions();
     state.genres = {include: new Set(), exclude: new Set()};
     state.seed = Math.floor(Math.random() * 2 ** 31);  // "Random" keeps one order per visit
-    const filterBar = createFilterBar({state, config: window.WATCHLIST_CONFIG, mySubscriptions, freeServices, rentalShops, onChange: () => renderFilms()});
+    const filterBar = createFilterBar({state, config: window.WATCHLIST_CONFIG, mySubscriptions, freeServices, rentalShops, onChange: () => renderFilms(), setFavoritesOnly: on => setFavoritesOnly(on)});
     initPopovers(document);
     const results = document.getElementById('results');
     const regionLabel = new Intl.DisplayNames(['en'], {type: 'region'});
@@ -99,6 +98,7 @@ const state = createAppState();
       const extra = [coming ? `+${coming} coming soon` : '', toCheck ? `<a href="/settings/matches">+${toCheck} to check</a>` : ''].filter(Boolean);
       document.getElementById('base-extra').innerHTML = extra.length ? ` · ${extra.join(' · ')}` : '';
     }
+    const WHERE = {all: 'Only here', both: 'Here and abroad', abroad: 'Only abroad'};
     const VIEW = window.WATCHLIST_CONFIG.view;  // "tonight" (start page) or "watchlist"
     // The switch shows how many films would come in; the cost segments show their abroad share while it is on.
     function showAbroadControls(filters, context, candidates, count, where) {
@@ -196,38 +196,17 @@ const state = createAppState();
       drawViews();
       renderComingSoon();
       document.getElementById('favorite-status-filter').hidden = !state.favoritesOnly;
-      document.getElementById('favorites-empty')?.toggleAttribute('hidden', !(state.favoritesOnly && view.visibleCount === 0 && view.unavailable.length === 0));
-      document.getElementById('favorites-banner').hidden = !state.favoritesOnly;
-      // "Why is my film missing?": say so and offer the way out instead of an empty page.
+      // "Why is my film missing?": each set filter with the films it keeps out; a tap removes just that one.
       const nothing = view.visibleCount === 0 && view.unavailable.length === 0;
-      document.getElementById('filters-empty').hidden = state.favoritesOnly || !nothing;
+      document.getElementById('filters-empty').hidden = !nothing;
       document.getElementById('empty-subscriptions').hidden = selected.size > 0;
-      // Name the one filter that keeps the most films out, with a button that removes just that one.
-      const way = nothing && selected.size ? bestRelaxation(state.films, filters, filterContext, relaxations()) : null;
-      document.getElementById('empty-relax').hidden = !way;
-      document.getElementById('filters-empty-hint').textContent = way ? `Without the ${way.label} filter there would be ${way.count}.` : 'No film matches these filters.';
-      if (way) { document.getElementById('empty-relax').dataset.filter = way.id; document.getElementById('empty-relax').textContent = `Remove ${way.label}`; }
+      emptyWays = nothing ? relaxationCounts(state.films, filters, filterContext, filterBar.activeChips().filter(chip => chip.without).map(chip => ({...chip, open: chip.without}))) : [];
+      document.getElementById('empty-ways').innerHTML = emptyWays.map((way, index) => `<li><button class="film-link" type="button" data-way="${index}">Without <strong>${escapeHtml(way.text)}</strong>: ${way.count}</button></li>`).join('');
+      document.getElementById('filters-empty-hint').textContent = emptyWays.length ? 'No film matches these filters. Remove one:' : 'No film matches these filters.';
       syncUrl();
       filterBar.updateChips();
     }
-    // Filters an empty result could drop: [{id, label, open(filters, context)}]; id is the control or "genres".
-    function relaxations() {
-      const reset = {
-        'film-search': ['search', {query: ''}], 'cost-filter': ['cost', {availability: 'available', kind: 'all'}],
-        'runtime-filter': ['runtime', {maxRuntime: 0}], 'lb-filter': ['Letterboxd rating', {minLetterboxd: 0}], 'tmdb-filter': ['TMDB rating', {minRating: 0}],
-        'year-from': ['year', {yearFrom: 0}], 'year-to': ['year', {yearTo: 9999}], 'min-votes': ['votes', {minVotes: 0}],
-        'keyword-filter': ['keyword', {keyword: 'all'}], 'media-filter': ['trailer', {media: 'all'}], 'change-filter': ['changes', {change: 'all'}],
-        'provider-count-filter': ['number of services', {minimumProviders: 0, exclusive: false}],
-        'age-filter': ['age rating', {age: 'all'}], 'language-filter': ['language', {language: 'all'}], 'origin-filter': ['country', {origin: 'all'}],
-      };
-      const candidates = Object.entries(reset).filter(([id]) => {
-        const input = document.getElementById(id);
-        return input && (input.type === 'checkbox' ? input.checked : input.dataset.default !== undefined ? input.value !== input.dataset.default : input.options ? input.value !== input.options[0].value : Boolean(input.value));
-      }).map(([id, [label, values]]) => ({id, label, open: (f, c) => [{...f, ...values}, c]}));
-      if (state.genres.include.size || state.genres.exclude.size) candidates.push({id: 'genres', label: 'genre', open: (f, c) => [{...f, genres: {include: [], exclude: []}}, c]});
-      if (JSON.stringify(state.link) !== JSON.stringify(emptyLink())) candidates.push({id: 'link', label: 'link filter', open: (f, c) => [{...f, link: emptyLink()}, c]});
-      return candidates;
-    }
+    let emptyWays = [];
     // Films that just left one of the user's services, from the stored changes of the last 14 days.
     function fillSelect(select, allText, values) {
       // A value from a link waits in data-pending until a scan brings films that have it.
@@ -319,13 +298,10 @@ const state = createAppState();
     const {loadFavorites, setFlag, toggleFavorite, updateFavoriteField} = createFilmFlags({state, results, showToast, renderFilms});
     document.getElementById('empty-reset').addEventListener('click', () => filterBar.resetAll());
     document.getElementById('empty-subscriptions').addEventListener('click', () => filterBar.setServices(mySubscriptions()));
-    document.getElementById('empty-relax').addEventListener('click', event => {
-      const id = event.currentTarget.dataset.filter;
-      if (id === 'genres') { state.genres = {include: new Set(), exclude: new Set()}; populateGenres(); renderFilms(); return; }
-      document.querySelector(`.filter-chip[data-filter-id="${id}"] .chip-remove`)?.click();
+    document.getElementById('empty-ways').addEventListener('click', event => {
+      const button = event.target.closest('[data-way]');
+      if (button) emptyWays[button.dataset.way]?.remove();
     });
-    document.getElementById('favorites-show-all').addEventListener('click', () => setFavoritesOnly(false));
-    document.getElementById('favorites-empty-all').addEventListener('click', () => setFavoritesOnly(false));
     const {showFilmDetails, openPendingFilm} = createFilmDetails({
       state, results, imageBaseUrl, openModal, modalOpeners, setDrawerKey: key => { lastDrawerKey = key; }, watchedKeys, hiddenKeys, includedOn, upcomingText,
       toggleFavorite, updateFavoriteField, setCompared, showToast, renderFilms,
@@ -378,7 +354,7 @@ const state = createAppState();
     // Typing in the search redraws only after a short pause, not on every key.
     let searchTimer;
     document.getElementById('film-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(renderFilms, 150); });
-    ['where-filter', 'show-unavailable', 'show-hidden', 'keyword-filter', 'age-filter', 'language-filter', 'origin-filter', 'lb-filter', 'tmdb-filter', 'year-from', 'year-to', 'min-votes', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => document.getElementById(id).addEventListener('input', renderFilms));
+    ['show-unavailable', 'show-hidden', 'keyword-filter', 'age-filter', 'language-filter', 'origin-filter', 'lb-filter', 'tmdb-filter', 'year-from', 'year-to', 'min-votes', 'media-filter', 'change-filter', 'provider-count-filter'].forEach(id => document.getElementById(id).addEventListener('input', renderFilms));
     const initialUrl = new URL(location.href).searchParams;
     const setInitial = (id, parameter, fallback) => {
       const element = document.getElementById(id);
@@ -403,19 +379,17 @@ const state = createAppState();
     // Older links used only=1 or availability=exclusive for what is now "Number of services: Only 1".
     if (initialUrl.get('only') === '1' || initialUrl.get('availability') === 'exclusive') document.getElementById('provider-count-filter').value = 'only1';
     document.getElementById('show-hidden').checked = initialUrl.get('hidden') === '1';
-    setInitial('where-filter', 'where', initialUrl.get('abroad') === '1' ? 'both' : 'all');
+    setWhere(initialUrl.get('where') ?? (initialUrl.get('abroad') === '1' ? 'both' : 'all'));
     filterBar.readUrl(initialUrl);
     filterBar.buildServicesMenu();
     ['sort-order', 'favorite-status-filter'].forEach(id => document.getElementById(id).addEventListener('change', renderFilms));
     const favoritesButton = document.getElementById('favorites-view');
-    const showHeart = on => {
-      favoritesButton.querySelector('i').className = on ? 'ti ti-heart-filled' : 'ti ti-heart';
-      document.getElementById('favorites-panel').checked = on;
-    };
+    const showHeart = on => { favoritesButton.querySelector('i').className = on ? 'ti ti-heart-filled' : 'ti ti-heart'; };
     state.favoritesOnly = initialUrl.get('favorites') === '1';
     // The button keeps its name; whether the view is on is said by aria-pressed and the line above the films.
     function setFavoritesOnly(on) {
       state.favoritesOnly = on;
+      if (!on) document.getElementById('favorite-status-filter').value = 'all';  // the status only narrows the favorites
       favoritesButton.classList.toggle('active', on);
       favoritesButton.setAttribute('aria-pressed', String(on));
       showHeart(on);
@@ -425,16 +399,19 @@ const state = createAppState();
     favoritesButton.setAttribute('aria-pressed', String(state.favoritesOnly));
     showHeart(state.favoritesOnly);
     favoritesButton.addEventListener('click', () => setFavoritesOnly(!state.favoritesOnly));
-    document.getElementById('favorites-panel').addEventListener('change', event => setFavoritesOnly(event.target.checked));
-    // The abroad switch and the "Where" field in the panel are one setting; Tonight remembers it in this browser.
+    // The abroad switch is the one place for "Where" (a hidden input); "Only abroad" comes from links (Tonight's row).
+    // Tonight remembers the switch in this browser.
+    function setWhere(value) {
+      const input = document.getElementById('where-filter');
+      input.value = WHERE[value] ? value : 'all';
+      input.dataset.text = WHERE[input.value];
+    }
     document.getElementById('abroad-toggle').addEventListener('click', event => {
       if (event.currentTarget.getAttribute('aria-disabled') === 'true') return;
-      const select = document.getElementById('where-filter');
-      select.value = select.value === 'all' ? 'both' : 'all';
-      localStorage.setItem('abroadOn', select.value === 'all' ? '' : '1');
+      setWhere(document.getElementById('where-filter').value === 'all' ? 'both' : 'all');
+      localStorage.setItem('abroadOn', document.getElementById('where-filter').value === 'all' ? '' : '1');
       renderFilms();
     });
-    document.getElementById('where-filter').addEventListener('change', event => localStorage.setItem('abroadOn', event.target.value === 'all' ? '' : '1'));
     document.querySelectorAll('[data-country-picker]').forEach(root => initCountryPicker(root, {onPick: switchCountry}));
     initPhoneSheet({results, filterBar});
     localStorage.removeItem('watchlistLayout');  // "Wide view" is gone; forget the old choice
