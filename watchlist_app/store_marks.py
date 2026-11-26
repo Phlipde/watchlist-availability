@@ -99,3 +99,26 @@ class MarkStore(StoreBase):
             "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
             (key, value),
         )
+
+    # ----- settings of one profile (store_schema.PROFILE_SETTING_KEYS) -----
+
+    def get_profile_setting(self, key: str, default: str | None = None, *, profile_id: int = 1) -> str | None:
+        rows = self._read(
+            "SELECT value FROM profile_settings WHERE profile_id = ? AND key = ?", (profile_id, key)
+        )
+        return rows[0][0] if rows else default
+
+    def profile_setting_keys(self, prefix: str, *, profile_id: int = 1) -> list[str]:
+        """Keys of one profile that start with `prefix` (no LIKE: `_` would be a wildcard)."""
+        rows = self._read(
+            "SELECT key FROM profile_settings WHERE profile_id = ? AND substr(key, 1, ?) = ?",
+            (profile_id, len(prefix), prefix),
+        )
+        return [row[0] for row in rows]
+
+    def set_profile_setting(self, key: str, value: str | None, *, profile_id: int = 1) -> None:
+        self._write(
+            "INSERT INTO profile_settings (profile_id, key, value) VALUES (?, ?, ?) "
+            "ON CONFLICT(profile_id, key) DO UPDATE SET value = excluded.value",
+            (profile_id, key, value),
+        )

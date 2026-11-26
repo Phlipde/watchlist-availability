@@ -1,9 +1,35 @@
-"""Migration of the database layout from version 1 (no profiles) to 2 (data owned by profile 1)."""
+"""Migration of the database layout from version 1 (no profiles) to 2 (data owned by profile 1) and 3
+(the settings of one person in profile_settings)."""
 
 import json
 import sqlite3
 
-from watchlist_app.store import SCHEMA_VERSION, Store
+from watchlist_app import store_base
+from watchlist_app.config import Settings
+from watchlist_app.settings import AppSettings
+from watchlist_app.store import INTERNAL_SETTINGS, SCHEMA_VERSION, Store
+
+# Settings of one person: version 3 moves them to profile_settings of profile 1.
+PERSONAL_SETTINGS = [
+    ("country", "DE"),
+    ("weekly_hours", "7.5"),
+    ("notify_kind", "ntfy"),
+    ("notify_url", "https://ntfy.example/t"),
+    ("notify_token", "secret"),
+    ("notify_events", '{"weekly": false}'),
+    ("notify_state", '{"checked": 5}'),
+    ("subscriptions:DE", '["Netflix"]'),
+    ("subscriptions:FR", "[]"),
+    ("subscription_costs:DE", '{"Netflix": {"price": 9.99, "remind_on": ""}}'),
+]
+# Settings of the whole app; they stay in settings.
+GLOBAL_SETTINGS = [
+    ("scan_interval_hours", "24"),
+    ("tmdb_regions", '{"codes": ["DE"], "fetched_at": 1}'),
+    ("matches_changed_at", "12.5"),
+    ("subscriptionXcosts:DE", "{}"),  # not the prefix: `_` is no wildcard
+    ("old_unknown_key", "x"),
+]
 
 # The layout of version 1, as it was in store_schema._SCHEMA; old databases look like this.
 V1_SCHEMA = """
@@ -125,7 +151,8 @@ def _v1_database(path, username="anna", version=1):
         "jobs": [
             ("job1", "done", "manual", "DE", None, None, None, 0, 0, 0, 0, "[]", 0, 0, 1.0, None, 2.0, 1)
         ],
-        "settings": [("country", "DE")]
+        "settings": PERSONAL_SETTINGS
+        + GLOBAL_SETTINGS
         + ([("letterboxd_username", username)] if username is not None else []),
     }
     for table, values in rows.items():
@@ -170,17 +197,16 @@ class TestMigrationToProfiles:
         rows = _v1_database(path)
         Store(path).close()
         connection = sqlite3.connect(path)
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 2
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 3
         for table in ("favorites", "flags", "service_history"):
             stored = connection.execute(f"SELECT * FROM {table}").fetchall()
             assert sorted(stored) == sorted((1, *row) for row in rows[table])  # profile_id comes first
         for table in ("scans", "changes", "jobs"):
             stored = connection.execute(f"SELECT * FROM {table}").fetchall()
             assert sorted(stored) == sorted((*row, 1) for row in rows[table])  # profile_id comes last
-        assert sorted(connection.execute("SELECT * FROM settings").fetchall()) == sorted(rows["settings"])
         assert connection.execute("SELECT id, name, email FROM profiles").fetchall() == [(1, "anna", None)]
         connection.close()
-        copy = sqlite3.connect(tmp_path / "old.sqlite3.pre-v2")
+        copy = sqlite3.connect(tmp_path / "old.sqlite3.pre-v3")
         assert copy.execute("PRAGMA user_version").fetchone()[0] == 1
         assert copy.execute("SELECT movie_key FROM favorites").fetchall() == [("lb:heat",)]
         copy.close()
@@ -231,3 +257,81 @@ class TestMigrationToProfiles:
         assert store._read("SELECT DISTINCT profile_id FROM favorites") == [(1,)]
         assert store._read("SELECT DISTINCT profile_id FROM flags") == [(1,)]
         assert "profile_id" not in json.dumps(store.export_backup())  # the backup format is unchanged
+
+
+def _settings_rows(path):
+    connection = sqlite3.connect(path)
+    personal = sorted(connection.execute("SELECT profile_id, key, value FROM profile_settings").fetchall())
+    shared = sorted(connection.execute("SELECT key, value FROM settings").fetchall())
+    connection.close()
+    return personal, shared
+
+
+class TestMigrationOfProfileSettings:
+    def test_from_version_1_the_personal_settings_move_to_profile_1(self, tmp_path):
+        path = tmp_path / "old.sqlite3"
+        _v1_database(path)
+        Store(path).close()
+        personal, shared = _settings_rows(path)
+        moved = PERSONAL_SETTINGS + [("letterboxd_username", "anna")]
+        assert personal == sorted((1, key, value) for key, value in moved)
+        assert shared == sorted(GLOBAL_SETTINGS)
+
+    def test_from_version_2_the_personal_settings_move_to_profile_1(self, tmp_path, monkeypatch):
+        path = tmp_path / "old.sqlite3"
+        _v1_database(path)
+        with monkeypatch.context() as patch:
+            patch.setattr(store_base, "SCHEMA_VERSION", 2)
+            Store(path).close()
+        connection = sqlite3.connect(path)
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert connection.execute("SELECT name FROM profiles").fetchall() == [("anna",)]
+        v2_settings = sorted(connection.execute("SELECT key, value FROM settings").fetchall())
+        connection.close()
+        Store(path).close()
+        personal, shared = _settings_rows(path)
+        assert [
+            (1, key, value) for key, value in v2_settings if (key, value) not in GLOBAL_SETTINGS
+        ] == personal
+        assert shared == sorted(GLOBAL_SETTINGS)
+        copy = sqlite3.connect(tmp_path / "old.sqlite3.pre-v3")
+        assert copy.execute("PRAGMA user_version").fetchone()[0] == 2
+        copy.close()
+
+    def test_the_backup_holds_the_same_settings_as_before(self, tmp_path):
+        path = tmp_path / "old.sqlite3"
+        rows = _v1_database(path)
+        store = Store(path)
+        expected = {key: value for key, value in rows["settings"] if key not in INTERNAL_SETTINGS}
+        assert store.export_backup()["settings"] == expected
+        assert "notify_token" not in expected and "notify_state" not in expected
+
+    def test_an_old_backup_restores_into_profile_1(self, tmp_path):
+        path = tmp_path / "old.sqlite3"
+        _v1_database(path)
+        backup = json.loads(json.dumps(Store(path).export_backup()))
+        fresh = Store(tmp_path / "fresh.sqlite3")
+        fresh.import_backup(backup)
+        AppSettings(fresh, Settings("key", None, "GB", tmp_path)).restore(backup["settings"])
+        personal = dict(fresh._read("SELECT key, value FROM profile_settings WHERE profile_id = 1"))
+        assert personal["country"] == "DE" and personal["letterboxd_username"] == "anna"
+        assert json.loads(personal["subscriptions:DE"]) == ["Netflix"]
+        assert json.loads(personal["subscription_costs:DE"])["Netflix"]["price"] == 9.99
+        assert "notify_token" not in personal and "notify_state" not in personal
+        assert dict(fresh._read("SELECT key, value FROM settings")) == {"scan_interval_hours": "24"}
+
+
+def test_a_second_profile_does_not_see_the_services_of_profile_1(tmp_path):
+    store = Store(":memory:")
+    store.save_provider_catalog("ZZ", [{"name": name} for name in ("Netflix", "MUBI", "Arte")])
+    defaults = Settings("key", None, "DE", tmp_path)
+    first = AppSettings(store, defaults)
+    second = AppSettings(store, defaults, profile_id=2)
+    untouched = second.subscriptions("DE")
+    first.update({"subscriptions": ["MUBI", "Arte"], "costs": {"MUBI": {"price": 12}}})
+    assert first.subscriptions("DE") == ["MUBI", "Arte"]
+    assert second.subscriptions("DE") == untouched != first.subscriptions("DE")
+    assert second.costs("DE") == {} and second.countries_in_use() == ["DE"]
+    second.update({"country": "FR", "subscriptions_country": "DE", "subscriptions": ["Netflix"]})
+    assert (first.country, second.country) == ("DE", "FR")
+    assert first.subscriptions("DE") == ["MUBI", "Arte"] and second.subscriptions("DE") == ["Netflix"]

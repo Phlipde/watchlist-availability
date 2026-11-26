@@ -5,6 +5,30 @@ MATCHES_CHANGED_SETTING = "matches_changed_at"
 # Settings the app keeps for itself; they are not part of a backup.
 REGIONS_SETTING = "tmdb_regions"  # the countries TMDB has offers for, as JSON with the fetch time
 INTERNAL_SETTINGS = frozenset({MATCHES_CHANGED_SETTING, "notify_token", "notify_state", REGIONS_SETTING})
+# Settings of one person, kept in profile_settings; every other key stays global in settings.
+PROFILE_SETTING_KEYS = frozenset(
+    {
+        "letterboxd_username",
+        "country",
+        "weekly_hours",
+        "notify_kind",
+        "notify_url",
+        "notify_token",
+        "notify_events",
+        "notify_state",
+    }
+)
+PROFILE_SETTING_PREFIXES = ("subscriptions:", "subscription_costs:")
+
+
+def is_profile_setting(key: str) -> bool:
+    return key in PROFILE_SETTING_KEYS or key.startswith(PROFILE_SETTING_PREFIXES)
+
+
+# The same test in SQL, for the migration (substr, not LIKE: `_` would be a wildcard).
+_PROFILE_KEYS_SQL = (
+    "key IN ({}) OR substr(key, 1, 14) = 'subscriptions:' OR substr(key, 1, 19) = 'subscription_costs:'"
+).format(", ".join(f"'{key}'" for key in sorted(PROFILE_SETTING_KEYS)))
 # Fields that identify a stored change, used to skip duplicates when restoring a backup.
 CHANGE_IDENTITY = ("created", "country", "film_key", "provider", "change")
 
@@ -148,6 +172,12 @@ CREATE TABLE IF NOT EXISTS profiles (
     created REAL NOT NULL
 );
 INSERT OR IGNORE INTO profiles (id, name, created) VALUES (1, 'Me', (julianday('now') - 2440587.5) * 86400.0);
+CREATE TABLE IF NOT EXISTS profile_settings (
+    profile_id INTEGER NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT,
+    PRIMARY KEY (profile_id, key)
+);
 """
 
 # The database layout is versioned with SQLite's `user_version`. Version 1 is the baseline of 2026-11-22 (the
@@ -155,7 +185,7 @@ INSERT OR IGNORE INTO profiles (id, name, created) VALUES (1, 'Me', (julianday('
 # and only runs on an empty database; an older one goes through the migrations.
 # A later change: put the SQL from version N-1 to N into _MIGRATIONS[N] (in BEGIN; ... COMMIT; with its
 # user_version, so a crash leaves the old layout), raise SCHEMA_VERSION to N and change _SCHEMA the same way.
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 _MIGRATIONS: dict[int, str] = {
     # 2: profiles; favorites, flags and service_history get profile_id in their key, scans, changes and jobs
     # an owner column. Everything that exists belongs to profile 1.
@@ -222,6 +252,22 @@ ALTER TABLE jobs ADD COLUMN profile_id INTEGER NOT NULL DEFAULT 1;
 CREATE INDEX changes_by_owner ON changes (profile_id, country, created);
 CREATE INDEX scans_by_owner ON scans (profile_id, country, created);
 PRAGMA user_version = 2;
+COMMIT;
+""",
+    # 3: the settings of one person move from settings to profile_settings, owned by profile 1. Version 2
+    # has already named profile 1 after the stored letterboxd_username.
+    3: f"""
+BEGIN;
+CREATE TABLE profile_settings (
+    profile_id INTEGER NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT,
+    PRIMARY KEY (profile_id, key)
+);
+INSERT INTO profile_settings (profile_id, key, value)
+SELECT 1, key, value FROM settings WHERE {_PROFILE_KEYS_SQL};
+DELETE FROM settings WHERE {_PROFILE_KEYS_SQL};
+PRAGMA user_version = 3;
 COMMIT;
 """,
 }

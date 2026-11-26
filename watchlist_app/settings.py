@@ -4,6 +4,7 @@ import json
 
 from . import config, costs, providers
 from .store import REGIONS_SETTING, Store
+from .store_schema import is_profile_setting
 
 # Shorter than a day would change nothing: a scan and its offers are reused for 24 hours.
 SCAN_INTERVALS_HOURS = (0, 24, 48, 168)
@@ -19,9 +20,22 @@ class AppSettings:
     the start values. The TMDB key stays in the environment and is never stored.
     """
 
-    def __init__(self, store: Store, defaults: config.Settings | None = None):
+    def __init__(self, store: Store, defaults: config.Settings | None = None, profile_id: int = 1):
         self._store = store
         self._defaults = defaults or config.load_settings()
+        self.profile_id = profile_id
+
+    def _get(self, key: str) -> str | None:
+        """A stored value: the profile's own for a per-person key, else the global one."""
+        if is_profile_setting(key):
+            return self._store.get_profile_setting(key, profile_id=self.profile_id)
+        return self._store.get_setting(key)
+
+    def _set(self, key: str, value: str) -> None:
+        if is_profile_setting(key):
+            self._store.set_profile_setting(key, value, profile_id=self.profile_id)
+        else:
+            self._store.set_setting(key, value)
 
     @property
     def tmdb_api_key(self) -> str | None:
@@ -33,21 +47,21 @@ class AppSettings:
 
     @property
     def letterboxd_username(self) -> str | None:
-        stored = self._store.get_setting("letterboxd_username")
+        stored = self._get("letterboxd_username")
         if stored is None:
             return self._defaults.letterboxd_username
         return stored or None
 
     @property
     def country(self) -> str:
-        stored = self._store.get_setting("country")
+        stored = self._get("country")
         return stored if config.valid_country(stored) else self._defaults.country
 
     @property
     def scan_interval_hours(self) -> int:
         """Hours between automatic scans; 0 switches the schedule off."""
         try:
-            return max(0, int(self._store.get_setting("scan_interval_hours") or "0"))
+            return max(0, int(self._get("scan_interval_hours") or "0"))
         except (TypeError, ValueError):
             return 0
 
@@ -55,28 +69,28 @@ class AppSettings:
     def weekly_hours(self) -> float:
         """Hours of films the user watches in a week (for "your pace" on the subscriptions page)."""
         try:
-            hours = float(self._store.get_setting("weekly_hours") or DEFAULT_WEEKLY_HOURS)
+            hours = float(self._get("weekly_hours") or DEFAULT_WEEKLY_HOURS)
         except (TypeError, ValueError):
             return DEFAULT_WEEKLY_HOURS
         return hours if 0.5 <= hours <= 80 else DEFAULT_WEEKLY_HOURS
 
     @property
     def notify_kind(self) -> str:
-        kind = self._store.get_setting("notify_kind") or ""
+        kind = self._get("notify_kind") or ""
         return kind if kind in NOTIFY_KINDS else ""
 
     @property
     def notify_url(self) -> str:
-        return self._store.get_setting("notify_url") or ""
+        return self._get("notify_url") or ""
 
     @property
     def notify_token(self) -> str:
-        return self._store.get_setting("notify_token") or ""
+        return self._get("notify_token") or ""
 
     @property
     def notify_events(self) -> dict[str, bool]:
         try:
-            stored = json.loads(self._store.get_setting("notify_events") or "{}")
+            stored = json.loads(self._get("notify_events") or "{}")
         except ValueError:
             stored = {}
         stored = stored if isinstance(stored, dict) else {}
@@ -94,7 +108,7 @@ class AppSettings:
     def subscriptions(self, country: str | None = None) -> list[str]:
         """The user's own services for a country (display names)."""
         country = country or self.country
-        stored = self._store.get_setting(f"subscriptions:{country}")
+        stored = self._get(f"subscriptions:{country}")
         known = self.known_providers()
         # platforms.toml is only a start value; a country without a section starts empty.
         names = [name for name in providers.load_platforms_config(country) if name in known]
@@ -107,7 +121,7 @@ class AppSettings:
 
     def costs(self, country: str | None = None) -> dict[str, dict]:
         """Monthly price and reminder date per own service: {name: {"price", "remind_on"}}."""
-        stored = self._store.get_setting(f"subscription_costs:{country or self.country}")
+        stored = self._get(f"subscription_costs:{country or self.country}")
         try:
             return json.loads(stored) if stored else {}
         except ValueError:
@@ -116,7 +130,7 @@ class AppSettings:
     def country_choices(self) -> list[str]:
         """Countries the picker offers: TMDB's list (a scan loads it), else every flag."""
         try:
-            stored = json.loads(self._store.get_setting(REGIONS_SETTING) or "{}")
+            stored = json.loads(self._get(REGIONS_SETTING) or "{}")
         except ValueError:
             stored = {}
         codes = stored.get("codes") if isinstance(stored, dict) else None
@@ -127,7 +141,10 @@ class AppSettings:
         """The app's country plus every country with saved services or prices, sorted."""
         codes = {self.country}
         for prefix in ("subscriptions:", "subscription_costs:"):
-            codes.update(key[len(prefix) :] for key in self._store.setting_keys(prefix))
+            codes.update(
+                key[len(prefix) :]
+                for key in self._store.profile_setting_keys(prefix, profile_id=self.profile_id)
+            )
         return sorted(code for code in codes if config.valid_country(code))
 
     def targets(self, country: str | None = None) -> dict[str, str]:
@@ -175,13 +192,13 @@ class AppSettings:
                     if not config.valid_country(country) or not isinstance(names, list):
                         raise ValueError("Invalid subscriptions.")
                     clean = [name[:200] for name in names[:500] if isinstance(name, str) and name.strip()]
-                    self._store.set_setting(key, json.dumps(clean))
+                    self._set(key, json.dumps(clean))
                 elif isinstance(key, str) and key.startswith("subscription_costs:"):
                     raw = json.loads(value) if isinstance(value, str) else value
                     if not config.valid_country(key.split(":", 1)[1]) or not isinstance(raw, dict):
                         raise ValueError("Invalid costs.")
                     names = {name for name in raw if isinstance(name, str) and len(name) <= 200}
-                    self._store.set_setting(key, json.dumps(costs.clean_costs(raw, names)))
+                    self._set(key, json.dumps(costs.clean_costs(raw, names)))
                 else:
                     continue
                 restored += 1
@@ -258,4 +275,4 @@ class AppSettings:
                 costs.clean_costs(changes["costs"], set(own))
             )
         for key, value in validated.items():
-            self._store.set_setting(key, value)
+            self._set(key, value)

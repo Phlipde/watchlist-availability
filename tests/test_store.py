@@ -141,7 +141,7 @@ class TestJobs:
 
 class TestBackup:
     def _fill(self, store):
-        store.set_setting("country", "GB")
+        store.set_profile_setting("country", "GB")
         store.add_favorite({"key": "949", "title": "Heat", "status": "watching", "notes": "n"})
         store.add_changes(
             "DE",
@@ -191,7 +191,7 @@ class TestBackup:
             "skipped": 0,
         }
         # Settings are restored by AppSettings.restore, with the checks of the settings page.
-        assert fresh.get_setting("country") is None
+        assert fresh.get_profile_setting("country") is None
         assert fresh.list_favorites()[0]["status"] == "watching"
         assert fresh.recent_changes("DE", 0)[0]["created"] == 50.0
         restored = fresh.latest_scan("DE")
@@ -332,7 +332,7 @@ class TestSchemaVersion:
         path = tmp_path / "prod.sqlite3"
         _v1_database(path, version=0)  # the baseline layout before it was versioned
         again = Store(path)
-        assert again.get_setting("country") == "DE"
+        assert again.get_profile_setting("country") == "DE"
         assert again._read("PRAGMA user_version")[0][0] == SCHEMA_VERSION
         assert again._read("SELECT profile_id, movie_key FROM favorites") == [(1, "lb:heat")]
 

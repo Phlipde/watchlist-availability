@@ -35,9 +35,10 @@ def test_settings_accept_any_country(settings):
 
 
 def test_countries_in_use_are_the_country_and_those_with_saved_services(settings):
-    settings._store.set_setting("subscriptions:FR", "[]")
-    settings._store.set_setting("subscription_costs:PL", "{}")
-    settings._store.set_setting("subscriptionsXIT", "[]")  # not the prefix
+    settings._store.set_profile_setting("subscriptions:FR", "[]")
+    settings._store.set_profile_setting("subscription_costs:PL", "{}")
+    settings._store.set_profile_setting("subscriptionsXIT", "[]")  # not the prefix
+    settings._store.set_profile_setting("subscriptions:GB", "[]", profile_id=2)  # another profile
     assert settings.countries_in_use() == ["DE", "FR", "PL"]
 
 

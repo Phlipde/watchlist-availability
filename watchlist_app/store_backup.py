@@ -27,9 +27,13 @@ class BackupStore(FilmStore, ScanStore, MarkStore):
         return {
             "version": store_module.BACKUP_VERSION,
             "exported_at": time.time(),
+            # Backup version 1 holds one person: the global settings plus those of profile 1, in one dict.
             "settings": {
                 key: value
-                for key, value in self._read("SELECT key, value FROM settings")
+                for key, value in self._read(
+                    "SELECT key, value FROM settings "
+                    "UNION ALL SELECT key, value FROM profile_settings WHERE profile_id = 1"
+                )
                 if key not in INTERNAL_SETTINGS
             },
             "favorites": self.list_favorites(),

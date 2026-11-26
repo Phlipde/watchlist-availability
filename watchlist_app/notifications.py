@@ -31,9 +31,9 @@ def in_quiet_hours(now: float) -> bool:
     return hour >= QUIET_FROM or hour < QUIET_TO
 
 
-def _state(store: Store) -> dict[str, Any]:
+def _state(store: Store, profile_id: int) -> dict[str, Any]:
     try:
-        state = json.loads(store.get_setting(STATE_KEY) or "{}")
+        state = json.loads(store.get_profile_setting(STATE_KEY, profile_id=profile_id) or "{}")
     except ValueError:
         state = {}
     return state if isinstance(state, dict) else {}
@@ -93,7 +93,7 @@ def build_message(
             lines.append(f"… and {len(new) - 10} more")
     if events["deadline"]:
         today = datetime.date.fromtimestamp(now)
-        sent = set(_state(store).get("deadlines", []))
+        sent = set(_state(store, settings.profile_id).get("deadlines", []))
         for item in costs.upcoming_deadlines(settings.costs(country), today, days=3):
             marker = f"{item['name']}|{item['date']}|{1 if item['days'] <= 1 else 3}"
             if item["days"] in (1, 3) and marker not in sent:
@@ -132,7 +132,7 @@ def run_notifications(
     kind, url = settings.notify_kind, settings.notify_url
     if not kind or not url or in_quiet_hours(now):
         return False
-    state = _state(store)
+    state = _state(store, settings.profile_id)
     if now - state.get("last_sent", 0) < DAY:
         return False
     local = datetime.datetime.fromtimestamp(now)
@@ -150,7 +150,7 @@ def run_notifications(
         message = build_message(store, settings, state.get("checked", now - DAY), now, base_url)
     if message is None:
         state["checked"] = now
-        store.set_setting(STATE_KEY, json.dumps(state))
+        store.set_profile_setting(STATE_KEY, json.dumps(state), profile_id=settings.profile_id)
         return False
     try:
         send(kind, url, settings.notify_token, message["title"], message["body"], message.get("click"))
@@ -164,5 +164,5 @@ def run_notifications(
         if item["days"] in (1, 3):
             sent.append(f"{item['name']}|{item['date']}|{1 if item['days'] <= 1 else 3}")
     state["deadlines"] = sent[-200:]
-    store.set_setting(STATE_KEY, json.dumps(state))
+    store.set_profile_setting(STATE_KEY, json.dumps(state), profile_id=settings.profile_id)
     return True
