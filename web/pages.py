@@ -94,10 +94,22 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
     def status_page():
         return page("status.html", status=status_overview(store, active_settings(settings), service))
 
+    other_cache: dict[tuple, list[dict]] = {}
+
     def _other_countries(scan: dict | None, own: list[str], country: str) -> list[dict]:
         """Countries where your services show more of the watchlist (stored offers, no TMDB request)."""
         if not scan:
             return []
+        # It reads the offers of every country (about a second): the same scan, offers and services give the
+        # same answer, so keep the last few, as /api/abroad does.
+        key = (scan["id"], store.offers_version, tuple(sorted(own)), country)
+        if key not in other_cache:
+            if len(other_cache) >= 8:
+                other_cache.pop(next(iter(other_cache)))
+            other_cache[key] = _count_other_countries(scan, own, country)
+        return other_cache[key]
+
+    def _count_other_countries(scan: dict, own: list[str], country: str) -> list[dict]:
         ids = [film["tmdb_id"] for film in scan["results"] if isinstance(film.get("tmdb_id"), int)]
         raw = store.offers_for(ids)
         by_country = {

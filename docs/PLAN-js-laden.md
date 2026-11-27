@@ -19,7 +19,7 @@ Gemessen mit Playwright (Chromium, Service Worker aus) gegen eine Kopie der Date
 - **Schritt 2:** Jedes `url_for('static', ...)` bekommt `?v=<Hash des Inhalts>` (`static_version`). Solche Adressen werden ein Jahr gecacht (`immutable`). Die eigenen JS-Module bekommen bewusst **kein** `?v=`: Sie importieren einander ohne, und `index.html` lädt sie per `modulepreload` vor. Eine zweite Adresse hätte jedes Modul doppelt geladen; das zeigte die erste Messung nach dem Umbau (78 statt 42 Dateien). Die von Hand geschriebenen `v=` in den Vorlagen sind entfernt.
 - **Schritt 3 gibt es schon:** `index.html` schreibt `modulepreload` für alle Module.
 - **Fund:** Die Tonight-Seite rechnete für den Spar-Tipp `costs.overview()` mit 190 000 Aufrufen von `service_group()`, die jedes Mal Regex auswerteten. `service_group` und `catalog_name` merken sich jetzt ihre Ergebnisse (`functools.cache`).
-- **Offen:** `/subscriptions` braucht auf dem Server noch rund 1 s, davon gut die Hälfte für `_other_countries` (Angebote anderer Länder aus `offers_for`). Eigene kleine Etappe, wenn es stört.
+- **Abo-Seite:** `_other_countries` liest die Angebote aller Länder; die Antwort wird jetzt je Scan, Angebotsstand (`offers_version`), Diensten und Land gemerkt, wie bei `/api/abroad`. `/subscriptions` braucht damit rund 0,3 s statt 1 bis 1,5 s; nur der erste Aufruf nach einem Scan oder Neustart rechnet noch einmal (rund 1,5 s).
 
 Die Planung von vorher folgt unverändert.
 

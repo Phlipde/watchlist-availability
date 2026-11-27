@@ -196,3 +196,27 @@ class TestAbroad:
         assert data == {"7": {"Netflix": {"AT": "flatrate"}}}
         assert client.get("/api/abroad?country=DE&services=MUBI").get_json() == {}
         assert client.get("/api/abroad?country=ZZ&services=Netflix").status_code == 400
+
+
+def test_subscriptions_page_reads_the_offers_of_all_countries_once_per_version(
+    client, store, settings, monkeypatch
+):
+    settings.update({"subscriptions": ["Netflix"]})
+    store.save_scan(
+        "DE",
+        "letterboxd",
+        None,
+        [{"key": "7", "tmdb_id": 7, "title": "Heat", "providers": {}}],
+        [],
+        {},
+        profile_id=1,
+    )
+    calls = []
+    real = store.offers_for
+    monkeypatch.setattr(store, "offers_for", lambda ids: calls.append(ids) or real(ids))
+    client.get("/subscriptions")
+    client.get("/subscriptions")
+    assert len(calls) == 1  # the second page comes from the cache
+    store.save_bundle(7, {"details": {}, "providers": {"AT": {"Netflix": ["flatrate"]}}})
+    client.get("/subscriptions")
+    assert len(calls) == 2  # new offers: counted again
