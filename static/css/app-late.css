@@ -31,7 +31,7 @@
   .svc-row td.num { white-space: normal; }
   .svc-row td::before { content: attr(data-label); display: block; color: var(--muted); font-size: var(--fs-small); }
   .svc-row td.svc-status::before { content: none; }
-  .svc-row td:not(.svc-status):not([data-label="Films"]):not([data-label="Only here"]):not([data-label="Hours"]) { display: none; }
+  .svc-row td:not(.svc-status):not([data-label="Films"]):not([data-label="Nowhere else"]):not([data-label="Hours"]) { display: none; }
   .svc-table .svc-row.open td { display: block !important; }
   .svc-name { min-height: 44px; font-weight: 600; }
   .svc-detail td { display: block; margin: -4px 0 8px; border: 1px solid var(--line-card); border-radius: .5rem; }
@@ -252,3 +252,42 @@ input[type=search]:not(#svc-q) { padding-left: 32px; background-image: url("data
 
 /* Touch: every tap target at least 44 px (the collapsed result panels, the Buy group, the card's logo stack). */
 @media (pointer: coarse) { details.unavailable > summary, .offer-buy > summary { display: flex; align-items: center; min-height: 44px; } .lstack-toggle { min-width: 44px; } }
+
+/* A scan in progress: a slim line at the very top; the films below stay as they were. */
+.scan-line { position: fixed; inset: 0 0 auto; z-index: 1040; height: 3px; background: var(--line); pointer-events: none; }
+.scan-line > span { display: block; width: 0; height: 100%; background: var(--accent); transition: width .3s ease-out; }
+/* A card without a poster: title and year on a calm surface instead of an empty grey box. */
+.no-poster { align-content: center; gap: 6px; background: var(--surface); }
+.no-poster-title { color: var(--text); font: 600 var(--fs-text)/1.25 system-ui, sans-serif; overflow-wrap: anywhere; }
+.no-poster-year { color: var(--muted); font-size: var(--fs-body); }
+
+/* Abroad countries in the drawer: folded regions of flags, a search from 10 countries. */
+.flag-search { max-width: 240px; margin: 6px 0 4px; }
+.flag-region > summary { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; color: var(--text-2); font: 600 var(--fs-small) system-ui, sans-serif; cursor: pointer; }
+.flag-region-count { color: var(--muted); font-weight: 400; }
+.flag-region ul { padding: 2px 0 6px; }
+@media (pointer: coarse) { .flag-region > summary { min-height: 44px; } }
+
+/* Card logos: the best way larger, the others overlap behind it, then "+N"; at least 20px each. */
+.lstack-logo { width: 20px; height: 20px; }
+.best-way .lstack-item:first-child .lstack-logo { width: 28px; height: 28px; }
+.lstack-item + .lstack-item { margin-left: -6px; }
+.best-way .lstack-item:first-child + .lstack-item { margin-left: 4px; }
+.lstack-item:not(:first-child) .lstack-logo { box-shadow: 0 0 0 2px var(--surface); }
+.lstack-item { cursor: default; }
+
+/* Histograms in Stats: a bin is named by its start ("90" for 90–104); with many bins only every second name shows. */
+.histo.is-dense li:nth-child(even) .histo-label { visibility: hidden; }
+.histo.is-dense .histo-label { overflow: visible; }  /* the hidden neighbours leave room */
+
+/* The CSV picker: our own button and the file's name; the native field stays for the keyboard, out of sight. */
+.file-pick { position: relative; display: flex; align-items: center; gap: 8px; margin-top: 6px; min-width: 0; }
+.file-input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.file-input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.file-name { min-width: 0; overflow: hidden; color: var(--muted); font-size: var(--fs-small); text-overflow: ellipsis; white-space: nowrap; }
+/* Genre hint: Alt-click only means something with a mouse. */
+.hint-touch { display: none; }
+@media (pointer: coarse) { .hint-mouse { display: none; } .hint-touch { display: inline; } }
+
+/* Touch: the parts of a filter chip are 44px targets each (the x removes, the text opens the filter). */
+@media (pointer: coarse) { .filter-chip .chip-open, .filter-chip .chip-remove { min-height: 44px; } .filter-chip .chip-remove { min-width: 44px; } }

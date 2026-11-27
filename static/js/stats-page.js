@@ -24,7 +24,7 @@ function render(stats, scan) {
     ${changes(stats)}
     <section class="stats-section" id="services-section"></section>`;
   wirePeople(stats, root.querySelector('#people'));
-  mountServiceTable(document.getElementById('services-section'), stats.serviceValue, {total: stats.overview.total, imageBaseUrl: config.imageBaseUrl});
+  mountServiceTable(document.getElementById('services-section'), stats.serviceValue, {total: stats.overview.total - stats.overview.comingSoon, imageBaseUrl: config.imageBaseUrl});
   root.setAttribute('aria-busy', 'false');
   // A link like ?svcq=Disney%2B#services-section scrolls once the table exists; Back from the watchlist returns to where you were.
   const back = performance.getEntriesByType('navigation')[0]?.type === 'back_forward';

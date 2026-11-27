@@ -21,6 +21,23 @@ function offersByGroup(film) {
   return groups;
 }
 const watchableGroups = offers => [...offers].filter(([, entry]) => WATCH.some(kind => entry.kinds.has(kind))).map(([group]) => group);
+// "Only here" (the same rule as on Subscriptions, costs.only_on_my_services): none of your other services has the
+// film and no other service shows it for free, so cancelling `group` loses it.
+const lostOnCancel = (offers, group, ownGroups) => [...offers].every(([other, entry]) => other === group
+  || !(['free', 'ads'].some(kind => entry.kinds.has(kind)) || (ownGroups.has(other) && entry.kinds.has('flatrate'))));
+
+// Newest first, one event per film, service and day: "Hot Fuzz new on RTL+ Max Amazon Channel" and "... on RTL+"
+// are one service (serviceGroup), shown under the group's name.
+export function oneChangePerService(changes) {
+  const seen = new Set();
+  return [...changes].sort((a, b) => b.created - a.created).flatMap(change => {
+    const provider = serviceGroup(change.provider);
+    const key = [change.film_key, change.change, provider, new Date(change.created * 1000).toISOString().slice(0, 10)].join('|');
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [{...change, provider}];
+  });
+}
 
 // computeStats(scan, {subscriptions, prices, favorites, now}) -> watchlistStats plus the decision numbers of the plan.
 // prices: {service: monthly price}; without a price nothing about money is returned for that service.
@@ -37,7 +54,8 @@ export function computeStats(scan, {subscriptions = [], prices = {}, favorites =
   const availabilityBreakdown = AVAILABILITY.map(kind => ({kind, films: where(kind).length, hours: hoursOf(where(kind))}));
   const hoursAvailableNow = hoursOf(films.filter(film => NOW_WATCHING.includes(best.get(film))));
 
-  // Per service group. "Exclusive": no other group shows the film without paying per film.
+  // Per service group. "Exclusive" ("Nowhere else"): no other group shows the film without paying per film.
+  // "Only here" (own groups): what cancelling loses, see lostOnCancel.
   const names = new Set();
   films.forEach(film => offers.get(film).forEach((_, group) => names.add(group)));
   const serviceValue = [...names].map(group => {
@@ -51,16 +69,17 @@ export function computeStats(scan, {subscriptions = [], prices = {}, favorites =
     const price = priced.length ? priced.reduce((sum, plan) => sum + prices[plan], 0) : null;
     const has = kind => entries.filter(entry => entry.kinds.has(kind)).length;
     const isOwn = ownGroups.has(group);
+    const onlyHere = isOwn ? watchable.filter(film => lostOnCancel(offers.get(film), group, ownGroups)) : [];
     // A rent store with three ad-supported films (Rakuten TV) is still a store: it counts by what most of its films are.
     const rentFilms = has('rent') + has('buy') - entries.filter(entry => entry.kinds.has('rent') && entry.kinds.has('buy')).length;
     const status = isOwn ? 'own' : rentFilms > has('flatrate') + has('free') + has('ads') ? 'store' : has('flatrate') ? 'other' : 'free';
     return {
       group, plans, status, own: isOwn,
-      films: on.length, watchable: watchable.length, exclusive: exclusive.length,
+      films: on.length, watchable: watchable.length, exclusive: exclusive.length, onlyHere: onlyHere.length,
       hours: hoursOf(on), exclusiveHours: hoursOf(exclusive),
       free: has('free'), ads: has('ads'), subscription: has('flatrate'), rent: rentFilms,
       averageRating: average(on.map(ratingOf).filter(value => value > 0)),
-      price, costPerExclusiveFilm: price && exclusive.length ? price / exclusive.length : null,
+      price, costPerLostFilm: price && onlyHere.length ? price / onlyHere.length : null,
       topFilms: [...watchable].sort((a, b) => ratingOf(b) - ratingOf(a)).slice(0, 5),
     };
   }).sort((a, b) => b.films - a.films || a.group.localeCompare(b.group));
@@ -93,7 +112,7 @@ export function computeStats(scan, {subscriptions = [], prices = {}, favorites =
     ...base,
     runtimeHistogram: {bins: histogram(runtimes, runtimeBins), average: average(runtimes)},
     ratingHistogram: {bins: histogram(ratings, ratingBins), average: average(ratings)},
-    recentChanges: [...(scan.changes || [])].sort((a, b) => b.created - a.created).slice(0, 10),
+    recentChanges: oneChangePerService(scan.changes || []).slice(0, 10),
     availabilityBreakdown,
     hoursAvailableNow,
     serviceValue,

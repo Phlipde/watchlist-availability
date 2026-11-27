@@ -26,9 +26,22 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
         latest = store.latest_scan(settings.country)
         films, unavailable = (latest["results"], latest["unavailable"]) if latest else ([], [])
         initial_filters = {"query": request.args.get("q", ""), "sort": request.args.get("sort", SORTS[0][0])}
+        # Tonight names the cancel tip in one line, only when Subscriptions has one.
+        hint = None
+        if view == "tonight" and latest:
+            hint = costs.cancel_hint(
+                costs.overview(
+                    films,
+                    settings.subscriptions(settings.country),
+                    settings.costs(settings.country),
+                    base.base_counts(latest)["not_available"],
+                    weekly_hours=settings.weekly_hours,
+                )["recommendations"]
+            )
         return page(
             "index.html",
             view=view,
+            cancel_hint=hint,
             needs_username=not settings.letterboxd_username and not latest,
             needs_tmdb=not settings.tmdb_api_key,
             country=settings.country,
@@ -114,6 +127,7 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
         country = settings.country
         scan = store.latest_scan(country)
         own = settings.subscriptions(country)
+        counts = base.base_counts(scan)
         return page(
             "subscriptions.html",
             country=country,
@@ -123,9 +137,11 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
                 scan["results"] if scan else [],
                 own,
                 settings.costs(country),
-                base.base_counts(scan)["not_available"],
+                counts["not_available"],
                 frozenset(favorite["key"] for favorite in store.list_favorites()),
+                weekly_hours=settings.weekly_hours,
             ),
+            coming_soon=counts["coming_soon"],
             weekly_hours=settings.weekly_hours,
             history=store.service_history(country),
             own=own,

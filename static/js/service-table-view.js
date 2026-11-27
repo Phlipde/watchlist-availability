@@ -10,11 +10,11 @@ const poster = (base, path) => (path ? `<img src="${escapeHtml(base.replace('/w5
 
 export function mountServiceTable(root, services, {total, imageBaseUrl}) {
   const state = parseState(location.search);
-  const hasPrices = services.some(item => item.costPerExclusiveFilm !== null);
+  const hasPrices = services.some(item => item.costPerLostFilm !== null);
   const columns = [
-    ['name', 'Service'], ['status', 'Status'], ['films', 'Films'], ['exclusive', 'Only here', 'Films no other service shows without paying per film'],
+    ['name', 'Service'], ['status', 'Status'], ['films', 'Films'], ['exclusive', 'Nowhere else', 'Films no other service streams: not free, not with ads, not by subscription'],
     ['hours', 'Hours'], ['free', 'Free'], ['ads', 'Ads'], ['subscription', 'Subscr.'], ['rent', 'Rent'], ['rating', 'Ø rating', 'Average Letterboxd rating of its films'],
-    ...(hasPrices ? [['cost', '€ per only-here film', 'Your monthly price divided by its films you could not watch elsewhere']] : []),
+    ...(hasPrices ? [['cost', '€ per film you would lose', 'Your monthly price divided by the films only here: none of your other services has them and none is free elsewhere (as on Subscriptions)']] : []),
   ];
   const max = Math.max(...services.map(item => item.films), 1);
   const open = new Set();
@@ -26,7 +26,7 @@ export function mountServiceTable(root, services, {total, imageBaseUrl}) {
         <input class="form-control" id="svc-q" type="search" placeholder="Search services…" aria-label="Search services">
         <label class="svc-field">Type <select class="form-select form-select-sm" id="svc-type">${TYPES.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label>
         <label class="svc-switch"><input type="checkbox" role="switch" id="svc-mine"> Only my subscriptions</label>
-        <label class="svc-switch"><input type="checkbox" role="switch" id="svc-excl"> Only with exclusive films</label>
+        <label class="svc-switch"><input type="checkbox" role="switch" id="svc-excl"> Only with films nowhere else</label>
         <label class="svc-field">At least <input class="form-control" id="svc-min" type="number" min="1" step="1" inputmode="numeric"> films</label>
         <button class="btn btn-sm btn-ghost" id="svc-reset" type="button" hidden>Reset filters</button>
       </div>
@@ -56,9 +56,9 @@ export function mountServiceTable(root, services, {total, imageBaseUrl}) {
       <th scope="row"><button class="svc-name" type="button" aria-expanded="${open.has(item.group)}" aria-controls="${id}">${escapeHtml(item.group)}</button></th>
       ${cell('Status', `<span class="pill ${tone}">${label}</span>`, 'svc-status')}
       ${cell('Films', `<span class="bar-track inline" aria-hidden="true"><span class="bar" style="width:${item.films / max * 100}%"></span></span>${item.films} <span class="muted">(${Math.round(item.films / total * 100)}%)</span>`)}
-      ${cell('Only here', dash(item.exclusive))}${cell('Hours', dash(item.hours))}${cell('Free', dash(item.free))}${cell('Ads', dash(item.ads))}
+      ${cell('Nowhere else', dash(item.exclusive))}${cell('Hours', dash(item.hours))}${cell('Free', dash(item.free))}${cell('Ads', dash(item.ads))}
       ${cell('Subscr.', dash(item.subscription))}${cell('Rent', dash(item.rent))}${cell('Ø rating', item.averageRating === null ? '–' : item.averageRating.toFixed(2))}
-      ${hasPrices ? cell('€ per only-here film', money(item.costPerExclusiveFilm)) : ''}
+      ${hasPrices ? cell('€ per film you would lose', money(item.costPerLostFilm)) : ''}
     </tr>
     <tr class="svc-detail" id="${id}"${open.has(item.group) ? '' : ' hidden'}><td colspan="${columns.length}">${detail(item)}</td></tr>`;
   };

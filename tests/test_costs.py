@@ -71,8 +71,8 @@ class TestOverview:
             1,
             2,
         )
-        # Without a price the card says it rests on the film count only.
-        assert costs.overview(films, ["Netflix"], {})["recommendations"][0]["based_on"] == "count"
+        # Without a price there is no cancel tip (it would rest on the film count only).
+        assert costs.overview(films, ["Netflix"], {})["recommendations"][0]["type"] == "subscribe"
         assert costs.overview(FILMS, [], {})["recommendations"][0]["type"] == "subscribe"
 
     def test_coverage_splits_the_watchlist_into_four_parts(self):
@@ -110,8 +110,8 @@ class TestOverview:
         mubi, netflix = result["services"]  # value 4 against 2: MUBI first
         assert (mubi["value"], mubi["favorites"], netflix["value"]) == (4, 1, 2)
         assert (mubi["value_per_euro"], netflix["value_per_euro"]) == (1.0, 0.2)
-        # Netflix gives the least for the money, so it is the one to cancel.
-        assert result["cancel"] == ["Netflix"]
+        # Both cost more than CANCEL_FROM per film you would lose; Netflix the most (10 € against 2 €).
+        assert result["cancel"] == ["Netflix", "MUBI"]
 
     def test_a_shared_account_splits_the_price(self):
         films = [FILMS[1]]
@@ -167,19 +167,58 @@ class TestOverview:
         assert (result["cancel"], result["cancel_loses_nothing"]) == (["MUBI"], True)
         assert result["book"] == [{"name": "Disney+", "films": 1, "hours": 0, "favorites": 0}]
 
+    def test_tonight_names_the_cancel_tip_in_one_line(self):
+        cancel = {"type": "cancel", "name": "Prime Video", "films": 54, "price": 8.99, "loses_nothing": False}
+        assert costs.cancel_hint([cancel]) == "54 films only on Prime Video · cancelling saves €8.99/month"
+        nothing = {**cancel, "films": 0, "loses_nothing": True, "price": None}
+        assert costs.cancel_hint([nothing]) == "Nothing on Prime Video is only there"
+        assert costs.cancel_hint([{"type": "keep", "name": ""}]) is None
+        assert costs.cancel_hint([]) is None
+
     def test_free_services_are_never_cancelled(self):
-        result = costs.overview(FILMS, ["Netflix", "Arte", "MUBI"], {"MUBI": {"price": 0}})
-        assert result["cancel"] == ["Netflix"]
+        prices = {"Netflix": {"price": 12.0}, "MUBI": {"price": 0}}
+        assert costs.overview(FILMS, ["Netflix", "Arte", "MUBI"], prices)["cancel"] == ["Netflix"]
 
     def test_services_free_in_the_scan_are_never_cancelled(self):
         # BBC iPlayer is not on the built-in free list, but the scan shows it free.
         films = [*FILMS, film("Brief Encounter", **{"BBC iPlayer": ["free"]})]
         assert "BBC iPlayer" not in costs.overview(films, ["Netflix", "BBC iPlayer"], {})["cancel"]
 
-    def test_cancel_the_service_with_fewest_own_films_when_each_has_some(self):
-        result = costs.overview(FILMS, ["Netflix", "Disney+"], {})
-        assert result["cancel_loses_nothing"] is False
-        assert len(result["cancel"]) == 1
+    def test_cancel_the_highest_price_per_film_you_would_lose(self):
+        # The numbers from the review: Netflix 66 films for 0.13 € each, Prime Video 54 for 0.17 € each.
+        films = [film(f"N{i}", Netflix=["flatrate"]) for i in range(66)]
+        films += [film(f"P{i}", **{"Prime Video": ["flatrate"]}) for i in range(54)]
+        prices = {"Netflix": {"price": 8.58}, "Prime Video": {"price": 8.99}}
+        result = costs.overview(films, ["Netflix", "Prime Video"], prices, cancel_from=0.1)
+        assert result["cancel"] == ["Prime Video", "Netflix"]
+        card = result["recommendations"][0]
+        assert (card["type"], card["name"], card["films"], card["per_film"]) == (
+            "cancel",
+            "Prime Video",
+            54,
+            0.17,
+        )
+        assert card["vs"] == {"name": "Netflix", "films": 66, "per_film": 0.13}
+        # Under the default threshold both are worth keeping: no cancel tip, a "keep" card instead.
+        result = costs.overview(films, ["Netflix", "Prime Video"], prices)
+        assert result["cancel"] == []
+        assert result["recommendations"][0] == {"type": "keep", "name": "", "cancel_from": costs.CANCEL_FROM}
+
+    def test_cancel_when_you_would_watch_the_films_only_there_within_a_month(self):
+        films = [{**film(f"N{i}", Netflix=["flatrate"]), "runtime": 120} for i in range(20)]  # 40 h
+        prices = {"Netflix": {"price": 5.0}}  # 0.25 € per film: under the threshold
+        assert costs.overview(films, ["Netflix"], prices, weekly_hours=5)["cancel"] == []  # 8 weeks
+        result = costs.overview(films, ["Netflix"], prices, weekly_hours=20)  # 2 weeks
+        assert result["cancel"] == ["Netflix"] and result["recommendations"][0]["weeks"] == 2.0
+
+    def test_equal_services_are_cancelled_in_a_fixed_order(self):
+        films = [film("A", Beta=["flatrate"]), film("B", Alpha=["flatrate"])]
+        prices = {"Alpha": {"price": 9.0}, "Beta": {"price": 9.0}}
+        assert costs.overview(films, ["Beta", "Alpha"], prices)["cancel"] == ["Alpha", "Beta"]
+        assert costs.overview(films, ["Alpha", "Beta"], prices)["cancel"] == ["Alpha", "Beta"]
+
+    def test_no_cancel_tip_without_prices_unless_a_service_loses_nothing(self):
+        assert costs.overview(FILMS, ["Netflix", "Disney+"], {})["cancel"] == []
 
     def test_rent_only(self):
         assert [item["title"] for item in costs.overview(FILMS, [], {})["rent_only"]] == ["Kes"]
@@ -300,3 +339,14 @@ def test_an_own_service_without_films_and_price_is_not_suggested_for_cancelling(
     result = costs.overview(films, ["Netflix", "ZDF"], {"Netflix": {"price": 9.99}})
     assert [item["name"] for item in result["services"]] == ["Netflix"]
     assert result["free_empty"] == 1
+
+
+def test_only_here_is_the_same_as_on_the_stats_page():
+    # The same case runs in tests/js/stats-compute.test.mjs: one definition of "Only here" on both pages.
+    import json
+    from pathlib import Path
+
+    cases = json.loads((Path(__file__).parent / "only_here_cases.json").read_text(encoding="utf-8"))
+    result = costs.overview(cases["films"], cases["subscriptions"], {})
+    counts = {item["name"]: len(item["only_here"]) for item in result["services"]}
+    assert counts == cases["only_here"]

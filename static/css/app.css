@@ -262,7 +262,7 @@
     .filter-reset { background: none; border-style: dashed; }
     .empty-state { margin: 18px 0; padding: 20px; border: 1px dashed var(--line); border-radius: .5rem; text-align: left; color: var(--muted); font: var(--fs-body) system-ui, sans-serif; }
     .empty-state .toolbar { justify-content: center; margin-bottom: 0; }
-    .favorites-banner { margin: 0 0 14px; color: var(--muted); font: var(--fs-body) system-ui, sans-serif; }
+    .empty-ways { margin: 0 0 12px; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 16px; }
     .export-menu { position: relative; }
     .export-menu summary { list-style: none; }
     .export-menu summary::-webkit-details-marker { display: none; }
@@ -292,7 +292,6 @@
     .year, .providers { color: var(--muted); font: var(--fs-body) system-ui, sans-serif; }
     .providers { margin: 9px 0 0; color: var(--accent); }
     .empty { color: var(--muted); font-family: system-ui, sans-serif; }
-    #favorites-empty { margin: 18px 0; padding: 20px; border: 1px dashed var(--line); border-radius: .5rem; text-align: left; }
     .btn-accent { --tblr-btn-color: var(--on-accent); --tblr-btn-bg: var(--accent); --tblr-btn-border-color: var(--accent); --tblr-btn-hover-color: var(--on-accent); --tblr-btn-hover-bg: var(--accent-hover); --tblr-btn-hover-border-color: var(--accent-hover); --bs-btn-color: var(--on-accent); --bs-btn-bg: var(--accent); --bs-btn-border-color: var(--accent); --bs-btn-hover-color: var(--on-accent); --bs-btn-hover-bg: var(--accent-hover); --bs-btn-hover-border-color: var(--accent-hover); }
     .form-control, .form-select { background-color: var(--surface) !important; border-color: var(--line-field) !important; color: var(--ink) !important; }
     .form-control::placeholder, .favorite-note::placeholder { color: oklch(67.7% 0.012 255) !important; }

@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 
 import {DEFAULTS, activeFilters, filterServices, parseState, sortServices, stateToSearch} from '../../static/js/service-table.js';
 
-const service = (group, extra) => ({group, plans: [group], status: 'other', own: false, films: 10, exclusive: 0, hours: 20, free: 0, ads: 0, subscription: 10, rent: 0, averageRating: 3.5, costPerExclusiveFilm: null, ...extra});
+const service = (group, extra) => ({group, plans: [group], status: 'other', own: false, films: 10, exclusive: 0, hours: 20, free: 0, ads: 0, subscription: 10, rent: 0, averageRating: 3.5, costPerLostFilm: null, ...extra});
 const list = [
-  service('Netflix', {status: 'own', own: true, films: 74, exclusive: 21, plans: ['Netflix', 'Netflix Standard with Ads'], costPerExclusiveFilm: 0.4}),
+  service('Netflix', {status: 'own', own: true, films: 74, exclusive: 21, plans: ['Netflix', 'Netflix Standard with Ads'], costPerLostFilm: 0.4}),
   service('MUBI', {films: 5, exclusive: 2, averageRating: 4.1}),
   service('Joyn', {status: 'free', films: 8, subscription: 0, ads: 8, averageRating: null}),
   service('Apple TV Store', {status: 'store', films: 400, subscription: 0, rent: 400}),

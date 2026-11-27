@@ -45,6 +45,11 @@ test('the collapsed line counts the countries; three flags a row and the rest be
   assert.match(html, /\+2 /);
   assert.match(html, /aria-label="Austria · Prime Video \(subscription\)"/);
   assert.equal(abroadHtml([], {nameOf, logoOf: () => ''}), '');
+  // Regions are folded; a search comes only from 10 countries.
+  assert.match(html, /<details class="flag-region"><summary>Europe <span class="flag-region-count">1<\/span>/);
+  assert.doesNotMatch(html, /flag-search/);
+  const many = [{...rows[0], countries: ['AT', 'NL', 'US', 'IT', 'JP', 'BR', 'MX', 'AR', 'CL', 'KR']}];
+  assert.match(abroadHtml(many, {nameOf, logoOf: () => ''}), /class="form-control form-control-sm flag-search"/);
   assert.deepEqual(groupByRegion(['US', 'AT', 'JP', 'ZZ']), [['Europe', ['AT']], ['Americas', ['US']], ['Asia / Pacific', ['JP']], ['Rest of the world', ['ZZ']]]);
 });
 

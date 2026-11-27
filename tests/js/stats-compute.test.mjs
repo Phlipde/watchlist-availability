@@ -31,10 +31,11 @@ test('service value: plans merge into one service, exclusive and price per exclu
   assert.equal(netflix.films, 2);
   assert.equal(netflix.exclusive, 1);  // film b is also on MUBI
   assert.equal(netflix.status, 'own');
-  assert.equal(netflix.costPerExclusiveFilm, 10);
+  assert.equal(netflix.onlyHere, 2);  // b is on MUBI too, but MUBI is not yours: you still lose it
+  assert.equal(netflix.costPerLostFilm, 5);
   const mubi = stats.serviceValue.find(item => item.group === 'MUBI');
   assert.equal(mubi.price, null);
-  assert.equal(mubi.costPerExclusiveFilm, null);
+  assert.equal(mubi.costPerLostFilm, null);
   assert.equal(stats.serviceValue.find(item => item.group === 'Joyn').status, 'free');
   assert.equal(stats.serviceValue.find(item => item.group === 'Apple').status, 'store');
 });
@@ -78,4 +79,26 @@ test('recent changes: newest first, at most ten', () => {
   const recent = computeStats(many, {now: NOW}).recentChanges;
   assert.equal(recent.length, 10);
   assert.equal(recent[0].created, 11);
+});
+
+test('"Only here" counts the same films as on Subscriptions (shared case with tests/test_costs.py)', async () => {
+  const {readFile} = await import('node:fs/promises');
+  const cases = JSON.parse(await readFile(new URL('../only_here_cases.json', import.meta.url), 'utf8'));
+  const result = computeStats({results: cases.films, unavailable: []}, {subscriptions: cases.subscriptions, now: NOW});
+  for (const [group, count] of Object.entries(cases.only_here)) {
+    assert.equal(result.serviceValue.find(item => item.group === group).onlyHere, count, group);
+  }
+});
+
+test('recent changes: one event per film, service and day (channels and plans are one service)', async () => {
+  const {oneChangePerService} = await import('../../static/js/stats-compute.js');
+  const at = Date.UTC(2026, 10, 20, 10) / 1000;
+  const change = (film_key, title, provider, created = at) => ({film_key, title, provider, change: 'added', created});
+  const events = oneChangePerService([
+    change('4638', 'Hot Fuzz', 'RTL+ Max Amazon Channel'), change('4638', 'Hot Fuzz', 'RTL+'),
+    change('522627', 'The Gentlemen', 'Filmtastic Amazon Channel'), change('522627', 'The Gentlemen', 'Filmtastic'),
+    change('4638', 'Hot Fuzz', 'RTL+', at - 2 * 86400),  // another day: its own event
+  ]);
+  assert.deepEqual(events.map(event => `${event.title} · ${event.provider}`),
+    ['Hot Fuzz · RTL+', 'The Gentlemen · Filmtastic', 'Hot Fuzz · RTL+']);
 });

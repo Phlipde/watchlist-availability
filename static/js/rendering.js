@@ -50,6 +50,7 @@ function wayLine(film, key, context) {
   const hereAll = film.abroadOnly ? [] : catalogues(film, context.selected).filter(entry => Object.keys(TYPE_ICON).some(k => entry.kinds.has(k))).sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
   // Rent and buy are not on the card (they live in the details); only free, subscription and ads are.
   const streaming = hereAll.filter(entry => ['free', 'flatrate', 'ads'].some(k => entry.kinds.has(k)) && entry.own);
+  const freeElsewhere = hereAll.filter(entry => !entry.own && ['free', 'ads'].some(k => entry.kinds.has(k)));
   const abroadRows = context.abroadList ? context.abroadList(film) : way.kind === 'abroad' ? [{service: way.service, countries: way.countries}] : [];
   const abroadNew = abroadRows.filter(row => !streaming.some(entry => entry.name === row.service));
   const url = name => (logos[name] ? (context.logoBaseUrl || '') + logos[name] : '');
@@ -58,7 +59,11 @@ function wayLine(film, key, context) {
       const kind = ['free', 'flatrate', 'ads'].find(k => entry.kinds.has(k));
       return {name: entry.name, kind, logo: url(entry.name), badge: `<span class="way-badge way-badge-${kind}" aria-hidden="true"><i class="ti ${TYPE_ICON[kind]}"></i></span>`};
     }),
-    ...abroadNew.map(row => ({name: row.service, kind: 'abroad', logo: url(row.service), flag: row.countries[0], country: row.countries.map(c => (context.countryName ? context.countryName(c) : c)).join(', ')})),
+    ...freeElsewhere.map(entry => {
+      const kind = entry.kinds.has('free') ? 'free' : 'ads';
+      return {name: entry.name, kind, logo: url(entry.name), badge: `<span class="way-badge way-badge-${kind}" aria-hidden="true"><i class="ti ${TYPE_ICON[kind]}"></i></span>`};
+    }),
+    ...abroadNew.map(row => ({name: row.service, kind: 'abroad', logo: url(row.service), flag: row.countries[0], country: `${context.countryName ? context.countryName(row.countries[0]) : row.countries[0]}${row.countries.length > 1 ? ` +${row.countries.length - 1} more` : ''}`})),
   ];
   if (!items.length) return none;
   return `<div class="best-way${way.muted ? ' is-muted' : ''}">${logoStackHtml(items, {key})}</div>`;
@@ -87,7 +92,7 @@ export function filmCard(film, section, context) {
   const key = filmKey(film);
   const pageHref = context.pageHref || 'http://localhost/';
   // The title link below names the film, so the poster is decoration here (the details window keeps its alt text).
-  const poster = film.poster_path ? `<img src="${sized(context.imageBaseUrl, 'w342')}${escapeHtml(film.poster_path)}" srcset="${['w185', 'w342', 'w500'].map(size => `${sized(context.imageBaseUrl, size)}${escapeHtml(film.poster_path)} ${size.slice(1)}w`).join(', ')}" sizes="(max-width: 800px) 45vw, 220px" alt="" loading="lazy">` : '<div class="no-poster" aria-hidden="true">No poster available</div>';
+  const poster = film.poster_path ? `<img src="${sized(context.imageBaseUrl, 'w342')}${escapeHtml(film.poster_path)}" srcset="${['w185', 'w342', 'w500'].map(size => `${sized(context.imageBaseUrl, size)}${escapeHtml(film.poster_path)} ${size.slice(1)}w`).join(', ')}" sizes="(max-width: 800px) 45vw, 220px" alt="" loading="lazy">` : `<div class="no-poster" aria-hidden="true"><span class="no-poster-title">${escapeHtml(film.title)}</span>${film.year ? `<span class="no-poster-year">${escapeHtml(String(film.year))}</span>` : ''}</div>`;
   // Letterboxd first (the community the watchlist comes from), TMDB when Letterboxd has no value yet.
   const rating = numberText(film.letterboxd_rating)
     ? `<span aria-hidden="true">★</span><span class="visually-hidden">Letterboxd</span> ${Number(film.letterboxd_rating).toFixed(1)}`

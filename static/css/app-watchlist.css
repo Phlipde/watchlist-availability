@@ -233,3 +233,8 @@ body.modal-open .compare-bar, body.tools-open .compare-bar, body:has(dialog[open
 /* Phone sheet: the count sits centred under its label, not pushed right by the desktop margin. */
 body.tools-open .segmented .option-count { margin-left: 0; }
 
+
+/* Tablet: the view tools sit in the gap of the bar's second row, next to Sort. */
+.bar-view-slot { display: flex; align-items: center; gap: 4px; order: 11; margin-left: auto; }
+.bar-view-slot:empty { display: none; }
+.bar-view-slot:not(:empty) + #sort-pop { margin-left: 0; }

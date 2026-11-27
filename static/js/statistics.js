@@ -37,7 +37,7 @@ export function bestAvailability(film, own, today) {
   if (kinds.includes('ads')) return 'ads';
   if (kinds.includes('flatrate')) return 'other_subscription';
   if (kinds.some(kind => kind === 'rent' || kind === 'buy')) return 'rent_buy';
-  return [film.cinema_date, film.home_date].some(date => date && date > today) ? 'coming_soon' : 'unavailable';
+  return [film.cinema_date, film.home_date].some(date => date && date >= today) ? 'coming_soon' : 'unavailable';
 }
 
 // TMDB fills unreleased films with far-away placeholder dates: a year more than 3 years ahead counts as unknown.
@@ -90,7 +90,7 @@ export function watchlistStats(scan, {subscriptions = [], favorites = [], now = 
     averageLetterboxd: average(numbers(all.map(film => film.letterboxd_rating))),
     oldestYear: years.length ? Math.min(...years) : null,
     newestYear: years.length ? Math.max(...years) : null,
-    comingSoon: all.filter(film => [film.cinema_date, film.home_date].some(date => date && date > today)).length,
+    comingSoon: all.filter(film => [film.cinema_date, film.home_date].some(date => date && date >= today)).length,
     favorites: favorites.length,
     watched: favorites.filter(favorite => favorite.status === 'watched').length,
   };
@@ -109,13 +109,6 @@ export function watchlistStats(scan, {subscriptions = [], favorites = [], now = 
       free: has('free'), ads: has('ads'), subscription: has('flatrate'), rent: has('rent'),
     };
   });
-
-  // Own subscriptions: what each one adds that no other own subscription has.
-  const ownServices = [...own].sort().map(name => {
-    const others = new Set([...own].filter(other => other !== name));
-    const films = onOwn.filter(film => watchableOn(film, new Set([name])));
-    return {name, films: films.length, onlyHere: films.filter(film => !watchableOn(film, others)).length};
-  }).sort((a, b) => b.films - a.films || a.name.localeCompare(b.name));
 
   const offerTypes = [['Free', 'free'], ['With ads', 'ads'], ['Subscription', 'flatrate'], ['Rent', 'rent']]
     .map(([label, kind]) => [label, available.filter(film => kindsOf(film).includes(kind)).length]);
@@ -142,7 +135,6 @@ export function watchlistStats(scan, {subscriptions = [], favorites = [], now = 
   return {
     overview,
     services,
-    ownServices,
     offerTypes,
     genres,
     decades,

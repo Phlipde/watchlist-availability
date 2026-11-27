@@ -14,12 +14,12 @@ def test_tonight_page_rows_chips_and_pick_for_me(app_server, page):
     expect(page.locator(".film-row h2").first).to_have_text("On Netflix 1", timeout=15000)
     expect(page.locator("#context-text")).to_contain_text("1 films available on 1 services")
     expect(page.locator(".film-row .film-title")).to_have_text(["Heat"])
-    # Quick chips narrow every row: Heat runs 120 minutes.
+    # Quick chips narrow every row: Heat runs 120 minutes and is not new this week.
     page.locator('.quick-chip[data-chip="tonight"]').click()
     expect(page.locator(".film-row .film-title")).to_have_text(["Heat"])
-    page.locator('.quick-chip[data-chip="short"]').click()
+    page.locator('.quick-chip[data-chip="week"]').click()
     expect(page.locator("#tonight-rows")).to_contain_text("No film fits")
-    page.locator('.quick-chip[data-chip="short"]').click()
+    page.locator('.quick-chip[data-chip="week"]').click()
     page.locator('.quick-chip[data-chip="tonight"]').click()
     # "Pick for me" opens the details of a film from the rows.
     page.locator("#pick-for-me").click()

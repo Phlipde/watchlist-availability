@@ -24,9 +24,9 @@
     {% if costs.coverage.total %}
     <section class="coverage" aria-labelledby="coverage-heading">
       <h2 class="visually-hidden" id="coverage-heading">Coverage of your watchlist</h2>
-      <p class="coverage-text"><strong>{{ costs.coverage.percent }} %</strong> of your watchlist is watchable without extra cost ({{ costs.coverage.covered }} of {{ costs.coverage.total }}).</p>
+      <p class="coverage-text"><strong>{{ costs.coverage.percent }} %</strong> of your watchlist is watchable without extra cost ({{ costs.coverage.covered }} of {{ costs.coverage.total }}{% if coming_soon %} · +{{ coming_soon }} coming soon, counted apart{% endif %}).</p>
       <div class="coverage-bar" role="img" aria-label="{{ costs.coverage.percent }} percent covered">
-        {% for segment in costs.coverage.segments if segment.films %}{% set label = {'subscription': 'Subscriptions', 'free': 'Free', 'rent': 'Rent only', 'other': 'Not on your services'}[segment.id] %}{% set link = {'subscription': '/watchlist?cost=subscription', 'free': '/watchlist?cost=free', 'rent': '/watchlist?cost=rent', 'other': '/watchlist?unavailable=1'}[segment.id] %}<a class="seg seg-{{ segment.id }}" style="flex: {{ segment.films }}" href="{{ link }}" title="{{ label }}: {{ segment.films }} films ({{ segment.percent|round(0)|int }} %)"><span class="visually-hidden">{{ label }}: {{ segment.films }} films</span></a>{% endfor %}
+        {% for segment in costs.coverage.segments if segment.films %}{% set label = {'subscription': 'Subscriptions', 'free': 'Free', 'rent': 'Rent only', 'other': 'Not on your services'}[segment.id] %}{% set link = {'subscription': '/watchlist?cost=subscription', 'free': '/watchlist?cost=free', 'rent': '/watchlist?cost=rent', 'other': '/watchlist?unavailable=1'}[segment.id] %}<a class="seg seg-{{ segment.id }}" style="flex: {{ segment.films }}" href="{{ link }}" title="{{ label }}: {{ segment.films }} films ({{ segment.percent|round(0)|int }} %)"><span class="visually-hidden">{{ label }}: {{ segment.films }} films</span>{% if segment.percent >= 8 %}<span class="seg-pct" aria-hidden="true">{{ segment.percent|round(0)|int }} %</span>{% endif %}</a>{% endfor %}
       </div>
       <ul class="coverage-key">{% for segment in costs.coverage.segments if segment.films %}<li><span class="key-dot seg-{{ segment.id }}" aria-hidden="true"></span>{{ {'subscription': 'Subscriptions', 'free': 'Free', 'rent': 'Rent only', 'other': 'Not on your services'}[segment.id] }} {{ segment.percent|round(0)|int }} %</li>{% endfor %}</ul>
       <p class="meta cost-line">{% if costs.monthly_total %}€ <span data-money>{{ '%.2f'|format(costs.monthly_total) }}</span> / month · € <span data-money>{{ '%.2f'|format(costs.yearly_total) }}</span> / year{% else %}<button class="film-link add-price" type="button">Add prices</button> to see what your services cost{% endif %}</p>
@@ -39,16 +39,20 @@
       <article class="rec rec-{{ card.type }}" data-rec="{{ card.type }}:{{ card.name }}">
         {% if card.type == 'cancel' %}
         <h3>Cancel {{ card.name }}</h3>
-        <p>{% if card.loses_nothing %}You lose no watchlist film.{% else %}<strong>{{ card.films }}</strong> film{{ '' if card.films == 1 else 's' }} only there{% if card.hours %} (≈ {{ card.hours|round(0)|int }} h){% endif %}.{% endif %}{% if card.price %} € <span data-money>{{ '%.2f'|format(card.price) }}</span> a month{% if card.per_film %} = € <span data-money>{{ '%.2f'|format(card.per_film) }}</span> per film you would lose{% endif %}.{% endif %}</p>
+        <p>{% if card.loses_nothing %}You lose no watchlist film.{% else %}<strong>{{ card.films }}</strong> film{{ '' if card.films == 1 else 's' }} only there{% if card.hours %} (≈ {{ card.hours|round(0)|int }} h){% endif %}.{% endif %}{% if card.price %} € <span data-money>{{ '%.2f'|format(card.price) }}</span> a month{% if card.per_film %} = € <span data-money>{{ '%.2f'|format(card.per_film) }}</span> per film you would lose{% endif %}.{% endif %}{% if card.weeks %} At your pace you would watch them in about {{ [card.weeks|round(0)|int, 1]|max }} week{{ '' if card.weeks < 1.5 else 's' }}.{% endif %}</p>
+        {% if card.vs and card.per_film %}<p class="hint rec-why">{{ card.name }}: {{ card.films }} films for € <span data-money>{{ '%.2f'|format(card.per_film) }}</span> each vs. {{ card.vs.name }}: {{ card.vs.films }} for € <span data-money>{{ '%.2f'|format(card.vs.per_film) }}</span> each</p>{% endif %}
+        {% elif card.type == 'keep' %}
+        <h3>All your subscriptions are worth it right now</h3>
+        <p>Every film only on one of them costs less than € <span data-money>{{ '%.2f'|format(card.cancel_from) }}</span> a month, and none would be watched within a month at your pace.</p>
         {% else %}
         <h3>Subscribe to {{ card.name }} for a month</h3>
         <p><strong>{{ card.films }}</strong> watchlist films none of your services has{% if card.hours %} (≈ {{ card.hours }} h){% endif %}.</p>
         {% endif %}
         {% if card.based_on == 'count' %}<p class="hint">Based on the film count only{% if card.type == 'cancel' %}: <button class="film-link add-price" type="button">add a price</button> for a better recommendation{% endif %}.</p>{% endif %}
-        <div class="rec-actions">
+        {% if card.type != 'keep' %}<div class="rec-actions">
           {% if card.type == 'cancel' %}<button class="btn btn-sm btn-outline-secondary set-reminder" type="button" data-service="{{ card.name }}">Set reminder</button><a class="btn btn-sm btn-outline-secondary" href="/watchlist?providers={{ card.name|urlencode }}&only=1&cost=subscription">Show the {{ card.films }} film{{ '' if card.films == 1 else 's' }}</a>{% else %}<a class="btn btn-sm btn-outline-secondary" href="/watchlist?providers={{ card.name|urlencode }}&cost=subscription">Show the films on {{ card.name }}</a>{% endif %}
           <button class="btn btn-sm btn-outline-secondary rec-hide" type="button">Not interested</button>
-        </div>
+        </div>{% endif %}
       </article>
       {% endfor %}
     </div>

@@ -1,4 +1,5 @@
 import {escapeHtml} from './ui.js';
+import {serviceGroup} from './catalog.js';
 
 export function updateScanFeedback(job) {
   const phase = document.getElementById('scan-phase');
@@ -15,4 +16,14 @@ export function updateScanFeedback(job) {
     document.getElementById('failed-count').textContent = failures.length;
     failureList.innerHTML = failures.map(failure => `<li>${escapeHtml(failure.title)} (${escapeHtml(failure.year || 'unknown year')}): ${escapeHtml(failure.message || 'Lookup failed')}</li>`).join('');
   }
+}
+
+// The toast after a scan: how many films this scan found new on your services (plans and channels count as the service).
+export function scanResultText(job, subscriptions) {
+  const own = new Set([...subscriptions].map(serviceGroup));
+  const since = job.started_at ?? Infinity;
+  const films = new Set((job.changes || [])
+    .filter(change => change.change === 'added' && change.created >= since && own.has(serviceGroup(change.provider)))
+    .map(change => change.film_key));
+  return films.size ? `Scan complete: ${films.size} new on your services.` : 'Watchlist scan complete.';
 }

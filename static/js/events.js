@@ -59,10 +59,10 @@ export function nowOnText(entry) {
   return `now on ${watch.slice(0, 2).map(item => `${item.service} (${item.kind})`).join(', ')}`;
 }
 
-// Quick filters of the Tonight page.
+// Quick filters of the Tonight page; a check gets the film and {services, now}.
 export const TONIGHT_CHIPS = [
   ['tonight', 'Under 2 h', film => film.runtime > 0 && film.runtime <= 120],
-  ['short', 'Under 100 min', film => film.runtime > 0 && film.runtime < 100],
+  ['week', 'New this week', (film, {services, now}) => newOnServices([film], services, now, 7).length > 0],
   ['rated', 'Highly rated', film => (Number(film.letterboxd_rating) ? Number(film.letterboxd_rating) >= 3.7 : Number(film.rating) >= 7.5)],
   ['free', 'Free only', null],
 ];
@@ -73,7 +73,7 @@ export function tonightRows(films, {services, favorites = new Map(), skip = new 
   const checks = TONIGHT_CHIPS.filter(([id, , check]) => chips.has(id) && check).map(([, , check]) => check);
   const freeOnly = chips.has('free');
   const offeredAs = (film, service, kinds) => (film.providers?.[service] || []).some(kind => kinds.includes(kind));
-  const wanted = films.filter(film => !skip.has(filmKey(film)) && checks.every(check => check(film)));
+  const wanted = films.filter(film => !skip.has(filmKey(film)) && checks.every(check => check(film, {services, now})));
   const watchable = wanted.filter(film => freeOnly
     ? [...services].some(service => offeredAs(film, service, FREE_KINDS))
     : watchableOn(film, services).length);

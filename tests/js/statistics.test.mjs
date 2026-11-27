@@ -42,13 +42,12 @@ test('overview counts films, offer types, hours and coming soon', () => {
 });
 
 test('services: exclusive counts only ways to watch without paying per film', () => {
-  const {services, ownServices} = watchlistStats(scan, {subscriptions: ['Netflix', 'MUBI'], now: NOW});
+  const {services} = watchlistStats(scan, {subscriptions: ['Netflix', 'MUBI'], now: NOW});
   const netflix = services.find(service => service.name === 'Netflix');
   assert.deepEqual([netflix.films, netflix.exclusive, netflix.subscription, netflix.own], [2, 1, 2, true]);
   // Shoplifters is free on Arte; renting it on Apple TV does not make Arte less exclusive.
   assert.equal(services.find(service => service.name === 'Arte').exclusive, 1);
   assert.equal(services.find(service => service.name === 'Apple TV').exclusive, 0);
-  assert.deepEqual(ownServices, [{name: 'Netflix', films: 2, onlyHere: 1}, {name: 'MUBI', films: 1, onlyHere: 0}]);
 });
 
 test('groups: genres, decades, runtime bands, people with more than one film', () => {

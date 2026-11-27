@@ -36,4 +36,6 @@ def service_group(name: str) -> str:
         return "Netflix"
     if re.match(r"^(Amazon )?Prime Video( with Ads)?$", base, re.IGNORECASE):
         return "Prime Video"
+    if re.match(r"^RTL\+( Premium| Max)?$", base, re.IGNORECASE):
+        return "RTL+"
     return base

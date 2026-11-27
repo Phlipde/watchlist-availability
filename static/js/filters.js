@@ -6,8 +6,18 @@ export const FILTER_CONTROLS = [
   ['media-filter', 'Trailer'], ['change-filter', 'Changes'], ['provider-count-filter', 'Services'],
   ['age-filter', 'Age rating'],
   ['language-filter', 'Language'], ['origin-filter', 'Country'], ['show-unavailable', 'Also not available'], ['show-hidden', 'Set aside shown'],
-  ['where-filter', 'Where'],
+  ['favorite-status-filter', 'Favorite status'], ['where-filter', 'Where'],
 ];
+
+// The filters with one control cleared, for "Without X: n" in an empty list.
+// Controls that only add films (show-unavailable, show-hidden) have no entry.
+export const WITHOUT = {
+  'film-search': {query: ''}, 'cost-filter': {availability: 'available', kind: 'all'}, 'runtime-filter': {maxRuntime: 0},
+  'lb-filter': {minLetterboxd: 0}, 'tmdb-filter': {minRating: 0}, 'year-from': {yearFrom: 0}, 'year-to': {yearTo: 9999},
+  'min-votes': {minVotes: 0}, 'keyword-filter': {keyword: 'all'}, 'media-filter': {media: 'all'}, 'change-filter': {change: 'all'},
+  'provider-count-filter': {minimumProviders: 0, exclusive: false}, 'age-filter': {age: 'all'}, 'language-filter': {language: 'all'},
+  'origin-filter': {origin: 'all'}, 'favorite-status-filter': {favoriteStatus: 'all'}, 'where-filter': {where: 'all'},
+};
 
 // A control is set when it differs from its default (data-default), first option, empty value or "unchecked".
 export function isFilterSet(input) {

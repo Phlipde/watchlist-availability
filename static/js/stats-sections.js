@@ -20,16 +20,18 @@ export function head(stats) {
   const o = stats.overview;
   const free = o.availability.free + o.availability.ads;
   const tip = stats.rotationSuggestion;
+  // One base set on every page (base.py, baseCounts): released films; coming soon is counted apart.
+  const rows = stats.availabilityBreakdown.filter(item => item.films && item.kind !== 'coming_soon');
+  const watchlist = o.total - o.comingSoon;
   const tiles = [
     tile(number(o.availability.own_subscription), 'films on your subscriptions', {sub: `${number(stats.availabilityBreakdown[0].hours)} h`, href: watchlistHref({availability: 'own_subscription'})}),
     tile(number(free), 'free or with ads', {sub: `${number(stats.availabilityBreakdown[1].hours + stats.availabilityBreakdown[2].hours)} h`, href: watchlistHref({availability: 'free,ads'})}),
     tip ? tile(number(tip.films), `more films with ${tip.group}`, {sub: 'a subscription you do not have', href: `?svcq=${encodeURIComponent(tip.group)}&svctype=all#services-section`})
       : tile('–', 'more films with another subscription', {sub: 'nothing to add'}),
-    tile(number(o.total), 'films on the watchlist', {sub: `${number(stats.availabilityBreakdown.reduce((sum, item) => sum + item.hours, 0))} h in total`, href: '/watchlist'}),
+    tile(number(watchlist), 'films on the watchlist', {sub: `${number(rows.reduce((sum, item) => sum + item.hours, 0))} h in total${o.comingSoon ? ` · +${number(o.comingSoon)} coming soon` : ''}`, href: '/watchlist'}),
   ].join('');
-  const rows = stats.availabilityBreakdown.filter(item => item.films);
-  const segments = rows.map(item => `<a class="avail-seg avail-${item.kind}" style="flex:${item.films}" href="${esc(watchlistHref({availability: item.kind}))}" title="${esc(AVAILABILITY_LABEL[item.kind])}: ${item.films} films (${percent(item.films, o.total)}%)" aria-label="${esc(AVAILABILITY_LABEL[item.kind])}: ${item.films} films"></a>`).join('');
-  const legend = rows.map(item => `<li><a href="${esc(watchlistHref({availability: item.kind}))}"><i class="swatch avail-${item.kind}" aria-hidden="true"></i>${esc(AVAILABILITY_LABEL[item.kind])} <strong>${number(item.films)}</strong> <span class="muted">${percent(item.films, o.total)}%</span></a></li>`).join('');
+  const segments = rows.map(item => `<a class="avail-seg avail-${item.kind}" style="flex:${item.films}" href="${esc(watchlistHref({availability: item.kind}))}" title="${esc(AVAILABILITY_LABEL[item.kind])}: ${item.films} films (${percent(item.films, watchlist)}%)" aria-label="${esc(AVAILABILITY_LABEL[item.kind])}: ${item.films} films"></a>`).join('');
+  const legend = rows.map(item => `<li><a href="${esc(watchlistHref({availability: item.kind}))}"><i class="swatch avail-${item.kind}" aria-hidden="true"></i>${esc(AVAILABILITY_LABEL[item.kind])} <strong>${number(item.films)}</strong> <span class="muted">${percent(item.films, watchlist)}%</span></a></li>`).join('');
   const foot = stats.withoutRuntime ? `<p class="hint">${plural(stats.withoutRuntime, 'film')} without a runtime are counted, but not in the hours.</p>` : '';
   return `<div class="stat-tiles">${tiles}</div>
     <div class="avail" role="group" aria-label="Where the films of your watchlist can be watched">
@@ -49,12 +51,12 @@ function valueRow({group, films, exclusive, text, badge = '', tone = 'own', max}
 }
 
 export function subscriptions(stats, {subscriptions: owned, prices}) {
-  const own = stats.serviceValue.filter(item => item.own).sort((a, b) => b.exclusive - a.exclusive || b.films - a.films);
+  const own = stats.serviceValue.filter(item => item.own).sort((a, b) => b.onlyHere - a.onlyHere || b.films - a.films);
   const ownMax = Math.max(...own.map(item => item.films), 1);
   const rows = own.map(item => valueRow({
-    group: item.group, films: item.films, exclusive: item.exclusive, max: ownMax,
-    text: `<strong>${number(item.exclusive)}</strong> only here · ${number(item.films)} films${item.costPerExclusiveFilm !== null ? ` · ${euro(item.costPerExclusiveFilm)} per only-here film` : ''}`,
-    badge: item.price && item.films && !item.exclusive ? '<span class="pill pill-warn">Cancel candidate</span>' : '',
+    group: item.group, films: item.films, exclusive: item.onlyHere, max: ownMax,
+    text: `<strong>${number(item.onlyHere)}</strong> only here · ${number(item.films)} films${item.costPerLostFilm !== null ? ` · ${euro(item.costPerLostFilm)} per film you would lose` : ''}`,
+    badge: item.price && item.films && !item.onlyHere ? '<span class="pill pill-warn">Cancel candidate</span>' : '',
   })).join('');
   const seen = new Set(own.map(item => item.group));
   const empty = [...new Set(owned)].filter(name => ![...seen].some(group => group === name || stats.serviceValue.find(item => item.group === group)?.plans.includes(name))).sort();
@@ -64,13 +66,13 @@ export function subscriptions(stats, {subscriptions: owned, prices}) {
   const gain = stats.gainIfSubscribed.slice(0, 8);
   const gainMax = Math.max(...gain.map(item => item.films), 1);
   const tip = stats.rotationSuggestion;
-  const tipCard = tip ? `<p class="stats-tip"><strong>Tip:</strong> one month of ${esc(tip.group)} would add ${plural(tip.films, 'film')} (${number(tip.hours)} h), ${number(tip.onlyThere)} of them only there.</p>` : '';
+  const tipCard = tip ? `<p class="stats-tip"><strong>Tip:</strong> one month of ${esc(tip.group)} would add ${plural(tip.films, 'film')} (${number(tip.hours)} h), ${number(tip.onlyThere)} of them nowhere else.</p>` : '';
   const more = gain.map(item => valueRow({
     group: item.group, films: item.films, exclusive: item.onlyThere, max: gainMax, tone: 'other',
-    text: `would add <strong>${number(item.films)}</strong> films · ${number(item.hours)} h · ${number(item.onlyThere)} only there`,
+    text: `would add <strong>${number(item.films)}</strong> films · ${number(item.hours)} h · ${number(item.onlyThere)} nowhere else`,
   })).join('');
 
-  return section('Are my subscriptions worth it?', 'The bright part of a bar is what you would lose by cancelling: films no other service shows without paying per film.',
+  return section('Are my subscriptions worth it?', 'The bright part of a bar is what you would lose by cancelling ("only here", as on Subscriptions): films none of your other services has and no service shows for free.',
     `${own.length ? `<ul class="val-list">${rows}</ul>` : '<p class="empty">No subscriptions saved. Set them on the <a href="/subscriptions">Subscriptions</a> page.</p>'}${none}${noPrices}
     ${gain.length ? `<h3 class="stats-sub">Subscriptions you do not have</h3>${tipCard}<ul class="val-list val-muted">${more}</ul>` : ''}`);
 }
@@ -113,8 +115,8 @@ function bars(rows, total, {limit = 8, nameOf = name => name, hrefOf = null, nou
 function histogram({bins, average}, {unit, hrefOf}) {
   const peak = Math.max(...bins.map(bin => bin.count), 1);
   const middle = bins.find(bin => average !== null && average >= bin.from && average < bin.to);
-  const columns = bins.map(bin => `<li${bin === middle ? ' class="is-average"' : ''}><a href="${esc(hrefOf(bin))}" title="${esc(bin.label)}: ${bin.count} films"><span class="histo-bar" style="height:${bin.count / peak * 100}%"></span><span class="histo-label">${esc(bin.label.replace(' min', '').replace('Under ', '<'))}</span><span class="visually-hidden">${esc(bin.label)}: ${bin.count} films</span></a></li>`).join('');
-  return `<p class="hint">${average === null ? 'No data.' : `Average ${unit(average)}`}</p><ol class="histo">${columns}</ol>`;
+  const columns = bins.map(bin => `<li${bin === middle ? ' class="is-average"' : ''}><a href="${esc(hrefOf(bin))}" title="${esc(bin.label)}: ${bin.count} films"><span class="histo-bar" style="height:${bin.count / peak * 100}%"></span><span class="histo-label" aria-hidden="true">${esc(bin.label.replace(' min', '').replace('Under ', '<').split('–')[0].replace(/(\.\d)0$/, '$1'))}</span><span class="visually-hidden">${esc(bin.label)}: ${bin.count} films</span></a></li>`).join('');
+  return `<p class="hint">${average === null ? 'No data.' : `Average ${unit(average)}`}</p><ol class="histo${bins.length > 8 ? ' is-dense' : ''}">${columns}</ol>`;
 }
 
 const sentence = (rows, total, nameOf) => {

@@ -1,5 +1,5 @@
 <details class="sync" id="sync">
-  <summary class="sync-toggle" id="sync-toggle" data-state="running"><span class="sync-dot" aria-hidden="true"></span><span id="sync-label">Checking…</span></summary>
+  <summary class="sync-toggle" id="sync-toggle" data-state="running"><span class="sync-dot" aria-hidden="true"></span><span id="sync-label">Scanning…</span></summary>
   <div class="sync-panel">
 <div class="progress-wrap" id="loading-panel">
           <p class="feedback" id="status-message" role="status">Preparing your watchlist...</p>
@@ -12,6 +12,7 @@
         </div>
         <details class="scan-failures" id="scan-failures" hidden><summary><i class="ti ti-alert-triangle" aria-hidden="true"></i> Failed lookups <span class="badge text-bg-danger" id="failed-count">0</span></summary><ul id="failed-list"></ul></details>
         <p class="error" id="error-message" role="alert" hidden></p>
-        <label class="upload-label">Scan a Letterboxd CSV export instead <input class="form-control form-control-sm mt-2" id="csv-upload" type="file" accept=".csv,text/csv"></label>
+        <div class="upload-label"><span>Scan a Letterboxd CSV export instead</span><div class="file-pick"><input class="file-input" id="csv-upload" type="file" accept=".csv,text/csv"><label class="btn btn-sm btn-outline-secondary" for="csv-upload">Choose CSV…</label><span class="file-name" id="csv-name">No file chosen</span></div></div>
   </div>
 </details>
+<div class="scan-line" id="scan-line" hidden><span></span></div>

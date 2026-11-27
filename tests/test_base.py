@@ -18,6 +18,7 @@ def test_one_base_set_counts_released_films_and_sets_coming_soon_apart():
 def test_service_group_folds_plans_like_the_stats_page():
     assert base.service_group("Netflix Standard with Ads") == "Netflix"
     assert base.service_group("Amazon Prime Video with Ads") == "Prime Video"
+    assert base.service_group("RTL+ Max Amazon Channel") == "RTL+"  # a tier of RTL+, as in catalog.js
     assert base.service_group("HBO Max Amazon Channel") == "HBO Max"
     assert base.service_group("MagentaTV") == "MagentaTV"
 
