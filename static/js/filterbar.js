@@ -95,7 +95,8 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
   function setCost(value, notify = true) {
     const input = $('cost-filter');
     input.value = COST[value] ? value : 'all';
-    input.dataset.text = document.querySelector(`#cost-options input[value="${input.value}"]`).nextElementSibling.textContent;
+    // Only the label ("Free"), not the count beside it: the chip read "Cost: Free32".
+    input.dataset.text = document.querySelector(`#cost-options input[value="${input.value}"] + .seg-text > span`).textContent;
     document.querySelector(`#cost-options input[value="${input.value}"]`).checked = true;
     if (notify) onChange();
   }

@@ -53,8 +53,8 @@ test('more own services come as alternatives; status badges carry the date', () 
   const film = {providers: {Arte: ['free'], filmfriend: ['free'], Netflix: ['flatrate'], Other: ['flatrate']}, provider_changes: {added: ['Netflix'], removed: ['Prime Video'], since: new Date(2026, 10, 12).getTime() / 1000}};
   assert.deepEqual(alternatives(film, own(['Arte', 'filmfriend', 'Netflix']), 'Arte'), [{name: 'filmfriend', kind: 'free'}, {name: 'Netflix', kind: 'flatrate'}]);
   assert.deepEqual(statusBadges(film, own(['Netflix', 'Prime Video'])), [
-    {tone: 'gone', text: 'No longer on Prime Video · since 12.11.'},
-    {tone: 'new', text: 'New on Netflix · since 12.11.'},
+    {tone: 'gone', text: 'No longer on Prime Video · since 12 Nov'},
+    {tone: 'new', text: 'New on Netflix · since 12 Nov'},
   ]);
 });
 

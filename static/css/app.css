@@ -397,3 +397,5 @@
       .films, .skeleton-grid { gap: 8px; }
     }
   
+/* Keep the scrollbar's room when a search makes the page short, so the header does not jump sideways. */
+@media (min-width: 801px) { html { scrollbar-gutter: stable; } }  /* phones: overlay scrollbars, full width */

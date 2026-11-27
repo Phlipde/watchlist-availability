@@ -66,10 +66,11 @@ body:has(.more-filters[open])::after { content: ""; position: fixed; inset: 0; z
 .card-action:active { background: rgb(255 255 255 / .12); }
 .card-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .poster { position: relative; }
-.poster .favorite { position: absolute; top: 6px; right: 6px; z-index: 3; width: 28px; height: 28px; border: 0; background: rgb(0 0 0 / .55); color: #fff; font-size: 15px; }
+/* A dark chip with a light rim: readable on a white poster as on a dark one. */
+.poster .favorite { position: absolute; top: 6px; right: 6px; z-index: 3; width: 28px; height: 28px; border: 0; background: rgb(0 0 0 / .72); box-shadow: 0 0 0 1px rgb(255 255 255 / .35); color: #fff; font-size: 15px; }
 .poster .favorite::before { inset: -8px; }
-.poster .favorite:hover { background: rgb(0 0 0 / .75); }
-.poster .favorite[data-favorite="true"] { background: rgb(0 0 0 / .55); color: var(--accent); }
+.poster .favorite:hover { background: rgb(0 0 0 / .85); }
+.poster .favorite[data-favorite="true"] { background: rgb(0 0 0 / .72); color: var(--accent); }
 @media (hover: hover) { .film .poster .favorite[data-favorite="false"] { opacity: 0; } .film:hover .poster .favorite, .film:focus-within .poster .favorite { opacity: 1; } }
 @media (pointer: coarse) { .card-action { width: 44px; height: 44px; } .poster .favorite { width: 36px; height: 36px; } }
 .card-foot { display: flex; align-items: center; gap: 8px; min-height: 28px; margin-top: auto; }
@@ -239,3 +240,5 @@ body.tools-open .segmented .option-count { margin-left: 0; }
 .bar-view-slot { display: flex; align-items: center; gap: 4px; order: 11; margin-left: auto; }
 .bar-view-slot:empty { display: none; }
 .bar-view-slot:not(:empty) + #sort-pop { margin-left: 0; }
+/* The Changes tab: the film count, view switch and "Save view" describe the films, not the changes. */
+.changes-open :is(#result-meta, #result-tools, #saved-views) { visibility: hidden; }

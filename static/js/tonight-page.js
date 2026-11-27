@@ -111,7 +111,7 @@ export function createTonightPage({state, imageBaseUrl, view: VIEW, regionLabel,
     document.getElementById('tonight-gone-list').innerHTML = gone.map(entry => {
       const title = escapeHtml(entry.title) + (entry.year ? ` (${numberText(entry.year)})` : '');
       const name = entry.film ? `<a class="film-link film-open" href="${escapeHtml(filmHref(location.href, entry.key))}" data-key="${escapeHtml(entry.key)}">${title}</a>` : title;
-      return `<li>${name} · gone from ${escapeHtml(entry.providers.join(', '))} ${new Date(entry.created * 1000).toLocaleDateString([], {dateStyle: 'medium'})} · ${escapeHtml(nowOnText(entry))}</li>`;
+      return `<li>${name} · gone from ${escapeHtml(entry.providers.join(', '))} ${new Date(entry.created * 1000).toLocaleDateString('en-GB', {dateStyle: 'medium'})} · ${escapeHtml(nowOnText(entry))}</li>`;
     }).join('');
   }
   document.querySelector('.tonight-chips')?.addEventListener('click', event => {

@@ -121,10 +121,10 @@ export function alternatives(film, own, primaryService) {
   return [...names].map(([name, kind]) => ({name, kind})).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-// "12.11." from epoch seconds.
-const shortDate = seconds => { const day = new Date(seconds * 1000); return `${day.getDate()}.${day.getMonth() + 1}.`; };
+// "12 Nov" from epoch seconds (the app's dates are English everywhere: "27 Nov 2026").
+const shortDate = seconds => new Date(seconds * 1000).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'});
 
-// "New on Netflix · since 12.11." / "No longer on Prime Video · since 14.11.", only for the services that count.
+// "New on Netflix · since 12 Nov" / "No longer on Prime Video · since 14 Nov", only for the services that count.
 export function statusBadges(film, selected) {
   const {added, removed} = selectedChanges(film, selected);
   const since = film.provider_changes?.since;

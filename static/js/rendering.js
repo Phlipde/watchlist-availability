@@ -33,15 +33,13 @@ function filmLink(film, key, pageHref, className = 'film-open') {
 }
 
 // The one line under a card: the logo of the best way and what it is in words, "+N" for the other services.
-// The logos are no links (tap shows the name); "+N" opens the details at "Other services".
-function wayLine(film, key, context) {
+// The logos of a film's way to watch, the same on the card and in the table: {way, items} for logoStackHtml.
+function wayItems(film, context) {
   const logos = context.providerLogos || {};
   // A film listed only because of the abroad switch has no way to watch it here: its best way is abroad.
   const way = film.abroadOnly
     ? bestWay({...film, providers: {}}, {own: context.selected, abroad: context.abroadFor ? context.abroadFor(film) : null})
     : bestWay(film, {own: context.selected, whose: context.whose});
-  const text = escapeHtml(wayText(way));
-  const none = `<div class="best-way is-muted"><span class="best-way-link is-static" tabindex="0"><i class="ti ti-ban way-none" aria-hidden="true"></i><span class="way-text">${text}</span></span></div>`;
   // A row of logos for your own services (best first), each marked with a small icon for its type in the logo's corner;
   // with the abroad switch on, your services abroad follow with the flag of their best country (dashed rim: needs a VPN).
   // "+N" counts the rest. With none of your services here, the one best way (a shop, or a service that is not yours).
@@ -65,13 +63,19 @@ function wayLine(film, key, context) {
     }),
     ...abroadNew.map(row => ({name: row.service, kind: 'abroad', logo: url(row.service), flag: row.countries[0], country: `${context.countryName ? context.countryName(row.countries[0]) : row.countries[0]}${row.countries.length > 1 ? ` +${row.countries.length - 1} more` : ''}`})),
   ];
-  if (!items.length) return none;
   // Together: whose service each logo is, in the bubble; one owner's initial also in the top corner (a shared one has none).
   if (context.ownersOf) items.forEach(item => {
     const {owners, text} = context.ownersOf(item.name);
     item.owner = text;
     if (owners.length === 1) item.ownerBadge = `<span class="way-badge way-badge-owner" aria-hidden="true">${escapeHtml(owners[0].initial)}</span>`;
   });
+  return {way, items};
+}
+
+// The logos are no links (tap shows the name); "+N" opens the details at "Other services".
+function wayLine(film, key, context) {
+  const {way, items} = wayItems(film, context);
+  if (!items.length) return `<div class="best-way is-muted"><span class="best-way-link is-static" tabindex="0"><i class="ti ti-ban way-none" aria-hidden="true"></i><span class="way-text">${escapeHtml(wayText(way))}</span></span></div>`;
   return `<div class="best-way${way.muted ? ' is-muted' : ''}">${logoStackHtml(items, {key})}</div>`;
 }
 
@@ -141,13 +145,9 @@ export function filmTable(films, context) {
   const rows = films.map(film => {
     const key = filmKey(film);
     const rating = numberText(film.letterboxd_rating) ? `★ ${Number(film.letterboxd_rating).toFixed(1)}` : numberText(film.rating) ? `TMDB ${Number(film.rating).toFixed(1)}` : '';
-    const logos = context.providerLogos || {};
-    const url = name => (logos[name] ? (context.logoBaseUrl || '') + logos[name] : '');
-    const items = catalogues(film, context.selected)
-      .sort((a, b) => Number(b.own) - Number(a.own) || a.name.localeCompare(b.name))
-      .map(entry => ({name: entry.name, kind: ['free', 'flatrate', 'ads', 'rent', 'buy'].find(k => entry.kinds.has(k)), logo: url(entry.name)}))
-      .filter(item => item.kind);
-    const services = logoStackHtml(items, {key});
+    // The same logos as on the card (your services, free elsewhere, abroad); with none, the way in words.
+    const {way, items} = wayItems(film, context);
+    const services = items.length ? logoStackHtml(items, {key}) : `<span class="muted">${escapeHtml(wayText(way))}</span>`;
     const runtime = runtimeText(film.runtime);
     return `<tr data-key="${escapeHtml(key)}"><th scope="row"><span class="table-title">${film.poster_path ? `<img class="table-poster" src="${sized(context.imageBaseUrl, 'w92')}${escapeHtml(film.poster_path)}" alt="" loading="lazy" width="28" height="42">` : '<span class="table-poster" aria-hidden="true"></span>'}${filmLink(film, key, pageHref)}</span></th><td class="col-year">${numberText(film.year, '')}</td><td>${runtime ? `<span aria-hidden="true">${runtime}</span><span class="visually-hidden">${runtimeSpoken(film.runtime)}</span>` : ''}</td><td>${rating}</td><td class="table-services">${services}</td></tr>`;
   }).join('');

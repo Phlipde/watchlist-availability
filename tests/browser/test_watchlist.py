@@ -446,3 +446,22 @@ def test_an_empty_list_names_every_filter_and_clear_resets_all(app_server, page)
     expect(page.locator('#age-chips .chip[aria-pressed="true"]')).to_have_count(0)
     for name in ("favorites=", "media=", "minproviders=", "from=", "to=", "hidden="):
         assert name not in page.url
+
+
+def test_changes_tab_follows_the_search_and_hides_the_film_tools(app_server, page):
+    expect = playwright_api.expect
+    store = app_server["store"]
+    change = {"film_key": "949", "title": "Heat", "year": 1995, "provider": "Netflix", "change": "added"}
+    store.add_changes("DE", [change, {**change, "film_key": "348", "title": "Alien"}], profile_id=1)
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    page.locator("#tab-changes").click()
+    expect(page.locator("#result-meta")).to_be_hidden()  # "2 of 3 films" is about the films
+    expect(page.locator("#changes-body tr")).to_have_count(2)
+    page.locator("#film-search").fill("ali")
+    expect(page.locator("#changes-body tr")).to_have_count(1)
+    expect(page.locator("#changes-body tr")).to_contain_text("Alien")
+    page.locator("#film-search").fill("zzz")
+    expect(page.locator("#changes-body")).to_have_text("No change matches the search.")
+    page.locator("#tab-films").click()
+    expect(page.locator("#result-meta")).to_be_visible()

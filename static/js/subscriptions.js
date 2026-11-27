@@ -6,7 +6,7 @@ const country = page.dataset.country;
 const table = document.getElementById('subscriptions-table');
 const state = document.getElementById('save-state');
 const money = value => value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-const dayText = iso => (iso ? new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, {day: '2-digit', month: '2-digit', year: 'numeric'}) : 'Set date');
+const dayText = iso => (iso ? new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', {dateStyle: 'medium'}) : 'Set date');
 const number = text => Number(String(text).replace(',', '.'));
 let timer;
 

@@ -5,7 +5,7 @@ const KEY = 'deadlineSnooze';
 const read = () => { try { return JSON.parse(local.getItem(KEY) || '{}'); } catch { return {}; } };
 
 export function dayText(iso) {
-  return new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, {day: '2-digit', month: '2-digit', year: 'numeric'});
+  return new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', {dateStyle: 'medium'});
 }
 
 export function whenText(days) {

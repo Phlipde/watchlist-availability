@@ -75,6 +75,10 @@ def test_filter_bar_cost_genres_runtime_and_the_address(app_server, page):
     expect(page.locator('[data-cost-count="free"]')).to_have_text("1")
     page.locator('#cost-options label:has(input[value="free"])').click()
     assert visible_titles(page) == ["Alien"]
+    expect(page.locator('#filter-chips [data-filter-id="cost-filter"]')).to_contain_text("Cost: Free")
+    expect(page.locator('#filter-chips [data-filter-id="cost-filter"]')).not_to_contain_text(
+        "Free1"
+    )  # no count
     expect(page).to_have_url(re.compile(r"[?&]cost=free"))
     page.locator('#cost-options label:has(input[value="all"])').click()
     # Genres: "No" excludes Action; the menu counts per genre.

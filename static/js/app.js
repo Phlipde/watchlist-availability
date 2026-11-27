@@ -242,7 +242,7 @@ const state = createAppState();
     }
     // "15 Mar 2027" for a date "2027-03-15".
     function day(date) {
-      return new Date(`${date}T00:00:00`).toLocaleDateString([], {dateStyle: 'medium'});
+      return new Date(`${date}T00:00:00`).toLocaleDateString('en-GB', {dateStyle: 'medium'});
     }
     function today() {
       return new Date().toLocaleDateString('sv');  // local date as YYYY-MM-DD

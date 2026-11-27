@@ -258,7 +258,7 @@ export function createScanFlow({state, scanState, results, filterBar, freeServic
     if (country !== document.getElementById('country-select').value) return null;
     if (snapshot.subscriptions) window.WATCHLIST_CONFIG.subscriptions = {...window.WATCHLIST_CONFIG.subscriptions, [country]: snapshot.subscriptions};
     // The service worker answers from its copy when the app cannot be reached: say how old the data is.
-    if (response.headers.get('X-From-Cache') && snapshot.created) showToast(`Offline: showing the data from ${new Date(snapshot.created * 1000).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'})}.`);
+    if (response.headers.get('X-From-Cache') && snapshot.created) showToast(`Offline: showing the data from ${new Date(snapshot.created * 1000).toLocaleString('en-GB', {dateStyle: 'medium', timeStyle: 'short'})}.`);
     if (!snapshot.available) return snapshot;
     replaceWithScanResults(snapshot.results, snapshot.unavailable, snapshot.changes, snapshot.created, snapshot.free_services, snapshot.rental_shops);
     document.getElementById('source-name').textContent = snapshot.source_name || '';

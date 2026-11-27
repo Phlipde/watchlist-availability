@@ -13,14 +13,16 @@ export function createChangesTab({state}) {
     const wanted = services.includes(service.value) ? service.value : '';
     service.innerHTML = '<option value="">All services</option>' + services.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
     service.value = wanted;
-    const rows = all.filter(change => (!wanted || change.provider === wanted) && (!kind || change.change === kind));
+    // The search box above works here too (on the titles); the other filters belong to the films.
+    const query = (document.getElementById('film-search')?.value || '').trim().toLowerCase();
+    const rows = all.filter(change => (!wanted || change.provider === wanted) && (!kind || change.change === kind) && (!query || String(change.title).toLowerCase().includes(query)));
     const known = new Set([...state.films, ...state.unavailable].map(filmKey));
     document.getElementById('changes-body').innerHTML = rows.map(change => {
       const title = escapeHtml(change.title) + (change.year ? ` (${numberText(change.year)})` : '');
       const film = known.has(change.film_key) ? `<a class="film-link film-open" href="${escapeHtml(filmHref(location.href, change.film_key))}" data-key="${escapeHtml(change.film_key)}">${title}</a>` : title;
       const event = change.change === 'added' ? '<span class="pill pill-ok">New</span>' : '<span class="pill pill-gone">Gone</span>';
-      return `<tr><td>${new Date(change.created * 1000).toLocaleDateString([], {dateStyle: 'medium'})}</td><td>${film}</td><td>${escapeHtml(change.provider)}</td><td>${event}</td></tr>`;
-    }).join('') || '<tr><td colspan="4" class="empty">No changes in the last 30 days.</td></tr>';
+      return `<tr><td>${new Date(change.created * 1000).toLocaleDateString('en-GB', {dateStyle: 'medium'})}</td><td>${film}</td><td>${escapeHtml(change.provider)}</td><td>${event}</td></tr>`;
+    }).join('') || `<tr><td colspan="4" class="empty">${query ? 'No change matches the search.' : 'No changes in the last 30 days.'}</td></tr>`;
     document.getElementById('tab-changes-count').textContent = rows.length;
   }
   ['changes-service', 'changes-kind', 'changes-mine'].forEach(id => document.getElementById(id)?.addEventListener('change', renderChanges));
@@ -32,6 +34,8 @@ export function createChangesTab({state}) {
       button.tabIndex = tab === name ? 0 : -1;
       document.getElementById(`${tab}-panel`).hidden = tab !== name;
     });
+    // The film count, the view switch and "Save view" are about the films: away while Changes is open.
+    document.body.classList.toggle('changes-open', name === 'changes');
   }
   document.querySelector('.view-tabs')?.addEventListener('click', event => {
     const tab = event.target.closest('[role=tab]');

@@ -8,7 +8,7 @@ export function numberText(value, fallback = '') {
 
 // A point in time without seconds, e.g. "15 Nov 2026, 23:10".
 export function dateTime(seconds) {
-  return new Date(seconds * 1000).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'});
+  return new Date(seconds * 1000).toLocaleString('en-GB', {dateStyle: 'medium', timeStyle: 'short'});
 }
 
 // How long ago a point in time was, e.g. "12 min ago", "3 h ago" or "4 days ago" (same words as agoText in

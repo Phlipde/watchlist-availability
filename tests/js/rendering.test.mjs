@@ -127,7 +127,7 @@ test('the card has a small heart on the poster and an action bar, no "..." menu'
   assert.ok(!html.includes('card-menu') && !html.includes('card-more'));
 });
 
-test('the table lists title link, year, runtime, rating and a stack of every service, yours first', async () => {
+test('the table lists title link, year, runtime, rating and the same service logos as the card', async () => {
   const {filmTable, renderResults} = await import('../../static/js/rendering.js');
   const films = [{key: '1', title: 'Heat', year: 1995, runtime: 170, letterboxd_rating: 4.1, providers: {Netflix: ['flatrate'], MUBI: ['flatrate'], 'Amazon VOD': ['rent', 'buy']}}];
   const context = {selected: new Set(['Netflix']), providerLogos: {Netflix: '/n.png', MUBI: '/m.png'}, logoBaseUrl: 'https://img/'};
@@ -136,7 +136,8 @@ test('the table lists title link, year, runtime, rating and a stack of every ser
   assert.match(html, /<td class="col-year">1995<\/td>/);
   assert.match(html, /★ 4\.1/);
   assert.match(html, /<th scope="col">Services<\/th>/);
-  assert.match(html, /aria-label="3 services: Netflix, Amazon VOD, MUBI · details"/);  // yours first, one stack
+  assert.match(html, /aria-label="1 service: Netflix · details"/);  // like the card: your services, no shops or others
+  assert.match(filmTable([{key: '2', title: 'Up', providers: {'Amazon VOD': ['rent']}}], context), /Rent · 1 shop/);  // no logo: the way in words
   assert.match(html, /data-tip="Netflix · Subscription"/);
   const containers = {results: {dataset: {}}, unavailableResults: {}};
   renderResults({films, sectionOf: new Map(), unavailable: []}, containers, {...context, viewMode: 'table'});

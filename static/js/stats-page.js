@@ -10,7 +10,7 @@ const named = (names, code) => { try { return names.of(code) || code; } catch { 
 const WEEK = 7 * 24 * 3600;
 
 function render(stats, scan) {
-  const day = seconds => new Date(seconds * 1000).toLocaleDateString([], {dateStyle: 'medium'});
+  const day = seconds => new Date(seconds * 1000).toLocaleDateString('en-GB', {dateStyle: 'medium'});
   document.getElementById('stats-meta').textContent = `Watchlist scan of ${day(scan.created)} · ${config.country}`;
   const old = Date.now() / 1000 - scan.created > WEEK
     ? `<p class="state-note">The data is from ${day(scan.created)}. Open the <a href="/watchlist">Watchlist</a> to scan again.</p>` : '';

@@ -200,7 +200,7 @@ export function wirePeople(stats, root) {
 
 export function changes(stats, now) {
   const c = stats.changes;
-  const day = seconds => new Date(seconds * 1000).toLocaleDateString([], {dateStyle: 'medium'});
+  const day = seconds => new Date(seconds * 1000).toLocaleDateString('en-GB', {dateStyle: 'medium'});
   if (!c.added30 && !c.removed30 && !c.weeks.some(week => week.added || week.removed) && !stats.recentChanges.length) {
     return section('What has changed?', '', '<p class="empty">No changes recorded yet. After the next scans you will see here which films are new on your services or gone from them. A film counts as gone only after two scans in a row without it.</p>');
   }
