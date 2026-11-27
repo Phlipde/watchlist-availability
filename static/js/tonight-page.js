@@ -70,6 +70,7 @@ export function createTonightPage({state, imageBaseUrl, view: VIEW, regionLabel,
     const everyone = members().length > 2;
     const {rows: [both, one], available} = togetherRows(together.results, {services, members: members().length, favorites: state.favorites, skip: new Set([...watchedKeys(), ...hiddenKeys()]), chips: tonightChips, now: Date.now() / 1000});
     tonightAvailable = available;
+    both.href = one.href = `/watchlist?together=${togetherIds().join(',')}`;  // the grid in Together
     document.getElementById('context-text').innerHTML = `${available.length} films available on the <a href="/subscriptions">${services.size} services</a> you have between you`;
     const cardContext = {...context, selected: services, ownersOf: service => { const owners = ownersFor(service); return {owners, text: ownerText(owners, members()[0]?.id)}; }};
     const card = film => filmCard(film, 'Paid', cardContext);

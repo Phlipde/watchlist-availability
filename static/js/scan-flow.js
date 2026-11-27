@@ -6,7 +6,7 @@ import {scanResultText, updateScanFeedback} from './scans.js';
 import {filmKey} from './filtering.js';
 import {saveCountry} from './country-picker.js';
 
-export function createScanFlow({state, scanState, results, filterBar, freeServices, rentalShops, mySubscriptions, greyKeys, populateGenres, renderFilms, showToast, loadFavorites, openPendingFilm}) {
+export function createScanFlow({state, scanState, results, filterBar, freeServices, rentalShops, mySubscriptions, greyKeys, populateGenres, renderFilms, showToast, loadFavorites, openPendingFilm, showTogether = () => false}) {
   const seen = new Set();
   // The dot in the header: nothing to see while the data is fresh; yellow when old, red after an error.
   function setSync(name, text) {
@@ -140,6 +140,7 @@ export function createScanFlow({state, scanState, results, filterBar, freeServic
     state.films.forEach(film => seen.add(filmKey(film)));
     if (!state.films.length && !state.unavailable.length) results.innerHTML = '';
     scanState.pendingUnavailable = [];
+    if (showTogether()) return;  // /watchlist?together=: the merged list replaces yours
     populateGenres();
     renderFilms();
   }

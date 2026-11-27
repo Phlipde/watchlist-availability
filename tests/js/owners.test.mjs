@@ -54,3 +54,10 @@ test('together rows: on both lists, then one of you; the chips and skip apply, o
   const short = togetherRows(films, {services, members: 3, chips: new Set(['tonight']), now: 0});
   assert.deepEqual(titles(short.rows), [["On everyone's list", ['Shared']], ['One of you, unseen', []]]);
 });
+
+test('the grid in Together reads its ids from ?together= and links back without it', async () => {
+  const {myListHref, togetherIdsFrom} = await import('../../static/js/together-grid.js');
+  assert.deepEqual(togetherIdsFrom('?together=2,3,2,x,0,-1'), [2, 3]);
+  assert.deepEqual(togetherIdsFrom('?cost=free'), []);
+  assert.equal(myListHref('http://h/watchlist?together=2&providers=MUBI&cost=free'), '/watchlist?cost=free');
+});

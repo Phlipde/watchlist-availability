@@ -106,3 +106,32 @@ def test_together_is_not_offered_with_one_profile(app_server, page):
     page.goto(app_server["url"])
     playwright_api.expect(page.locator(".film-row h2").first).to_have_text("On Netflix 1", timeout=15000)
     assert page.locator("#together-pop").count() == 0
+
+
+def test_the_grid_in_together_shows_both_lists_and_goes_back_to_mine(app_server, page):
+    expect = playwright_api.expect
+    store, settings = app_server["store"], app_server["settings"]
+    anna = store.add_profile("Anna")
+    settings.for_profile(anna).update({"subscriptions": ["MUBI"]})
+    store.save_scan("DE", "letterboxd", None, [HEAT, UP], [], {}, profile_id=anna)
+    _wait_for_my_scan(app_server, page)
+    expect(page.locator('#results article.film[data-key="14160"]')).to_have_count(0)
+
+    # Tonight's Together rows link to the grid.
+    page.goto(app_server["url"])
+    page.locator("#together-pop > summary").click()
+    page.get_by_role("checkbox", name="Anna").check()
+    expect(page.locator("#tonight-rows .film-row-head a").first).to_have_attribute(
+        "href", f"/watchlist?together={anna}"
+    )
+    page.goto(app_server["url"] + f"/watchlist?together={anna}")
+    expect(page.locator("#together-grid-note")).to_contain_text("Together with Anna", timeout=15000)
+    up = page.locator('#results article.film[data-key="14160"]')
+    expect(up.locator(".way-badge-owner")).to_have_text("A")
+    expect(page.locator('#results article.film[data-key="949"] .way-badge-owner')).to_have_text("M")
+    assert "MUBI" in page.url  # Anna's service is ticked too
+
+    page.get_by_role("link", name="Back to my list").click()
+    expect(page.locator('#results article.film[data-key="949"]')).to_have_count(1, timeout=15000)
+    expect(page.locator('#results article.film[data-key="14160"]')).to_have_count(0)
+    expect(page.locator("#together-grid-note")).to_have_count(0)

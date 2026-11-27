@@ -22,6 +22,7 @@ import {createFilmDetails} from './film-details.js';
 import {createKeyboardNav} from './keyboard-nav.js';
 import {initPhoneSheet} from './phone-sheet.js';
 import {createChangesTab} from './changes-tab.js';
+import {createTogetherGrid} from './together-grid.js';
 
 const imageBaseUrl = window.WATCHLIST_CONFIG.imageBaseUrl;
 const scanState = createScanState();
@@ -177,6 +178,7 @@ const state = createAppState();
         countryName: code => regionLabel.of(code) || code,
         abroadFor,
         abroadList,
+        ownersOf: togetherGrid.ownersOf(),
       });
       const note = typed && results.querySelector(`.favorite-note[data-key="${CSS.escape(typed.key)}"]`);
       if (note) { note.value = typed.value; note.focus(); note.setSelectionRange(typed.start, typed.end); }
@@ -295,8 +297,9 @@ const state = createAppState();
     const {setCompared} = createCompare({state, results, imageBaseUrl, showToast, openModal, renderFilms});
     const {startScan, resumeScan, loadLatestResult, switchCountry, showSavedPanel} = createScanFlow({
       state, scanState, results, filterBar, freeServices, rentalShops, mySubscriptions, greyKeys, populateGenres, renderFilms, showToast,
-      loadFavorites: () => loadFavorites(), openPendingFilm: final => openPendingFilm(final),
+      loadFavorites: () => loadFavorites(), openPendingFilm: final => openPendingFilm(final), showTogether: () => togetherGrid.show(),
     });
+    const togetherGrid = createTogetherGrid({state, view: VIEW, filterBar, populateGenres, renderFilms, showToast});
     const {loadFavorites, setFlag, toggleFavorite, updateFavoriteField} = createFilmFlags({state, results, showToast, renderFilms});
     document.getElementById('empty-reset').addEventListener('click', () => filterBar.resetAll());
     document.getElementById('empty-subscriptions').addEventListener('click', () => filterBar.setServices(mySubscriptions()));
@@ -306,7 +309,7 @@ const state = createAppState();
     });
     const {showFilmDetails, openPendingFilm} = createFilmDetails({
       state, results, imageBaseUrl, openModal, modalOpeners, setDrawerKey: key => { lastDrawerKey = key; }, watchedKeys, hiddenKeys, includedOn, upcomingText,
-      toggleFavorite, updateFavoriteField, setCompared, showToast, renderFilms, together: togetherMode,
+      toggleFavorite, updateFavoriteField, setCompared, showToast, renderFilms, together: () => togetherMode() || togetherGrid.mode(),
     });
     const {applyRoving, applyTonightRoving, navItems, activeKey, setActiveKey} = createKeyboardNav({state, results, view: VIEW, toggleFavorite, setFlag, setCompared, renderFilms});
     // The skip link moves the focus without a #results in the address: going back to a #fragment entry

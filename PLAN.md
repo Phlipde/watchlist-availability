@@ -762,7 +762,7 @@ Der Rest von Etappe 17; die Grundlage steht in 17a (vor K3c).
 
 ## Teil E: Mehrere Profile und „Together“ (2026-11-26/27)
 
-Plan, Entscheidungen und offene Punkte stehen in `docs/PLAN-multi-user.md` (M1 bis M5). Gebaut: Profile ohne Anmeldung (Kopfzeile, Settings → Profiles), Daten und Scans je Profil, Backup v2, „Together“ auf Tonight (gemeinsame Liste, gesehene Filme von Letterboxd), Benachrichtigungen und Gerätewerte je Profil, gespeicherte Ansichten teilen und in ein anderes Profil kopieren. Offen: M5.3 (Raster in Together, optional).
+Plan, Entscheidungen und offene Punkte stehen in `docs/PLAN-multi-user.md` (M1 bis M5). Gebaut: Profile ohne Anmeldung (Kopfzeile, Settings → Profiles), Daten und Scans je Profil, Backup v2, „Together“ auf Tonight (gemeinsame Liste, gesehene Filme von Letterboxd), Benachrichtigungen und Gerätewerte je Profil, gespeicherte Ansichten teilen und in ein anderes Profil kopieren. Raster in Together: `/watchlist?together=2`.
 
 ## Nicht im Plan (frühere Ideen)
 

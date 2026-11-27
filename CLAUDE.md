@@ -282,7 +282,7 @@ Flask app (`app.py`, `web/routes.py`, `watchlist_app/`) with SQLite, Tabler/Boot
 - 2026-11-16: [Decisions] Stages 9e-9j and most of 10 done (see PLAN.md); "Ähnliche Filme" left open because it needs extra TMDB requests per suggestion
 - 2026-11-16: [Gotchas] Filter bugs found by comparing each filter's count against counts computed from `/api/latest` data; repeat this method after filter changes
 
-- 2026-11-27: [Decisions] Multi-user plan done except optional M5.3 (grid in Together); open points are listed under each stage in `docs/PLAN-multi-user.md`
+- 2026-11-27: [Decisions] Multi-user plan done (M1-M5, grid in Together via `/watchlist?together=2`, `together-grid.js`); open points are listed under each stage in `docs/PLAN-multi-user.md`
 
 ## graphify
 
