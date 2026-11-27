@@ -15,7 +15,7 @@ def test_stats_page_shows_the_numbers_of_the_last_scan(app_server, page):
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     page.get_by_role("link", name="Stats").first.click()
     expect(page.locator("#stats-root")).to_have_attribute("aria-busy", "false")
-    expect(page.locator(".stat-tile").first).to_contain_text("films on your subscriptions")
+    expect(page.locator(".stat-tile").first).to_contain_text("films on your services")
     expect(page.locator(".stat-tile", has_text="films on the watchlist")).to_be_visible()
     expect(page.locator(".avail-bar .avail-seg").first).to_be_visible()
     expect(page.locator(".stats-card", has_text="Genres").locator(".bars li").first).to_be_visible()

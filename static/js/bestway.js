@@ -2,7 +2,7 @@
 // Order: own free service, own subscription, own service with ads, rent (first shop by the shop order),
 // buy, abroad on an own service (only when the switch is on), another service that is not yours, nothing.
 // No prices anywhere: the data has none; rent and buy show the offer type and the shop only.
-import {catalogName} from './catalog.js';
+import {serviceGroup} from './catalog.js';
 
 // Rental shops in the order they are listed (the ones ticked in the settings come first, see rankShops).
 export const RENT_SHOP_ORDER = ['amazon', 'apple tv', 'google play', 'youtube', 'sky store', 'magenta', 'rakuten', 'maxdome'];
@@ -12,11 +12,12 @@ const shopRank = name => {
 };
 const byName = (a, b) => a.localeCompare(b, undefined, {sensitivity: 'base'});
 
-// The films's offers merged by catalogue: [{name, own, kinds}] ("HBO Max" and its Amazon Channel are one).
+// The films's offers merged by service: [{name, own, kinds}] ("HBO Max" and its Amazon Channel are one, so are
+// "Prime Video" and "Amazon Prime Video with Ads": one logo per service, see serviceGroup).
 export function catalogues(film, own) {
   const merged = new Map();
   for (const [raw, kinds] of Object.entries(film.providers || {})) {
-    const name = catalogName(raw);
+    const name = serviceGroup(raw);
     const entry = merged.get(name) || {name, own: false, kinds: new Set()};
     entry.own = entry.own || own.has(raw) || own.has(name);
     kinds.forEach(kind => entry.kinds.add(kind));

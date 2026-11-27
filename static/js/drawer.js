@@ -75,7 +75,7 @@ function posterRow(items, ctx, currentKey = '') {
     const service = ctx.serviceOf(item);
     const poster = item.poster_path ? `<img src="${ctx.imageBaseUrl}${escapeHtml(item.poster_path)}" alt="">` : `<span class="no-poster" aria-hidden="true">${escapeHtml(item.title)}</span>`;
     const badge = service ? `<span class="mini-service">${logoImg(ctx, service, 'mini-logo') || escapeHtml(service.slice(0, 2))}</span>` : '';
-    const under = `${badge}<span class="mini-year">${item.year ? numberText(item.year) : ''}</span>`;
+    const under = `${badge}<span class="mini-title">${escapeHtml(item.title)}</span><span class="mini-year">${item.year ? numberText(item.year) : ''}</span>`;
     const current = ctx.keyOf(item) === currentKey;
     const unreleased = !isReleased(item, ctx.today);
     return `<li class="${[current && 'is-current', unreleased && 'is-unreleased'].filter(Boolean).join(' ')}"><button class="series-pick" type="button" data-key="${escapeHtml(ctx.keyOf(item))}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}${service ? `, ${escapeHtml(service)}` : ''}"${current ? ' aria-current="true"' : ''}>${poster}${under}</button></li>`;

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101412">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  <title>Page not found · Watchlist Availability</title>
+  <link href="{{ url_for('static', filename='css/tabler.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/tabler-icons.min.css') }}" rel="stylesheet">
+  {% include "partials/styles.html" %}
+</head>
+<body data-profile="{{ active_profile.id }}">
+  {% include "partials/header.html" %}
+  <main class="page">
+    <h1 class="page-title">Page not found</h1>
+    <p class="hint">There is no page at <code>{{ path }}</code>. The link may be old or mistyped.</p>
+    <p><a class="film-link" href="/">Go to Tonight</a> · <a class="film-link" href="/watchlist">Open the watchlist</a></p>
+  </main>
+  <script src="{{ url_for('static', filename='js/header.js', v='20261126-3') }}" type="module"></script>
+</body>
+</html>

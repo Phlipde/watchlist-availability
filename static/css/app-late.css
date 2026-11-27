@@ -161,14 +161,13 @@ a.stat-tile:focus-visible, .avail-seg:focus-visible, .avail-legend a:focus-visib
 .source-info { position: relative; margin-left: 8px; }
 .hidden-list { display: grid; gap: 4px; margin: 0 0 12px; padding: 0; list-style: none; }
 .hidden-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-/* Phone: no header line on Tonight, Subscriptions and Settings (the nav stays at the bottom); the watchlist keeps
-   only the sync dot; Settings says country and sync state in one small line. */
+/* Phone: no header line on Subscriptions and Settings (the nav stays at the bottom; Settings says country and sync
+   state in one small line). Tonight and the watchlist keep it: profile, country and sync are needed there. */
 .phone-status { display: none; }
 @media (max-width: 800px) {
-  .view-tonight .app-header .brand, .view-tonight .app-header .header-tools,
   body > .app-header:has(~ main.page:not(.stats-page)) .brand, body > .app-header:has(~ main.page:not(.stats-page)) .header-tools { display: none; }
-  .view-tonight .app-header, body > .app-header:has(~ main.page:not(.stats-page)) { min-height: 0; padding: 0; border: 0; }
-  .view-watchlist .app-header .brand { display: none; }
+  body > .app-header:has(~ main.page:not(.stats-page)) { min-height: 0; padding: 0; border: 0; }
+  :is(.view-watchlist, .view-tonight) .app-header .brand { display: none; }
   .phone-status { display: block; margin: -4px 0 12px; }
   .phone-status .sync-toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); }
 }
@@ -319,3 +318,9 @@ input[type=search]:not(#svc-q) { padding-left: 32px; background-image: url("data
 @media (pointer: coarse) { .together-menu .check-field { min-height: var(--h-lg); } }
 .together-bar .btn { min-height: var(--h-md); }
 @media (pointer: coarse) { .together-bar .btn { min-height: var(--h-lg); } }
+/* The poster makes the title cell taller: every cell of a film row sits in the middle. */
+.film-table th, .film-table td { vertical-align: middle; }
+/* Touch screens show these summaries as flex rows, which drops the native marker: draw it, so "Buy (8)" reads as foldable. */
+@media (pointer: coarse) { :is(details.unavailable, .offer-buy) > summary::before { content: "▸"; margin-right: 6px; } :is(details.unavailable, .offer-buy)[open] > summary::before { content: "▾"; } }
+/* "Picked for you" sits above the hero image, whose negative top margin would pull the image up under it. */
+.pick-reason + .film-hero { margin-top: 0; }

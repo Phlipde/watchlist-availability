@@ -24,8 +24,8 @@ export function head(stats) {
   const rows = stats.availabilityBreakdown.filter(item => item.films && item.kind !== 'coming_soon');
   const watchlist = o.total - o.comingSoon;
   const tiles = [
-    tile(number(o.availability.own_subscription), 'films on your subscriptions', {sub: `${number(stats.availabilityBreakdown[0].hours)} h`, href: watchlistHref({availability: 'own_subscription'})}),
-    tile(number(free), 'free or with ads', {sub: `${number(stats.availabilityBreakdown[1].hours + stats.availabilityBreakdown[2].hours)} h`, href: watchlistHref({availability: 'free,ads'})}),
+    tile(number(o.availability.own_subscription), 'films on your services (incl. your free ones)', {sub: `${number(stats.availabilityBreakdown[0].hours)} h`, href: watchlistHref({availability: 'own_subscription'})}),
+    tile(number(free), 'free elsewhere (not your services)', {sub: `${number(stats.availabilityBreakdown[1].hours + stats.availabilityBreakdown[2].hours)} h`, href: watchlistHref({availability: 'free,ads'})}),
     tip ? tile(number(tip.films), `more films with ${tip.group}`, {sub: 'a subscription you do not have', href: `?svcq=${encodeURIComponent(tip.group)}&svctype=all#services-section`})
       : tile('–', 'more films with another subscription', {sub: 'nothing to add'}),
     tile(number(watchlist), 'films on the watchlist', {sub: `${number(rows.reduce((sum, item) => sum + item.hours, 0))} h in total${o.comingSoon ? ` · +${number(o.comingSoon)} coming soon` : ''}`, href: '/watchlist'}),
@@ -91,7 +91,7 @@ export function nextUp(stats, {imageBaseUrl}) {
   return section('What is worth watching next?', '',
     `<div class="stats-lists">
       ${list('Best rated on your subscriptions', filmRows(stats.bestOnOwnSubs, ratingNote, imageBaseUrl), watchlistHref({availability: 'own_subscription', sort: 'letterboxd'}))}
-      ${list('Waiting the longest', filmRows(stats.waitingLongest, film => `#${film.watchlist_position} on the watchlist`, imageBaseUrl), watchlistHref({availability: 'own_subscription', sort: 'oldest'}))}
+      ${list('Waiting the longest', filmRows(stats.waitingLongest, film => `#${film.watchlist_position} on your Letterboxd watchlist`, imageBaseUrl), watchlistHref({availability: 'own_subscription', sort: 'oldest'}))}
       ${list('Worth renting', filmRows(stats.worthRenting, ratingNote, imageBaseUrl), watchlistHref({availability: 'rent_buy', rating: 'lb:4', sort: 'letterboxd'}))}
       ${list('Film series', series ? `<ol class="film-rows">${series}</ol>` : '<p class="empty">No series with two films.</p>', '')}
     </div>`);
@@ -133,7 +133,9 @@ export function distribution(stats, {nameOfLanguage, nameOfCountry, ageNote}) {
   const decadeNote = o.unknownYears ? `${plural(o.unknownYears, 'film')} without a confirmed release year are left out.` : '';
   const keywords = stats.keywords.slice(0, 15);
   const gaps = list => list.map(item => `<li><a href="/watchlist?film=${encodeURIComponent(item.film.key)}">${esc(item.film.title)}</a> <span class="muted">★ ${Number(item.film.letterboxd_rating).toFixed(1)} · TMDB ${Number(item.film.rating).toFixed(1)}</span></li>`).join('');
-  return section('What does my list look like?', 'Click a bar to open those films.',
+  // The tiles count released films; these charts count every film on the list, coming soon included.
+  const base = `All ${number(o.total)} films on the list${o.comingSoon ? `, the ${number(o.comingSoon)} coming soon included` : ''}. Click a bar to open those films.`;
+  return section('What does my list look like?', base,
     `<div class="stats-grid">
       ${card('Genres', bars(stats.genres.map(genre => [genre.name, genre.total]), o.total, {hrefOf: name => watchlistHref({genre: name})}), 'A film can have several genres.')}
       ${card('Decades', bars(stats.decades, o.total, {limit: 20, hrefOf: name => watchlistHref({from: String(name).slice(0, 4), to: Number(String(name).slice(0, 4)) + 9})}), decadeNote)}

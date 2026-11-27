@@ -150,3 +150,23 @@ class TestProfilesInThePages:
         assert ">Not synced yet<" in client.get("/settings").get_data(as_text=True)  # not "Out of date"
         store.set_profile_setting("letterboxd_username", "anna", profile_id=anna)
         assert '"needsUsername": true' not in client.get("/watchlist").get_data(as_text=True)
+
+
+def test_unknown_pages_get_the_app_404_and_the_api_json(client):
+    answer = client.get("/no-such-page")
+    assert answer.status_code == 404 and "Page not found" in answer.get_data(as_text=True)
+    assert 'id="app-header"' in answer.get_data(as_text=True)
+    answer = client.get("/api/no-such-thing")
+    assert answer.status_code == 404 and answer.get_json() == {"error": "Not found."}
+
+
+def test_ago_text_matches_the_page_script():
+    from web.routes import ago_text
+
+    assert [ago_text(s) for s in (30, 12 * 60, 3600, 47 * 3600, 3 * 86400)] == [
+        "just now",
+        "12 min ago",
+        "1 h ago",
+        "47 h ago",
+        "3 days ago",
+    ]

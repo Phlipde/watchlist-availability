@@ -13,7 +13,7 @@ from watchlist_app.scan_service import ScanService
 from watchlist_app.settings import AppSettings
 from watchlist_app.store import Store
 from web import api_data, api_scan, feeds, pages
-from web.common import PROFILE_COOKIE, SORTS, active_settings, status_overview  # noqa: F401
+from web.common import PROFILE_COOKIE, SORTS, active_settings, page, status_overview  # noqa: F401
 
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
@@ -72,6 +72,16 @@ def profile_for_request(profiles: list[dict]) -> int:
     return 1 if 1 in ids else min(ids)
 
 
+def ago_text(seconds: float) -> str:
+    """ "12 min ago", "3 h ago" or "4 days ago", the same words as ago() in static/js/ui.js."""
+    minutes = int(seconds // 60)
+    if minutes < 1:
+        return "just now"
+    if minutes < 60:
+        return f"{minutes} min ago"
+    return f"{minutes // 60} h ago" if minutes < 48 * 60 else f"{minutes // 1440} days ago"
+
+
 def register_routes(app: Flask, *, store: Store, settings: AppSettings, service: ScanService) -> None:
     app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 
@@ -106,6 +116,13 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
     def upload_too_large(error):
         return jsonify({"error": "The file is too large."}), 413
 
+    @app.errorhandler(404)
+    def not_found(error):
+        """A page in the app's own look with the header; the API keeps answering in JSON."""
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "Not found."}), 404
+        return page("not-found.html", path=request.path), 404
+
     @app.before_request
     def reject_cross_site_writes():
         if is_cross_site_write(request.method, request.headers, request.host):
@@ -128,7 +145,9 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             "header_country": s.country,
             "header_countries": s.country_choices(),
             "sync_state": "stale" if stale else "ok",
-            "sync_text": "Not synced yet" if age is None else "Out of date" if stale else "Synced",
+            "sync_text": "Not synced yet"
+            if age is None
+            else f"{'Out of date ·' if stale else 'Synced'} {ago_text(age)}",
             "profiles": g.profiles,
             "active_profile": next(p for p in g.profiles if p["id"] == g.profile_id),
         }

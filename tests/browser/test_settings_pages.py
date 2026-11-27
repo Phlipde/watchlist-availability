@@ -77,7 +77,9 @@ def test_subscriptions_page_adds_a_service_and_cancels_it_to_an_end_date(app_ser
     # Add: search, pick; the page reloads with the service saved.
     page.locator("#add-service").click()
     page.locator("#add-search").fill("MUBI")
-    page.locator('#add-list .add-item[data-name="MUBI"]').click()
+    # Adding reloads the page: wait for it, or the reload throws away the dialog opened below.
+    with page.expect_navigation():
+        page.locator('#add-list .add-item[data-name="MUBI"]').click()
     expect(page.locator("#add-dialog")).to_be_hidden()
     assert sorted(settings.subscriptions("DE")) == ["MUBI", "Netflix"]
     # Cancel Netflix to a date: it stays on the list until then.

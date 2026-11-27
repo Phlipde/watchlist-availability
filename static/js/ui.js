@@ -11,10 +11,12 @@ export function dateTime(seconds) {
   return new Date(seconds * 1000).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'});
 }
 
-// How long ago a point in time was, e.g. "3 h ago" or "4 days ago".
+// How long ago a point in time was, e.g. "12 min ago", "3 h ago" or "4 days ago" (same words as agoText in
+// web/routes.py, so the header reads alike on every page).
 export function ago(seconds) {
-  const hours = Math.floor((Date.now() / 1000 - seconds) / 3600);
-  return hours < 1 ? 'just now' : hours < 48 ? `${hours} h ago` : `${Math.floor(hours / 24)} days ago`;
+  const minutes = Math.floor((Date.now() / 1000 - seconds) / 60);
+  const hours = Math.floor(minutes / 60);
+  return minutes < 1 ? 'just now' : minutes < 60 ? `${minutes} min ago` : hours < 48 ? `${hours} h ago` : `${Math.floor(hours / 24)} days ago`;
 }
 
 export function escapeHtml(value) {

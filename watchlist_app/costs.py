@@ -342,15 +342,34 @@ def _coverage(films: list[dict], subscriptions: list[str], free: frozenset[str],
             counts["other"] += 1  # on services the user does not have
     total = sum(counts.values())
     covered = counts["free"] + counts["subscription"]
+    keys = ("subscription", "free", "rent", "other")
     return {
         "total": total,
         "covered": covered,
         "percent": round(100 * covered / total) if total else 0,
         "segments": [
-            {"id": key, "films": counts[key], "percent": round(100 * counts[key] / total, 1) if total else 0}
-            for key in ("subscription", "free", "rent", "other")
+            {
+                "id": key,
+                "films": counts[key],
+                "percent": round(100 * counts[key] / total, 1) if total else 0,
+                "share": share,
+            }
+            for key, share in zip(keys, whole_percents([counts[key] for key in keys]), strict=True)
         ],
     }
+
+
+def whole_percents(counts: list[int]) -> list[int]:
+    """Whole percents that add up to 100 (largest remainder), so a bar never says 101 %."""
+    total = sum(counts)
+    if not total:
+        return [0] * len(counts)
+    exact = [100 * count / total for count in counts]
+    shares = [int(value) for value in exact]
+    by_remainder = sorted(range(len(counts)), key=lambda index: exact[index] - shares[index], reverse=True)
+    for index in by_remainder[: 100 - sum(shares)]:
+        shares[index] += 1
+    return shares
 
 
 def cancel_ranking(

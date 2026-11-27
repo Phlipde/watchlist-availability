@@ -24,6 +24,14 @@ function fill(values) {
   document.getElementById('notify-kind').value = values.notify_kind;
   document.getElementById('notify-url').value = values.notify_url;
   document.querySelectorAll('input[name=notify_event]').forEach(box => { box.checked = Boolean(values.notify_events[box.value]); });
+  showDependent();
+}
+// Address, token and events only matter with a target; the scan hint follows the chosen interval.
+function showDependent() {
+  document.getElementById('notify-target').hidden = !document.getElementById('notify-kind').value;
+  const never = document.getElementById('scan-interval').value === '0';
+  document.getElementById('scan-hint-auto').hidden = never;
+  document.getElementById('scan-hint-never').hidden = !never;
 }
 async function save(values) {
   try {
@@ -68,6 +76,7 @@ document.getElementById('toast-rescan').addEventListener('click', async () => {
 let saved = fields();
 form.addEventListener('submit', event => event.preventDefault());
 form.addEventListener('change', async event => {
+  showDependent();
   if (!event.target.name || event.target.name === 'notify_token' && !event.target.value) return;
   const before = saved;
   const now = fields();

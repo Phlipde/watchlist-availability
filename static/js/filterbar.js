@@ -108,7 +108,8 @@ export function createFilterBar({state, config, mySubscriptions, freeServices, r
     $('runtime-summary').textContent = value ? `≤ ${durationText(value)}` : '';
     const radio = document.querySelector(`#runtime-pop input[name=runtime][value="${value}"]`);
     document.querySelectorAll('#runtime-pop input[name=runtime]').forEach(item => { item.checked = item === radio; });
-    if (value) { $('runtime-slider').value = String(value); $('runtime-slider-value').textContent = runtimeText(value); }
+    if (value) $('runtime-slider').value = String(value);
+    $('runtime-slider-value').textContent = value ? runtimeText(value) : 'Or drag for a maximum';  // not "Up to 3 h" beside "Any length"
     if (notify) onChange();
   }
   $('runtime-pop').addEventListener('change', event => {

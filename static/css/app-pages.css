@@ -320,3 +320,5 @@ dialog.side-drawer[open] { animation: drawer-in .22s ease; }
 .cancel-hint { margin: 0 0 12px; color: var(--muted); font: var(--fs-body) system-ui, sans-serif; }
 .cancel-hint .ti { color: var(--text-2); }
 @media (pointer: coarse) { .cancel-hint .film-link { display: inline-flex; align-items: center; min-height: 44px; } }
+/* A laptop-wide window (about 950px): tighter cells and wrapping headings keep the last column in sight. */
+@media (min-width: 641px) and (max-width: 1100px) { .subscriptions-table th, .subscriptions-table td { padding-left: 6px; padding-right: 6px; } .subscriptions-table thead th { white-space: normal; } }

@@ -54,7 +54,7 @@ def test_together_shows_both_lists_with_owner_badges_and_turns_off(app_server, p
     )
 
     # The drawer says whose service the best way is; Anna's film opens though it is not on my list.
-    page.locator("#together-pop > summary").click()  # close the menu
+    expect(page.locator("#together-pop")).not_to_have_attribute("open", "")  # closed after the only choice
     _open_drawer(page, "14160")
     expect(page.locator("#film-details-content .film-modal-primary")).to_have_text(
         "Watch on Anna's MUBI · Subscription"

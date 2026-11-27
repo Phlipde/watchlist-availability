@@ -80,6 +80,7 @@ export function createKeyboardNav({state, results, view: VIEW, toggleFavorite, s
   document.addEventListener('keydown', event => {
     if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
     if (event.target.closest?.('input, select, textarea, [contenteditable], dialog, .modal:not(#film-details-modal)')) return;
+    if (document.querySelector('details.filter-pop[open]')) return;  // a menu is open: its keys, not the shortcuts
     const dialog = document.getElementById('shortcuts-dialog');
     if (event.key === '?') { dialog.showModal(); return; }
     if (goPending) {

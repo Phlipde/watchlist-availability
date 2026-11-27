@@ -7,6 +7,7 @@ import {abroadHtml, abroadRows, filterFlags} from './abroad.js';
 import {drawerHtml, seriesOrder} from './drawer.js';
 
 export function createFilmDetails({state, results, imageBaseUrl, openModal, modalOpeners, setDrawerKey, watchedKeys, hiddenKeys, includedOn, upcomingText, toggleFavorite, updateFavoriteField, setCompared, showToast, renderFilms, together = () => null}) {
+  const pageTitle = document.title;
   // "Abroad on your services": from stored scan data (no TMDB request); filled in when it arrives.
   async function showElsewhere(tmdbId, key, own) {
     let byCountry;
@@ -83,6 +84,7 @@ export function createFilmDetails({state, results, imageBaseUrl, openModal, moda
     shownKey = key;
     const backFilm = backStack.length ? [...all, ...(mode?.films || [])].find(item => filmKey(item) === backStack.at(-1)) : null;
     document.getElementById('film-details-title').textContent = film.title;
+    document.title = `${film.title} · ${pageTitle}`;  // the tab names the open film
     setDrawerKey(key);
     const country = document.getElementById('country-select').value;
     const regions = new Intl.DisplayNames(['en'], {type: 'region'});
@@ -179,6 +181,7 @@ export function createFilmDetails({state, results, imageBaseUrl, openModal, moda
     if (push) { history.pushState(history.state, '', url); filmPushed = true; } else history.replaceState(history.state, '', url);
   }
   document.getElementById('film-details-modal').addEventListener('hidden.bs.modal', () => {
+    document.title = pageTitle;
     if (!new URL(location.href).searchParams.has('film')) return;
     if (filmPushed) { filmPushed = false; history.back(); } else setFilmAddress(null);
   });

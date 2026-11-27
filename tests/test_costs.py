@@ -350,3 +350,10 @@ def test_only_here_is_the_same_as_on_the_stats_page():
     result = costs.overview(cases["films"], cases["subscriptions"], {})
     counts = {item["name"]: len(item["only_here"]) for item in result["services"]}
     assert counts == cases["only_here"]
+
+
+def test_whole_percents_add_up_to_100():
+    # 144/32/43/235 of 454 round to 32 + 7 + 10 + 52 = 101 one by one.
+    assert costs.whole_percents([144, 32, 43, 235]) == [32, 7, 9, 52]
+    assert sum(costs.whole_percents([1, 1, 1])) == 100
+    assert costs.whole_percents([0, 0]) == [0, 0]

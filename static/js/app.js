@@ -204,10 +204,11 @@ const state = createAppState();
       // "Why is my film missing?": each set filter with the films it keeps out; a tap removes just that one.
       const nothing = view.visibleCount === 0 && view.unavailable.length === 0;
       document.getElementById('filters-empty').hidden = !nothing;
+      if (nothing) document.getElementById('coming-panel').hidden = true;  // the way out comes first, not a list below it
       document.getElementById('empty-subscriptions').hidden = selected.size > 0;
       emptyWays = nothing ? relaxationCounts(state.films, filters, filterContext, filterBar.activeChips().filter(chip => chip.without).map(chip => ({...chip, open: chip.without}))) : [];
-      document.getElementById('empty-ways').innerHTML = emptyWays.map((way, index) => `<li><button class="film-link" type="button" data-way="${index}">Without <strong>${escapeHtml(way.text)}</strong>: ${way.count}</button></li>`).join('');
-      document.getElementById('filters-empty-hint').textContent = emptyWays.length ? 'No film matches these filters. Remove one:' : 'No film matches these filters.';
+      document.getElementById('empty-ways').innerHTML = emptyWays.map((way, index) => `<li><button class="film-link" type="button" data-way="${index}">Remove <strong>${escapeHtml(way.text)}</strong> to see ${way.count} film${way.count === 1 ? '' : 's'}</button></li>`).join('');
+      document.getElementById('filters-empty-hint').textContent = emptyWays.length ? 'No film matches these filters. Remove one of them:' : 'No film matches these filters.';
       syncUrl();
       filterBar.updateChips();
     }

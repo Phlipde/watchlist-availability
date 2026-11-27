@@ -38,7 +38,8 @@ export function createFilmFlags({state, results, showToast, renderFilms}) {
     const film = state.films.find(movie => filmKey(movie) === key);
     if (!previous && !film) return;
     // Disabling the button below takes the focus away, so remember it first.
-    const hadFocus = document.activeElement === button && results.contains(button);
+    const area = button.closest('#results, #tonight-rows');  // the grid or the Tonight rows
+    const hadFocus = document.activeElement === button && area !== null;
     button.disabled = true;
     let response;
     try {
@@ -60,7 +61,7 @@ export function createFilmFlags({state, results, showToast, renderFilms}) {
     const fields = document.getElementById('modal-favorite-fields');
     if (fields?.dataset.key === key) fields.innerHTML = state.favorites.has(key) ? favoriteFields(key, state.favorites.get(key).title || film?.title || '', state.favorites.get(key)) : '';
     // The redraw replaces the card: put the focus back on the same star.
-    if (hadFocus) results.querySelector(`.film[data-key="${CSS.escape(key)}"] .favorite`)?.focus();
+    if (hadFocus) area.querySelector(`.film[data-key="${CSS.escape(key)}"] .favorite`)?.focus();
     document.querySelectorAll(`.modal-favorite[data-key="${CSS.escape(key)}"]`).forEach(modalButton => {
       const active = state.favorites.has(key);
       modalButton.innerHTML = `<i class="ti ${active ? 'ti-heart-filled' : 'ti-heart'}" aria-hidden="true"></i><span class="tool-label">Favorite</span>`;
@@ -100,7 +101,8 @@ export function createFilmFlags({state, results, showToast, renderFilms}) {
     if (!response?.ok) { showToast(`Could not save the ${field === 'notes' ? 'note' : 'status'}. It is still in the field; change it again to retry.`, true); return; }
     const saved = state.favorites.get(key) || {key}; saved[field] = control.value; state.favorites.set(key, saved);
   }
-  results.addEventListener('click', event => { const favoriteButton = event.target.closest('.favorite'); if (favoriteButton) { event.preventDefault(); toggleFavorite(favoriteButton); } });
+  // The hearts on the cards: in the grid and on Tonight's rows.
+  [results, document.getElementById('tonight-rows')].forEach(area => area?.addEventListener('click', event => { const favoriteButton = event.target.closest('.favorite'); if (favoriteButton) { event.preventDefault(); toggleFavorite(favoriteButton); } }));
   results.addEventListener('change', event => { if (event.target.classList.contains('favorite-status')) updateFavoriteField(event.target); });
   results.addEventListener('change', event => { if (event.target.classList.contains('favorite-note')) updateFavoriteField(event.target); });
   return {loadFavorites, setFlag, toggleFavorite, updateFavoriteField};

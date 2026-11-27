@@ -49,7 +49,7 @@ export function createTonightPage({state, imageBaseUrl, view: VIEW, regionLabel,
   function showTogetherControls(on) {
     if (!document.getElementById('together-pop')) return;
     const names = picks().filter(box => box.checked).map(box => box.dataset.name);
-    document.getElementById('together-label').textContent = on ? `Together with ${names.join(', ')}` : 'Together with …';
+    document.getElementById('together-label').textContent = on ? `Together with ${names.join(', ')}` : 'Watch together';
     document.getElementById('together-pop').toggleAttribute('data-active', on);
     document.getElementById('together-off').hidden = !on;
     const missing = members().filter(member => (together?.missing || []).includes(member.id));
@@ -121,7 +121,11 @@ export function createTonightPage({state, imageBaseUrl, view: VIEW, regionLabel,
     local.setItem('tonightChips', JSON.stringify([...tonightChips]));
     renderTonightPage();
   });
-  document.getElementById('together-pop')?.addEventListener('change', () => setTogether(togetherIds()));
+  document.getElementById('together-pop')?.addEventListener('change', event => {
+    setTogether(togetherIds());
+    // With one other profile there is nothing more to choose: close the menu so it does not cover the chips.
+    if (picks().length === 1) { event.currentTarget.open = false; event.currentTarget.querySelector('summary').focus(); }
+  });
   document.getElementById('together-off')?.addEventListener('click', () => {
     setTogether([]);
     document.querySelector('#together-pop > summary').focus();  // the button itself hides
@@ -152,7 +156,8 @@ export function createTonightPage({state, imageBaseUrl, view: VIEW, regionLabel,
   // "r" picks a film; only outside text fields and dialogs.
   document.addEventListener('keydown', event => {
     if (VIEW !== 'tonight' || event.key !== 'r' || event.ctrlKey || event.metaKey || event.altKey) return;
-    if (event.target.closest('input, select, textarea, [contenteditable], .modal')) return;
+    // Not while typing or while a menu (country, profile, Together, filters) is open.
+    if (event.target.closest('input, select, textarea, [contenteditable], .modal') || document.querySelector('details.filter-pop[open]')) return;
     pickForMe(document.getElementById('pick-for-me'));
   });
   return {renderTonightPage, togetherMode};

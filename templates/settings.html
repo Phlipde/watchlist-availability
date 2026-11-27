@@ -21,6 +21,7 @@
     {% if not settings.tmdb_api_key_set %}<p class="error">The TMDB API key is missing. Set <code>TMDB_API_KEY</code> in the environment (or <code>.env</code>) and restart the app.</p>{% endif %}
 
     <form id="settings-form" class="settings-form">
+      <p class="hint">Changes save on their own. <span class="feedback" id="settings-message" role="status"></span></p>
       <section class="settings-section">
         <h2 class="h4">Watchlist</h2>
         <label class="form-label" for="letterboxd-username">Letterboxd username</label>
@@ -49,6 +50,7 @@
         <p class="hint">Each profile has its own target and events; the test message goes to {{ active_profile.name }}'s target.</p>
         <label class="form-label" for="notify-kind">Send messages to</label>
         <select class="form-select w-auto" id="notify-kind" name="notify_kind">{% for value, label in [('', 'Nowhere'), ('ntfy', 'ntfy'), ('gotify', 'Gotify'), ('webhook', 'A webhook')] %}<option value="{{ value }}" {% if settings.notify_kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+        <div id="notify-target"{% if not settings.notify_kind %} hidden{% endif %}>
         <label class="form-label mt-2" for="notify-url">Address</label>
         <input class="form-control" id="notify-url" name="notify_url" type="url" value="{{ settings.notify_url }}" placeholder="https://ntfy.sh/your-topic" autocomplete="off">
         <label class="form-label mt-2" for="notify-token">Token (optional)</label>
@@ -58,6 +60,7 @@
         </fieldset>
         <p class="hint">At most one message a day, none between 22:00 and 08:00 (they wait until the morning). The token stays in this app and is not part of a backup.</p>
         <div class="toolbar"><button class="btn btn-sm btn-outline-secondary" id="notify-test" type="button">Send a test message</button><span class="feedback" id="notify-message" role="status"></span></div>
+        </div>
       </section>
 
       <section class="settings-section">
@@ -66,10 +69,10 @@
         <select class="form-select w-auto mw-100" id="scan-interval" name="scan_interval_hours">
           {% for hours in intervals %}<option value="{{ hours }}" {% if hours == settings.scan_interval_hours %}selected{% endif %}>{% if hours == 0 %}Never (only when the page is opened){% elif hours == 168 %}Once a week{% elif hours == 24 %}Once a day{% else %}Every {{ hours }} hours{% endif %}</option>{% endfor %}
         </select>
-        <p class="hint">Runs in the background while the app is running, also when nobody has the page open.</p>
+        <p class="hint" id="scan-hint-auto"{% if not settings.scan_interval_hours %} hidden{% endif %}>Runs in the background while the app is running, also when nobody has the page open.</p>
+        <p class="hint" id="scan-hint-never"{% if settings.scan_interval_hours %} hidden{% endif %}>No scan runs by itself: a page starts one when you open it and the data is a day old.</p>
       </section>
 
-      <p class="hint">Changes save on their own. <span class="feedback" id="settings-message" role="status"></span></p>
     </form>
 
     <section class="settings-section">
@@ -85,6 +88,6 @@
   </main>
   <div class="toast-bar" id="toast" role="status" hidden><span id="toast-text"></span><button class="film-link" id="toast-undo" type="button" hidden>Undo</button><button class="film-link" id="toast-rescan" type="button" hidden>Rescan now</button></div>
   <script src="{{ url_for('static', filename='js/header.js', v='20261126-3') }}" type="module"></script>
-  <script src="{{ url_for('static', filename='js/settings.js', v='20261126-1') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/settings.js', v='20261127-1') }}" type="module"></script>
 </body>
 </html>
