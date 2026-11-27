@@ -295,7 +295,7 @@ const state = createAppState();
 
     const {renderChanges} = createChangesTab({state});
     const {setCompared} = createCompare({state, results, imageBaseUrl, showToast, openModal, renderFilms});
-    const {startScan, resumeScan, loadLatestResult, switchCountry, showSavedPanel} = createScanFlow({
+    const {startScan, resumeScan, loadLatestResult, switchCountry, showSavedPanel, updateSyncLabel} = createScanFlow({
       state, scanState, results, filterBar, freeServices, rentalShops, mySubscriptions, greyKeys, populateGenres, renderFilms, showToast,
       loadFavorites: () => loadFavorites(), openPendingFilm: final => openPendingFilm(final), showTogether: () => togetherGrid.show(),
     });
@@ -444,6 +444,12 @@ const state = createAppState();
       const savedJob = new URL(location.href).searchParams.get('scan');
       if (savedJob) {
         resumeScan(savedJob);
+      } else if (window.WATCHLIST_CONFIG.needsUsername) {
+        // No name and no scan yet: say what to do instead of a scan that must fail (Tonight lists the steps).
+        results.setAttribute('aria-busy', 'false');
+        results.innerHTML = '<p class="empty">Enter your Letterboxd user name under <a href="/settings">Settings</a>, then your watchlist loads here.</p>';
+        document.getElementById('tonight-rows')?.replaceChildren();
+        updateSyncLabel();
       } else if (!snapshot || snapshot.stale) {
         startScan(true);
       } else {

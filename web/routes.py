@@ -128,7 +128,7 @@ def register_routes(app: Flask, *, store: Store, settings: AppSettings, service:
             "header_country": s.country,
             "header_countries": s.country_choices(),
             "sync_state": "stale" if stale else "ok",
-            "sync_text": "Out of date" if stale else "Synced",
+            "sync_text": "Not synced yet" if age is None else "Out of date" if stale else "Synced",
             "profiles": g.profiles,
             "active_profile": next(p for p in g.profiles if p["id"] == g.profile_id),
         }

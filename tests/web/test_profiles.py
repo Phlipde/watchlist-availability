@@ -143,3 +143,10 @@ class TestProfilesInThePages:
         page = client.get("/settings/profiles").get_data(as_text=True)
         assert "The last profile cannot be deleted." in page
         assert 'aria-label="Delete Me" disabled' in page
+
+    def test_a_new_profile_without_a_name_is_not_scanned_by_the_page(self, client, store, anna):
+        client.set_cookie("wl_profile", str(anna))
+        assert '"needsUsername": true' in client.get("/watchlist").get_data(as_text=True)
+        assert ">Not synced yet<" in client.get("/settings").get_data(as_text=True)  # not "Out of date"
+        store.set_profile_setting("letterboxd_username", "anna", profile_id=anna)
+        assert '"needsUsername": true' not in client.get("/watchlist").get_data(as_text=True)

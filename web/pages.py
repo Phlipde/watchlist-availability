@@ -39,11 +39,12 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
                     weekly_hours=s.weekly_hours,
                 )["recommendations"]
             )
+        needs_username = not s.letterboxd_username and not latest
         return page(
             "index.html",
             view=view,
             cancel_hint=hint,
-            needs_username=not s.letterboxd_username and not latest,
+            needs_username=needs_username,
             needs_tmdb=not s.tmdb_api_key,
             country=s.country,
             initial_filters=initial_filters,
@@ -51,6 +52,8 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
             client_config={
                 "imageBaseUrl": _TMDB_IMAGE_BASE_URL,
                 "view": view,
+                # No name and no scan yet: the page shows the setup steps instead of a scan that must fail.
+                "needsUsername": needs_username,
                 "deadlines": costs.upcoming_deadlines(s.costs(s.country)),
                 "initialFilters": initial_filters,
                 "subscriptions": {country: s.subscriptions(country) for country in s.countries_in_use()},

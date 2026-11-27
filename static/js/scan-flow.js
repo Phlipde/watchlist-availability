@@ -17,6 +17,7 @@ export function createScanFlow({state, scanState, results, filterBar, freeServic
   function updateSyncLabel(failed = false) {
     const age = state.lastScan ? Date.now() / 1000 - state.lastScan : Infinity;
     if (failed) setSync('error', 'Scan failed');
+    else if (!state.lastScan) setSync('stale', 'Not synced yet');  // a new profile: no scan to date
     else if (age > 24 * 3600) setSync('stale', `Out of date · ${ago(state.lastScan)}`);
     else setSync('ok', state.lastScan ? `Synced ${ago(state.lastScan)}` : 'Synced');
   }
@@ -329,5 +330,5 @@ export function createScanFlow({state, scanState, results, filterBar, freeServic
     local.setItem('greyUnavailableDuringRescan', String(event.target.checked));
     applyRescanUnavailableState();
   });
-  return {startScan, resumeScan, loadLatestResult, switchCountry, showSavedPanel};
+  return {startScan, resumeScan, loadLatestResult, switchCountry, showSavedPanel, updateSyncLabel};
 }

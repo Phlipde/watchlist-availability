@@ -52,7 +52,7 @@ class TestProfile2SeesNothingOfProfile1:
         status = client.get(f"/api/status?profile={anna}").get_json()
         assert status["jobs"] == [] and status["last_scan_at"] is None
         assert len(client.get("/api/status").get_json()["jobs"]) == 1
-        assert "Out of date" in client.get(f"/settings?profile={anna}").get_data(as_text=True)
+        assert "Not synced yet" in client.get(f"/settings?profile={anna}").get_data(as_text=True)
         assert "Synced" in client.get("/settings").get_data(as_text=True)
 
     def test_pages(self, client, anna):

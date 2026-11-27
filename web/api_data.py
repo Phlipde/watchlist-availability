@@ -122,7 +122,7 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
             profile_id = store.add_profile(body.get("name"), body.get("email"))
         except ValueError as error:
             return jsonify({"error": str(error)}), 400
-        # shortcut: no first scan for the new profile yet (plan question 5), that comes with M2.
+        # Its first scan comes from the scheduler once it has a Letterboxd name (plan question 5).
         return jsonify({"ok": True, **(find(profile_id) or {})}), 201
 
     @app.put("/api/profiles/<int:profile_id>")
@@ -146,7 +146,7 @@ def register(app: Flask, store: Store, settings: AppSettings, service: ScanServi
         except ValueError as error:
             return jsonify({"error": str(error)}), 400
         response = jsonify({"ok": True})
-        # Ids are reused: a cookie left on the deleted id would open the next new profile.
+        # The id is never given again, but a cookie on it would only fall back to another profile.
         if request.cookies.get(PROFILE_COOKIE) == str(profile_id):
             response.delete_cookie(PROFILE_COOKIE, path="/", samesite="Lax", httponly=True)
         return response
