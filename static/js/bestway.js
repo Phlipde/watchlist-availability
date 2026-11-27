@@ -26,11 +26,13 @@ export function catalogues(film, own) {
 }
 
 // abroad: {service, countries (best first)} for this film when the switch is on, else null.
+// whose(service) (Together only): 'your', '' for a shared one or "Anna's"; your and shared services come first.
 // Returns {kind, service, others, shops, muted, countries} where kind is
 // free | flatrate | ads | rent | buy | abroad | foreign | none.
-export function bestWay(film, {own, abroad = null} = {}) {
+export function bestWay(film, {own, abroad = null, whose = null} = {}) {
   const entries = catalogues(film, own);
-  const withKind = (kind, mine) => entries.filter(entry => entry.kinds.has(kind) && (mine === undefined || entry.own === mine)).sort((a, b) => byName(a.name, b.name));
+  const partners = name => (whose && !['', 'your'].includes(whose(name)) ? 1 : 0);
+  const withKind = (kind, mine) => entries.filter(entry => entry.kinds.has(kind) && (mine === undefined || entry.own === mine)).sort((a, b) => partners(a.name) - partners(b.name) || byName(a.name, b.name));
   const others = service => entries.filter(entry => entry.name !== service).length;
   const pick = (kind, mine) => withKind(kind, mine)[0];
   for (const kind of ['free', 'flatrate', 'ads']) {

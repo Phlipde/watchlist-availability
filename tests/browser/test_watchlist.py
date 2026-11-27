@@ -119,7 +119,7 @@ def test_any_country_can_be_picked_and_stays_after_a_reload(app_server, page):
     expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
     # Poland has no own services yet (and the fake TMDB no offers there): none are ticked, nothing breaks.
     assert app_server["settings"].subscriptions("PL") == []
-    assert "providers=" not in page.url
+    expect(page).not_to_have_url(re.compile(r"providers="))  # the address follows once the films are drawn
     assert page.locator("#services-list input:checked").count() == 0
     assert page.locator("#country-select").input_value() == "PL"
     page.goto(app_server["url"] + "/watchlist")  # a fresh load, without the scan in the address

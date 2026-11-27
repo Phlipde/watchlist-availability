@@ -89,9 +89,9 @@ export const justWatchSearch = (film, country) => `https://www.justwatch.com/${e
 
 // The main button: the best way (bestWay, the same as on the card) in words, or why there is none. `primary` is
 // true only for something watchable on an own service (the only gold button).
-export function primaryAction(film, own, country, regionName = country, today = new Date().toISOString().slice(0, 10)) {
+export function primaryAction(film, own, country, regionName = country, today = new Date().toISOString().slice(0, 10), whose = null) {
   const href = watchUrl(film, country);
-  const way = bestWay(film, {own});
+  const way = bestWay(film, {own, whose});
   const label = {free: 'Free', flatrate: 'Subscription', ads: 'With ads'};
   switch (way.kind) {
     case 'free':

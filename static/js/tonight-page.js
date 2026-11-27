@@ -72,7 +72,7 @@ export function createTonightPage({state, imageBaseUrl, view: VIEW, regionLabel,
     tonightAvailable = available;
     both.href = one.href = `/watchlist?together=${togetherIds().join(',')}`;  // the grid in Together
     document.getElementById('context-text').innerHTML = `${available.length} films available on the <a href="/subscriptions">${services.size} services</a> you have between you`;
-    const cardContext = {...context, selected: services, ownersOf: service => { const owners = ownersFor(service); return {owners, text: ownerText(owners, members()[0]?.id)}; }};
+    const cardContext = {...context, selected: services, whose: togetherMode()?.whose, ownersOf: service => { const owners = ownersFor(service); return {owners, text: ownerText(owners, members()[0]?.id)}; }};
     const card = film => filmCard(film, 'Paid', cardContext);
     const lists = everyone ? "everyone's list" : 'both lists';
     const empty = together.together.groups.both.length

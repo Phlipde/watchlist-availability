@@ -179,6 +179,7 @@ const state = createAppState();
         abroadFor,
         abroadList,
         ownersOf: togetherGrid.ownersOf(),
+        whose: togetherGrid.mode()?.whose,
       });
       const note = typed && results.querySelector(`.favorite-note[data-key="${CSS.escape(typed.key)}"]`);
       if (note) { note.value = typed.value; note.focus(); note.setSelectionRange(typed.start, typed.end); }
@@ -440,7 +441,9 @@ const state = createAppState();
     const latestRequest = fetch(`/api/latest?country=${encodeURIComponent(document.getElementById('country-select').value)}`);
     loadFavorites().then(async () => {
       const snapshot = await loadLatestResult(latestRequest);
-      fetch('/api/matches').then(response => (response.ok ? response.json() : [])).then(rows => { toCheck = rows.length; baseLine(); }).catch(() => {});
+      // Matches are shared by all profiles: count those of films on this list (and the ones TMDB did not find).
+      const onList = new Set([...state.films, ...state.unavailable].map(filmKey));
+      fetch('/api/matches').then(response => (response.ok ? response.json() : [])).then(rows => { toCheck = rows.filter(row => row.tmdb_id == null || onList.has(String(row.tmdb_id))).length; baseLine(); }).catch(() => {});
       const savedJob = new URL(location.href).searchParams.get('scan');
       if (savedJob) {
         resumeScan(savedJob);

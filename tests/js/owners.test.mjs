@@ -52,7 +52,7 @@ test('together rows: on both lists, then one of you; the chips and skip apply, o
   assert.deepEqual(titles(rows), [['On both lists', ['Long', 'Shared']], ['One of you, unseen', ['Mine']]]);
   assert.equal(available.length, 3);
   const short = togetherRows(films, {services, members: 3, chips: new Set(['tonight']), now: 0});
-  assert.deepEqual(titles(short.rows), [["On everyone's list", ['Shared']], ['One of you, unseen', []]]);
+  assert.deepEqual(titles(short.rows), [["On everyone's list", ['Shared']], ['Some of you, unseen', []]]);
 });
 
 test('the grid in Together reads its ids from ?together= and links back without it', async () => {

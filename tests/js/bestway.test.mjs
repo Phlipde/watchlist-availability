@@ -37,3 +37,11 @@ test('abroad only when it is given, then a service that is not yours, then nothi
   // rent beats abroad: you can watch it here
   assert.equal(bestWay(film({'Amazon VOD': ['rent']}), {own: own([]), abroad}).kind, 'rent');
 });
+
+test('in Together your and shared services come before a partner\'s one of the same kind', () => {
+  const film = {providers: {'Disney+': ['flatrate'], 'Prime Video': ['flatrate']}};
+  const own = new Set(['Disney+', 'Prime Video']);
+  assert.equal(bestWay(film, {own}).service, 'Disney+');  // by name without Together
+  const whose = name => (name === 'Disney+' ? "Anna's" : '');
+  assert.equal(bestWay(film, {own, whose}).service, 'Prime Video');
+});

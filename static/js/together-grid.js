@@ -34,6 +34,8 @@ export function createTogetherGrid({state, view, filterBar, populateGenres, rend
       document.getElementById('result-meta').insertAdjacentElement('afterend', element);
     }
     const others = members().slice(1);
+    // The source line names whose lists these are, not only your Letterboxd name.
+    document.getElementById('source-name').textContent = `Lists of ${members().map(member => member.name).join(', ')}`;
     const missing = others.filter(member => (data.missing || []).includes(member.id));
     element.innerHTML = `Together with ${escapeHtml(others.map(member => member.name).join(', '))} · <a class="film-link" href="${escapeHtml(myListHref(location.href))}">Back to my list</a>`
       + missing.map(member => ` · ${escapeHtml(member.name)} has no recent scan for ${escapeHtml(country())} — their list may be out of date.`).join('');

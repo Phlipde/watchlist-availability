@@ -126,6 +126,7 @@ def test_the_grid_in_together_shows_both_lists_and_goes_back_to_mine(app_server,
     )
     page.goto(app_server["url"] + f"/watchlist?together={anna}")
     expect(page.locator("#together-grid-note")).to_contain_text("Together with Anna", timeout=15000)
+    expect(page.locator("#source-name")).to_have_text("Lists of Me, Anna")
     up = page.locator('#results article.film[data-key="14160"]')
     expect(up.locator(".way-badge-owner")).to_have_text("A")
     expect(page.locator('#results article.film[data-key="949"] .way-badge-owner')).to_have_text("M")

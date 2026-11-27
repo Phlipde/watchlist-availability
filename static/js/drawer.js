@@ -94,7 +94,7 @@ export function drawerHtml(film, ctx) {
   const key = ctx.key;
   const name = escapeHtml(film.title);
   const long = film.title.length > 30;
-  const action = primaryAction(film, ctx.own, ctx.country, ctx.regionName, ctx.today);
+  const action = primaryAction(film, ctx.own, ctx.country, ctx.regionName, ctx.today, ctx.whose);
   const owner = action.primary && ctx.whose ? ctx.whose(action.service) : '';
   if (owner) action.text = action.text.replace(`Watch on ${action.service}`, `Watch on ${owner} ${action.service}`);
   const badges = statusBadges(film, ctx.own).map(badge => `<p class="status-badge is-${badge.tone}">${escapeHtml(badge.text)}</p>`).join('');

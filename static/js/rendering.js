@@ -39,7 +39,7 @@ function wayLine(film, key, context) {
   // A film listed only because of the abroad switch has no way to watch it here: its best way is abroad.
   const way = film.abroadOnly
     ? bestWay({...film, providers: {}}, {own: context.selected, abroad: context.abroadFor ? context.abroadFor(film) : null})
-    : bestWay(film, {own: context.selected});
+    : bestWay(film, {own: context.selected, whose: context.whose});
   const text = escapeHtml(wayText(way));
   const none = `<div class="best-way is-muted"><span class="best-way-link is-static" tabindex="0"><i class="ti ti-ban way-none" aria-hidden="true"></i><span class="way-text">${text}</span></span></div>`;
   // A row of logos for your own services (best first), each marked with a small icon for its type in the logo's corner;

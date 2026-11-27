@@ -110,7 +110,7 @@ export function togetherRows(films, {services, members = 2, favorites = new Map(
   const sorted = list => sortFilms(list, 'priority', {favorites});
   const rows = [
     {id: 'both', title: members > 2 ? "On everyone's list" : 'On both lists', films: sorted(watchable.filter(film => film.group === 'both')), href: ''},
-    {id: 'one', title: 'One of you, unseen', films: sorted(watchable.filter(film => film.group !== 'both')), href: ''},
+    {id: 'one', title: members > 2 ? 'Some of you, unseen' : 'One of you, unseen', films: sorted(watchable.filter(film => film.group !== 'both')), href: ''},
   ];
   return {rows, available: watchable};
 }
