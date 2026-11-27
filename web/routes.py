@@ -1,6 +1,7 @@
 """Flask route registration for the web application."""
 
 import gzip
+import hashlib
 import os
 import time  # noqa: F401  (tests patch time, tmdb, matches, requests and notifications through here)
 from urllib.parse import urlsplit
@@ -82,32 +83,78 @@ def ago_text(seconds: float) -> str:
     return f"{minutes // 60} h ago" if minutes < 48 * 60 else f"{minutes // 1440} days ago"
 
 
+# Scripts and styles from /static: packed like JSON and HTML, cached a year when the address has a version.
+_STATIC_TYPES = {"text/javascript", "application/javascript", "text/css"}
+_packed: dict[tuple[str, str], bytes] = {}  # (path, ETag) -> gzip body: the files only change with a deploy
+_versions: dict[tuple[str, int], str] = {}  # (file, mtime) -> short content hash
+
+
+def static_version(folder: str, filename: str) -> str:
+    """A short hash of the file content: a new address whenever the file changes, so it can be cached long."""
+    path = os.path.join(folder, filename)
+    try:
+        key = (path, os.stat(path).st_mtime_ns)
+    except OSError:
+        return ""
+    if key not in _versions:
+        with open(path, "rb") as file:
+            _versions[key] = hashlib.sha256(file.read()).hexdigest()[:10]
+    return _versions[key]
+
+
 def register_routes(app: Flask, *, store: Store, settings: AppSettings, service: ScanService) -> None:
     app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 
+    @app.url_defaults
+    def version_static(endpoint, values):
+        # Every url_for("static", ...) gets ?v=<content hash> instead of a hand-written v=: nothing to bump.
+        # Our own modules stay without it: they import each other by bare name, and a preload or script tag
+        # with ?v= would be a second address for the same module (fetched twice).
+        filename = values.get("filename") or ""
+        own_module = filename.endswith(".js") and not filename.endswith(".min.js")
+        if endpoint == "static" and filename and app.static_folder and not own_module:
+            values["v"] = static_version(app.static_folder, filename) or values.get("v")
+
     @app.after_request
-    def keep_flags(response):
-        # The flag pictures never change: the browser keeps them for a month instead of asking again.
-        if request.path.startswith("/static/flags/"):
+    def keep_static(response):
+        # A versioned address never changes its content; modules imported without ?v= keep asking (no-cache).
+        if (
+            request.path.startswith("/static/")
+            and request.args.get("v")
+            and response.status_code in {200, 304}
+        ):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif request.path.startswith("/static/flags/"):  # flags never change: a month
             response.headers["Cache-Control"] = "public, max-age=2592000"
         return response
 
     @app.after_request
     def compress(response):
         # The film list is close to 1 MB of JSON and is fetched on every page; gzip makes it about a tenth.
+        # Scripts and styles too (tabler.min.css alone is 1 MB); those are packed once per file version.
+        static = response.mimetype in _STATIC_TYPES and request.path.startswith("/static/")
         if (
             response.status_code != 200
-            or response.is_streamed
-            or response.direct_passthrough
+            or (response.is_streamed and not static)  # a sent file counts as streamed
+            or (response.direct_passthrough and not static)
             or "Content-Encoding" in response.headers
-            or response.mimetype not in {"application/json", "text/html"}
+            or (response.mimetype not in {"application/json", "text/html"} and not static)
             or "gzip" not in request.headers.get("Accept-Encoding", "")
+            or request.range is not None
         ):
             return response
-        data = response.get_data()
-        if len(data) < 2048:
-            return response
-        response.set_data(gzip.compress(data, compresslevel=5))
+        response.direct_passthrough = False  # read the file so it can be packed
+        key = (request.path, response.get_etag()[0] or "")
+        if static and key in _packed:
+            packed = _packed[key]
+        else:
+            data = response.get_data()
+            if len(data) < 2048:
+                return response
+            packed = gzip.compress(data, compresslevel=5)
+            if static:
+                _packed[key] = packed
+        response.set_data(packed)
         response.headers["Content-Encoding"] = "gzip"
         response.vary.add("Accept-Encoding")
         return response

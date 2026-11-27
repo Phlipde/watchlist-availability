@@ -237,7 +237,7 @@ Flask app (`app.py`, `web/routes.py`, `watchlist_app/`) with SQLite, Tabler/Boot
 
 - `CRLF line endings` -- most files use CRLF; scripted edits must match `\r\n` or the replace finds nothing
 - `Stale templates in the preview` -- Flask caches templates; restart the preview server after template edits, or the old HTML loads the new JS and throws
-- `Asset version` -- bump `v=` in `templates/*.html` (`url_for(..., v='YYYYMMDD-n')`) after CSS/JS changes, else browsers keep the old files
+- `Asset version` -- automatic: `url_for('static', ...)` adds `?v=<content hash>` (`static_version` in `web/routes.py`), cached a year; own JS modules get no `?v=` (they import each other by bare name, a second address would load them twice) and stay `no-cache`. JS/CSS are gzipped by `compress()`. Never hand-write `v=`
 - `.btn beats display:none` -- a later `.btn { display: inline-flex }` overrides `.x { display: none }`; hide buttons with a more specific selector (`.header-buttons .provider-toggle`)
 - `Disabled button loses focus` -- remember `document.activeElement` before `button.disabled = true` if focus must be restored
 - `Bootstrap modal and Escape` -- Escape only works after the modal has faded in; tests wait until focus is inside the dialog

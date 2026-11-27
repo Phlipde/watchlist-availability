@@ -232,3 +232,26 @@ def test_a_new_country_without_data_renders_every_page(client):
     services = client.get("/settings/services").get_data(as_text=True)
     assert "No services are known for PL yet" in services
     assert 'data-code="FR"' in services  # the picker lists every country with a flag
+
+
+def test_scripts_and_styles_are_packed_and_versioned_by_content(client):
+    import gzip
+    import re
+
+    page = client.get("/settings").get_data(as_text=True)
+    href = re.search(r'/static/css/tabler\.min\.css\?v=([0-9a-f]{10})"', page)
+    assert href, "every static address carries a content hash"
+    packed = client.get(f"/static/css/tabler.min.css?v={href.group(1)}", headers={"Accept-Encoding": "gzip"})
+    assert packed.headers["Content-Encoding"] == "gzip"
+    assert packed.headers["Cache-Control"] == "public, max-age=31536000, immutable"
+    plain = client.get("/static/css/tabler.min.css")
+    assert gzip.decompress(packed.get_data()) == plain.get_data()
+    assert "immutable" not in plain.headers.get("Cache-Control", "")  # imported modules have no ?v=
+    again = client.get(f"/static/css/tabler.min.css?v={href.group(1)}", headers={"Accept-Encoding": "gzip"})
+    assert again.get_data() == packed.get_data()  # packed once, served from memory
+
+
+def test_own_modules_keep_their_bare_address(client):
+    page = client.get("/watchlist").get_data(as_text=True)
+    assert 'src="/static/js/app.js"' in page and 'href="/static/js/ui.js"' in page  # same as their imports
+    assert "/static/js/tabler.min.js?v=" in page

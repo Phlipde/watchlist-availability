@@ -6,6 +6,7 @@ ahead are counted apart ("coming soon"), as are matches that need a look ("to ch
 
 import re
 from datetime import date
+from functools import cache
 
 
 def is_coming_soon(film: dict, today: str | None = None) -> bool:
@@ -29,6 +30,8 @@ def base_counts(scan: dict | None, to_check: int = 0, today: str | None = None) 
 
 
 # Plans of one provider are one service ("Netflix ... with Ads" is Netflix); as serviceGroup in catalog.js.
+# Cached: the cost pages ask it for every offer of every film (190 000 calls for one Tonight page).
+@cache
 def service_group(name: str) -> str:
     base = re.sub(r"\s+Amazon channels?$", "", name, flags=re.IGNORECASE)
     base = re.sub(r"\s+(Apple TV|Amazon) channels?$", "", base, flags=re.IGNORECASE)

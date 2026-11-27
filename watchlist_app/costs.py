@@ -1,6 +1,7 @@
 """Subscription costs: price per film, what cancelling loses, what to book next, rent-only films."""
 
 import re
+from functools import cache
 from typing import Any
 
 from .base import service_group
@@ -52,6 +53,7 @@ def mark_only_on_my_services(films: list[dict], subscriptions: list[str]) -> lis
     return [{**film, "only_on_my_services": only_on_my_services(film, subscriptions)} for film in films]
 
 
+@cache  # asked for every offer of every film on the cost pages
 def catalog_name(name: str) -> str:
     """The main service of an Amazon Channel: "HBO Max Amazon Channel" shows the same films as "HBO Max"."""
     return re.sub(r"\s+Amazon channels?$", "", name, flags=re.IGNORECASE)

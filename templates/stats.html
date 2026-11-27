@@ -19,8 +19,8 @@
     <p class="hint" id="stats-meta"></p>
     <div id="stats-root" aria-busy="true" aria-live="polite"><div class="stats-skeleton" role="status" aria-label="Loading the statistics"><div class="sk-row"><div class="sk-tile"></div><div class="sk-tile"></div><div class="sk-tile"></div><div class="sk-tile"></div></div><div class="sk-bar"></div></div></div>
   </main>
-  <script src="{{ url_for('static', filename='js/header.js', v='20261126-3') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/header.js') }}" type="module"></script>
   <script>window.STATS_PAGE = {{ client_config|tojson }};</script>
-  <script src="{{ url_for('static', filename='js/stats-page.js', v='20261126-4') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='js/stats-page.js') }}" type="module"></script>
 </body>
 </html>
