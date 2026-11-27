@@ -285,7 +285,7 @@ const state = createAppState();
       renderViews(document.getElementById('saved-views'), {canSave: true, search: location.search});
       renderViews(document.getElementById('tonight-views'));
     }
-    ['saved-views', 'tonight-views', 'views-menu'].forEach(id => wireViews(document.getElementById(id), () => location.search, drawViews));
+    ['saved-views', 'tonight-views', 'views-menu'].forEach(id => wireViews(document.getElementById(id), () => location.search, drawViews, showToast));
     const {renderTonightPage, togetherMode} = createTonightPage({
       state, imageBaseUrl, view: VIEW, regionLabel, drawViews, ensureAbroad, abroadOnFor, abroadCandidates, abroadFor, abroadList, watchedKeys, hiddenKeys, includedOn, showToast,
       applyTonightRoving: () => applyTonightRoving(), showFilmDetails: (key, opener) => showFilmDetails(key, opener), detailsOpener: () => modalOpeners.get('film-details-modal'),

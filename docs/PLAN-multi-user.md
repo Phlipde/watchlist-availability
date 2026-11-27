@@ -175,8 +175,8 @@ Für jede Stufe gilt: `pytest -q`, `node --test tests/js/*.mjs`, ruff und mypy g
 - [ ] **M5.3 Raster in Together [einfach, optional]** — `/watchlist?together=2`.
 - [x] **M5.4 Feeds und Sensoren mit Profil-Link [einfach]** — Settings → Data zeigt URLs mit `?profile=`.
 - [x] **M5.6 Gerätewerte je Profil [einfach]** — kleines Modul `static/js/profile-storage.js` (`profileKey(name)` = `p<id>:<name>`; Profil-ID aus einem `data-profile` am `<body>`), alle `localStorage`-Zugriffe (`saved-views.js`, Tonight-Chips, `abroadOn`, `viewMode`, versteckte Vorschläge) darüber; beim ersten Lesen für Profil 1 den alten Schlüssel ohne Präfix übernehmen, damit nichts verloren geht. Tests: node-Test für `profileKey` und die Übernahme; Browser: Profil 2 sieht die gespeicherten Ansichten von Profil 1 nicht.
-- [ ] **M5.7 Gespeicherte Ansichten teilen [einfach]** — eine Ansicht als Link teilen (die Filter stehen schon in der URL) und „Copy to profile …“ in der Liste der gespeicherten Ansichten. Ganz am Ende.
-- [ ] **M5.5 Doku [einfach]** — `CLAUDE.md` und `PLAN.md` aktualisieren.
+- [x] **M5.7 Gespeicherte Ansichten teilen [einfach]** — eine Ansicht als Link teilen (die Filter stehen schon in der URL) und „Copy to profile …“ in der Liste der gespeicherten Ansichten. Ganz am Ende. Umsetzung (27.11.2026): im „Views“-Menü der Watchlist je Ansicht ein Link-Knopf (kopiert `/watchlist?…`) und eine Auswahl „Copy to…“ mit den anderen Profilen (nur wenn es welche gibt); gleicher Name ersetzt. Offen: die Chips auf Tonight bieten beides nicht.
+- [x] **M5.5 Doku [einfach]** — `CLAUDE.md` und `PLAN.md` aktualisieren. Umsetzung (27.11.2026): Decisions in `CLAUDE.md`, Teil E in `PLAN.md`.
 
 ---
 

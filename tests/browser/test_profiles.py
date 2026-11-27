@@ -64,6 +64,22 @@ def test_saved_views_belong_to_a_profile_and_an_old_one_goes_to_profile_1(app_se
     expect(page.locator("#tonight-views .saved-view a")).to_have_text(["Old night"], timeout=15000)
 
 
+def test_a_saved_view_is_copied_to_another_profile(app_server, page):
+    expect = playwright_api.expect
+    anna = app_server["store"].add_profile("Anna")
+    page.goto(app_server["url"] + "/watchlist")
+    expect(page.locator("#progress-count")).to_have_text("Complete", timeout=15000)
+    page.evaluate('localStorage.setItem(\'p1:savedViews\', \'[{"name": "Night", "search": "?max=90"}]\')')
+    page.goto(app_server["url"] + "/watchlist")
+    page.locator("#views-pop > summary").click()
+    page.get_by_label("Copy the view Night to a profile").select_option(label="Anna")
+    expect(page.locator("#toast-message")).to_contain_text("Copied to Anna.")
+    assert page.evaluate(f"JSON.parse(localStorage.getItem('p{anna}:savedViews'))") == [
+        {"name": "Night", "search": "?max=90"}
+    ]
+    expect(page.get_by_label("Copy the view Night to a profile")).to_have_value("")
+
+
 def test_profiles_page_adds_renames_and_deletes_with_the_keyboard(app_server, page):
     expect = playwright_api.expect
     store = app_server["store"]

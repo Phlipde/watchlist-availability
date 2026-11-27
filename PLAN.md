@@ -760,6 +760,10 @@ Der Rest von Etappe 17; die Grundlage steht in 17a (vor K3c).
 - [x] `.env` in `.dockerignore` (mit Etappe 9c), `pytest` in `requirements-dev.txt` (mit Etappe 8).
 - [ ] `platforms.toml` aus `/data` lesen: entfällt, die Einstellungen liegen seit Etappe 7 in der Datenbank.
 
+## Teil E: Mehrere Profile und „Together“ (2026-11-26/27)
+
+Plan, Entscheidungen und offene Punkte stehen in `docs/PLAN-multi-user.md` (M1 bis M5). Gebaut: Profile ohne Anmeldung (Kopfzeile, Settings → Profiles), Daten und Scans je Profil, Backup v2, „Together“ auf Tonight (gemeinsame Liste, gesehene Filme von Letterboxd), Benachrichtigungen und Gerätewerte je Profil, gespeicherte Ansichten teilen und in ein anderes Profil kopieren. Offen: M5.3 (Raster in Together, optional).
+
 ## Nicht im Plan (frühere Ideen)
 
-Direkt-Link in die App des Anbieters (TMDB liefert nur den Link zur JustWatch-Seite, siehe Etappe 9i), mehrere Letterboxd-Profile, weitere Letterboxd-Listen, Serien, Abgleich mit Plex/Jellyfin, deutsche Oberfläche (offene Frage aus der Design-Kritik: die Oberfläche ist englisch), Push-Nachrichten über Discord/Telegram (ntfy/Gotify/Webhook stehen in K5; installierbare App jetzt in K6), Zugriffsschutz, umgekehrte Suche (Vorschläge außerhalb der Watchlist), Filmsuche ohne Watchlist (auch die TMDB-Gesamtsuche aus dem Gesamtkonzept), IMDb-Bewertung über OMDb, Leihpreise und Qualität (HD/4K, Ton, Untertitel; TMDB liefert sie nicht), Kalender-Zeitfenster, „Auf Fernseher öffnen“, Wischgesten auf Karten.
+Direkt-Link in die App des Anbieters (TMDB liefert nur den Link zur JustWatch-Seite, siehe Etappe 9i), weitere Letterboxd-Listen, Serien, Abgleich mit Plex/Jellyfin, deutsche Oberfläche (offene Frage aus der Design-Kritik: die Oberfläche ist englisch), Push-Nachrichten über Discord/Telegram (ntfy/Gotify/Webhook stehen in K5; installierbare App jetzt in K6), Zugriffsschutz, umgekehrte Suche (Vorschläge außerhalb der Watchlist), Filmsuche ohne Watchlist (auch die TMDB-Gesamtsuche aus dem Gesamtkonzept), IMDb-Bewertung über OMDb, Leihpreise und Qualität (HD/4K, Ton, Untertitel; TMDB liefert sie nicht), Kalender-Zeitfenster, „Auf Fernseher öffnen“, Wischgesten auf Karten.

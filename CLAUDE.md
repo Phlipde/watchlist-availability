@@ -268,6 +268,9 @@ Flask app (`app.py`, `web/routes.py`, `watchlist_app/`) with SQLite, Tabler/Boot
 - Header: one partial `partials/header.html` on every page (brand, country, nav, sync); a context processor gives it country and sync state. The film pages show the scan panel in it, the others a link plus `header.js`. The phone "Filters" button lives in the page (`.phone-filters`), not in the header. Grid: one list from `filterFilms().films`; `sectionOf` says which offers a card lists ("All" when both sections match). Sort is a menu of radios with a hidden `#sort-order` (`SORTS` in `routes.py` has group and text)
 - Film flags: `flags` table (`watched`, `not_now` with a server-set date 30 days ahead), `/api/flags`, part of the backup; the card's ... menu, the drawer buttons and the keys `s`/`n` call `setFlag` in `app.js`. The details are a Bootstrap modal styled as a drawer (`#film-details-modal`, right on desktop, bottom sheet on phones)
 - PWA: `/sw.js` (served from the root) keeps scripts/styles network-first (modules import each other unversioned), posters/fonts stale-while-revalidate, pages and `/api/latest` network-first with a cached copy (`X-From-Cache`). Icons come from `scripts/make_icons.py`. Browser tests block service workers (`page` fixture); the worker test makes its own context
+- Profiles (`docs/PLAN-multi-user.md`, M1-M5): no login; `before_request` picks the profile from `?profile=` (GET), cookie `wl_profile`, the `Cf-Access-Authenticated-User-Email` header, else the lowest id. Store, scan and scheduler methods take a required keyword `profile_id`; routes use `active_profile_id()` / `active_settings(settings)` from `web/common.py`. Ids are never reused (`profile_last_id`). The `.env` Letterboxd name belongs to profile 1 only
+- Together: `/api/together?with=2,3` merges watchlists (`watchlist_app/together.py`, groups `both`/`one`); a film hidden or watched (Letterboxd `/films/`, table `watched`, refreshed daily) by any member drops out; the active profile's country counts
+- Device values (saved views, chips, view mode, ...) go through `profile-storage.js` (`p<id>:<name>`, id from `<body data-profile>`); never call `localStorage` directly for them. Saved views can be copied to another profile and shared as a link from the Views menu
 - Settings sub-pages: `/settings`, `/settings/data`, `/settings/matches`. The scan panel lives in the header sync dropdown (`#sync-toggle`), its element ids are unchanged
 - "Where to watch" uses `tmdb_url + /watch?locale=XX` instead of storing TMDB's `link` field (same page, no DB/backup change)
 - The services are chosen on `/settings/services` (saves on tick, `PUT /api/settings` with `subscriptions`); prices and renewal dates live on `/subscriptions` and save on blur (`costs`); `subscriptions_country` still lets the API edit another country. `costs.overview` returns paid rows sorted by films only there, a free-services block and `book` with Amazon Channels folded into their main service (`catalog_name`)
@@ -278,6 +281,8 @@ Flask app (`app.py`, `web/routes.py`, `watchlist_app/`) with SQLite, Tabler/Boot
 
 - 2026-11-16: [Decisions] Stages 9e-9j and most of 10 done (see PLAN.md); "Ähnliche Filme" left open because it needs extra TMDB requests per suggestion
 - 2026-11-16: [Gotchas] Filter bugs found by comparing each filter's count against counts computed from `/api/latest` data; repeat this method after filter changes
+
+- 2026-11-27: [Decisions] Multi-user plan done except optional M5.3 (grid in Together); open points are listed under each stage in `docs/PLAN-multi-user.md`
 
 ## graphify
 

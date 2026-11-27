@@ -31,6 +31,7 @@
 #favorites-view[aria-pressed="true"] { color: var(--accent); }
 .menu-row { display: flex; align-items: center; gap: 4px; }
 .menu-row .menu-item { flex: 1; }
+.menu-row .view-copy { flex: none; width: auto; max-width: 10rem; padding-right: 1.75rem; }
 .save-pop { position: relative; }
 .save-pop > summary { list-style: none; }
 .save-pop > summary::-webkit-details-marker { display: none; }
