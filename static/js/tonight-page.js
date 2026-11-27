@@ -157,7 +157,7 @@ export function createTonightPage({state, imageBaseUrl, view: VIEW, regionLabel,
   document.addEventListener('keydown', event => {
     if (VIEW !== 'tonight' || event.key !== 'r' || event.ctrlKey || event.metaKey || event.altKey) return;
     // Not while typing or while a menu (country, profile, Together, filters) is open.
-    if (event.target.closest('input, select, textarea, [contenteditable], .modal') || document.querySelector('details.filter-pop[open]')) return;
+    if (event.target.closest('input, select, textarea, [contenteditable], .modal') || document.querySelector('details.filter-pop[open]:not(.is-moved)')) return;
     pickForMe(document.getElementById('pick-for-me'));
   });
   return {renderTonightPage, togetherMode};

@@ -205,6 +205,18 @@ export function relaxationCounts(films, filters, context, candidates) {
 }
 
 // Returns what to show: films per section, matching unavailable films and the visible count.
+// Why the search found a film when its title does not say it: "Director: Christopher Nolan", "Cast: …" or
+// "Keyword: dark comedy" (the search looks at title, director, cast and TMDB keywords). '' for a title match.
+export function searchReason(film, query) {
+  if (!query || String(film.title || '').toLowerCase().includes(query)) return '';
+  const hit = values => (values || []).find(value => String(value).toLowerCase().includes(query));
+  if (film.director && String(film.director).toLowerCase().includes(query)) return `Director: ${film.director}`;
+  const actor = hit(film.cast);
+  if (actor) return `Cast: ${actor}`;
+  const keyword = hit(film.keywords);
+  return keyword ? `Keyword: ${keyword}` : '';
+}
+
 export function filterFilms(films, unavailable, filters, context) {
   const sections = {};
   const visibleKeys = new Set();

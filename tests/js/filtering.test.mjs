@@ -315,3 +315,13 @@ test('one base set: released films are the watchlist, films with a release ahead
   const unavailable = [{key: 'c', home_date: '2026-01-01'}, {key: 'd', cinema_date: '2027-06-30'}, {key: 'e'}];
   assert.deepEqual(baseCounts(available, unavailable, '2026-11-24'), {watchlist: 4, available: 2, notAvailable: 2, comingSoon: 1});
 });
+
+test('searchReason says where a search matched outside the title', async () => {
+  const {searchReason} = await import('../../static/js/filtering.js');
+  const film = {title: 'Inglourious Basterds', director: 'Quentin Tarantino', cast: ['Brad Pitt'], keywords: ['dark comedy', 'nazi']};
+  assert.equal(searchReason(film, 'dark'), 'Keyword: dark comedy');
+  assert.equal(searchReason(film, 'tarant'), 'Director: Quentin Tarantino');
+  assert.equal(searchReason(film, 'pitt'), 'Cast: Brad Pitt');
+  assert.equal(searchReason(film, 'basterds'), '');  // the title says it
+  assert.equal(searchReason(film, ''), '');
+});

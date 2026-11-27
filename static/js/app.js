@@ -178,6 +178,7 @@ const state = createAppState();
         countryName: code => regionLabel.of(code) || code,
         abroadFor,
         abroadList,
+        query: filters.query,  // a hit outside the title says why (searchReason)
         ownersOf: togetherGrid.ownersOf(),
         whose: togetherGrid.mode()?.whose,
       });
@@ -425,9 +426,18 @@ const state = createAppState();
     // The header slims down once the page scrolls.
     const appHeader = document.getElementById('app-header');
     // Two thresholds: on a short page the 8px it saves would push scrollY back under one threshold and flicker.
+    // The filter bar folds away while scrolling down the films and comes back on the way up (or at the top);
+    // never while one of its menus is open or someone types in it. 8px of slack, so a trackpad's jitter does not flicker.
+    let lastY = scrollY;
+    const watchBar = document.querySelector('.watch-bar');
     addEventListener('scroll', () => {
       if (scrollY > 64) appHeader.classList.add('compact');
       else if (scrollY < 8) appHeader.classList.remove('compact');
+      const delta = scrollY - lastY;
+      if (Math.abs(delta) < 8) return;
+      lastY = scrollY;
+      const busy = watchBar?.querySelector('details.filter-pop[open]:not(.is-moved)') || document.activeElement?.closest?.('.watch-bar input, .watch-bar select');
+      document.body.classList.toggle('bar-folded', delta > 0 && scrollY > 240 && !busy);
     }, {passive: true});
     document.getElementById('share-button')?.addEventListener('click', async () => {
       try {

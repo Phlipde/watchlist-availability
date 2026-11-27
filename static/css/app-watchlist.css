@@ -43,7 +43,8 @@
 
 /* ===== The "More filters" panel: three columns, sentence-case headings, readable counts, a dimmed page behind ===== */
 .menu-group { color: var(--text-2); font: 500 12px system-ui, sans-serif; letter-spacing: 0; text-transform: none; }
-.more-filters .filter-menu { left: auto; right: 0; width: min(720px, calc(100vw - 16px)); }
+/* Opens under its button, left edges in line (keepInView slides it back in at the window edge). */
+.more-filters .filter-menu { left: 0; right: auto; width: min(720px, calc(100vw - 16px)); }
 .more-filters-menu .menu-head { display: flex; align-items: center; justify-content: space-between; margin: -4px 0 8px; }
 .more-filters-menu .menu-head .btn { margin-left: auto; }
 .more-filters-menu .menu-head .menu-group { margin: 0; color: var(--text); font-size: var(--fs-body); font-weight: 600; }
@@ -242,3 +243,16 @@ body.tools-open .segmented .option-count { margin-left: 0; }
 .bar-view-slot:not(:empty) + #sort-pop { margin-left: 0; }
 /* The Changes tab: the film count, view switch and "Save view" describe the films, not the changes. */
 .changes-open :is(#result-meta, #result-tools, #saved-views) { visibility: hidden; }
+/* Why a search found a film whose title does not contain the words. */
+.search-reason { margin: 2px 0 0; overflow: hidden; color: var(--text-2); font: var(--fs-small)/1.3 system-ui, sans-serif; white-space: nowrap; text-overflow: ellipsis; }
+/* Year, runtime and rating that gave way to the panel: one full-width row under the three columns, side by side,
+   instead of a long third column. */
+.moved-section { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.moved-slot { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; align-items: start; }
+.moved-slot .range-menu { width: auto; }
+/* Scrolling down the films folds the filter bar up behind the header; scrolling up brings it back (app.js). */
+@media (min-width: 801px) {
+  .watch-bar { transition: translate .2s ease-out; }
+  body.bar-folded .watch-bar { translate: 0 calc(-100% - 8px); }
+}
+@media (prefers-reduced-motion: reduce) { .watch-bar { transition: none; } }

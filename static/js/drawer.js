@@ -97,7 +97,7 @@ export function drawerHtml(film, ctx) {
   const action = primaryAction(film, ctx.own, ctx.country, ctx.regionName, ctx.today, ctx.whose);
   const owner = action.primary && ctx.whose ? ctx.whose(action.service) : '';
   if (owner) action.text = action.text.replace(`Watch on ${action.service}`, `Watch on ${owner} ${action.service}`);
-  const badges = statusBadges(film, ctx.own).map(badge => `<p class="status-badge is-${badge.tone}">${escapeHtml(badge.text)}</p>`).join('');
+  const badges = statusBadges(film, ctx.own, action.primary ? action.service : '').map(badge => `<p class="status-badge is-${badge.tone}">${escapeHtml(badge.text)}</p>`).join('');
   const alt = alternatives(film, ctx.own, action.service);
   const altKinds = alt.every(item => item.kind !== 'flatrate');
   const altLine = alt.length

@@ -1,5 +1,5 @@
 import {dateTime, escapeHtml, numberText} from './ui.js';
-import {SECTION_KINDS, filmKey, sectionProviders, selectedChanges} from './filtering.js';
+import {SECTION_KINDS, filmKey, searchReason, sectionProviders, selectedChanges} from './filtering.js';
 import {TYPE_ICON, bestWay, catalogues, wayText} from './bestway.js';
 import {logoStackHtml} from './logo-stack.js';
 
@@ -130,7 +130,7 @@ export function filmCard(film, section, context) {
   const bar = `<div class="poster-actions" role="group" aria-label="Actions: ${title}">${act(`data-compare="${escapeHtml(key)}"`, 'ti-layout-columns', context.compareKeys.has(key) ? 'Remove from comparison' : 'Add to comparison')}${act(`data-flag="not_now" data-key="${escapeHtml(key)}"`, 'ti-eye-off', hidden ? 'Bring back' : 'Not now: off Tonight and suggestions for 30 days')}${act(`data-flag="watched" data-key="${escapeHtml(key)}"`, 'ti-archive', watched ? 'Unhide' : 'Hide: stays hidden until you unhide it')}</div>`;
   // The title comes first in the source (and for the keyboard); the CSS draws the poster on top. The title link covers
   // the whole card (see .film-open::after); the heart, the bar and the line sit above it.
-  return `<article class="film${grey}${watched ? ' is-watched' : ''}" data-key="${escapeHtml(key)}" data-section="${section}"><div class="film-info"><h3 class="film-title">${filmLink(film, key, pageHref)}</h3><p class="year">${meta}</p><div class="card-foot">${wayLine(film, key, context)}</div>${favoriteControls}</div><div class="poster"><label class="comparison-toggle"><input class="comparison-check" type="checkbox" aria-label="Compare ${title}" ${compareChecked}><span aria-hidden="true">Compare</span></label>${badge}${favoriteButton}${poster}${bar}</div></article>`;
+  return `<article class="film${grey}${watched ? ' is-watched' : ''}" data-key="${escapeHtml(key)}" data-section="${section}"><div class="film-info"><h3 class="film-title">${filmLink(film, key, pageHref)}</h3><p class="year">${meta}</p>${reasonLine(film, context)}<div class="card-foot">${wayLine(film, key, context)}</div>${favoriteControls}</div><div class="poster"><label class="comparison-toggle"><input class="comparison-check" type="checkbox" aria-label="Compare ${title}" ${compareChecked}><span aria-hidden="true">Compare</span></label>${badge}${favoriteButton}${poster}${bar}</div></article>`;
 }
 
 export function unavailableCard(film, selected, pageHref = 'http://localhost/') {
@@ -138,6 +138,12 @@ export function unavailableCard(film, selected, pageHref = 'http://localhost/') 
   const changeBadges = changeBadgesFor(film, selected);
   return `<article class="film unavailable-card" data-key="${escapeHtml(key)}" data-section="Unavailable"><div class="film-info"><h3 class="film-title">${filmLink(film, key, pageHref)}</h3><span class="year">${numberText(film.year, 'Year unknown')}</span>${changeBadges ? `<p class="provider-changes">${changeBadges}</p>` : ''}</div></article>`;
 }
+
+// A search hit outside the title says where it matched, under the year (see searchReason).
+const reasonLine = (film, context) => {
+  const reason = searchReason(film, context.query || '');
+  return reason ? `<p class="search-reason">${escapeHtml(reason)}</p>` : '';
+};
 
 // The table view: one row per film, the title is the link to the details.
 export function filmTable(films, context) {
@@ -149,7 +155,7 @@ export function filmTable(films, context) {
     const {way, items} = wayItems(film, context);
     const services = items.length ? logoStackHtml(items, {key}) : `<span class="muted">${escapeHtml(wayText(way))}</span>`;
     const runtime = runtimeText(film.runtime);
-    return `<tr data-key="${escapeHtml(key)}"><th scope="row"><span class="table-title">${film.poster_path ? `<img class="table-poster" src="${sized(context.imageBaseUrl, 'w92')}${escapeHtml(film.poster_path)}" alt="" loading="lazy" width="28" height="42">` : '<span class="table-poster" aria-hidden="true"></span>'}${filmLink(film, key, pageHref)}</span></th><td class="col-year">${numberText(film.year, '')}</td><td>${runtime ? `<span aria-hidden="true">${runtime}</span><span class="visually-hidden">${runtimeSpoken(film.runtime)}</span>` : ''}</td><td>${rating}</td><td class="table-services">${services}</td></tr>`;
+    return `<tr data-key="${escapeHtml(key)}"><th scope="row"><span class="table-title">${film.poster_path ? `<img class="table-poster" src="${sized(context.imageBaseUrl, 'w92')}${escapeHtml(film.poster_path)}" alt="" loading="lazy" width="28" height="42">` : '<span class="table-poster" aria-hidden="true"></span>'}${filmLink(film, key, pageHref)}</span>${reasonLine(film, context)}</th><td class="col-year">${numberText(film.year, '')}</td><td>${runtime ? `<span aria-hidden="true">${runtime}</span><span class="visually-hidden">${runtimeSpoken(film.runtime)}</span>` : ''}</td><td>${rating}</td><td class="table-services">${services}</td></tr>`;
   }).join('');
   return `<div class="table-scroll"><table class="status-table film-table"><thead><tr><th scope="col">Title</th><th scope="col" class="col-year">Year</th><th scope="col">Runtime</th><th scope="col">Rating</th><th scope="col">Services</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }

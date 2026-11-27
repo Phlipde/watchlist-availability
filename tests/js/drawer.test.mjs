@@ -91,3 +91,12 @@ test('an unreleased film: no TMDB 0.0, and the main button says when it is in ci
   const rows = catalogRows({'Prime Video': ['flatrate'], 'Amazon Prime Video with Ads': ['flatrate'], 'MUBI Amazon Channel': ['flatrate'], MUBI: ['flatrate']}, own)[0].rows;
   assert.deepEqual(rows.map(row => row.name), ['MUBI', 'Prime Video']);
 });
+
+test('a film new on another service than the main button says "Also new on"', async () => {
+  const {statusBadges} = await import('../../static/js/film-meta.js');
+  const film = {providers: {Netflix: ['flatrate'], 'Prime Video': ['flatrate']}, provider_changes: {added: ['Prime Video'], removed: []}};
+  const own = new Set(['Netflix', 'Prime Video']);
+  assert.equal(statusBadges(film, own, 'Netflix')[0].text, 'Also new on Prime Video');
+  assert.equal(statusBadges(film, own, 'Prime Video')[0].text, 'New on Prime Video');
+  assert.equal(statusBadges(film, own)[0].text, 'New on Prime Video');
+});

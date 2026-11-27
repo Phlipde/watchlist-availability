@@ -125,13 +125,15 @@ export function alternatives(film, own, primaryService) {
 const shortDate = seconds => new Date(seconds * 1000).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'});
 
 // "New on Netflix · since 12 Nov" / "No longer on Prime Video · since 14 Nov", only for the services that count.
-export function statusBadges(film, selected) {
+// `main` is the service of the drawer's main button: a film new on another one says "Also new on …", so
+// "New on Prime Video" above "Watch on Netflix" does not read like a contradiction.
+export function statusBadges(film, selected, main = '') {
   const {added, removed} = selectedChanges(film, selected);
   const since = film.provider_changes?.since;
   const when = since ? ` · since ${shortDate(since)}` : '';
   return [
     ...removed.map(name => ({tone: 'gone', text: `No longer on ${name}${when}`})),
-    ...added.map(name => ({tone: 'new', text: `New on ${name}${when}`})),
+    ...added.map(name => ({tone: 'new', text: `${main && serviceGroup(main) !== serviceGroup(name) ? 'Also new' : 'New'} on ${name}${when}`})),
   ];
 }
 
